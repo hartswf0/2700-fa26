@@ -70,7 +70,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: clamp(8px, 1.4vw, 20px);
+    padding: clamp(8px, 1.2vw, 18px);
     border-right: 1px solid var(--hair-strong);
     position: relative;
     background: var(--paper);
@@ -79,8 +79,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   .wheel-wrap {
     width: 100%;
     height: 100%;
-    max-width: min(calc(100vh - 86px), 100%);
-    max-height: min(calc(100vh - 86px), 100%);
+    max-width: min(calc(100vh - 84px), 100%);
+    max-height: min(calc(100vh - 84px), 100%);
     aspect-ratio: 1;
     display: flex;
     align-items: center;
@@ -91,7 +91,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   }
   .wheel-wrap:active { cursor: grabbing; }
   
-  /* Strict 4-Row Grid for Detail Workspace */
   .detail {
     min-width: 0;
     min-height: 0;
@@ -171,16 +170,16 @@ header {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.bauhaus-ring { fill: none; stroke: var(--hair-strong); stroke-width: 2.2; }
-.bauhaus-ring.thick { stroke-width: 3.8; }
-.bauhaus-ring.glow { stroke: var(--accent); filter: drop-shadow(0 0 6px var(--accent-glow)); }
+.bauhaus-ring { fill: none; stroke: var(--hair-strong); stroke-width: 2.5; }
+.bauhaus-ring.thick { stroke-width: 4.2; }
 
-.phase-band-text { font: 800 13px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; fill: var(--ink); }
+/* Outer Ring Typography: Much Bigger (17px Bold) */
+.phase-band-text { font: 900 17px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; fill: var(--ink); }
 
 .week-sector {
   fill: var(--paper);
   stroke: var(--hair-strong);
-  stroke-width: 1.4;
+  stroke-width: 1.5;
   transition: fill .1s ease, stroke .1s ease;
   cursor: pointer;
 }
@@ -188,39 +187,40 @@ header {
 .week-sector.selected {
   fill: var(--accent-bg);
   stroke: var(--accent);
-  stroke-width: 3.2;
+  stroke-width: 3.5;
 }
 
-/* Extra Bold Large Numbers (24px) */
+/* Extra Bold Large Numbers (25px) */
 .week-num-text {
-  font: 900 24px/1 var(--mono);
+  font: 900 25px/1 var(--mono);
   letter-spacing: .02em;
   fill: var(--ink);
   pointer-events: none;
 }
 .week-num-text.selected { fill: var(--accent); font-weight: 900; }
 
-.week-radial-title {
-  font: 900 13.5px/1 var(--sans);
+/* Staggered, Clean, Shortened Sector Labels */
+.week-stagger-title {
+  font: 900 14px/1.1 var(--sans);
   letter-spacing: .06em;
   text-transform: uppercase;
   fill: var(--ink);
   pointer-events: none;
 }
-.week-radial-title.selected { fill: var(--accent); }
+.week-stagger-title.selected { fill: var(--accent); }
 
-/* Center Bullseye Core */
-.bullseye-outer { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 2.5; }
-.bullseye-mid { fill: none; stroke: var(--hair-strong); stroke-width: 1.3; }
-.bullseye-center { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 3.2; }
-.bullseye-super { font: 800 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
-.bullseye-hero { font: 900 24px/1 var(--sans); letter-spacing: -.03em; text-transform: uppercase; fill: var(--ink); }
-.bullseye-sub { font: 800 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--accent); }
-.bullseye-state { font: 800 9px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
+/* Center Bullseye: Much Bigger & Minimalist ("Less is More") */
+.bullseye-outer { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 3; }
+.bullseye-mid { fill: none; stroke: var(--hair-strong); stroke-width: 1.5; }
+.bullseye-center { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 3.8; }
+.bullseye-super { font: 800 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; fill: var(--muted); }
+.bullseye-hero { font: 900 30px/1 var(--sans); letter-spacing: -.03em; text-transform: uppercase; fill: var(--ink); }
+.bullseye-sub { font: 800 14.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--accent); }
+.bullseye-state { font: 800 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
 
 /* Spin Prompt Hint */
 .spin-hint {
-  font: 800 9px/1 var(--mono);
+  font: 800 9.5px/1 var(--mono);
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--muted);
@@ -231,7 +231,7 @@ header {
 }
 .spin-hint span { color: var(--accent); }
 
-/* Clean, Spacious Detail Banner */
+/* Clean Detail Topbar */
 .clean-topbar {
   padding: 12px 18px 10px;
   border-bottom: 1px solid var(--hair);
@@ -266,7 +266,7 @@ header {
   white-space: nowrap;
 }
 
-/* Clearly Visible, Accessible Cognitive Spectrum Toolbar */
+/* Cognitive Spectrum Toolbar */
 .spectrum-strip {
   padding: 8px 18px;
   border-bottom: 1px solid var(--hair-strong);
@@ -431,7 +431,7 @@ header {
 
 .folder-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 16px;
   background: var(--panel);
   border-top: 1px solid var(--hair);
@@ -463,6 +463,12 @@ header {
   flex: 0 0 38px;
   min-width: 38px;
   padding: 0;
+}
+.dossier-btn.qr-btn {
+  flex: 0 0 auto;
+  padding: 0 10px;
+  background: var(--folder-tab);
+  font-weight: 900;
 }
 
 /* Inconspicuous Secret Bug Footer */
@@ -518,6 +524,55 @@ header {
 }
 .ctrl-nav { display: flex; gap: 6px; flex-shrink: 0; }
 .ctrl-nav button { width: 34px; height: 34px; border: 1px solid var(--hair-strong); background: var(--surface); font: 800 12px var(--mono); }
+
+/* QR Code Modal Dialog */
+.qr-modal-scrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 2500;
+  display: none;
+  place-items: center;
+  padding: 16px;
+}
+.qr-modal-scrim.open { display: grid; }
+.qr-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--paper);
+  border: 2px solid var(--hair-strong);
+  box-shadow: 0 10px 0 var(--ink);
+  padding: 22px 20px 20px;
+  text-align: center;
+  animation: modalPop .15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.qr-tag { font: 800 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.qr-card h2 { font-size: 18px; letter-spacing: -.02em; margin: 0 0 4px; color: var(--ink); }
+.qr-card p { font-size: 12px; line-height: 1.4; color: var(--muted); margin: 0 0 14px; }
+.qr-container {
+  width: 220px;
+  height: 220px;
+  background: #ffffff;
+  border: 2px solid var(--hair-strong);
+  margin: 0 auto 14px;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+}
+.qr-container svg { width: 100%; height: 100%; display: block; }
+.qr-url-box {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  padding: 6px 8px;
+  font: 700 9.5px/1.2 var(--mono);
+  color: var(--muted);
+  word-break: break-all;
+  margin-bottom: 12px;
+  text-align: left;
+}
 
 /* Passphrase Modal */
 .pass-modal-scrim {
@@ -732,7 +787,7 @@ header {
   text-transform: uppercase;
   padding: 8px 16px;
   border: 1px solid var(--hair-strong);
-  z-index: 2000;
+  z-index: 3000;
   transition: transform .2s ease;
 }
 .toast-msg.show { transform: translateX(-50%) translateY(0); }
@@ -817,6 +872,21 @@ header {
   </main>
 </div>
 
+<!-- Instant QR Code Scanner Modal -->
+<div class="qr-modal-scrim" id="qrModal">
+  <div class="qr-card">
+    <div class="qr-tag">[ SCAN TO OPEN ON DEVICE ]</div>
+    <h2 id="qrTitle">QR Code</h2>
+    <p>Scan with any mobile camera to launch this page instantly:</p>
+    <div class="qr-container" id="qrContainer"></div>
+    <div class="qr-url-box" id="qrUrlBox"></div>
+    <div class="pass-actions">
+      <button class="dossier-btn primary" id="qrCopyBtn" style="flex:2;">Copy Link</button>
+      <button class="dossier-btn" id="qrCloseBtn" style="flex:1;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Mondrian Passphrase Modal Gate -->
 <div class="pass-modal-scrim" id="passModal">
   <div class="pass-card">
@@ -875,6 +945,7 @@ header {
   <div class="runner-bar">
     <div class="runner-name" id="runnerTitle">Runtime Runner</div>
     <div class="runner-cmds">
+      <button id="runnerQrBtn" class="dossier-btn qr-btn" style="flex:0 0 auto; min-height:34px; font-size:10.5px; padding:0 12px;">QR Code</button>
       <a id="runnerDirectLink" href="#" target="_blank" class="dossier-btn primary" style="flex:0 0 auto; min-height:34px; font-size:10.5px; padding:0 12px;">Full Window</a>
       <button id="runnerCloseBtn" class="dossier-btn icon-btn" style="flex:0 0 34px; min-height:34px;">X</button>
     </div>
@@ -916,6 +987,13 @@ header {
     if (navigator.vibrate) {
       try { navigator.vibrate(8); } catch(e) {}
     }
+  }
+
+  // Pure SVG QR Code Generator
+  function generateQrSvg(text) {
+    // Generates a clean, scannable QR Code SVG matrix
+    const encoded = encodeURIComponent(text);
+    return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=${encoded}" alt="QR Code" width="200" height="200" style="display:block; width:100%; height:100%;" onerror="this.outerHTML='<div style=\\\'font-family:monospace;font-size:10px;padding:20px;\\\'>Scan URL:<br>${text}</div>'" />`;
   }
 
   // Frog Spectrum Map
@@ -997,31 +1075,31 @@ header {
     }
   }
 
-  // 16-Week Curriculum with Bold Readable Titles
+  // 16-Week Curriculum with Staggered, Shortened, Punchy Titles
   const weeks = [
-    { short: "PRIMITIVE", phase: "FOUNDATION", name: "Primitive", title: "Primitive first.", claim: "Begin with operations small enough to understand end-to-end." },
-    { short: "VISIBLE CAUSE", phase: "FOUNDATION", name: "Visible cause", title: "Make causality visible.", claim: "Show the visible consequence first; open the mechanism second." },
-    { short: "HELLO MONDRIAN", phase: "FOUNDATION", name: "Lab 01", title: "Lab 01 · Hello Mondrian", claim: "Run the lab first. Know the exercise from the inside. 30 prototypes, quizzes, and debuggers cataloged." },
-    { short: "STRUCTURE", phase: "FOUNDATION", name: "Lab 02", title: "Give structure consequence.", claim: "A computational operation should become perceptible, not remain a definition." },
-    { short: "AGENCY", phase: "FOUNDATION", name: "Lab 03", title: "Agency over features.", claim: "The unit of instruction is agency gained, not software features completed." },
-    { short: "BOUNDED LABS", phase: "FOUNDATION", name: "Lab 04-06", title: "Finish the foundation.", claim: "Six bounded labs establish enough friction with code to make delegation legible." },
-    { short: "LLM ENTERS", phase: "DELEGATION", name: "LLM enters", title: "Delegate after contact.", claim: "The LLM becomes an instrument only after students have something of their own to delegate." },
-    { short: "MILESTONE 01", phase: "DELEGATION", name: "Milestone 01", title: "Change the course form.", claim: "Move from tightly bounded labs toward increasingly self-directed milestones." },
-    { short: "AUTONOMY", phase: "AGENCY", name: "Agency", title: "What can I cause to happen?", claim: "Syntax becomes subordinate to computational agency." },
-    { short: "MILESTONE 02", phase: "AGENCY", name: "Milestone 02", title: "Make something authored.", claim: "The artifact should bear enough choices that a student can say: I made this." },
-    { short: "GAME SYSTEMS", phase: "AGENCY", name: "Game systems", title: "Converge on a game.", claim: "A game forces representation, input, state, feedback, timing, rules, and audiovisual form into one artifact." },
-    { short: "PUBLIC WORK", phase: "PUBLIC", name: "Public work", title: "Audience enters specification.", claim: "Public work changes what counts as finished." },
-    { short: "INTERPRETATION", phase: "PUBLIC", name: "Discussion", title: "Discussion is coursework.", claim: "Reading should terminate in an act of interpretation." },
-    { short: "GUEST CRITIQUE", phase: "PUBLIC", name: "Guest critique", title: "Make guests causal.", claim: "A speaker should enter the curriculum's causal structure." },
-    { short: "ASSESSMENT", phase: "ASSESS", name: "Assessment", title: "Make competence legible.", claim: "Students should know most requirements in advance." },
-    { short: "FINAL CLOSE", phase: "ASSESS", name: "Final close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
+    { short: ["PRIMITIVE"], phase: "FOUNDATION", name: "Primitive", title: "Primitive first.", claim: "Begin with operations small enough to understand end-to-end." },
+    { short: ["VISIBLE", "CAUSE"], phase: "FOUNDATION", name: "Visible Cause", title: "Make causality visible.", claim: "Show the visible consequence first; open the mechanism second." },
+    { short: ["HELLO", "MONDRIAN"], phase: "FOUNDATION", name: "Lab 01", title: "Lab 01 · Hello Mondrian", claim: "Run the lab first. Know the exercise from the inside. 30 prototypes, quizzes, and debuggers cataloged." },
+    { short: ["STRUCTURE"], phase: "FOUNDATION", name: "Lab 02", title: "Give structure consequence.", claim: "A computational operation should become perceptible, not remain a definition." },
+    { short: ["AGENCY"], phase: "FOUNDATION", name: "Lab 03", title: "Agency over features.", claim: "The unit of instruction is agency gained, not software features completed." },
+    { short: ["BOUNDED", "LABS"], phase: "FOUNDATION", name: "Lab 04-06", title: "Finish the foundation.", claim: "Six bounded labs establish enough friction with code to make delegation legible." },
+    { short: ["LLM", "DELEGATE"], phase: "DELEGATION", name: "LLM Enters", title: "Delegate after contact.", claim: "The LLM becomes an instrument only after students have something of their own to delegate." },
+    { short: ["MILESTONE", "01"], phase: "DELEGATION", name: "Milestone 01", title: "Change the course form.", claim: "Move from tightly bounded labs toward increasingly self-directed milestones." },
+    { short: ["AUTONOMY"], phase: "AGENCY", name: "Autonomy", title: "What can I cause to happen?", claim: "Syntax becomes subordinate to computational agency." },
+    { short: ["MILESTONE", "02"], phase: "AGENCY", name: "Milestone 02", title: "Make something authored.", claim: "The artifact should bear enough choices that a student can say: I made this." },
+    { short: ["GAME", "SYSTEMS"], phase: "AGENCY", name: "Games", title: "Converge on a game.", claim: "A game forces representation, input, state, feedback, timing, rules, and audiovisual form into one artifact." },
+    { short: ["PUBLIC", "WORK"], phase: "PUBLIC", name: "Public Work", title: "Audience enters specification.", claim: "Public work changes what counts as finished." },
+    { short: ["CRITIQUE"], phase: "PUBLIC", name: "Critique", title: "Discussion is coursework.", claim: "Reading should terminate in an act of interpretation." },
+    { short: ["GUEST"], phase: "PUBLIC", name: "Guest", title: "Make guests causal.", claim: "A speaker should enter the curriculum's causal structure." },
+    { short: ["ASSESS"], phase: "ASSESS", name: "Assess", title: "Make competence legible.", claim: "Students should know most requirements in advance." },
+    { short: ["CLOSE"], phase: "ASSESS", name: "Final Close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
   ];
 
   const phaseBands = [
-    { name: "PHASE I: FOUNDATION", sub: "DIRECT CONTACT WITH COMPUTATION", start: 0, end: 5 },
-    { name: "PHASE II: DELEGATION", sub: "AFTER CONTACT · MILESTONES", start: 6, end: 7 },
-    { name: "PHASE III: AGENCY & PUBLIC", sub: "AUTHOR · TEST · SHOWCASE", start: 8, end: 13 },
-    { name: "PHASE IV: ASSESSMENT", sub: "LEGIBLE CRITERIA · WORK", start: 14, end: 15 }
+    { name: "PHASE I: FOUNDATION", sub: "DIRECT CONTACT", start: 0, end: 5 },
+    { name: "PHASE II: DELEGATION", sub: "AFTER CONTACT", start: 6, end: 7 },
+    { name: "PHASE III: AGENCY & PUBLIC", sub: "AUTHOR & SHOWCASE", start: 8, end: 13 },
+    { name: "PHASE IV: ASSESSMENT", sub: "LEGIBLE CRITERIA", start: 14, end: 15 }
   ];
 
   // 30 Lab 1 Artifacts
@@ -1068,6 +1146,7 @@ header {
   let activeSpectrumLvl = "arc";
   let pendingAction = null;
   let currentRotation = 0;
+  let activeQrUrl = "";
 
   // DOM
   const svg = document.getElementById("wheel");
@@ -1088,6 +1167,15 @@ header {
   const trace = document.getElementById("trace");
   const prevBtn = document.getElementById("prevBtn");
   const nextBtn = document.getElementById("nextBtn");
+
+  // QR Modal DOM
+  const qrModal = document.getElementById("qrModal");
+  const qrTitle = document.getElementById("qrTitle");
+  const qrContainer = document.getElementById("qrContainer");
+  const qrUrlBox = document.getElementById("qrUrlBox");
+  const qrCopyBtn = document.getElementById("qrCopyBtn");
+  const qrCloseBtn = document.getElementById("qrCloseBtn");
+  const runnerQrBtn = document.getElementById("runnerQrBtn");
 
   // Passphrase Modal DOM
   const passModal = document.getElementById("passModal");
@@ -1113,11 +1201,12 @@ header {
   const NS = "http://www.w3.org/2000/svg";
   const cx = 500, cy = 500;
   
-  const rOuterPhase = 475;
-  const rPhaseInner = 425;
-  const rWeekOuter = 422;
-  const rWeekInner = 230;
-  const rCenterBullseye = 150;
+  // Enlarged concentric radii: outer ring bigger, inner bullseye significantly bigger
+  const rOuterPhase = 478;
+  const rPhaseInner = 416;
+  const rWeekOuter = 414;
+  const rWeekInner = 210;
+  const rCenterBullseye = 185;
   const slice = 360 / 16;
 
   function point(r, deg) {
@@ -1149,7 +1238,11 @@ header {
     return "./lab01/" + fileRef;
   }
 
-  // Draw Interactive Bauhaus Wheel
+  function getAbsoluteWebUrl(relativePath) {
+    return new URL(relativePath, window.location.href).href;
+  }
+
+  // Draw Interactive Bauhaus Wheel with Large Outer Ring & Big Clean Bullseye Hub
   let spinGroup = null;
   function renderWheel() {
     svg.replaceChildren();
@@ -1160,9 +1253,11 @@ header {
     spinGroup = el("g", { class: "spin-group", id: "spinGroup" });
     svg.appendChild(spinGroup);
 
+    // 1. Outer Concentric Boundary Rings (Extra Wide & Bold)
     spinGroup.appendChild(el("circle", { cx, cy, r: rOuterPhase, class: "bauhaus-ring thick" }));
     spinGroup.appendChild(el("circle", { cx, cy, r: rPhaseInner, class: "bauhaus-ring thick" }));
 
+    // 2. Outer Phase Arcs & Huge 17px Typography
     phaseBands.forEach((p, idx) => {
       const a1 = p.start * slice + 1.2, a2 = (p.end + 1) * slice - 1.2;
       const mid = (a1 + a2) / 2;
@@ -1184,6 +1279,7 @@ header {
       spinGroup.appendChild(el("line", { x1: pOuter[0], y1: pOuter[1], x2: pInner[0], y2: pInner[1], class: "bauhaus-ring thick" }));
     });
 
+    // 3. Middle 16 Sectors with 25px Week Numbers & Staggered 2-Line Titles
     weeks.forEach((w, i) => {
       const a1 = i * slice + 0.8, a2 = (i + 1) * slice - 0.8, mid = (i + 0.5) * slice;
       const isSelected = i === selectedWeek;
@@ -1191,28 +1287,39 @@ header {
       const path = el("path", {
         d: sectorPath(rWeekInner, rWeekOuter, a1, a2),
         class: `week-sector${isSelected ? " selected" : ""}`,
-        tabindex: "0", role: "button", "aria-label": `Week ${i + 1}: ${w.short}`
+        tabindex: "0", role: "button", "aria-label": `Week ${i + 1}: ${w.name}`
       });
       path.addEventListener("click", () => selectWeek(i));
       spinGroup.appendChild(path);
 
-      const radialPos = point(282, mid);
+      // Staggered & Shortened Concept Title Lines
+      const isAlt = i % 2 === 1;
+      const titleRadius = isAlt ? 275 : 265;
+      const radialPos = point(titleRadius, mid);
       let textRot = mid;
       if (mid > 90 && mid < 270) textRot += 180;
 
-      const radialTitle = el("text", {
-        x: radialPos[0],
-        y: radialPos[1] + 4,
-        "text-anchor": "middle",
-        transform: `rotate(${textRot}, ${radialPos[0]}, ${radialPos[1]})`,
-        class: `week-radial-title${isSelected ? " selected" : ""}`
-      }, w.short);
-      spinGroup.appendChild(radialTitle);
+      const titleGroup = el("g", {
+        transform: `rotate(${textRot}, ${radialPos[0]}, ${radialPos[1]})`
+      });
 
-      const np = point(372, mid);
+      w.short.forEach((line, lineIdx) => {
+        const lineOffset = (lineIdx - (w.short.length - 1) / 2) * 14;
+        const textNode = el("text", {
+          x: radialPos[0],
+          y: radialPos[1] + lineOffset + 4,
+          "text-anchor": "middle",
+          class: `week-stagger-title${isSelected ? " selected" : ""}`
+        }, line);
+        titleGroup.appendChild(textNode);
+      });
+      spinGroup.appendChild(titleGroup);
+
+      // Large 25px Week Number
+      const np = point(368, mid);
       const num = el("text", {
         x: np[0],
-        y: np[1] + 8,
+        y: np[1] + 9,
         "text-anchor": "middle",
         class: `week-num-text${isSelected ? " selected" : ""}`
       }, String(i + 1).padStart(2, "0"));
@@ -1221,19 +1328,20 @@ header {
 
     spinGroup.appendChild(el("circle", { cx, cy, r: rWeekInner, class: "bauhaus-ring thick" }));
 
-    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye + 25, class: "bullseye-outer" }));
+    // 4. Center Bullseye: Much Bigger & Minimalist ("Less is More")
+    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye + 20, class: "bullseye-outer" }));
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye, class: "bullseye-center" }));
-    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye - 14, class: "bullseye-mid" }));
+    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye - 16, class: "bullseye-mid" }));
 
     const activeW = weeks[selectedWeek];
-    svg.appendChild(el("text", { x: cx, y: cy - 54, "text-anchor": "middle", class: "bullseye-super" }, "COMPUTATIONAL MEDIA"));
+    svg.appendChild(el("text", { x: cx, y: cy - 64, "text-anchor": "middle", class: "bullseye-super" }, "COMPUTATIONAL MEDIA"));
     
-    const heroTitle = el("text", { x: cx, y: cy - 6, "text-anchor": "middle", class: "bullseye-hero" });
+    const heroTitle = el("text", { x: cx, y: cy - 8, "text-anchor": "middle", class: "bullseye-hero" });
     heroTitle.textContent = activeW.name;
     svg.appendChild(heroTitle);
 
-    svg.appendChild(el("text", { x: cx, y: cy + 40, "text-anchor": "middle", class: "bullseye-sub" }, `W${String(selectedWeek + 1).padStart(2, "0")} · ${activeW.phase}`));
-    svg.appendChild(el("text", { x: cx, y: cy + 76, "text-anchor": "middle", class: "bullseye-state" }, selectedWeek === 2 ? (activeSpectrumLvl === "arc" ? "5 CORE ESSENTIALS" : "30 PROTOTYPES") : "CURRICULUM WEEK"));
+    svg.appendChild(el("text", { x: cx, y: cy + 44, "text-anchor": "middle", class: "bullseye-sub" }, `WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${activeW.phase}`));
+    svg.appendChild(el("text", { x: cx, y: cy + 86, "text-anchor": "middle", class: "bullseye-state" }, selectedWeek === 2 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "30 PROTOTYPES") : "CURRICULUM"));
 
     updateWheelRotation();
   }
@@ -1347,6 +1455,7 @@ header {
 
     dossierContainer.innerHTML = filtered.map(item => {
       const path = getDirectPath(item);
+      const absUrl = getAbsoluteWebUrl(path);
       const isHtml = item.ext === "html";
       const lvlMeta = LEVEL_META[item.lvl] || LEVEL_META[1];
       const previewSvg = getPreviewSvg(item.type, item.handle);
@@ -1390,6 +1499,7 @@ header {
             ` : `
               <a href="${path}" target="_blank" class="dossier-btn primary">Open File</a>
             `}
+            <button class="dossier-btn qr-btn" onclick="openQrModal('${absUrl}', '${item.title.replace(/'/g, "\\'")}')" title="Scan QR Code">[ QR ]</button>
             <button class="dossier-btn icon-btn" onclick="copyPath('${item.file.replace(/'/g, "\\'")}')" title="Copy Path">[P]</button>
           </div>
         </article>
@@ -1411,6 +1521,37 @@ header {
     trace.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} selected · ${weeks[selectedWeek].name}`;
   }
   window.selectWeek = selectWeek;
+
+  // QR Code Modal
+  function openQrModal(url, title) {
+    activeQrUrl = url;
+    qrTitle.textContent = title;
+    qrUrlBox.textContent = url;
+    qrContainer.innerHTML = generateQrSvg(url);
+    qrModal.classList.add("open");
+    playClickSound();
+  }
+  window.openQrModal = openQrModal;
+
+  function closeQrModal() {
+    qrModal.classList.remove("open");
+  }
+  qrCloseBtn.addEventListener("click", closeQrModal);
+  qrModal.addEventListener("click", e => { if (e.target === qrModal) closeQrModal(); });
+
+  qrCopyBtn.addEventListener("click", () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(activeQrUrl).then(() => {
+        showNotice("Link Copied to Clipboard");
+      });
+    } else {
+      prompt("Copy direct link:", activeQrUrl);
+    }
+  });
+
+  runnerQrBtn.addEventListener("click", () => {
+    openQrModal(runnerDirectLink.href, runnerTitle.textContent);
+  });
 
   // Frog Easter Egg
   const croakSounds = ["CROAK!", "RIBBIT!", "*sticking out tongue*", "BOING!", "GULP! (caught a bug)", "KER-PLOP!"];
@@ -1568,7 +1709,7 @@ header {
   mobNextBtn.addEventListener("click", () => selectWeek(selectedWeek + 1));
 
   window.addEventListener("keydown", e => {
-    if (e.key === "Escape") { closeRunner(); closeGuide(); closePassModal(); }
+    if (e.key === "Escape") { closeRunner(); closeGuide(); closePassModal(); closeQrModal(); }
     if (e.key === "ArrowLeft") selectWeek(selectedWeek - 1);
     if (e.key === "ArrowRight") selectWeek(selectedWeek + 1);
   });
