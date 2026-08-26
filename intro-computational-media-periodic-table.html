@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Intro to Computational Media — Periodic Notes</title>
+<style>
+  :root{
+    --paper:#f6f3ec;
+    --ink:#161616;
+    --muted:#6e6a62;
+    --hair:#b8b2a8;
+    --accent:#7f211b;
+    --max:1180px;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--paper);color:var(--ink);font-family:Georgia,'Times New Roman',serif}
+  body{margin:0;background:var(--paper)}
+  main{max-width:var(--max);margin:0 auto;padding:22px 16px 64px}
+  header{border-bottom:1px solid var(--ink);padding-bottom:12px;margin-bottom:12px}
+  .kicker{font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1{font-size:clamp(28px,7vw,58px);line-height:.96;font-weight:400;letter-spacing:-.035em;margin:8px 0 10px;max-width:10ch}
+  .dek{font-size:15px;line-height:1.45;max-width:62ch;margin:0;color:#302f2c}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);padding:10px 0 4px}
+  .legend b{color:var(--ink);font-weight:600}
+  .period{margin-top:26px}
+  .period-head{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:end;border-bottom:1px solid var(--hair);padding-bottom:5px;margin-bottom:8px}
+  .period-no{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--accent)}
+  .period-title{font-size:18px;font-weight:400;margin:0}
+  .period-note{font-size:12px;color:var(--muted);margin:3px 0 0}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  details.element{border-top:1px solid var(--ink);min-height:154px;padding:8px 7px 10px;background:transparent}
+  details.element[open]{grid-column:1/-1;border-bottom:1px solid var(--ink);padding-bottom:14px}
+  summary{list-style:none;cursor:pointer;outline:none}
+  summary::-webkit-details-marker{display:none}
+  .meta{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .num,.family{font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .symbol{font:400 38px/.92 Georgia,'Times New Roman',serif;letter-spacing:-.04em;margin:14px 0 6px}
+  .name{font-size:13px;line-height:1.14;max-width:17ch}
+  .claim{font-size:12px;line-height:1.35;color:#37342f;margin-top:7px}
+  .expand{font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);margin-top:12px;text-transform:uppercase;letter-spacing:.08em}
+  .body{display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
+  .body p{margin:0;font-size:15px;line-height:1.52;max-width:70ch}
+  .seed{font-style:italic;color:#4a4742}
+  .links,.source{font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .links b,.source b{color:var(--ink)}
+  .formula{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;border-left:2px solid var(--accent);padding-left:10px;white-space:pre-wrap}
+  .ghosts{margin-top:38px;border-top:1px solid var(--ink);padding-top:12px}
+  .ghosts h2{font-size:18px;font-weight:400;margin:0 0 8px}
+  .ghost-list{columns:1;column-gap:24px}
+  .ghost{break-inside:avoid;border-top:1px solid var(--hair);padding:7px 0 12px;font-size:12px;line-height:1.45;color:#4a4742}
+  .ghost b{font:600 10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);letter-spacing:.07em}
+  footer{margin-top:28px;padding-top:10px;border-top:1px solid var(--hair);font:10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  @media (min-width:680px){
+    main{padding:32px 26px 78px}
+    .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}
+    details.element[open]{grid-column:span 4}
+    .body{grid-template-columns:minmax(0,2fr) minmax(210px,1fr)}
+    .ghost-list{columns:2}
+  }
+  @media (min-width:980px){
+    .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 16px}
+    details.element[open]{grid-column:span 6}
+    .ghost-list{columns:3}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    details.element{transition:background .15s ease}
+    details.element:hover{background:rgba(0,0,0,.018)}
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">Course design / atomic notes / v0.1</div>
+  <h1>Intro to Computational Media</h1>
+  <p class="dek">A periodic table of course principles. Rows are temporal phases of the course; each element is one irreducible claim. Tap any element to unfold the full note.</p>
+  <div class="legend"><span><b>row</b> = course phase</span><span><b>symbol</b> = memory handle</span><span><b>family</b> = note type</span><span><b>tap</b> = expand</span></div>
+</header>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P0</div><div><h2 class="period-title">Premise</h2><p class="period-note">What kind of learning counts?</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">01</span><span class="family">Thought</span></div><div class="symbol">Cf</div><div class="name">Confusion is proof of thought</div><div class="claim">Confusion can mark the edge of understanding, not its absence.</div><div class="expand">open note</div></summary><div class="body"><div><p>Visible confusion can be evidence that a student has reached the edge of what they understand. The instructional task is not simply to eliminate confusion, but to make students inspect, articulate, and work through it.</p><p class="seed">Seed: “Proof of thought” / “Confusion.”</p></div><div><div class="links"><b>LINKS</b><br>Reflection as Interjection<br>Discussion Keeps Automation Honest</div><div class="source"><b>SOURCE</b><br>handwritten course-design notes, image 1</div></div></div></details>
+  </div>
+</section>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P1</div><div><h2 class="period-title">First contact</h2><p class="period-note">Make causality visible before complexity arrives.</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">03</span><span class="family">Primitive</span></div><div class="symbol">Pr</div><div class="name">The primitive before the prompt</div><div class="claim">Begin with operations small enough to understand end-to-end.</div><div class="expand">open note</div></summary><div class="body"><div><p>Begin with one visible operation, then variables, repetition, collections, data, and systems. Only after students can relate an instruction to an observable consequence should generative systems enter the loop.</p><div class="formula">touch the medium → acquire primitives → then delegate</div></div><div><div class="links"><b>LINKS</b><br>Six Weeks Before the LLM<br>Computational Agency</div><div class="source"><b>SOURCE</b><br>image 3</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">08</span><span class="family">Demo</span></div><div class="symbol">Sd</div><div class="name">Small demo before class</div><div class="claim">Show the visible consequence first; open the mechanism second.</div><div class="expand">open note</div></summary><div class="body"><div><p>A tiny working demonstration can establish the perceptual stakes before explanation begins. Students see the consequence first and then open the mechanism.</p><div class="formula">phenomenon → curiosity → code</div></div><div><div class="links"><b>LINKS</b><br>Run the Labs<br>The Primitive Before the Prompt</div><div class="source"><b>SOURCE</b><br>image 6</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">09</span><span class="family">Tool</span></div><div class="symbol">P5</div><div class="name">p5.js as the first surface</div><div class="claim">Code changes the visible world immediately.</div><div class="expand">open note</div></summary><div class="body"><div><p>p5.js/Processing is useful not simply because it is beginner-friendly, but because it collapses the distance between code and visible consequence.</p></div><div><div class="links"><b>LINKS</b><br>The Primitive Before the Prompt<br>Small Demo Before Class</div><div class="source"><b>SOURCE</b><br>image 3</div></div></div></details>
+  </div>
+</section>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P2</div><div><h2 class="period-title">Laboratory</h2><p class="period-note">Practice should teach structure, not software tourism.</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">05</span><span class="family">Method</span></div><div class="symbol">Rl</div><div class="name">Run the labs</div><div class="claim">The instructor should know the exercise from inside.</div><div class="expand">open note</div></summary><div class="body"><div><p>Running the lab exposes the actual difficulty, hidden assumptions, broken dependencies, dead time, and points where syntax overwhelms the concept.</p></div><div><div class="links"><b>LINKS</b><br>Small Demo Before Class<br>Labs Teach Aesthetic Structure</div><div class="source"><b>SOURCE</b><br>image 6</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">06</span><span class="family">Aesthetic</span></div><div class="symbol">As</div><div class="name">Labs teach aesthetic structure</div><div class="claim">A computational operation should acquire expressive consequence.</div><div class="expand">open note</div></summary><div class="body"><div><p>A loop is not only repetition; an array is not only storage; randomness is not only a function. Each lab should teach what a computational structure can become perceptually.</p></div><div><div class="links"><b>LINKS</b><br>The Primitive Before the Prompt<br>Not Just Workshops</div><div class="source"><b>SOURCE</b><br>image 7</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">07</span><span class="family">Critique</span></div><div class="symbol">Nw</div><div class="name">Not just workshops</div><div class="claim">The unit of instruction is agency gained, not feature mastery.</div><div class="expand">open note</div></summary><div class="body"><div><p>A workshop teaches how to operate something. A course should also ask why the operation matters, what it makes possible, what choices it encodes, and what the student can make with it.</p></div><div><div class="links"><b>LINKS</b><br>Labs Teach Aesthetic Structure<br>Computational Agency</div><div class="source"><b>SOURCE</b><br>image 6</div></div></div></details>
+  </div>
+</section>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P3</div><div><h2 class="period-title">After six weeks</h2><p class="period-note">AI enters after students have something of their own to delegate.</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">02</span><span class="family">Sequence</span></div><div class="symbol">6W</div><div class="name">Six weeks before the LLM</div><div class="claim">Encounter computation directly before delegating it.</div><div class="expand">open note</div></summary><div class="body"><div><p>The first six weeks establish enough friction with code that an LLM becomes an instrument rather than an invisible replacement for understanding.</p><div class="formula">touch the medium → acquire primitives → then delegate</div></div><div><div class="links"><b>LINKS</b><br>The Primitive Before the Prompt<br>Six Labs Then Milestones<br>Run the Labs</div><div class="source"><b>SOURCE</b><br>image 3</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">04</span><span class="family">Sequence</span></div><div class="symbol">6L</div><div class="name">Six labs, then milestones</div><div class="claim">The course should change form after foundational competency.</div><div class="expand">open note</div></summary><div class="body"><div><p>Phase one is tightly bounded laboratory work. Phase two is a sequence of milestones toward increasingly self-directed work.</p><div class="formula">LAB × 6 → MILESTONE → MILESTONE → PROJECT</div></div><div><div class="links"><b>LINKS</b><br>Six Weeks Before the LLM<br>Final Project: Make a Game</div><div class="source"><b>SOURCE</b><br>images 3–4</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">10</span><span class="family">Reflection</span></div><div class="symbol">Ri</div><div class="name">Reflection should interrupt making</div><div class="claim">Reflect while there is still time for reflection to change the work.</div><div class="expand">open note</div></summary><div class="body"><div><p>Reflection belongs at project milestones rather than only after completion. It acts as an interjection into the trajectory of the work.</p></div><div><div class="links"><b>LINKS</b><br>Confusion Is Proof of Thought<br>Six Labs Then Milestones</div><div class="source"><b>SOURCE</b><br>image 3</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">20</span><span class="family">AI</span></div><div class="symbol">Dh</div><div class="name">Discussion keeps automation honest</div><div class="claim">Conversation exposes whether a student can inhabit generated claims.</div><div class="expand">open note</div></summary><div class="body"><div><p>Automation can help produce text; discussion exposes whether a person can inhabit, defend, revise, or abandon what that text says. Conversation becomes an authenticity check without needing to become surveillance.</p></div><div><div class="links"><b>LINKS</b><br>Six Weeks Before the LLM<br>Discussion Is Coursework</div><div class="source"><b>SOURCE</b><br>image 2; interpretation provisional</div></div></div></details>
+  </div>
+</section>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P4</div><div><h2 class="period-title">Agency</h2><p class="period-note">Computation becomes consequential, public, authored.</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">13</span><span class="family">Motif</span></div><div class="symbol">Ag</div><div class="name">Computational agency is the course motif</div><div class="claim">What can I cause to happen through computation?</div><div class="expand">open note</div></summary><div class="body"><div><p>Syntax becomes subordinate to agency. A student progresses from executing an instruction to constructing a system capable of acting and being acted upon.</p></div><div><div class="links"><b>LINKS</b><br>The Primitive Before the Prompt<br>Final Project: Make a Game</div><div class="source"><b>SOURCE</b><br>synthesis from images 3–4</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">12</span><span class="family">Motif</span></div><div class="symbol">Wg</div><div class="name">WarGames is about agency</div><div class="claim">Interfaces can acquire consequences outside the apparent interface.</div><div class="expand">open note</div></summary><div class="body"><div><p><em>WarGames</em> can function as more than a film example. It poses a foundational computational-media question: what happens when actions mediated through a computer acquire consequences outside the apparent interface?</p></div><div><div class="links"><b>LINKS</b><br>Final Project: Make a Game<br>Computational Agency</div><div class="source"><b>SOURCE</b><br>image 4</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">11</span><span class="family">Capstone</span></div><div class="symbol">Gm</div><div class="name">Final project: make a game</div><div class="claim">A game forces multiple forms of computation into one artifact.</div><div class="expand">open note</div></summary><div class="body"><div><p>A game demands representation, input, state, feedback, timing, rules, audiovisual form, and above all agency. It makes computation experiential instead of merely demonstrative.</p></div><div><div class="links"><b>LINKS</b><br>WarGames Is About Agency<br>Portfolio Says I Made This</div><div class="source"><b>SOURCE</b><br>image 4</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">23</span><span class="family">Public</span></div><div class="symbol">Pw</div><div class="name">Public work changes the assignment</div><div class="claim">Audience becomes part of the specification.</div><div class="expand">open note</div></summary><div class="body"><div><p>Students must ask not merely whether something runs but what another person sees, understands, and carries away.</p></div><div><div class="links"><b>LINKS</b><br>Portfolio Says I Made This<br>Computational Agency</div><div class="source"><b>SOURCE</b><br>image 8</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">14</span><span class="family">Authorship</span></div><div class="symbol">Im</div><div class="name">Portfolio should say “I made this”</div><div class="claim">The final artifact should bear enough choices to feel authored.</div><div class="expand">open note</div></summary><div class="body"><div><p>A portfolio piece should not read like completion of somebody else’s tutorial. It should bear enough choices that the student can point to it and say: I made this.</p></div><div><div class="links"><b>LINKS</b><br>Six Weeks Before the LLM<br>Above and Beyond</div><div class="source"><b>SOURCE</b><br>image 4; transcription partially uncertain</div></div></div></details>
+  </div>
+</section>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P5</div><div><h2 class="period-title">Course ecology</h2><p class="period-note">Reading, discussion, speakers, and scale.</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">19</span><span class="family">Discussion</span></div><div class="symbol">Dc</div><div class="name">Discussion is coursework</div><div class="claim">Reading should terminate in an act of interpretation.</div><div class="expand">open note</div></summary><div class="body"><div><p>A student can read, lead, respond, or connect a reading to a piece of computational work. Discussion then becomes an artifact of understanding.</p></div><div><div class="links"><b>LINKS</b><br>Guest Speakers Need Response Prompts<br>Discussion Keeps Automation Honest</div><div class="source"><b>SOURCE</b><br>image 2</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">22</span><span class="family">Guest</span></div><div class="symbol">Gs</div><div class="name">Guest speakers need response prompts</div><div class="claim">A speaker should enter the curriculum’s causal structure.</div><div class="expand">open note</div></summary><div class="body"><div><p>Give students a prompt before or immediately after the visit: identify a claim, challenge a choice, connect the speaker’s practice to a lab, reproduce one operation, or formulate a question from their own work.</p></div><div><div class="links"><b>LINKS</b><br>Discussion Is Coursework<br>Reflection Should Interrupt Making</div><div class="source"><b>SOURCE</b><br>image 3</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">21</span><span class="family">Scale</span></div><div class="symbol">50</div><div class="name">Fifty is not a small number</div><div class="claim">Discussion architecture has to respond to class scale.</div><div class="expand">open note</div></summary><div class="body"><div><p>A fifty-person class cannot pretend to be one seminar. The note appears to point toward partitioning discussion when enrollment approaches fifty.</p></div><div><div class="links"><b>LINKS</b><br>Discussion Is Coursework</div><div class="source"><b>SOURCE</b><br>image 2; numeral relationship uncertain</div></div></div></details>
+  </div>
+</section>
+
+<section class="period">
+  <div class="period-head"><div class="period-no">P6</div><div><h2 class="period-title">Assessment</h2><p class="period-note">Make requirements legible; reserve judgment for distinction.</p></div></div>
+  <div class="grid">
+    <details class="element"><summary><div class="meta"><span class="num">15</span><span class="family">Grade</span></div><div class="symbol">90</div><div class="name">90% of the grade should be objective</div><div class="claim">Students should know most requirements in advance.</div><div class="expand">open note</div></summary><div class="body"><div><p>Completion, required behaviors, milestones, technical requirements, documentation, participation, and submission can carry most of the grade. This reduces the burden of repeatedly turning aesthetic judgment into numbers.</p></div><div><div class="links"><b>LINKS</b><br>Above and Beyond<br>Attendance Is Participation</div><div class="source"><b>SOURCE</b><br>image 5</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">16</span><span class="family">Grade</span></div><div class="symbol">10</div><div class="name">Above and beyond is the remaining ten percent</div><div class="claim">Competence is legible; distinction is visible excess.</div><div class="expand">open note</div></summary><div class="body"><div><div class="formula">competence = legible criteria\ndistinction = visible excess</div></div><div><div class="links"><b>LINKS</b><br>90 Percent Objective<br>Portfolio Says I Made This</div><div class="source"><b>SOURCE</b><br>image 5</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">17</span><span class="family">Grade</span></div><div class="symbol">At</div><div class="name">Attendance is part of participation</div><div class="claim">Presence matters because critique and collaboration happen there.</div><div class="expand">open note</div></summary><div class="body"><div><p>Attendance does not need to become a second shadow grading system. If presence matters because the course depends on critique, discussion, demonstrations, and collaborative work, express its value through participation.</p></div><div><div class="links"><b>LINKS</b><br>90 Percent Objective<br>Discussion Is Coursework</div><div class="source"><b>SOURCE</b><br>image 5</div></div></div></details>
+    <details class="element"><summary><div class="meta"><span class="num">18</span><span class="family">Grade</span></div><div class="symbol">Gs</div><div class="name">Grades should not be scarcity</div><div class="claim">Rigorous courses do not require narrow distributions of A grades.</div><div class="expand">open note</div></summary><div class="body"><div><p>If students satisfy clearly defined objectives and produce good work, many of them can receive A’s without degrading the meaning of the course. The scarce thing should be excellent work, not the letter assigned to it.</p></div><div><div class="links"><b>LINKS</b><br>90 Percent Objective<br>Above and Beyond</div><div class="source"><b>SOURCE</b><br>image 6</div></div></div></details>
+  </div>
+</section>
+
+<section class="ghosts">
+  <div class="kicker">Unresolved / do not normalize yet</div>
+  <h2>Ghost notes</h2>
+  <div class="ghost-list">
+    <div class="ghost"><b>G01 · STELLA</b><br>“Stella → help with course.” Preserve as a person/resource connection.</div>
+    <div class="ghost"><b>G02 · 2700 TA</b><br>Likely course/TA logistics; not enough context for a conceptual note.</div>
+    <div class="ghost"><b>G03 · EVERYONE AVERAGE</b><br>Potential grading principle. Mechanics remain unclear.</div>
+    <div class="ghost"><b>G04 · COVER BASES / POV</b><br>Handwriting too uncertain to stabilize as a claim.</div>
+    <div class="ghost"><b>G05 · OPEN CODE</b><br>Possible tool/reference note. Confirm wording before indexing.</div>
+    <div class="ghost"><b>G06 · TA TIMES</b><br>9:00 AM / meet in office / syllabus / grading 9:30–10:45. Administrative, not conceptual.</div>
+    <div class="ghost"><b>G07 · 3402 / GRAPHIC DESIGN / PLOTTER</b><br>Possible collaboration, neighboring course, or production method.</div>
+    <div class="ghost"><b>G08 · PUPPETS / PHONE</b><br>Potential project seed. Preserve until intended use is clearer.</div>
+  </div>
+</section>
+
+<footer>
+  Reading order: P0 → P6. On mobile, the table becomes a vertical series of compact two-column element fields rather than a horizontally scrolling desktop table. Hairline rules and typography carry structure; color is reserved for orientation.
+</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-gold.svg" />
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Hello World Magic Circle — Playable Coding Game</title>
+<style>
+:root{
+  --bg:#efe8d6; --paper:#fffdf7; --ink:#111; --muted:#6f6a61;
+  --red:#d83a2f; --blue:#1d4fa3; --yellow:#f0ce37; --green:#2f7b48;
+  --orange:#d98628; --purple:#7451aa; --cyan:#3f929d;
+  --line:5px; --gap:10px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:4px solid #6fa3ef;outline-offset:2px}
+.app{height:100%;display:grid;grid-template-rows:58px minmax(0,1fr) 68px}
+.top,.bottom{
+  display:flex;align-items:center;gap:10px;background:var(--paper);
+  border-bottom:var(--line) solid var(--ink);padding:8px 12px
+}
+.bottom{border-bottom:0;border-top:var(--line) solid var(--ink);justify-content:space-between}
+.brand{font-size:12px;font-weight:950;letter-spacing:.13em;white-space:nowrap}
+.levelName{font:900 12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.btn{border:3px solid var(--ink);background:#fff;padding:8px 12px;font-size:12px;font-weight:950;letter-spacing:.04em}
+.btn:hover{background:#111;color:white}
+.btn.primary{background:#111;color:white}
+.btn.primary:disabled{opacity:.25;cursor:not-allowed}
+.progress{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.pip{width:18px;height:18px;border:2px solid var(--ink);background:#fff}
+.pip.done{background:var(--green)}
+.pip.now{background:var(--yellow)}
+.score{font:900 12px var(--mono)}
+.stage{min-height:0;position:relative;overflow:hidden}
+.level{position:absolute;inset:0;padding:18px;display:none;grid-template-rows:auto minmax(0,1fr);gap:14px;overflow:auto}
+.level.active{display:grid}
+.head{display:flex;align-items:end;gap:16px;justify-content:space-between}
+.kicker{font:900 12px var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+h1{margin:0;font-size:clamp(34px,5vw,68px);line-height:.94;letter-spacing:-.055em}
+.prompt{font:900 clamp(18px,2.2vw,28px)/1.1 var(--sans);max-width:760px}
+.play{display:grid;gap:14px;min-height:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card,.arena{
+  background:var(--paper);border:var(--line) solid var(--ink);padding:14px;min-width:0
+}
+.arena{min-height:300px;display:grid;align-content:center;justify-items:center;gap:14px}
+.tile,.choice,.slot{
+  border:4px solid var(--ink);background:#fff;padding:14px;min-height:64px;
+  display:grid;place-items:center;text-align:center;font-weight:950;font-size:clamp(15px,2vw,26px);
+  box-shadow:4px 4px 0 rgba(0,0,0,.12);
+  user-select:none
+}
+.tile.small{font-size:15px;min-height:50px;padding:9px}
+.tile:hover,.choice:hover{transform:translate(-1px,-1px);box-shadow:6px 6px 0 rgba(0,0,0,.18)}
+.tile.used{opacity:.25;pointer-events:none}
+.tile.correct,.choice.correct,.slot.correct{background:#eaf6ea;border-color:var(--green)}
+.tile.wrong,.choice.wrong,.slot.wrong{background:#fff0ec;border-color:var(--red);animation:shake .25s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.chain{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;min-height:84px}
+.chainBox{border:4px solid var(--ink);background:#fff;padding:12px;min-width:110px;text-align:center;font:900 15px var(--mono)}
+.arrow{font:950 28px var(--mono)}
+.feedback{
+  min-height:42px;border:3px solid var(--ink);background:#fff;padding:9px 12px;
+  font:900 13px var(--mono);display:flex;align-items:center;gap:8px
+}
+.feedback.win{background:#eaf6ea}.feedback.fail{background:#fff0ec}
+.code{
+  background:#111;color:#f8f3e8;border:var(--line) solid #111;padding:14px;
+  font:clamp(16px,2vw,26px)/1.45 var(--mono);white-space:pre;overflow:auto
+}
+.token{display:inline-block;padding:0 4px;border:2px solid transparent;border-radius:0}
+.token.target{background:var(--yellow);color:#111;border-color:#111}
+.token.hit{background:var(--green);color:white}
+.token.bad{background:var(--red);color:white}
+.rooms{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
+.room{min-height:250px;border:var(--line) solid var(--ink);background:#fff;display:grid;grid-template-rows:auto 1fr}
+.room h3{margin:0;padding:10px;border-bottom:3px solid var(--ink);background:#eee8db;font-size:18px;letter-spacing:.1em}
+.roomBody{padding:10px;display:grid;gap:8px;align-content:start}
+.palette{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.numberSlots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.slot{min-height:110px;background:#f6f2e8}
+.slot .label{font:900 12px var(--mono);color:var(--muted);margin-bottom:8px}
+.canvas{
+  width:min(58vh,560px);aspect-ratio:1/1;border:var(--line) solid var(--ink);background:#fff;position:relative;overflow:hidden
+}
+.grid{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(to right,rgba(0,0,0,.2) 1px,transparent 1px) 0 0/10% 100%,
+    linear-gradient(to bottom,rgba(0,0,0,.2) 1px,transparent 1px) 0 0/100% 10%
+}
+.gridCell{position:absolute;border:0;background:transparent}
+.gridCell:hover{background:rgba(240,206,55,.35)}
+.marker{position:absolute;width:20px;height:20px;background:#fff;border:5px solid var(--red);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+.bigNumber{font:950 clamp(58px,8vw,120px)/.9 var(--mono)}
+.strip{height:54px;width:min(680px,100%);border:4px solid var(--ink);background:linear-gradient(to right,#000,#fff);position:relative}
+.needle{position:absolute;top:-8px;width:6px;height:68px;background:var(--red);left:0}
+input[type=range]{width:min(650px,100%);accent-color:var(--red)}
+.maskGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mask{border:4px solid var(--ink);background:#fff;padding:12px;min-height:150px;font:16px var(--mono);white-space:pre-wrap}
+.mask.selected{background:#fff7ca}
+.mask.matched{background:#eaf6ea;border-color:var(--green)}
+.bossSlots{display:grid;gap:8px}
+.lineSlot{min-height:54px;border:4px dashed #777;background:#fff;padding:9px;font:16px var(--mono)}
+.lineSlot.filled{border-style:solid;border-color:var(--green);background:#eaf6ea}
+.confetti{pointer-events:none;position:absolute;inset:0;overflow:hidden}
+.confetti i{position:absolute;width:10px;height:20px;background:var(--yellow);animation:fall 900ms linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:0}}
+.theory{
+  position:absolute;right:12px;top:68px;bottom:78px;width:min(420px,calc(100% - 24px));
+  background:var(--paper);border:var(--line) solid var(--ink);z-index:20;display:none;grid-template-rows:auto 1fr;box-shadow:8px 8px 0 rgba(0,0,0,.18)
+}
+.theory.open{display:grid}
+.theoryHead{background:#111;color:#fff;padding:9px 10px;display:flex;align-items:center;gap:8px}
+.theoryHead strong{font-size:11px;letter-spacing:.1em}.theoryHead button{margin-left:auto;border:2px solid #fff;background:#111;color:#fff;padding:5px 8px;font:900 10px var(--sans)}
+.theoryBody{overflow:auto;padding:10px;display:grid;gap:8px}
+.tfield{border:2px solid var(--ink);background:#fff}
+.tfield b{display:block;border-bottom:2px solid var(--ink);background:#eee8db;padding:5px 7px;font:900 9px var(--mono)}
+.tfield div{padding:7px;font:12px/1.4 var(--mono)}
+@media(max-width:900px){
+  .level{padding:10px}
+  .grid2,.grid3,.rooms,.numberSlots,.maskGrid{grid-template-columns:1fr}
+  .top .levelName{display:none}
+  h1{font-size:38px}
+  .canvas{width:min(90vw,560px)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">HELLO WORLD MAGIC CIRCLE</div>
+    <div class="levelName" id="levelName"></div>
+    <div class="spacer"></div>
+    <div class="score" id="score">0 / 11</div>
+    <button class="btn" id="theoryBtn">CIRCLE</button>
+    <button class="btn" id="resetBtn">RESET</button>
+  </header>
+  <main class="stage" id="stage"></main>
+  <footer class="bottom">
+    <button class="btn" id="prevBtn">←</button>
+    <div class="progress" id="progress"></div>
+    <button class="btn primary" id="nextBtn" disabled>NEXT</button>
+  </footer>
+</div>
+<aside class="theory" id="theory">
+  <div class="theoryHead"><strong id="theoryTitle">MAGIC CIRCLE</strong><button id="closeTheory">CLOSE</button></div>
+  <div class="theoryBody" id="theoryBody"></div>
+</aside>
+<script>
+const levels=[
+{title:"Build the World",kicker:"LEVEL 1",prompt:"Put the runtime world in order.",theory:{ordinary:"Code is inert text.",elements:"<browser> <JavaScript> <p5> <sketch> <runtime>",morphism:"[order tiles] → <runnable world>",boundary:"Only these five tiles.",win:"Correct chain makes PLAY possible."}},
+{title:"Provider Hunt",kicker:"LEVEL 2",prompt:"Click the p5-supplied operations.",theory:{ordinary:"All code marks look equal.",elements:"<token> <provider> <p5 operation>",morphism:"[click] → [classify provider]",boundary:"Only p5-supplied operations count.",win:"createCanvas and background are found."}},
+{title:"Once or Every Frame",kicker:"LEVEL 3",prompt:"Put each operation in the right room.",theory:{ordinary:"setup and draw look like arbitrary containers.",elements:"<setup> <draw> <operation>",morphism:"[place tile] → <lifecycle order>",boundary:"createCanvas once; background every frame.",win:"Operations enter correct temporal rooms."}},
+{title:"Number Masks",kicker:"LEVEL 4",prompt:"Match each number to its job.",theory:{ordinary:"400, 400, 220 are naked numbers.",elements:"<number> <role> <axis> <range>",morphism:"[match] → <number with use>",boundary:"Each number has one role in this sketch.",win:"No number remains naked."}},
+{title:"Coordinate Hunt",kicker:"LEVEL 5",prompt:"Click the target grid cell.",theory:{ordinary:"Canvas is a blank square.",elements:"<origin> <x> <y> <grid> <target>",morphism:"[predict point] → [place marker]",boundary:"400×400; grid unit 40.",win:"Three coordinates land correctly."}},
+{title:"PLAY Stepper",kicker:"LEVEL 6",prompt:"Choose what happens next.",theory:{ordinary:"PLAY feels magical.",elements:"<runtime> <callback> <canvas> <frame>",morphism:"[predict] → [advance runtime]",boundary:"One step at a time.",win:"Runtime sequence completed."}},
+{title:"Gray Target",kicker:"LEVEL 7",prompt:"Make the canvas match background(220).",theory:{ordinary:"220 is only a numeral.",elements:"<gray scale> <range> <canvas color>",morphism:"[slide] → <gray value>",boundary:"0 black; 255 white.",win:"Value lands near 220."}},
+{title:"Many Masks",kicker:"LEVEL 8",prompt:"Pair equivalent ways to say the same program.",theory:{ordinary:"One syntax is mistaken for the program.",elements:"<p5> <Processing> <plain language> <runtime contract>",morphism:"[pair masks] → <shared invariant>",boundary:"Canvas once; background every frame.",win:"Equivalent masks matched."}},
+{title:"Catch the Imposter",kicker:"LEVEL 9",prompt:"Find the broken one, then the fragile one.",theory:{ordinary:"Visual success disguises bad structure.",elements:"<candidate> <imposter> <future change>",morphism:"[inspect] → [detect hidden break]",boundary:"Judge runtime and maintainability.",win:"Broken and fragile are both caught."}},
+{title:"Does Not",kicker:"LEVEL 10",prompt:"Pick what createCanvas does NOT do.",theory:{ordinary:"Operations are known only by success.",elements:"<does> <does not> <requires> <preserves>",morphism:"[select refusals] → <negative-space contract>",boundary:"Only true refusals count.",win:"Forbidden space is named."}},
+{title:"Final Boss",kicker:"LEVEL 11",prompt:"Assemble the six-line sketch.",theory:{ordinary:"Code is scattered fragments.",elements:"<line> <sequence> <setup> <draw>",morphism:"[assemble] → <runnable source>",boundary:"Exact line order required.",win:"Sketch runs and fills canvas gray."}}
+];
+let idx=0,wins=Array(levels.length).fill(false),levelState={};
+const stage=document.getElementById('stage');
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function setFeedback(msg,type=""){const f=document.querySelector('.level.active .feedback');if(f){f.textContent=msg;f.className='feedback '+type}}
+function win(msg="YOU WIN"){wins[idx]=true;setFeedback(msg,'win');document.getElementById('nextBtn').disabled=false;renderTop();confetti()}
+function wrong(msg="Try again"){setFeedback(msg,'fail')}
+function renderTop(){
+ document.getElementById('levelName').textContent=`${levels[idx].kicker} · ${levels[idx].title}`;
+ document.getElementById('score').textContent=`${wins.filter(Boolean).length} / ${levels.length}`;
+ document.getElementById('nextBtn').disabled=!wins[idx]&&idx<levels.length-1;
+ document.getElementById('nextBtn').textContent=idx===levels.length-1?'DONE':'NEXT';
+ document.getElementById('progress').innerHTML=levels.map((l,i)=>`<div class="pip ${wins[i]?'done':''} ${i===idx?'now':''}"></div>`).join('');
+}
+function base(){
+ const l=levels[idx];
+ return `<section class="level active"><div class="head"><div><div class="kicker">${l.kicker}</div><h1>${l.title}</h1></div><div class="prompt">${l.prompt}</div></div><div class="play" id="play"></div></section>`;
+}
+function render(){
+ stage.innerHTML=base();
+ renderTop();
+ ({0:L1,1:L2,2:L3,3:L4,4:L5,5:L6,6:L7,7:L8,8:L9,9:L10,10:L11}[idx])();
+}
+function L1(){
+ const play=document.getElementById('play'), order=['Browser','JavaScript','p5.js','Your Sketch','Runtime'], tiles=['p5.js','Runtime','Browser','Your Sketch','JavaScript'];
+ levelState={chain:[]};
+ play.innerHTML=`<div class="arena"><div class="chain" id="chain"></div><div class="palette">${tiles.map(t=>`<button class="tile" data-t="${t}">${t}</button>`).join('')}</div><div class="feedback">Choose the first thing that must exist.</div></div>`;
+ document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{
+   const want=order[levelState.chain.length];
+   if(b.dataset.t===want){levelState.chain.push(want);b.classList.add('used','correct');renderChain();if(levelState.chain.length===order.length)win('WORLD BUILT: source can now run.');else setFeedback('Good. Next layer?','win')}
+   else{b.classList.add('wrong');wrong(`${b.dataset.t} cannot come before ${want}.`);setTimeout(()=>b.classList.remove('wrong'),300)}
+ });
+ function renderChain(){document.getElementById('chain').innerHTML=levelState.chain.map((t,i)=>`<div class="chainBox">${t}</div>${i<levelState.chain.length-1?'<div class="arrow">→</div>':''}`).join('')}
+ renderChain();
+}
+function L2(){
+ const play=document.getElementById('play');
+ levelState={hits:new Set(),bad:false};
+ play.innerHTML=`<div class="grid2"><pre class="code"><span class="token" data-id="function">function</span> <span class="token" data-id="setup">setup</span>() {
+  <span class="token" data-id="createCanvas">createCanvas</span>(<span class="token" data-id="400a">400</span>, <span class="token" data-id="400b">400</span>);
+}
+
+<span class="token" data-id="function2">function</span> <span class="token" data-id="draw">draw</span>() {
+  <span class="token" data-id="background">background</span>(<span class="token" data-id="220">220</span>);
+}</pre><div class="arena"><div class="bigNumber">p5?</div><div class="feedback">Click only operations supplied by p5.</div></div></div>`;
+ const correct=['createCanvas','background'];
+ document.querySelectorAll('.token').forEach(t=>t.onclick=()=>{
+  if(correct.includes(t.dataset.id)){t.classList.add('hit');levelState.hits.add(t.dataset.id);setFeedback('Yes: p5 supplies that operation.','win');if(correct.every(x=>levelState.hits.has(x)))win('P5 OPERATIONS FOUND.')}
+  else{t.classList.add('bad');wrong('Not p5-supplied here. Try another token.');setTimeout(()=>t.classList.remove('bad'),350)}
+ });
+}
+function L3(){
+ const play=document.getElementById('play');
+ const tiles=['createCanvas(400,400)','background(220)','frameRate(60)'];
+ levelState={picked:null,rooms:{setup:[],draw:[]}};
+ play.innerHTML=`<div class="palette">${tiles.map(t=>`<button class="tile small" data-t="${t}">${t}</button>`).join('')}</div><div class="rooms"><div class="room" data-room="setup"><h3>SETUP · ONCE</h3><div class="roomBody"></div></div><div class="room" data-room="draw"><h3>DRAW · EVERY FRAME</h3><div class="roomBody"></div></div></div><div class="feedback">Click a tile, then a room.</div>`;
+ document.querySelectorAll('.palette .tile').forEach(b=>b.onclick=()=>{levelState.picked=b.dataset.t;setFeedback(`Selected ${levelState.picked}. Now choose a room.`)});
+ document.querySelectorAll('.room').forEach(r=>r.onclick=()=>{
+  if(!levelState.picked)return wrong('Pick an operation first.');
+  const room=r.dataset.room,t=levelState.picked;
+  const ok=(t.startsWith('createCanvas')&&room==='setup')||(t.startsWith('frameRate')&&room==='setup')||(t.startsWith('background')&&room==='draw');
+  if(!ok)return wrong(`${t} does not belong in ${room.toUpperCase()} for this game.`);
+  if(levelState.rooms[room].includes(t))return;
+  levelState.rooms[room].push(t);
+  [...document.querySelectorAll(`.palette .tile[data-t="${CSS.escape(t)}"]`)].forEach(x=>x.classList.add('used'));
+  levelState.picked=null;renderRooms();setFeedback('Placed in the right lifecycle.','win');
+  if(levelState.rooms.setup.length===2&&levelState.rooms.draw.length===1)win('LIFECYCLE SORTED.');
+ });
+ function renderRooms(){document.querySelector('[data-room="setup"] .roomBody').innerHTML=levelState.rooms.setup.map(t=>`<div class="tile small correct">${t}</div>`).join('');document.querySelector('[data-room="draw"] .roomBody').innerHTML=levelState.rooms.draw.map(t=>`<div class="tile small correct">${t}</div>`).join('')}
+}
+function L4(){
+ const play=document.getElementById('play');
+ const nums=['400 A','400 B','220'], slots=['WIDTH','HEIGHT','GRAY'];
+ const ans={'400 A':'WIDTH','400 B':'HEIGHT','220':'GRAY'}; levelState={sel:null,placed:{}};
+ play.innerHTML=`<div class="palette">${nums.map(n=>`<button class="tile" data-n="${n}">${n.split(' ')[0]}</button>`).join('')}</div><div class="numberSlots">${slots.map(s=>`<button class="slot" data-s="${s}"><div class="label">${s}</div><div>drop number</div></button>`).join('')}</div><div class="feedback">Same symbol, different use.</div>`;
+ document.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{levelState.sel=b.dataset.n;setFeedback(`${levelState.sel} selected.`)});
+ document.querySelectorAll('[data-s]').forEach(s=>s.onclick=()=>{
+  if(!levelState.sel)return wrong('Pick a number first.');
+  if(ans[levelState.sel]!==s.dataset.s)return wrong(`${levelState.sel} does not serve ${s.dataset.s}.`);
+  if(levelState.placed[s.dataset.s])return;
+  levelState.placed[s.dataset.s]=levelState.sel;
+  s.classList.add('correct');s.innerHTML=`<div class="label">${s.dataset.s}</div><div>${levelState.sel.split(' ')[0]}</div>`;
+  document.querySelector(`[data-n="${levelState.sel}"]`).classList.add('used');levelState.sel=null;
+  if(Object.keys(levelState.placed).length===3)win('NO NAKED NUMBERS.');
+  else setFeedback('Role matched.','win');
+ });
+}
+function L5(){
+ const targets=[[0,0],[200,200],[80,120]];levelState={round:0};
+ const play=document.getElementById('play');
+ play.innerHTML=`<div class="grid2"><div class="arena"><div class="canvas" id="gridCanvas"><div class="grid"></div><div class="marker" id="mark" style="display:none"></div></div></div><div class="arena"><div class="bigNumber" id="target">(0,0)</div><div class="feedback">Click the target grid location.</div></div></div>`;
+ const c=document.getElementById('gridCanvas');
+ for(let r=0;r<10;r++)for(let col=0;col<10;col++){let b=document.createElement('button');b.className='gridCell';b.style.left=(col*10)+'%';b.style.top=(r*10)+'%';b.style.width='10%';b.style.height='10%';b.dataset.x=col*40;b.dataset.y=r*40;c.appendChild(b);b.onclick=()=>check(Number(b.dataset.x),Number(b.dataset.y))}
+ updateTarget();
+ function updateTarget(){document.getElementById('target').textContent=`(${targets[levelState.round][0]},${targets[levelState.round][1]})`}
+ function check(x,y){const [tx,ty]=targets[levelState.round];if(x===tx&&y===ty){const m=document.getElementById('mark');m.style.display='block';m.style.left=(tx/400*100)+'%';m.style.top=(ty/400*100)+'%';levelState.round++;if(levelState.round===targets.length)win('COORDINATES LANDED.');else{setFeedback('Correct. Next point.','win');updateTarget()}}else wrong(`That is (${x},${y}). Try ${targets[levelState.round].join(',')}.`)}
+}
+function L6(){
+ const sequence=['p5 looks for setup','setup called once','canvas created','p5 looks for draw','draw called','frame displayed'];
+ let options=['canvas created','draw called','setup called once','p5 looks for setup','frame displayed','p5 looks for draw'];
+ levelState={i:0};
+ const play=document.getElementById('play');
+ play.innerHTML=`<div class="arena"><div class="chain" id="runChain"></div><div class="palette">${options.map(o=>`<button class="tile small" data-o="${o}">${o}</button>`).join('')}</div><div class="feedback">Choose the next runtime event.</div></div>`;
+ document.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{const want=sequence[levelState.i];if(b.dataset.o===want){levelState.i++;b.classList.add('used','correct');renderChain();if(levelState.i===sequence.length)win('PLAY IS NO LONGER MAGIC.');else setFeedback('Correct. What happens next?','win')}else wrong(`Not yet. First: ${want}.`)});
+ function renderChain(){document.getElementById('runChain').innerHTML=sequence.slice(0,levelState.i).map(x=>`<div class="chainBox">${x}</div>`).join('<div class="arrow">→</div>')}
+ renderChain();
+}
+function L7(){
+ const play=document.getElementById('play');levelState={v:0};
+ play.innerHTML=`<div class="arena"><div class="canvas" id="grayCanvas"></div><div class="strip"><i class="needle" id="needle"></i></div><input type="range" min="0" max="255" value="0" id="gray"><div class="bigNumber" id="grayNum">0</div><div class="feedback">Set grayscale to 220.</div></div>`;
+ const inp=document.getElementById('gray');inp.oninput=()=>{const v=Number(inp.value);document.getElementById('grayCanvas').style.background=`rgb(${v},${v},${v})`;document.getElementById('grayNum').textContent=v;document.getElementById('needle').style.left=(v/255*100)+'%';if(v>=218&&v<=222)win('BACKGROUND(220) MATCHED.');else setFeedback(v<220?'Too dark.':'Too light.')};
+}
+function L8(){
+ const pairs={'p5':'plain','processing':'runtime'};levelState={sel:null,matched:new Set()};
+ const cards={p5:'function draw() {\\n  background(220);\\n}',plain:'every frame:\\n  fill canvas gray',processing:'void draw() {\\n  background(220);\\n}',runtime:'runtime → draw → gray frame'};
+ const play=document.getElementById('play');
+ play.innerHTML=`<div class="maskGrid">${Object.entries(cards).map(([k,v])=>`<button class="mask" data-k="${k}">${v}</button>`).join('')}</div><div class="feedback">Pair masks with same behavior.</div>`;
+ document.querySelectorAll('.mask').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.k;if(levelState.matched.has(k))return;
+  if(!levelState.sel){levelState.sel=k;b.classList.add('selected');setFeedback('Now choose its matching mask.');return}
+  const a=levelState.sel, good=(pairs[a]===k||pairs[k]===a);
+  if(good){[a,k].forEach(x=>{levelState.matched.add(x);document.querySelector(`[data-k="${x}"]`).classList.add('matched')});setFeedback('Equivalent behavior.','win');if(levelState.matched.size===4)win('MASKS MATCHED.')}
+  else wrong('These masks do not say the same thing.');
+  document.querySelectorAll('.mask').forEach(x=>x.classList.remove('selected'));levelState.sel=null;
+ });
+}
+function L9(){
+ levelState={need:'broken'};
+ const play=document.getElementById('play');
+ const cards=[
+  ['fragile','A','function setup() {\\n  createCanvas(400,400);\\n  background(220);\\n}','Looks okay now; harder when animation arrives.'],
+  ['good','B','function setup() {\\n  createCanvas(400,400);\\n}\\nfunction draw() {\\n  background(220);\\n}','Preserves lifecycle.'],
+  ['broken','C','function setup() {\\n  createCanvas(400);\\n}\\nfunction draw() {\\n  background(220);\\n}','Missing height.']
+ ];
+ play.innerHTML=`<div class="grid3">${cards.map(c=>`<button class="choice" data-kind="${c[0]}"><b>${c[1]}</b><pre>${c[2]}</pre><span>${c[3]}</span></button>`).join('')}</div><div class="feedback">First catch the broken one.</div>`;
+ document.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{
+  if(b.dataset.kind===levelState.need){b.classList.add('correct');if(levelState.need==='broken'){levelState.need='fragile';setFeedback('Broken caught. Now catch the one that works visually but is fragile.','win')}else win('IMPOSTERS CAUGHT.')}
+  else{b.classList.add('wrong');wrong(levelState.need==='broken'?'Find the actually broken one first.':'Find the fragile one now.');setTimeout(()=>b.classList.remove('wrong'),350)}
+ });
+}
+function L10(){
+ const correct=new Set(['start draw loop','set background','create animation']);levelState={hits:new Set()};
+ const opts=['create canvas','start draw loop','set width','set height','set background','create animation'];
+ const play=document.getElementById('play');
+ play.innerHTML=`<div class="grid3">${opts.map(o=>`<button class="choice" data-o="${o}">${o}</button>`).join('')}</div><div class="feedback">Select only what createCanvas does NOT do.</div>`;
+ document.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{
+  const o=b.dataset.o;
+  if(correct.has(o)){b.classList.add('correct');levelState.hits.add(o);if(levelState.hits.size===correct.size)win('NEGATIVE SPACE NAMED.');else setFeedback('Yes. That is outside createCanvas.','win')}
+  else{b.classList.add('wrong');wrong(`${o} is something createCanvas does or sets here.`);setTimeout(()=>b.classList.remove('wrong'),350)}
+ });
+}
+function L11(){
+ const lines=['function setup() {','  createCanvas(400, 400);','}','function draw() {','  background(220);','}'];
+ const shuffled=[lines[3],lines[0],lines[4],lines[2],lines[1],lines[5]];
+ levelState={slots:Array(6).fill(null),sel:null};
+ const play=document.getElementById('play');
+ play.innerHTML=`<div class="grid2"><div class="card"><div class="palette">${shuffled.map((l,i)=>`<button class="tile small" data-i="${i}">${esc(l)}</button>`).join('')}</div></div><div class="card bossSlots">${lines.map((l,i)=>`<div class="lineSlot" data-slot="${i}">${i+1}</div>`).join('')}</div></div><div class="arena" id="finalPreview"><div class="feedback">Assemble the sketch in order.</div></div>`;
+ document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{levelState.sel={i:b.dataset.i,line:b.textContent};setFeedback('Line selected. Choose a numbered slot.')});
+ document.querySelectorAll('[data-slot]').forEach(s=>s.onclick=()=>{
+  if(!levelState.sel)return wrong('Choose a line first.');
+  const i=Number(s.dataset.slot);
+  if(levelState.sel.line!==lines[i])return wrong('That line does not belong there.');
+  levelState.slots[i]=levelState.sel.line;s.classList.add('filled');s.textContent=levelState.sel.line;document.querySelector(`[data-i="${levelState.sel.i}"]`).classList.add('used');levelState.sel=null;
+  if(levelState.slots.every(Boolean)){document.getElementById('finalPreview').innerHTML='<div class="canvas" style="background:rgb(220,220,220);display:grid;place-items:center;font:900 28px var(--mono)">400 × 400<br>gray 220</div><div class="feedback win">RUNNABLE SKETCH BUILT.</div>';win('FINAL BOSS COMPLETE.')}
+  else setFeedback('Correct line.','win');
+ });
+}
+function confetti(){const box=document.createElement('div');box.className='confetti';document.body.appendChild(box);for(let i=0;i<40;i++){const c=document.createElement('i');c.style.left=Math.random()*100+'%';c.style.top='-30px';c.style.background=[`var(--red)`,`var(--blue)`,`var(--yellow)`,`var(--green)`][i%4];c.style.animationDelay=(Math.random()*250)+'ms';box.appendChild(c)}setTimeout(()=>box.remove(),1400)}
+function renderTheory(){const t=levels[idx].theory;document.getElementById('theoryTitle').textContent=`MAGIC CIRCLE · ${levels[idx].title}`;document.getElementById('theoryBody').innerHTML=Object.entries({ordinary:t.ordinary,elements:t.elements,morphism:t.morphism,boundary:t.boundary,win:t.win}).map(([k,v])=>`<div class="tfield"><b>${k}</b><div>${v}</div></div>`).join('')}
+document.getElementById('theoryBtn').onclick=()=>{document.getElementById('theory').classList.toggle('open');renderTheory()};
+document.getElementById('closeTheory').onclick=()=>document.getElementById('theory').classList.remove('open');
+document.getElementById('resetBtn').onclick=()=>render();
+document.getElementById('prevBtn').onclick=()=>{idx=Math.max(0,idx-1);render()};
+document.getElementById('nextBtn').onclick=()=>{if(idx<levels.length-1){idx++;render()}};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')document.getElementById('prevBtn').click();if(e.key==='ArrowRight'&&!document.getElementById('nextBtn').disabled)document.getElementById('nextBtn').click()});
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Call Your Shots: p5.js Hello World</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#20242e; --ink:#f5f1e8; --muted:#b7b1a6;
+    --line:#343946; --good:#5ee0a0; --bad:#ff6b6b; --warn:#ffd166; --blue:#78b7ff; --violet:#c7a8ff;
+    --code:#0b0d12; --orange:#ffbd7a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+  button{font:inherit}
+  .app{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}
+  header{height:58px;display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);background:#0b0d12;position:sticky;top:0;z-index:5}
+  .brand{font-weight:900;letter-spacing:.02em;font-size:15px;white-space:nowrap}.brand b{color:var(--warn)}
+  .progress{height:8px;background:#2a2f3b;border-radius:999px;flex:1;overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--good),var(--blue));transition:.3s}
+  .counter{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;min-width:60px;text-align:right}
+  main{padding:18px;display:grid;place-items:center}
+  .slide{width:min(1240px,100%);display:none}.slide.active{display:block;animation:pop .18s ease-out}
+  @keyframes pop{from{opacity:.2;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .titleRow{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:14px}
+  h1{font-size:clamp(30px,5vw,64px);line-height:.94;margin:0;letter-spacing:-.05em}.kicker{color:var(--warn);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:.12em;margin-bottom:8px}
+  .sub{font-size:clamp(16px,2vw,24px);color:var(--muted);max-width:760px;margin:10px 0 0;line-height:1.25}.badge{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--muted);white-space:nowrap}
+  .grid{display:grid;grid-template-columns:1.03fr .86fr .92fr;gap:14px}.grid.two{grid-template-columns:1fr 1fr}.grid.single{grid-template-columns:1fr}.stack{display:grid;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);min-width:0}.card h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.14em;color:var(--blue)}
+  .card h3{font-size:22px;margin:0 0 8px;letter-spacing:-.02em}.card p{color:var(--muted);line-height:1.45;margin:8px 0}.big{font-size:clamp(28px,4vw,54px);font-weight:950;letter-spacing:-.04em;line-height:.95}.center{text-align:center}.tiny{font-size:12px;color:var(--muted)}
+  pre.code{margin:0;background:var(--code);border:1px solid #2a2e38;border-radius:14px;padding:12px;overflow:auto;font-size:15px;line-height:1.45;tab-size:2;white-space:pre}.line{display:block;padding:0 8px;border-radius:7px;min-height:1.4em}.line.hot{background:rgba(255,209,102,.15);outline:1px solid rgba(255,209,102,.35)}.ln{display:inline-block;color:#626a78;width:2.1em;text-align:right;margin-right:10px;user-select:none}.kw{color:#ff86b7}.fn{color:#8fd7ff}.num{color:#ffd166}.str{color:#a8f0a5}.com{color:#78808f}.var{color:#c7a8ff}.punc{color:#d8d8d8}
+  .copy{float:right;margin-top:-2px;background:#232936;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:5px 8px;font-size:12px;cursor:pointer}.copy:hover{border-color:var(--blue)}
+  .canvasWrap{display:grid;place-items:center;background:#0b0d12;border-radius:16px;border:1px solid #2a2e38;padding:12px}.sim{width:100%;max-width:420px;aspect-ratio:1/1;background:#fff;border-radius:8px;image-rendering:pixelated}.wideSim{max-width:520px;aspect-ratio:4/3}
+  .legend{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.pill{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:7px 10px;color:var(--muted);font-size:12px}.pill b{color:var(--ink)}
+  .micro{display:grid;gap:8px}.tok{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:9px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}.tok .t{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--warn);font-weight:900}.tok .r{color:var(--muted);font-size:13px}.tok.good{border-color:rgba(94,224,160,.5)}.tok.bad{border-color:rgba(255,107,107,.55)}
+  .quiz{border:1px solid #3b4250;background:#11141b;border-radius:18px;padding:14px;margin-top:14px}.quiz h2{color:var(--warn);margin-bottom:8px}.options{display:grid;gap:8px;margin-top:10px}.opt{border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:10px 12px;border-radius:12px;text-align:left;cursor:pointer}.opt:hover{border-color:var(--blue)}.opt.correct{border-color:var(--good);background:rgba(94,224,160,.14)}.opt.wrong{border-color:var(--bad);background:rgba(255,107,107,.12)}.feedback{min-height:40px;margin-top:10px;color:var(--muted);line-height:1.35}.feedback b{color:var(--ink)}
+  .controls{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid var(--line);background:#0b0d12;position:sticky;bottom:0;z-index:5}.navs{display:flex;gap:8px}.btn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer}.btn:hover{border-color:var(--blue)}.btn.primary{background:var(--warn);border-color:var(--warn);color:#15100a;font-weight:900}.btn.ghost{background:transparent}.btn.good{background:var(--good);border-color:var(--good);color:#06130d;font-weight:900}
+  .note{border-left:4px solid var(--warn);padding:10px 12px;background:rgba(255,209,102,.08);border-radius:10px;color:var(--ink);line-height:1.35}.note span{color:var(--muted)}
+  .table{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.cell{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:10px}.cell b{display:block;color:var(--warn);margin-bottom:4px}.bigChoice{display:grid;grid-template-columns:1fr 1fr;gap:12px}.choiceCard{border:2px solid var(--line);border-radius:18px;background:#10131a;padding:12px;cursor:pointer}.choiceCard:hover{border-color:var(--blue)}.choiceCard.correct{border-color:var(--good)}.choiceCard.wrong{border-color:var(--bad)}
+  .source{font-size:12px;color:#8c95a6}.source a{color:#9bc9ff}.warnBox{border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.09);border-radius:14px;padding:12px}.goodBox{border:1px solid rgba(94,224,160,.45);background:rgba(94,224,160,.09);border-radius:14px;padding:12px}
+  @media (max-width: 980px){.grid,.grid.two{grid-template-columns:1fr}.titleRow{display:block}.badge{display:inline-block;margin-top:10px}.controls{position:static}.bigChoice{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">CALL YOUR SHOTS <b>p5.js</b></div>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="counter" id="counter"></div>
+</header>
+<main id="deck"></main>
+<footer class="controls">
+  <div class="tiny">Keys: ← → · Space reveals/runs · Every sketch shown is a whole <code>sketch.js</code>.</div>
+  <div class="navs">
+    <button class="btn ghost" id="prev">Back</button>
+    <button class="btn primary" id="reveal">Reveal / Run</button>
+    <button class="btn" id="next">Next</button>
+  </div>
+</footer>
+</div>
+<script>
+const sketches = {
+ starter:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n}`,
+ circle:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, 80);\n}`,
+ grid:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n\n  // grid every 100 pixels\n  line(100, 0, 100, 400);\n  line(200, 0, 200, 400);\n  line(300, 0, 300, 400);\n\n  line(0, 100, 400, 100);\n  line(0, 200, 400, 200);\n  line(0, 300, 400, 300);\n\n  circle(300, 100, 50);\n}`,
+ helloText:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  textSize(32);\n  fill(0);\n  text("Hello, world!", 60, 200);\n}`,
+ style:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 0, 0);\n  circle(140, 200, 90);\n\n  circle(260, 200, 90);\n}`,
+ order:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 0, 0);\n  circle(170, 200, 150);\n\n  fill(0, 80, 255);\n  circle(230, 200, 150);\n}`,
+ imposterA:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, 80);\n}`,
+ imposterB:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(width / 2, height / 2, 80);\n}`,
+ rectBad:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  rect(200, 200, 100, 60);\n}`,
+ rectGood:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  rectMode(CENTER);\n  rect(200, 200, 100, 60);\n}`,
+ trace:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n  console.log(frameCount);\n}`,
+ brokenName:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  backgroun(220);\n}`
+};
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function hi(code, hot=-1){
+  const words = code.split('\n');
+  return `<pre class="code">${words.map((l,i)=>`<span class="line ${i===hot?'hot':''}"><span class="ln">${String(i+1).padStart(2,'0')}</span>${colorLine(l)}</span>`).join('')}</pre>`;
+}
+function colorLine(l){
+  let s=esc(l);
+  s=s.replace(/(\/\/.*)$/g,'<span class="com">$1</span>');
+  s=s.replace(/("[^"]*")/g,'<span class="str">$1</span>');
+  s=s.replace(/\b(function|let|for|if|else|return)\b/g,'<span class="kw">$1</span>');
+  s=s.replace(/\b(setup|draw|createCanvas|background|circle|line|textSize|fill|text|rect|rectMode|console|log|frameCount|width|height|CENTER)\b/g,'<span class="fn">$1</span>');
+  s=s.replace(/\b(\d+)\b/g,'<span class="num">$1</span>');
+  return s;
+}
+function copyBtn(id, code){return `<button class="copy" onclick="navigator.clipboard.writeText(sketches['${id}']);this.textContent='copied'">copy sketch</button>`;}
+function tok(t,r,cls=''){return `<div class="tok ${cls}"><div class="t">${t}</div><div class="r">${r}</div></div>`}
+function quiz(q, opts, right, explain){return `<div class="quiz"><h2>CALL YOUR SHOT</h2><p><b>${q}</b></p><div class="options">${opts.map((o,i)=>`<button class="opt" data-right="${i===right}" onclick="choose(this)">${o}</button>`).join('')}</div><div class="feedback" data-explain="${esc(explain)}"></div></div>`}
+function choose(btn){const box=btn.closest('.quiz');box.querySelectorAll('.opt').forEach(b=>{b.disabled=true;b.classList.add(b.dataset.right==='true'?'correct':'wrong')});const ok=btn.dataset.right==='true';box.querySelector('.feedback').innerHTML=(ok?'<b>Correct.</b> ':'<b>Good miss.</b> ')+box.querySelector('.feedback').dataset.explain;}
+function choice(btn, good){const wrap=btn.closest('.bigChoice');wrap.querySelectorAll('.choiceCard').forEach(c=>{c.classList.add(c.dataset.good==='true'?'correct':'wrong')});const fb=wrap.parentElement.querySelector('.feedback');fb.innerHTML = good ? '<b>Correct.</b> Same image at 400×400, but the hard-coded version fails the resize test.' : '<b>Useful miss.</b> The sketch using width / 2 and height / 2 survives when the canvas changes.';}
+const slides = [
+{type:'intro', kicker:'New rule', title:'Do not learn p5.js by staring at code.', sub:'Call the shot first. Then run it. If the result disagrees with your call, that disagreement is the lesson.', badge:'zero assumptions · whole sketches · imposter rounds'},
+{scene:'empty',kicker:'Slide 1',title:'Before the gray square, there is a machine.',sub:'The code is text until Play gives it a runtime.',code:'starter',hot:-1,micro:[tok('Play','starts or restarts the sketch'),tok('browser','runs JavaScript'),tok('p5.js','supplies createCanvas(), setup(), draw() rules'),tok('preview','shows the canvas after p5 creates it')],quiz:quiz('What must exist before background(220) can paint gray?', ['The canvas','The console','A variable called x','A circle'],0,'background() needs a canvas surface to paint. createCanvas() creates that surface first.'),note:'Small console fortune: before the sketch runs, the canvas has main-character energy but no body.'},
+{scene:'flow',kicker:'Line 1',title:'function setup() declares a start block.',sub:'This line does not call setup. It gives p5 a named block to call once.',code:'starter',hot:0,micro:[tok('function','JavaScript keyword: a named block is being declared'),tok('setup','special p5 lifecycle name'),tok('()','no inputs are listed here'),tok('{','the block begins')],quiz:quiz('Does line 1 run setup immediately?', ['Yes — the word setup means run now','No — it declares a block p5 will call later','Only if the canvas is gray','Only inside draw()'],1,'A declaration names a block. p5 calls setup() when the sketch starts.'),note:'setup() is not a button. It is more like a reserved parking spot p5 knows to use.'},
+{scene:'canvas400',kicker:'Line 2',title:'createCanvas(400, 400) gives the world size.',sub:'Every number now gets a job. The first 400 is width. The second 400 is height.',code:'starter',hot:1,micro:[tok('createCanvas','p5 operation: create the drawing surface'),tok('first 400','width: 400 pixels across','good'),tok('comma','separates the first argument from the second'),tok('second 400','height: 400 pixels down','good'),tok(';','this statement ends')],quiz:quiz('Which number controls how far the canvas goes across?', ['first 400','second 400','220','frameCount'],0,'Argument position gives the number its role: createCanvas(width, height).'),note:'The two 400s are twins with different jobs. One goes sideways. One goes down.'},
+{scene:'grid',kicker:'Map before marks',title:'The canvas has an invisible grid.',sub:'x goes right. y goes down. That is not school graph paper; that is screen space.',code:'grid',hot:18,micro:[tok('(0,0)','top-left corner'),tok('x','horizontal position: more x means more right'),tok('y','vertical position: more y means lower'),tok('circle(300, 100, 50)','center at x=300, y=100, diameter=50')],quiz:quiz('Where does circle(300, 100, 50) land?', ['upper-left','upper-right','lower-left','lower-right'],1,'x=300 is far right on a 400-wide canvas; y=100 is near the top.'),note:'In p5, y goes down. The graph paper fell off the wall and landed on a screen.'},
+{scene:'trace',kicker:'Line 5',title:'draw() repeats even when the image does not change.',sub:'The canvas can look still while the program keeps running.',code:'trace',hot:4,micro:[tok('draw','special p5 lifecycle name'),tok('background(220)','paint same gray every frame'),tok('console.log','send evidence to the console'),tok('frameCount','p5 value: how many draw calls have happened')],quiz:quiz('After five seconds, what should the console show?', ['one number only','many increasing numbers','nothing because gray is still','an error'],1,'draw() repeats. The canvas keeps getting the same gray paint; the console shows the repeated calls.'),note:'The canvas says “nothing to see here.” The console says “I have receipts.”'},
+{scene:'gray',kicker:'Line 6',title:'background(220) is not “the background.”',sub:'It is an operation: paint the canvas with a grayscale value.',code:'starter',hot:5,micro:[tok('background','p5 drawing operation'),tok('220','grayscale brightness'),tok('0','black'),tok('255','white'),tok('inside draw()','this paint happens again and again')],quiz:quiz('What happens if 220 becomes 0?', ['the canvas becomes black','the canvas becomes white','the canvas gets wider','setup runs twice'],0,'For default grayscale, lower values are darker; 0 is black.'),note:'220 is not a vibe. It is a number with a color job.'},
+{scene:'circle',kicker:'First mark',title:'circle(200, 200, 80) places a mark.',sub:'The first two numbers place the center. The third number sets the diameter.',code:'circle',hot:5,micro:[tok('first 200','x position: center is 200 pixels from left'),tok('second 200','y position: center is 200 pixels from top'),tok('80','diameter: circle is 80 pixels wide'),tok('circle anchor','center by default')],quiz:quiz('Which value makes the circle bigger without moving its center?', ['first 200','second 200','80','400'],2,'In circle(x, y, diameter), the third argument controls size.'),note:'A circle is polite: when you give it a place, it uses the center.'},
+{scene:'text',kicker:'Literal Hello World',title:'text("Hello, world!", 60, 200) writes on the canvas.',sub:'Now “Hello World” is a visible mark, not just a tradition.',code:'helloText',hot:7,micro:[tok('"Hello, world!"','string value: the characters to draw'),tok('60','x position for the text'),tok('200','y position for the text'),tok('textSize(32)','sets the size of later text')],quiz:quiz('Which part is the actual message?', ['text','"Hello, world!"','60','200'],1,'The quoted string is the text value drawn on the canvas.'),note:'The quotation marks are the tiny fence that keeps the words together.'},
+{scene:'style',kicker:'Style state',title:'fill(255, 0, 0) keeps working until changed.',sub:'Style is state. It affects later shapes, not just the next line.',code:'style',hot:6,micro:[tok('255, 0, 0','RGB red'),tok('fill(...)','sets current fill color'),tok('first circle','uses current fill'),tok('second circle','also uses current fill because fill was not changed')],quiz:quiz('Which circles become red?', ['only the first circle','only the second circle','both circles','neither circle'],2,'fill() changes drawing state. That state persists until another fill() changes it.'),note:'fill() is like dipping the brush. It stays dipped until you rinse it.'},
+{scene:'order',kicker:'Order',title:'The last drawn shape sits on top.',sub:'The canvas is not a stack of editable objects. Later pixels cover earlier pixels.',code:'order',hot:9,micro:[tok('red circle first','drawn earlier'),tok('blue circle second','drawn later'),tok('overlap','blue covers red in the overlap'),tok('reverse the lines','the visible top color changes')],quiz:quiz('Which color appears on top in the overlap?', ['red','blue','gray','neither'],1,'The blue circle is drawn later, so its pixels cover the earlier red pixels.'),note:'The canvas has no “send to back” button. It has time travel with better syntax.'},
+{type:'imposter1'},
+{type:'imposter2'},
+{type:'finish'}
+];
+let idx=0, revealed=false;
+const deck=document.getElementById('deck');
+function renderSlide(){
+  revealed=false;
+  const s=slides[idx];
+  document.getElementById('bar').style.width=`${(idx+1)/slides.length*100}%`;
+  document.getElementById('counter').textContent=`${idx+1}/${slides.length}`;
+  let html='';
+  if(s.type==='intro') html=intro(s);
+  else if(s.type==='imposter1') html=imposter1();
+  else if(s.type==='imposter2') html=imposter2();
+  else if(s.type==='finish') html=finish();
+  else html=normal(s);
+  deck.innerHTML=html;
+  setTimeout(()=>drawScene(s.scene||s.type),50);
+}
+function header(s){return `<div class="titleRow"><div><div class="kicker">${s.kicker}</div><h1>${s.title}</h1><p class="sub">${s.sub}</p></div><div class="badge">${s.badge||'predict → run → inspect → change'}</div></div>`}
+function intro(s){return `<section class="slide active">${header(s)}<div class="grid two"><div class="card"><h2>The game</h2><div class="big">First guess. Then run. Then fix the miss.</div><p>This is not a lecture deck. It is a prediction machine for the first p5.js program.</p><div class="note">If the answer feels too easy, do the imposter rounds. They look correct until the code has to survive a change.</div></div><div class="card"><h2>The loop</h2><div class="table"><div class="cell"><b>1. Whole sketch</b>Read all the code.</div><div class="cell"><b>2. Call it</b>Pick what happens next.</div><div class="cell"><b>3. Run it</b>Reveal canvas + trace.</div><div class="cell"><b>4. Microscope</b>Give every number a job.</div><div class="cell"><b>5. Break it</b>Find the imposter.</div><div class="cell"><b>6. Change it</b>Make it survive.</div></div></div></div></section>`}
+function normal(s){return `<section class="slide active">${header(s)}<div class="grid"><div class="card"><h2>Whole sketch.js</h2>${copyBtn(s.code,sketches[s.code])}${hi(sketches[s.code],s.hot)}</div><div class="stack"><div class="card"><h2>Line microscope</h2><div class="micro">${s.micro.join('')}</div></div><div class="card"><h2>Board scribble</h2><div class="note">${s.note}</div></div></div><div class="stack"><div class="card"><h2>Expected result</h2><div class="canvasWrap"><canvas class="sim" id="sim" width="400" height="400"></canvas></div><div class="legend" id="legend"></div></div>${s.quiz}</div></div></section>`}
+function imposter1(){return `<section class="slide active"><div class="titleRow"><div><div class="kicker">Imposter Round 1</div><h1>Which sketch is secretly worse?</h1><p class="sub">Both look centered at 400 × 400. One survives a resize. One is a maintenance trap.</p></div><div class="badge">same image · different future</div></div><div class="grid two"><div class="choiceCard" data-good="false" onclick="choice(this,false)"><h3>A — hard-coded center</h3>${hi(sketches.imposterA,5)}<div class="canvasWrap"><canvas class="sim" id="imA" width="400" height="400"></canvas></div></div><div class="choiceCard" data-good="true" onclick="choice(this,true)"><h3>B — relation to canvas</h3>${hi(sketches.imposterB,5)}<div class="canvasWrap"><canvas class="sim" id="imB" width="400" height="400"></canvas></div></div></div><div class="quiz"><h2>CALL YOUR SHOT</h2><p><b>Which one is the imposter after the canvas changes to 600 × 400?</b></p><div class="bigChoice"><button class="choiceCard" data-good="true" onclick="choice(this,true)"><b>A breaks.</b><p>200,200 only meant center when the canvas was 400×400.</p></button><button class="choiceCard" data-good="false" onclick="choice(this,false)"><b>B breaks.</b><p>width / 2 and height / 2 update with the canvas.</p></button></div><div class="feedback"></div></div><div class="note">A hard-coded number is not evil. It just starts charging rent when the world changes.</div></section>`}
+function imposter2(){return `<section class="slide active"><div class="titleRow"><div><div class="kicker">Imposter Round 2</div><h1>Which rectangle is actually centered?</h1><p class="sub">Both use 200,200. But one treats that point as a corner. The other treats it as the center.</p></div><div class="badge">anchor trap</div></div><div class="grid two"><div class="choiceCard" data-good="false" onclick="choiceRect(this,false)"><h3>A — looks like “center,” but is corner</h3>${hi(sketches.rectBad,5)}<div class="canvasWrap"><canvas class="sim" id="rectA" width="400" height="400"></canvas></div></div><div class="choiceCard" data-good="true" onclick="choiceRect(this,true)"><h3>B — changes rectangle mode</h3>${hi(sketches.rectGood,6)}<div class="canvasWrap"><canvas class="sim" id="rectB" width="400" height="400"></canvas></div></div></div><div class="quiz"><h2>CALL YOUR SHOT</h2><p><b>Which sketch places the rectangle's center at (200,200)?</b></p><div class="bigChoice"><button class="choiceCard" data-good="false" onclick="choiceRect(this,false)"><b>A</b><p>rect(200,200,100,60)</p></button><button class="choiceCard" data-good="true" onclick="choiceRect(this,true)"><b>B</b><p>rectMode(CENTER); rect(200,200,100,60)</p></button></div><div class="feedback"></div></div><div class="note">Rectangles are corner people by default. Circles are center people. This is why family road trips are hard.</div></section>`}
+function choiceRect(btn, good){const sec=btn.closest('section');sec.querySelectorAll('.choiceCard').forEach(c=>{if(c.dataset.good){c.classList.add(c.dataset.good==='true'?'correct':'wrong')}});sec.querySelector('.feedback').innerHTML = good ? '<b>Correct.</b> rectMode(CENTER) changes how rect() uses x and y.' : '<b>Useful miss.</b> Default rect() uses x,y as the top-left corner, not the center.';}
+function finish(){return `<section class="slide active"><div class="titleRow"><div><div class="kicker">Reference card</div><h1>Every number gets a job.</h1><p class="sub">The first p5.js lesson is not “draw a gray box.” It is learning how values become places, sizes, colors, and rules.</p></div></div><div class="grid two"><div class="card"><h2>Use this checklist</h2><div class="micro">${tok('What is the value?','400, 220, 200, 80, "Hello"')}${tok('What role does it play?','width, height, x, y, diameter, color, text')}${tok('What unit/range?','pixels, grayscale 0–255, RGB 0–255')}${tok('Who supplied the name?','JavaScript, p5.js, or you')}${tok('What breaks if it changes?','resize, color, position, maintenance')}</div></div><div class="card"><h2>Imposter test</h2><div class="big">Does it still work when the world changes?</div><p>If yes, the code probably encodes a relation. If no, a number might be pretending to be a rule.</p><div class="goodBox"><b>Prefer:</b><br><code>circle(width / 2, height / 2, 80);</code></div><br><div class="warnBox"><b>Suspicious after resize:</b><br><code>circle(200, 200, 80);</code></div><p class="source">Official p5 docs: setup runs once, draw repeats, createCanvas creates the canvas, and coordinates use x/y positions on the canvas.</p></div></div></section>`}
+function drawScene(scene){
+  if(scene==='imposter1'){drawImposter('imA',false,400,400);drawImposter('imB',true,400,400);return}
+  if(scene==='imposter2'){drawRect('rectA',false);drawRect('rectB',true);return}
+  const c=document.getElementById('sim'); if(!c)return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,400,400); ctx.fillStyle='#f5f5f5'; ctx.fillRect(0,0,400,400); ctx.lineWidth=1; ctx.font='14px monospace'; ctx.textBaseline='alphabetic';
+  let legend='';
+  if(scene==='empty'){ctx.fillStyle='#11141b';ctx.fillRect(0,0,400,400);ctx.fillStyle='#b7b1a6';ctx.textAlign='center';ctx.fillText('No canvas yet',200,190);ctx.fillText('Press Play to create one',200,215);legend=leg(['editor: code text','preview: empty','console: quiet','runtime: waiting'])}
+  if(scene==='flow'){ctx.fillStyle='#11141b';ctx.fillRect(0,0,400,400);['p5 starts','calls setup()','createCanvas()','calls draw()'].forEach((t,i)=>{ctx.fillStyle=i===1?'#ffd166':'#20242e';round(ctx,70,45+i*82,260,48,12);ctx.fillStyle=i===1?'#15100a':'#f5f1e8';ctx.fillText(t,110,76+i*82);if(i<3){ctx.strokeStyle='#78b7ff';ctx.beginPath();ctx.moveTo(200,95+i*82);ctx.lineTo(200,124+i*82);ctx.stroke();}});legend=leg(['declaration: text','call: runtime action','setup(): once','draw(): later'])}
+  if(scene==='canvas400'||scene==='grid'||scene==='circle'||scene==='text'||scene==='style'||scene==='order'||scene==='trace'||scene==='gray'){drawGrid(ctx, scene==='grid'||scene==='circle'); legend=leg(['width = 400','height = 400','(0,0) top-left','+y goes down'])}
+  if(scene==='gray'||scene==='trace'||scene==='canvas400'){ctx.fillStyle='rgb(220,220,220)';ctx.fillRect(0,0,400,400);ctx.fillStyle='#111';ctx.textAlign='center';ctx.font='18px monospace';ctx.fillText('background(220)',200,210);legend=leg(['220 = light gray','same pixels each frame','console can still change','canvas ≠ trace'])}
+  if(scene==='circle'){drawGrid(ctx,true);ctx.fillStyle='rgb(255,80,80)';ctx.strokeStyle='#111';ctx.lineWidth=3;ctx.beginPath();ctx.arc(200,200,40,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#111';ctx.font='15px monospace';ctx.fillText('(200,200)',245,195);ctx.fillText('d=80',210,255);legend=leg(['x=200 center across','y=200 center down','d=80 diameter','anchor=center'])}
+  if(scene==='grid'){drawGrid(ctx,true);ctx.fillStyle='rgb(255,80,80)';ctx.beginPath();ctx.arc(300,100,25,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#111';ctx.stroke();ctx.fillStyle='#111';ctx.fillText('(300,100)',255,90);legend=leg(['300 = far right','100 = near top','50 = diameter','call the quadrant'])}
+  if(scene==='text'){ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,400,400);ctx.fillStyle='#111';ctx.font='32px monospace';ctx.fillText('Hello, world!',60,200);ctx.strokeStyle='#ff6b6b';ctx.strokeRect(60,170,270,40);ctx.font='13px monospace';ctx.fillText('x=60, y=200',60,230);legend=leg(['string = message','60 = x position','200 = y baseline-ish','textSize=32'])}
+  if(scene==='style'){ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,400,400);ctx.fillStyle='rgb(255,0,0)';ctx.strokeStyle='#111';ctx.lineWidth=3;ctx.beginPath();ctx.arc(140,200,45,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(260,200,45,0,Math.PI*2);ctx.fill();ctx.stroke();legend=leg(['fill set once','both circles use it','style persists','until changed'])}
+  if(scene==='order'){ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,400,400);ctx.fillStyle='rgb(255,0,0)';ctx.beginPath();ctx.arc(170,200,75,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgb(0,80,255)';ctx.beginPath();ctx.arc(230,200,75,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111';ctx.font='13px monospace';ctx.fillText('blue drawn later',230,105);legend=leg(['red first','blue second','later covers earlier','order matters'])}
+  const l=document.getElementById('legend'); if(l)l.innerHTML=legend;
+}
+function drawGrid(ctx,labels=false){ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,400,400);ctx.strokeStyle='#d7d7d7';ctx.lineWidth=1;for(let v=0;v<=400;v+=100){ctx.beginPath();ctx.moveTo(v,0);ctx.lineTo(v,400);ctx.stroke();ctx.beginPath();ctx.moveTo(0,v);ctx.lineTo(400,v);ctx.stroke();}ctx.strokeStyle='#777';ctx.strokeRect(0,0,400,400);if(labels){ctx.fillStyle='#333';ctx.font='12px monospace';for(let v=0;v<=400;v+=100){ctx.fillText(v, v+3, 15); if(v>0)ctx.fillText(v, 4, v-4);}ctx.fillStyle='#78b7ff';ctx.fillText('+x →',320,25);ctx.save();ctx.translate(18,330);ctx.rotate(Math.PI/2);ctx.fillText('+y →',0,0);ctx.restore();}}
+function drawImposter(id,relation,w,h){const c=document.getElementById(id); if(!c)return; const ctx=c.getContext('2d');ctx.clearRect(0,0,400,400);ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,400,400);drawGrid(ctx,true);const x=relation?200:200,y=relation?200:200;ctx.fillStyle='rgb(255,80,80)';ctx.beginPath();ctx.arc(x,y,40,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#111';ctx.stroke();ctx.fillStyle='#111';ctx.font='12px monospace';ctx.fillText('(200,200)',238,196)}
+function drawRect(id,center){const c=document.getElementById(id);if(!c)return;const ctx=c.getContext('2d');ctx.clearRect(0,0,400,400);drawGrid(ctx,true);ctx.fillStyle='rgba(255,80,80,.85)';ctx.strokeStyle='#111';ctx.lineWidth=3;if(center){ctx.fillRect(150,170,100,60);ctx.strokeRect(150,170,100,60);}else{ctx.fillRect(200,200,100,60);ctx.strokeRect(200,200,100,60);}ctx.fillStyle='#111';ctx.beginPath();ctx.arc(200,200,5,0,Math.PI*2);ctx.fill();ctx.font='12px monospace';ctx.fillText('(200,200)',208,194)}
+function round(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function leg(arr){return arr.map(s=>{const [a,b]=s.split(':');return `<div class="pill"><b>${a}</b>${b?': '+b:''}</div>`}).join('')}
+document.getElementById('next').onclick=()=>{idx=Math.min(slides.length-1,idx+1);renderSlide()};
+document.getElementById('prev').onclick=()=>{idx=Math.max(0,idx-1);renderSlide()};
+document.getElementById('reveal').onclick=()=>{const q=deck.querySelector('.quiz .opt'); if(q&&!deck.querySelector('.quiz .opt[disabled]')){deck.querySelector('.feedback').innerHTML='<b>Pick an answer first.</b> Call the shot before the reveal.';return;} drawScene(slides[idx].scene||slides[idx].type)};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')document.getElementById('next').click(); if(e.key==='ArrowLeft')document.getElementById('prev').click(); if(e.code==='Space'){e.preventDefault();document.getElementById('reveal').click();}});
+renderSlide();
+</script>
+</body>
+</html>

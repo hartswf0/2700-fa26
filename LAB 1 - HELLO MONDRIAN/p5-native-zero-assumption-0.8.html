@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-gold.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>p5.js Web Editor · Zero-Assumption Hello World</title>
+<style>
+:root{
+  --p5:#ed225d;
+  --bg:#f7f7f7;
+  --panel:#fff;
+  --editor:#ededed;
+  --line:#d3d3d3;
+  --line2:#e2e2e2;
+  --ink:#333;
+  --muted:#777;
+  --blue:#1870b8;
+  --error:#d32f4f;
+  --mono:Monaco,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:Arial,Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:12px}
+button,input,textarea{font:inherit}
+button{color:inherit}
+#app{height:100vh;display:grid;grid-template-rows:32px 48px minmax(0,1fr);background:#fff}
+/* p5 Web Editor top menu */
+#menuBar{display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:#fafafa;min-width:0}
+#p5mark{width:40px;background:var(--p5);color:#fff;display:grid;place-items:center;font:bold 18px/1 Arial,sans-serif;letter-spacing:-1.5px;user-select:none}
+.menuGroup{display:flex;align-items:center;gap:0;padding-left:4px}
+.menuBtn{height:31px;border:0;background:transparent;padding:0 9px;color:#555;font-size:11px;cursor:default}
+.menuBtn::after{content:"";display:inline-block;margin-left:4px;vertical-align:2px;border:3px solid transparent;border-top-color:#777}
+.account{margin-left:auto;display:flex;align-items:center;gap:9px;padding-right:12px;color:#777;font-size:11px}.account b{font-weight:400;color:#555}
+/* native run row */
+#toolBar{display:flex;align-items:center;gap:10px;padding:6px 13px;border-bottom:1px solid var(--line);background:#fff;min-width:0}
+.runCircle{width:34px;height:34px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;position:relative;flex:0 0 auto}
+#playBtn{background:#dedede}#playBtn::before{content:"";margin-left:3px;border-left:11px solid #666;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#stopBtn{background:var(--p5)}#stopBtn::before{content:"";width:11px;height:11px;background:white;border-radius:1px}
+#restartBtn{display:none}
+.autorefresh{display:flex;align-items:center;gap:5px;color:#666;font-size:11px;white-space:nowrap}.autorefresh input{accent-color:var(--p5)}
+#projectTitle{color:#666;font-size:11px;margin-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}#projectTitle .pencil{font-size:10px;color:#999}
+#slideTruth{color:#aaa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.toolSpacer{flex:1}
+.version{background:#eee;border-radius:13px;padding:5px 9px;color:#666;font-size:10px;white-space:nowrap}
+.gear{width:34px;height:34px;border-radius:50%;border:0;background:#ddd;color:#555;font-size:19px;line-height:34px;text-align:center;padding:0;cursor:pointer}
+/* main editor like screenshot */
+#workspace{min-height:0;display:grid;grid-template-columns:50% 50%;background:#fff}
+#left{min-width:0;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) 132px;border-right:1px solid var(--line)}
+#sourcePane{min-height:0;display:grid;grid-template-rows:23px minmax(0,1fr);background:#fff}
+#worldPane{min-width:0;min-height:0;display:grid;grid-template-rows:23px minmax(0,1fr);background:#fff}
+.paneHead{height:23px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff;color:#555;font-size:10px;padding:0 8px}
+.fileChevron{width:24px;margin-left:-8px;text-align:center;font-size:16px;color:#777}.fileName{padding-left:4px}
+#sourceWrap{min-height:0;position:relative;display:grid;grid-template-columns:48px minmax(0,1fr);background:var(--editor);overflow:hidden}
+#editorLayer{position:relative;min-width:0;min-height:0;overflow:hidden}
+#highlight,#editor{position:absolute;inset:0;margin:0;width:100%;height:100%;padding:14px 9px;font:13px/1.58 var(--mono);tab-size:2;white-space:pre;overflow:auto}
+#gutter{margin:0;padding:14px 7px 14px 0;background:#fafafa;border-right:1px solid #ddd;color:#a0a0a0;text-align:right;white-space:pre;font:12px/1.58 var(--mono);user-select:none;overflow:hidden}
+#highlight{z-index:1;background:var(--editor);color:#444;pointer-events:none;overflow:hidden}#highlight .p5tok{color:#0875be;font-weight:600}#highlight .jstok{color:#7b4b2a}#highlight .numtok{color:#444}#highlight .strtok{color:#397b55}#highlight .nametok{color:#333}#highlight .puncttok{color:#555}
+#editor{z-index:2;border:0;outline:0;resize:none;background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:#333;overflow:auto}#editor::placeholder{color:transparent}
+#editor::selection{background:rgba(132,177,211,.38);-webkit-text-fill-color:transparent}
+#nativeRuntimeStatus{margin-left:auto;color:#999;font-size:9px}
+/* hide old teaching chrome; its state still drives the native shell */
+#tokenStrip,#slideNav,#mission,#inspect,#ruleBox,#promptBox,#freePlay,#universe{display:none!important}
+#runtimeMeta{display:none}
+#world{min-height:0;position:relative;background:#fff;overflow:hidden}
+#preview{border:0;width:100%;height:100%;display:block;background:#fff}
+/* Console is the lesson/play surface, matching p5 editor placement */
+#console{min-height:0;border-top:1px solid #bfbfbf;background:#f7f7f7;display:grid;grid-template-rows:24px minmax(0,1fr)}
+#consoleHead{display:flex;align-items:center;border-bottom:1px solid var(--line);background:#eee;color:#555;font-size:10px;padding:0 6px;gap:5px}
+#consoleHead .consoleTitle{margin-right:auto}
+#prevBtn,#nextBtn{width:23px;height:20px;border:0;background:transparent;color:#777;font-size:17px;line-height:18px;padding:0;cursor:pointer}
+#lessonCounter{font-size:10px;color:#888;white-space:nowrap}
+#lessonStatus{color:#3f8a61;min-width:10px}
+#clearConsole{margin-left:5px;color:#777}.down{font-size:13px;margin-left:2px}
+#consoleBody{min-height:0;overflow:auto;padding:7px 10px 8px;color:#555;font:11px/1.35 var(--mono)}
+#slideQuestion{font-weight:600;color:#444;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#controlArea{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.control{display:flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;min-width:0}.control label{font-size:9px;color:#888}.control output{font-weight:bold;color:#444;min-width:30px}.control input[type=range]{width:110px;accent-color:var(--p5)}
+.choice{border:1px solid #c7c7c7;border-radius:2px;background:#fff;color:#555;padding:3px 7px;font:10px/1.2 var(--sans);cursor:pointer}.choice:hover{border-color:#999}.choice.good{border-color:#9ab9a6}.choice.bad{border-color:#d9a0aa}
+#microWorld{display:inline;color:#666}#feedback{display:inline;margin-left:8px;color:#999}
+#fault{display:none;margin-top:4px;color:var(--error);font-weight:600}#fault.show{display:block}.faultActions{display:flex;gap:5px;margin-top:4px}
+#ordinary,#tension{display:none}
+/* compact token info appears only when cursor is on something */
+#cursorInfo{margin-top:5px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cursorInfo b{color:var(--blue);font-weight:600}
+.hidden{display:none!important}
+@media(max-width:760px){#workspace{grid-template-columns:1fr;grid-template-rows:52% 48%}#left{border-right:0;border-bottom:1px solid var(--line);grid-template-rows:minmax(0,1fr) 104px}.account,.menuGroup .menuBtn:nth-child(n+4),.version{display:none}#projectTitle{max-width:30vw}#consoleBody{font-size:10px}.control input[type=range]{width:90px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="menuBar">
+    <div id="p5mark">p5*</div>
+    <div class="menuGroup">
+      <button class="menuBtn">File</button><button class="menuBtn">Edit</button><button class="menuBtn">Sketch</button><button class="menuBtn">Help</button><button class="menuBtn">English</button>
+    </div>
+    <div class="account"><span>Log in</span><span>or</span><b>Sign up</b></div>
+  </div>
+
+  <div id="toolBar">
+    <button class="runCircle" id="playBtn" aria-label="Run sketch"></button>
+    <button class="runCircle" id="stopBtn" aria-label="Stop sketch"></button>
+    <button id="restartBtn"></button>
+    <label class="autorefresh"><input id="autoRefresh" type="checkbox"> Auto-refresh</label>
+    <div id="projectTitle">Zero assumption hello world <span class="pencil">✎</span></div>
+    <div id="slideTruth">SLIDE 00 · BEFORE CODE</div>
+    <div class="toolSpacer"></div>
+    <div class="version">p5.js 1.11.10</div>
+    <button class="gear" aria-label="Settings">⚙</button>
+  </div>
+
+  <main id="workspace">
+    <section id="left">
+      <section id="sourcePane">
+        <div class="paneHead"><span class="fileChevron">›</span><span class="fileName">sketch.js</span></div>
+        <div id="sourceWrap"><pre id="gutter"></pre><div id="editorLayer"><pre id="highlight" aria-hidden="true"></pre><textarea id="editor" spellcheck="false" aria-label="sketch.js"></textarea></div></div>
+        <div id="tokenStrip"><span id="lineAddr">#L01</span></div>
+      </section>
+      <section id="console">
+        <div id="consoleHead">
+          <span class="consoleTitle">Console</span>
+          <button id="prevBtn" aria-label="Previous lesson">‹</button>
+          <span id="lessonCounter">00 / 21</span><span id="lessonStatus"></span>
+          <button id="nextBtn" aria-label="Next lesson">›</button>
+          <span id="clearConsole">Clear <span class="down">⌄</span></span>
+        </div>
+        <div id="consoleBody">
+          <div id="slideQuestion"></div>
+          <div id="controlArea"></div>
+          <span id="microWorld"></span><span id="feedback"></span>
+          <div id="cursorInfo"></div>
+          <div id="fault"></div>
+          <div id="slideNav"></div>
+          <div id="mission"><span id="slideNo"></span><span id="slideTitle"></span><div id="ordinary"></div><div id="tension"></div><div id="ruleBox"></div><div id="promptBox"></div></div>
+          <div id="inspect"><div id="inspectAddr"></div><div id="inspectValue"></div><div id="inspectKV"></div><button id="ruleBtn"></button><button id="promptBtn"></button><div id="universe"></div><div id="freePlay"></div></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="worldPane">
+      <div class="paneHead">Preview <span id="nativeRuntimeStatus">stopped</span></div>
+      <div id="world"><iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe></div>
+      <div id="runtimeMeta"><b id="mPhase"></b><b id="mCanvas"></b><b id="mFrame"></b><b id="mLoop"></b><b id="mP5"></b></div>
+    </section>
+  </main>
+</div>
+<script>
+const P5_URL='https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.min.js';
+const $=s=>document.querySelector(s);
+const editor=$('#editor'), gutter=$('#gutter'), preview=$('#preview');
+let current=0, selectedLine=1, selectedToken=null, interactions=0, solved=new Set(), running=false;
+let runtime={phase:'STOPPED',canvas:null,frame:null,loop:null,p5:'not loaded'};
+let lesson={};
+
+const baseHello=`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n}`;
+
+const slides=[
+{n:'00',title:'WHAT EXISTS BEFORE MY CODE?',question:'What has to already exist before createCanvas() can possibly work?',ordinary:'Ordinary tutorials begin with the sketch already alive. This play-ground begins one layer earlier: the host, language, library, and sketch must all be present.',tension:'Turn layers off. Press the local TEST button. Find the smallest chain that still makes a p5 sketch possible.',focus:1,source:baseHello,rule:'A program begins inside inherited machinery. p5.js supplies createCanvas(); JavaScript supplies function syntax; the browser hosts both.',prompt:'You are the <Before-Code Game>. Darken browser, JavaScript, p5.js, and sketch as removable dependency layers. Let the participant toggle one layer at a time and test whether createCanvas can be reached. Do not define runtime first; make absence visible. Completion: HOST → JAVASCRIPT → P5.JS → SKETCH.',kind:'deps'},
+{n:'01',title:'WHAT IS SOURCE CODE?',question:'Which visible pieces make background(220); executable?',ordinary:'A line of source looks like one thing. It is actually a sequence of differently used signs.',tension:'Remove or restore pieces. Discover which part names the operation, which part supplies a value, and which marks organize the call.',focus:6,source:baseHello,rule:'Source code is structured signs in use: operation name + argument syntax + value + statement boundary.',prompt:'You are the <Source Material Game>. Break background(220); into movable or removable pieces. Every test must yield either the visible gray consequence or the first broken condition. Reveal token/statement vocabulary only after play.',kind:'tokens'},
+{n:'02',title:'WHAT IS A FUNCTION?',question:'Why can valid code exist without doing anything?',ordinary:'A function declaration can sit perfectly intact while no one calls it.',tension:'Toggle the call to paint(). Make the canvas change without rewriting the body.',focus:1,source:`function setup() {\n  createCanvas(400, 400);\n  paint();\n}\n\nfunction paint() {\n  background(220);\n}`,rule:'Declaring a function makes an operation callable. Calling it performs the operation.',prompt:'You are the <Callable Box Game>. Present function paint(){background(220);} with an optional paint() call. Let the learner distinguish declaration from invocation by consequence.',kind:'call'},
+{n:'03',title:'WHY IS setup() SPECIAL?',question:'Is setup a JavaScript keyword, a name you invented, or a name p5 recognizes?',ordinary:'setup looks syntactically ordinary. Its special behavior comes from a convention outside JavaScript.',tension:'Rename setup to banana or Setup. Restart. Which name does p5 call automatically?',focus:1,source:baseHello,rule:'setup is a normal JavaScript function name with special meaning supplied by p5. p5.js uses function setup(); Processing/Java uses void setup().',prompt:'You are the <Secret Name Game>. Swap setup, banana, and Setup while keeping the body identical. Show that p5 recognizes one exact lifecycle name. Never call setup a JavaScript keyword.',kind:'setupName'},
+{n:'04',title:'WHAT DOES createCanvas() CREATE?',question:'What new things become possible after createCanvas runs?',ordinary:'Drawing commands need somewhere to go. createCanvas establishes that bounded drawing world.',tension:'Remove and restore createCanvas(). Compare the runtime before and after the drawing surface exists.',focus:2,source:baseHello,rule:'createCanvas establishes a renderer, logical width and height, coordinate space, and drawing target.',prompt:'You are the <Make a Place Game>. Let createCanvas be removable. When it runs, instantiate width, height, origin, axes, and drawing target as visible consequences.',kind:'canvas'},
+{n:'05',title:'WHAT DO THE TWO 400s MEAN?',question:'How can two identical numerals perform different jobs?',ordinary:'The characters 400 do not carry “width” or “height” inside themselves.',tension:'Scrub each 400 independently. Make a wide canvas, then a tall canvas.',focus:2,source:baseHello,rule:'A value gets its role from use. In createCanvas(width, height), the first argument controls horizontal extent; the second controls vertical extent.',prompt:'You are the <Two 400s Game>. Give the two equal literals distinct addresses and scrubbable controls. Same written value; different operational role.',kind:'canvasSize'},
+{n:'06',title:'WHERE IS (0,0)?',question:'Which corner is the origin, and which way do positive x and y travel?',ordinary:'Screen coordinates do not automatically match the school-math picture of a Cartesian plane.',tension:'Send a point to five known coordinate pairs. Infer the orientation from consequence.',focus:6,source:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  strokeWeight(10);\n  point(0, 0);\n}`,rule:'In the default p5 2D canvas, (0,0) is the upper-left. +x moves right. +y moves down.',prompt:'You are the <Find the Origin Game>. Offer corner and center coordinate pairs without labels. Reveal +x/right and +y/down only after repeated placement.',kind:'origin'},
+{n:'07',title:'WHY CALL THEM x AND y?',question:'Are x and y magic words?',ordinary:'Short names can look like language requirements even when they are only conventions.',tension:'Rename x and y to horizontalPosition and verticalPosition. Then swap the arguments to point().',focus:1,source:`let x = 100;\nlet y = 200;\nfunction setup() { createCanvas(400,400); }\nfunction draw() {\n  background(245);\n  point(x, y);\n}`,rule:'x and y are conventional names. For point(), argument position gives the first value the horizontal role and the second the vertical role.',prompt:'You are the <Names Aren’t Magic Game>. Preserve behavior while renaming x/y, then change argument order. Separate programmer-chosen names from operational positions.',kind:'names'},
+{n:'08',title:'WHY IS draw() SPECIAL?',question:'Who repeats draw()?',ordinary:'draw() contains no loop statement. Yet it runs again and again.',tension:'Rename draw to again, restart, then restore draw. Watch the frame counter.',focus:5,source:baseHello,rule:'draw is a callback name recognized by p5. The p5/browser frame scheduler invokes it repeatedly while looping.',prompt:'You are the <Repeated Name Game>. Let draw and again exchange names while a visible frame counter exposes which function the runtime repeatedly invokes.',kind:'drawName'},
+{n:'09',title:'WHAT IS A FRAME?',question:'How does one drawing operation become animation?',ordinary:'Continuous motion is presented as repeated discrete updates.',tension:'STEP one draw at a time, then PLAY. Count the state transitions rather than watching an unexplained animation.',focus:6,source:`let x = 20;\nfunction setup(){\n  createCanvas(400,400);\n  noLoop();\n}\nfunction draw(){\n  background(240);\n  circle(x,200,30);\n  x = x + 8;\n}`,rule:'A frame is one produced visual state. Animation emerges when draw repeatedly updates state and presents successive frames.',prompt:'You are the <One Moment Game>. Begin paused. STEP one draw invocation at a time, advance frame count visibly, then enable PLAY.',kind:'frame'},
+{n:'10',title:'WHAT DOES background(220) DO?',question:'What relationship connects the number 220 to the visible field?',ordinary:'220 is only a number until background() interprets it under the current color rules.',tension:'Scrub 0–255. Predict black, middle gray, light gray, and white before testing.',focus:6,source:baseHello,rule:'With one numeric argument in the default color mode, background interprets the value as grayscale: 0 black, 255 white.',prompt:'You are the <Gray Field Game>. Make 220 scrubbable across 0–255 and demand predictions at anchor values before revealing the grayscale rule.',kind:'gray'},
+{n:'11',title:'WHAT IS COLOR?',question:'How can one, three, four, string, and hexadecimal arguments all specify appearance?',ordinary:'“Color” is not one representation. p5 accepts several representations and interprets them according to context.',tension:'Switch among gray, RGB, RGBA, named color, and hex while keeping the shape constant.',focus:6,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  fill(255,0,0);\n  circle(200,200,180);\n}`,rule:'Color is represented by conventions: grayscale, RGB channels, optional alpha, names, or hexadecimal strings. The receiving function interprets the representation.',prompt:'You are the <Color Arity Game>. Let the participant add/remove channels and switch to strings/hex. Keep geometry fixed so only representation changes.',kind:'color'},
+{n:'12',title:'HOW DO I PLACE ONE THING?',question:'How do two values become one location?',ordinary:'A point has no width or height; its problem is position alone.',tension:'Move x and y until the point reaches the target crosshair.',focus:6,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  strokeWeight(12);\n  point(100,100);\n}`,rule:'point(x,y) uses two independent coordinates: x controls horizontal position, y controls vertical position.',prompt:'You are the <Single Position Game>. Provide a target and only x/y controls. Crosshairs make each coordinate’s consequence visible.',kind:'point'},
+{n:'13',title:'HOW DO I PLACE TWO ENDS?',question:'What changes when one location becomes two?',ordinary:'A line is constrained by two endpoints, each with its own x and y.',tension:'Move four values until both endpoints land on their targets.',focus:6,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  line(50,50,300,300);\n}`,rule:'line(x1,y1,x2,y2) contains two ordered coordinate pairs. Each pair locates one endpoint.',prompt:'You are the <Bridge Two Points Game>. Illuminate one endpoint component per selected number and require both target anchors to be connected.',kind:'line'},
+{n:'14',title:'HOW DO I PLACE A BOX?',question:'Which numbers locate a rectangle, and which numbers give it extent?',ordinary:'A rectangle needs both a position rule and size rules.',tension:'Match the ghost rectangle. Then switch rectMode(CENTER) without changing the four numbers.',focus:6,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  rect(70,80,180,120);\n}`,rule:'By default rect(x,y,w,h) uses x,y as the upper-left corner and w,h as extents. rectMode can change that interpretation.',prompt:'You are the <Corner and Extent Game>. Make x/y and w/h visibly different control families, then change rectMode to prove that state alters numeric interpretation.',kind:'rect'},
+{n:'15',title:'HOW DO I PLACE A CIRCLE?',question:'Why does x,y mean something slightly different here than in rect()?',ordinary:'Similar argument names can participate in different geometric conventions.',tension:'Match the target center and diameter; compare the center marker with the rectangle’s default corner marker.',focus:6,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  circle(200,200,100);\n}`,rule:'circle(x,y,d) uses x,y as its center and d as diameter. Argument roles come from the operation, not the letters alone.',prompt:'You are the <Center and Diameter Game>. Keep center and diameter independently scrubbable and contrast circle’s center convention with rect’s default corner convention.',kind:'circle'},
+{n:'16',title:'WHAT DO x y w h d MEAN?',question:'Can you recover the long operational roles from the compressed names?',ordinary:'Code compresses recurring roles into short conventional names.',tension:'Switch among point, rect, and circle and watch the same short names acquire roles from each operation.',focus:6,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  rect(80,90,160,110);\n}`,rule:'x/y conventionally name coordinates; w/h name width/height; d names diameter. The operation determines the exact geometry they control.',prompt:'You are the <Role Not Letter Game>. Treat x y w h d as compressed role cards; move between primitives and make role expansion explicit.',kind:'roles'},
+{n:'17',title:'WHAT IS DRAWING STATE?',question:'Why can one fill() change several later shapes?',ordinary:'Some drawing commands change persistent renderer state instead of drawing a shape immediately.',tension:'Move the second fill() before or after the first rectangle. Predict which shapes inherit which fill.',focus:3,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  fill("red");\n  rect(40,100,120,120);\n  fill("blue");\n  rect(220,100,120,120);\n}`,rule:'Drawing state persists until changed. Shapes read the current fill/stroke/mode state when they execute.',prompt:'You are the <Invisible Paintbrush Game>. Reorder state-changing operations around shapes and display the current drawing-state register.',kind:'drawState'},
+{n:'18',title:'WHAT IS A VARIABLE?',question:'How can one named value control several later uses?',ordinary:'Repeated numerals look alike but remain unrelated. A variable creates a reusable binding.',tension:'Change ballX once and watch every read of ballX follow it. Compare with an unrelated literal 100.',focus:1,source:`let ballX = 100;\nfunction setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  circle(ballX,130,40);\n  circle(ballX,260,40);\n}`,rule:'A variable binds a name to a value. Every later read of that name can use the current value.',prompt:'You are the <Name a Moving Value Game>. Connect declaration to all reads and keep an unrelated identical literal as an imposter.',kind:'variable'},
+{n:'19',title:'WHAT CHANGES OVER TIME?',question:'How does a value survive one frame and become the input to the next?',ordinary:'Animation needs persistent state, not only repeated drawing.',tension:'STEP through x = x + 1. Read BEFORE, OPERATION, AFTER for each frame.',focus:6,source:`let x = 40;\nfunction setup(){createCanvas(400,400);noLoop();}\nfunction draw(){\n  background(245);\n  circle(x,200,30);\n  x = x + 1;\n}`,rule:'State carries values across frames. Each draw can read the previous value, transform it, and leave the next value for the following frame.',prompt:'You are the <State Across Frames Game>. Keep draw paused; STEP updates one state transition at a time and show BEFORE → OPERATION → AFTER.',kind:'state'},
+{n:'20',title:'HOW DOES INPUT ENTER?',question:'How does physical pointer movement become numbers the program can use?',ordinary:'The world outside the sketch does not directly move a circle. The runtime samples input into values that draw reads.',tension:'Move the pointer over the canvas. Watch mouseX/mouseY change, then watch the circle follow.',focus:4,source:`function setup(){createCanvas(400,400);}\nfunction draw(){\n  background(245);\n  circle(mouseX,mouseY,40);\n}`,rule:'The runtime turns pointer position into program values such as mouseX and mouseY. draw reads those values and produces a consequence.',prompt:'You are the <Outside Enters the Program Game>. Visualize pointer → runtime values → draw read → canvas consequence as one chain.',kind:'input'},
+{n:'21',title:'WHAT HAPPENS WHEN SOMETHING BREAKS?',question:'Can the debugger show both what happened and what never happened?',ordinary:'A conventional console reports wreckage. This slide reconstructs the interrupted operation.',tension:'Inject backgrund(220). Run it. Repair the exact failed operation without losing the source or last valid state.',focus:6,source:baseHello,rule:'A useful failure record shows the stopped operation, first broken condition, completed work, omitted work, preserved state, recovery, and boundary that would prevent recurrence.',prompt:'You are the <Breakdown Game>. Introduce one bounded typo and attach the failure to its source address. Expose STOPPED, FIRST BROKEN CONDITION, COMPLETED, DID NOT HAPPEN, PRESERVED, NEXT, and BOUNDARY.',kind:'fault'}
+];
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function setSource(s,run=false){editor.value=s;syncGutter();selectedLine=Math.min(selectedLine,s.split('\n').length);renderTokens(); if(run&&running)runSketch();}
+function hEsc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function syncHighlight(){const h=$('#highlight');if(!h)return;const classes={p5:'p5tok',js:'jstok',num:'numtok',string:'strtok',name:'nametok',punct:'puncttok'};h.innerHTML=editor.value.split('\n').map(line=>{const toks=tokenize(line);let out='',pos=0;for(const t of toks){out+=hEsc(line.slice(pos,t.start));out+=`<span class="${classes[t.kind]||''}">${hEsc(t.raw)}</span>`;pos=t.start+t.raw.length;}out+=hEsc(line.slice(pos));return out||' ';}).join('\n');h.scrollTop=editor.scrollTop;h.scrollLeft=editor.scrollLeft;}
+function syncGutter(){const lines=editor.value.split('\n');gutter.textContent=lines.map((_,i)=>String(i+1)).join('\n');syncHighlight();}
+function getLine(){return editor.value.split('\n')[selectedLine-1]||'';}
+function tokenize(line){const re=/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[0-9A-Fa-f]{3,8}|\b\d+(?:\.\d+)?\b|[A-Za-z_$][\w$]*|=>|===|!==|==|!=|<=|>=|\+\+|--|&&|\|\||[{}()[\],.;=+\-*\/<>&])/g;let m,out=[];while((m=re.exec(line))){let k='punct',r=m[0];if(/^\d/.test(r))k='num';else if(/^(function|let|const|var|if|else|return|for|while|true|false|null|undefined)$/.test(r))k='js';else if(/^(setup|draw|createCanvas|background|fill|stroke|strokeWeight|rect|circle|ellipse|line|point|noLoop|loop|redraw|frameRate|mouseX|mouseY)$/.test(r))k='p5';else if(/^[A-Za-z_$]/.test(r))k='name';else if(/^['"]/.test(r))k='string';out.push({raw:r,kind:k,start:m.index});}return out;}
+function renderTokens(){const strip=$('#tokenStrip');strip.innerHTML=`<span id="lineAddr">#L${String(selectedLine).padStart(2,'0')}</span>`;tokenize(getLine()).forEach((t,i)=>{const b=document.createElement('button');b.className=`token ${t.kind} ${selectedToken===i?'active':''}`;b.textContent=`#L${selectedLine}.${i+1} ${t.raw}`;b.onclick=()=>{selectedToken=i;renderTokens();updateInspect();};strip.appendChild(b);});updateInspect();}
+function tokenInfo(){const toks=tokenize(getLine());const t=toks[selectedToken];if(!t)return null;const line=getLine();const call=(line.match(/([A-Za-z_$][\w$]*)\s*\(/)||[])[1]||'';const nums=toks.filter(x=>x.kind==='num');const nIndex=t.kind==='num'?nums.indexOf(t):-1;let x={addr:`#L${selectedLine}.${selectedToken+1}`,value:t.raw,what:t.kind==='num'?'NUMBER LITERAL':t.kind==='p5'?'P5 NAME':t.kind==='js'?'JAVASCRIPT SYNTAX':t.kind==='name'?'NAME':'SYNTAX',provider:t.kind==='p5'?'p5.js':t.kind==='js'?'JavaScript':t.kind==='num'?'you wrote this value':'source syntax',role:'used by this source line',unit:'—',effect:'select a more specific token to inspect its consequence'};
+ if(t.raw==='setup'){x.role='lifecycle function name';x.provider='you name it; p5 gives the name special use';x.effect='p5 calls setup once when a fresh sketch starts';}
+ if(t.raw==='draw'){x.role='lifecycle function name';x.provider='you name it; p5 gives the name special use';x.effect='p5 schedules draw repeatedly while looping';}
+ if(t.raw==='createCanvas'){x.role='create drawing target';x.effect='establishes renderer, width, height, and coordinate space';}
+ if(t.kind==='num'&&call==='createCanvas'){x.role=nIndex===0?'canvas width':'canvas height';x.unit='logical canvas units';x.effect=nIndex===0?'changes horizontal extent / width':'changes vertical extent / height';}
+ if(t.kind==='num'&&call==='background'){x.role=nums.length===1?'grayscale intensity':['red channel','green channel','blue channel','alpha'][nIndex]||`argument ${nIndex+1}`;x.unit='default color channel: usually 0–255';x.effect='changes the color written across the current canvas';}
+ const roles={point:['x position','y position'],line:['x₁','y₁','x₂','y₂'],rect:['x position','y position','width','height'],circle:['x center','y center','diameter'],ellipse:['x center','y center','width','height']};
+ if(t.kind==='num'&&roles[call]){x.role=roles[call][nIndex]||`argument ${nIndex+1}`;x.unit='canvas coordinate units';x.effect=`controls ${x.role} for ${call}()`;}
+ if(t.raw==='function'){x.provider='JavaScript';x.role='declare a function';x.effect='the following name/body becomes callable code';}
+ if(t.raw==='(')x.role='begin arguments/parameters';if(t.raw===')')x.role='end arguments/parameters';if(t.raw===',')x.role='separate arguments';if(t.raw===';')x.role='end statement';if(t.raw==='{')x.role='begin block body';if(t.raw==='}')x.role='end block body';
+ return x;}
+function updateInspect(){const info=tokenInfo();const ci=$('#cursorInfo');if(!info){$('#inspectAddr').textContent=`#L${String(selectedLine).padStart(2,'0')} · LINE`;$('#inspectValue').textContent=getLine()||'blank line';$('#inspectKV').innerHTML='';if(ci)ci.textContent='';return;}$('#inspectAddr').textContent=info.addr;$('#inspectValue').textContent=info.value;$('#inspectKV').innerHTML='';if(ci)ci.innerHTML=`<b>${esc(info.addr)} · ${esc(info.value)}</b> — ${esc(info.role)} · ${esc(info.effect)}`;}
+
+function renderNav(){const nav=$('#slideNav');if(nav)nav.innerHTML='';const c=$('#lessonCounter');if(c)c.textContent=`${slides[current].n} / ${slides[slides.length-1].n}`;const st=$('#lessonStatus');if(st)st.textContent=solved.has(current)?'✓':'';}
+function loadSlide(i){current=Math.max(0,Math.min(slides.length-1,i));const s=slides[current];interactions=0;lesson={};selectedToken=null;selectedLine=s.focus||1;setSource(s.source,false);$('#slideNo').textContent=`SLIDE ${s.n}`;$('#slideTitle').textContent=s.title;$('#slideQuestion').textContent=s.question;$('#ordinary').textContent=s.ordinary;$('#tension').textContent=`TENSION · ${s.tension}`;$('#ruleBox').className='';$('#ruleBox').textContent=`RULE DISCOVERED · ${s.rule}`;$('#promptBox').className='';$('#promptBox').textContent=s.prompt;$('#promptBtn').textContent='LUDIC PROMPT';$('#ruleBtn').disabled=true;$('#ruleBtn').textContent='SHOW RULE';$('#freePlay').className='';$('#freePlay').textContent='FREE PLAY · The target is gone. Use the new primitive to make one unrequested change.';$('#fault').className='';$('#fault').innerHTML='';$('#slideTruth').textContent=`${s.n}/21 · ${s.title}`;renderNav();renderControls();renderUniverse();renderTokens();stopSketch();}
+function interacted(msg){interactions++;if(msg)$('#feedback').textContent=msg;if(interactions>=2){solved.add(current);const st=$('#lessonStatus');if(st)st.textContent='✓';renderNav();}}
+function revealRule(){solved.add(current);$('#ruleBox').classList.add('show');$('#freePlay').classList.add('show');$('#ruleBtn').textContent='RULE SHOWN';renderNav();}
+function promptToggle(){const p=$('#promptBox');p.classList.toggle('show');$('#promptBtn').textContent=p.classList.contains('show')?'HIDE PROMPT':'LUDIC PROMPT';}
+function cButton(label,fn,cls=''){const b=document.createElement('button');b.className=`choice ${cls}`;b.textContent=label;b.onclick=()=>{fn();interacted();};return b;}
+function slider(label,min,max,value,step,oninput){const d=document.createElement('div');d.className='control';d.innerHTML=`<label>${esc(label)}</label><output>${value}</output><input type="range" min="${min}" max="${max}" value="${value}" step="${step}">`;const input=d.querySelector('input'),out=d.querySelector('output');input.oninput=()=>{out.value=input.value;oninput(+input.value);interacted(`${label} = ${input.value}`);};return d;}
+function runSource(src){setSource(src,false);runSketch();}
+
+function renderControls(){const s=slides[current],a=$('#controlArea'),m=$('#microWorld');a.innerHTML='';m.innerHTML='';$('#feedback').textContent='';
+ if(s.kind==='deps'){if(!lesson.deps)lesson.deps={browser:true,js:true,p5:true,sketch:true};['browser','JavaScript','p5.js','sketch'].forEach((name,i)=>{const k=['browser','js','p5','sketch'][i];a.appendChild(cButton(`${lesson.deps[k]?'✓':'×'} ${name}`,()=>{lesson.deps[k]=!lesson.deps[k];renderControls();}));});a.appendChild(cButton('TEST',()=>{const d=lesson.deps||{};let fail=!d.browser?'no host exists':!d.js?'source cannot execute':!d.p5?'createCanvas is unavailable':!d.sketch?'runtime has nothing to run':'chain complete';m.textContent=fail;} ,'good'));m.innerHTML='Turn one dependency off, then TEST.';}
+ else if(s.kind==='tokens'){lesson.parts={background:true,open:true,value:true,close:true,semi:true};[['background','background'],['(','open'],['220','value'],[')','close'],[';','semi']].forEach(([lab,k])=>a.appendChild(cButton(lab,()=>{lesson.parts[k]=!lesson.parts[k];const p=lesson.parts;let line=`${p.background?'background':''}${p.open?'(':''}${p.value?'220':''}${p.close?')':''}${p.semi?';':''}`;runSource(`function setup(){createCanvas(400,400);}\nfunction draw(){${line}}`);})));m.textContent='Click a source piece to remove/restore it. PLAY tests the remaining sign-chain.';}
+ else if(s.kind==='call'){lesson.call=true;a.appendChild(cButton('CALL paint()',()=>{lesson.call=!lesson.call;runSource(`function setup(){createCanvas(400,400);${lesson.call?'paint();':''}}\nfunction paint(){background(220);}`);}));m.textContent='The function body exists either way. Toggle only the call.';}
+ else if(s.kind==='setupName'){['setup','banana','Setup'].forEach(name=>a.appendChild(cButton(name,()=>runSource(`${name==='setup'?'function setup()':`function ${name}()`}{createCanvas(400,400);}\nfunction draw(){background(220);}`))));m.textContent='Same body. Different name. Restart after each choice.';}
+ else if(s.kind==='canvas'){a.appendChild(cButton('REMOVE createCanvas',()=>runSource(`function setup(){}\nfunction draw(){background(220);}`),'bad'));a.appendChild(cButton('RESTORE createCanvas',()=>runSource(baseHello),'good'));m.textContent='Watch CANVAS in the runtime strip.';}
+ else if(s.kind==='canvasSize'){lesson.w=400;lesson.h=400;const upd=()=>runSource(`function setup(){createCanvas(${lesson.w},${lesson.h});}\nfunction draw(){background(220);}`);a.appendChild(slider('#L02.width',100,800,400,10,v=>{lesson.w=v;upd();}));a.appendChild(slider('#L02.height',100,800,400,10,v=>{lesson.h=v;upd();}));m.textContent='Goal A: make it wide. Goal B: make it tall. Same digits can occupy different roles.';}
+ else if(s.kind==='origin'){const pts=[[0,0],[400,0],[0,400],[400,400],[200,200]];pts.forEach(([x,y])=>a.appendChild(cButton(`(${x},${y})`,()=>runSource(`function setup(){createCanvas(400,400);}\nfunction draw(){background(245);strokeWeight(12);point(${x},${y});}`))));m.textContent='Try all five positions. Which corner keeps receiving (0,0)?';}
+ else if(s.kind==='names'){a.appendChild(cButton('x / y',()=>runSource(slides[current].source)));a.appendChild(cButton('long names',()=>runSource(`let horizontalPosition=100;let verticalPosition=200;function setup(){createCanvas(400,400);}function draw(){background(245);point(horizontalPosition,verticalPosition);}`)));a.appendChild(cButton('SWAP arguments',()=>runSource(`let horizontalPosition=100;let verticalPosition=200;function setup(){createCanvas(400,400);}function draw(){background(245);point(verticalPosition,horizontalPosition);}`),'bad'));m.textContent='Renaming should preserve behavior. Swapping argument positions should not.';}
+ else if(s.kind==='drawName'){a.appendChild(cButton('draw',()=>runSource(baseHello),'good'));a.appendChild(cButton('again',()=>runSource(`function setup(){createCanvas(400,400);}\nfunction again(){background(220);}`),'bad'));m.textContent='Watch FRAME. Which name receives repeated calls?';}
+ else if(s.kind==='frame'||s.kind==='state'){a.appendChild(cButton('STEP ONE DRAW',()=>sendControl('redraw'),'good'));a.appendChild(cButton('LOOP',()=>sendControl('loop')));a.appendChild(cButton('NO LOOP',()=>sendControl('noLoop')));m.textContent=s.kind==='state'?'Watch the circle advance one state transition per STEP.':'STEP makes discrete frames inspectable; LOOP compresses them into motion.';}
+ else if(s.kind==='gray'){lesson.gray=220;a.appendChild(slider('#L06.gray',0,255,220,1,v=>{lesson.gray=v;runSource(`function setup(){createCanvas(400,400);}\nfunction draw(){background(${v});}`);}));[0,128,220,255].forEach(v=>a.appendChild(cButton(String(v),()=>{lesson.gray=v;runSource(`function setup(){createCanvas(400,400);}\nfunction draw(){background(${v});}`);})));m.textContent='Predict before pressing an anchor. The number is interpreted by background().';}
+ else if(s.kind==='color'){const choices=[['GRAY','fill(160);'],['RGB','fill(255,0,0);'],['RGBA','fill(255,0,0,128);'],['NAME','fill("red");'],['HEX','fill("#ff0000");']];choices.forEach(([lab,fill])=>a.appendChild(cButton(lab,()=>runSource(`function setup(){createCanvas(400,400);}\nfunction draw(){background(245);${fill}circle(200,200,180);}`))));m.textContent='Geometry stays fixed. Only the representation of color changes.';}
+ else if(s.kind==='point'){lesson.x=100;lesson.y=100;const upd=()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);strokeWeight(12);point(${lesson.x},${lesson.y});}`);a.appendChild(slider('x',0,400,100,5,v=>{lesson.x=v;upd();}));a.appendChild(slider('y',0,400,100,5,v=>{lesson.y=v;upd();}));m.innerHTML='TARGET · x=300, y=120. <b>Land the point there.</b>';}
+ else if(s.kind==='line'){lesson.v=[50,50,300,300];const upd=()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);strokeWeight(4);line(${lesson.v.join(',')});}`);['x₁','y₁','x₂','y₂'].forEach((lab,i)=>a.appendChild(slider(lab,0,400,lesson.v[i],5,v=>{lesson.v[i]=v;upd();})));m.textContent='TARGET ENDPOINTS · (80,300) and (330,70).';}
+ else if(s.kind==='rect'){lesson.r=[70,80,180,120];lesson.mode='CORNER';const upd=()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);rectMode(${lesson.mode});noFill();strokeWeight(4);rect(${lesson.r.join(',')});}`);['x','y','w','h'].forEach((lab,i)=>a.appendChild(slider(lab,0,i<2?400:300,lesson.r[i],5,v=>{lesson.r[i]=v;upd();})));a.appendChild(cButton('CORNER',()=>{lesson.mode='CORNER';upd();}));a.appendChild(cButton('CENTER',()=>{lesson.mode='CENTER';upd();}));m.textContent='First match a box. Then keep all four numbers fixed and change only rectMode.';}
+ else if(s.kind==='circle'){lesson.c=[200,200,100];const upd=()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);noFill();strokeWeight(4);circle(${lesson.c.join(',')});}`);['x center','y center','diameter'].forEach((lab,i)=>a.appendChild(slider(lab,0,i===2?300:400,lesson.c[i],5,v=>{lesson.c[i]=v;upd();})));m.textContent='TARGET · center (300,120), diameter 140.';}
+ else if(s.kind==='roles'){[['POINT','point(100,200);'],['RECT','rect(100,200,80,40);'],['CIRCLE','circle(100,200,80);']].forEach(([lab,op])=>a.appendChild(cButton(lab,()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);${op}}`))));m.innerHTML='<b>x</b> horizontal · <b>y</b> vertical · <b>w</b> width · <b>h</b> height · <b>d</b> diameter. Switch primitives and inspect the argument roles.';}
+ else if(s.kind==='drawState'){a.appendChild(cButton('RED then BLUE',()=>runSource(slides[current].source)));a.appendChild(cButton('BLUE before both',()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);fill("blue");rect(40,100,120,120);rect(220,100,120,120);}`)));a.appendChild(cButton('RED only',()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);fill("red");rect(40,100,120,120);rect(220,100,120,120);}`)));m.textContent='fill() changes state. The next shapes read whatever state is current when they execute.';}
+ else if(s.kind==='variable'){lesson.ballX=100;const upd=()=>runSource(`let ballX=${lesson.ballX};function setup(){createCanvas(400,400);}function draw(){background(245);circle(ballX,130,40);circle(ballX,260,40);}`);a.appendChild(slider('ballX',0,400,100,5,v=>{lesson.ballX=v;upd();}));a.appendChild(cButton('replace second with literal 100',()=>runSource(`let ballX=${lesson.ballX};function setup(){createCanvas(400,400);}function draw(){background(245);circle(ballX,130,40);circle(100,260,40);}`),'bad'));m.textContent='One named value can move two reads together. An identical literal remains independent.';}
+ else if(s.kind==='input'){a.appendChild(cButton('LIVE INPUT',()=>runSource(slides[current].source),'good'));a.appendChild(cButton('HARD CODED',()=>runSource(`function setup(){createCanvas(400,400);}function draw(){background(245);circle(200,200,40);}`),'bad'));m.textContent='Move the pointer over the real canvas. Runtime values enter the program as mouseX/mouseY.';}
+ else if(s.kind==='fault'){a.appendChild(cButton('INJECT backgrund()',()=>runSource(`function setup(){createCanvas(400,400);}\nfunction draw(){\n  backgrund(220);\n}`),'bad'));a.appendChild(cButton('REPAIR background()',()=>runSource(baseHello),'good'));m.textContent='Break the exact operation. The debugger should preserve the source and reconstruct what did not happen.';}
+}
+
+function renderUniverse(){const u=$('#universe');u.innerHTML='<div class="kicker">UNIVERSE LADDER</div>';const steps=['YOU press PLAY','IDE creates iframe runtime','HTML document exists','p5.js loads','source evaluates','setup() once','canvas exists','draw() scheduled','frame produced','browser presents'];steps.forEach((x,i)=>{const d=document.createElement('div');d.className='urow';d.dataset.i=i;d.innerHTML=`<i></i><span>${esc(x)}</span>`;u.appendChild(d);});markUniverse(-1);}
+function markUniverse(i){[...$('#universe').querySelectorAll('.urow')].forEach((r,j)=>{r.classList.toggle('done',j<i);r.classList.toggle('now',j===i);});}
+
+function runtimeDoc(source){const safe=source.replace(/<\/script>/gi,'<\\/script>');return `<!doctype html><html><head>
+<link rel="icon" type="image/svg+xml" href="frog-gold.svg" />
+<meta charset="utf-8"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}body{display:grid;place-items:center}canvas{max-width:94vw!important;max-height:94vh!important;width:auto!important;height:auto!important}#msg{font:700 11px ui-monospace,monospace;color:#555;text-align:center;padding:15px}</style></head><body><div id="msg">constructing runtime…</div><script>
+const send=(type,payload={})=>parent.postMessage({source:'ZA_LUDIC',type,payload},'*');send('runtime');
+window.addEventListener('error',e=>send('fault',{message:e.message||'runtime error',line:e.lineno||null}));
+window.addEventListener('unhandledrejection',e=>send('fault',{message:String(e.reason?.message||e.reason||'promise rejection')}));
+const s=document.createElement('script');s.src='${P5_URL}';s.onload=()=>{send('p5');boot();};s.onerror=()=>send('fault',{message:'p5.js could not load. The library is a required dependency. Check network access.'});document.head.appendChild(s);
+function boot(){try{send('source');${safe}\nconst userSetup=typeof setup==='function'?setup:null;const userDraw=typeof draw==='function'?draw:null;const userMouse=typeof mousePressed==='function'?mousePressed:null;const userKey=typeof keyPressed==='function'?keyPressed:null;
+window.setup=function(){send('setup');try{if(userSetup)userSetup();const c=document.querySelector('canvas');if(c){document.querySelector('#msg')?.remove();send('canvas',{w:typeof width==='number'?width:c.width,h:typeof height==='number'?height:c.height});}}catch(e){send('fault',{message:e.message||String(e)});try{noLoop();}catch(_){}}};
+window.draw=function(){send('draw',{frame:window.frameCount||0});try{if(userDraw)userDraw();send('frame',{frame:window.frameCount||0,loop:typeof isLooping==='function'?isLooping():true});}catch(e){send('fault',{message:e.message||String(e)});try{noLoop();}catch(_){}}};
+window.mousePressed=function(){try{return userMouse&&userMouse();}catch(e){send('fault',{message:e.message||String(e)})}};window.keyPressed=function(){try{return userKey&&userKey();}catch(e){send('fault',{message:e.message||String(e)})}};
+window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='ZA_CONTROL')return;try{if(d.action==='noLoop')noLoop();if(d.action==='loop')loop();if(d.action==='redraw'){noLoop();redraw(1);}if(d.action==='remove')remove();}catch(err){send('fault',{message:err.message||String(err)})}});
+try{window.__zaP5Instance=new p5();}catch(e){send('fault',{message:e.message||String(e)});}
+}catch(e){send('fault',{message:e.message||String(e)});}}
+<\/script></body></html>`;}
+function runSketch(){running=true;runtime={phase:'CREATE RUNTIME',canvas:null,frame:null,loop:null,p5:'loading'};updateRuntime();$('#fault').className='';preview.srcdoc=runtimeDoc(editor.value);markUniverse(1);}
+function stopSketch(){running=false;preview.srcdoc='<!doctype html><body style="margin:0;height:100vh;display:grid;place-items:center;background:#fff;font:11px Arial,sans-serif;color:#777">STOPPED · SOURCE PRESERVED</body>';runtime.phase='STOPPED';runtime.loop='stopped';runtime.frame=null;updateRuntime();markUniverse(-1);}
+function sendControl(action){try{preview.contentWindow.postMessage({type:'ZA_CONTROL',action},'*');interacted(action.toUpperCase());}catch(_){}}
+function updateRuntime(){ $('#mPhase').textContent=runtime.phase;$('#mCanvas').textContent=runtime.canvas?`${runtime.canvas.w} × ${runtime.canvas.h}`:'—';$('#mFrame').textContent=runtime.frame??'—';$('#mLoop').textContent=runtime.loop??'—';$('#mP5').textContent=runtime.p5;const n=$('#nativeRuntimeStatus');if(n){const c=runtime.canvas?` · ${runtime.canvas.w}×${runtime.canvas.h}`:'';const f=runtime.frame!=null?` · frame ${runtime.frame}`:'';n.textContent=`${String(runtime.phase).toLowerCase()}${c}${f}`;}}
+function showFault(msg){runtime.phase='FAULT';runtime.loop='stopped';updateRuntime();const f=$('#fault');f.className='show';f.innerHTML=`✕ ${esc(msg)} <details><summary>details</summary><div>Stopped here. Source is preserved. The failed operation and dependent later work did not complete. Edit the source, then Run again.</div></details>`;interacted('');}
+window.addEventListener('message',e=>{const d=e.data;if(!d||d.source!=='ZA_LUDIC')return;const p=d.payload||{};if(d.type==='runtime'){runtime.phase='RUNTIME';markUniverse(1);}if(d.type==='p5'){runtime.p5='loaded';runtime.phase='P5 LOADED';markUniverse(3);}if(d.type==='source'){runtime.phase='SOURCE READY';markUniverse(4);}if(d.type==='setup'){runtime.phase='SETUP · ONCE';markUniverse(5);}if(d.type==='canvas'){runtime.canvas={w:p.w,h:p.h};runtime.phase='CANVAS EXISTS';markUniverse(6);}if(d.type==='draw'){runtime.phase='DRAW · LOOP';runtime.frame=p.frame;runtime.loop='looping';markUniverse(7);}if(d.type==='frame'){runtime.phase='DRAW · LOOP';runtime.frame=p.frame;runtime.loop=p.loop?'looping':'stopped';markUniverse(8);setTimeout(()=>markUniverse(9),20);}if(d.type==='fault')showFault(p.message||'runtime error');updateRuntime();});
+
+editor.addEventListener('input',()=>{syncGutter();renderTokens();const ar=$('#autoRefresh');if(ar&&ar.checked){clearTimeout(editor._t);editor._t=setTimeout(runSketch,350);}});
+editor.addEventListener('scroll',()=>{const h=$('#highlight');if(h){h.scrollTop=editor.scrollTop;h.scrollLeft=editor.scrollLeft;}gutter.scrollTop=editor.scrollTop;});
+function selectTokenAtCaret(){const before=editor.value.slice(0,editor.selectionStart);selectedLine=before.split('\n').length;const lineStart=editor.value.lastIndexOf('\n',editor.selectionStart-1)+1;const col=editor.selectionStart-lineStart;const toks=tokenize(getLine());let best=null;for(let i=0;i<toks.length;i++){const t=toks[i];if(col>=t.start&&col<=t.start+t.raw.length){best=i;break;}if(t.start<=col)best=i;}selectedToken=best;renderTokens();}
+editor.addEventListener('click',selectTokenAtCaret);editor.addEventListener('keyup',selectTokenAtCaret);
+$('#prevBtn').onclick=()=>loadSlide(current-1);$('#nextBtn').onclick=()=>loadSlide(current+1);$('#playBtn').onclick=()=>{interacted('PLAY constructs a fresh runtime from the current source.');runSketch();};$('#stopBtn').onclick=()=>stopSketch();$('#restartBtn').onclick=()=>{interacted('RESTART discards the current runtime, not the source.');runSketch();};$('#ruleBtn').onclick=revealRule;$('#promptBtn').onclick=promptToggle;
+window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();runSketch();}if(e.key==='ArrowRight'&&e.altKey)loadSlide(current+1);if(e.key==='ArrowLeft'&&e.altKey)loadSlide(current-1);});
+loadSlide(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-strawberry.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Mondrian Quine — Void Surface</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.11.8/lib/p5.min.js"></script>
+<style>
+:root{
+  --paper:#f3eee4;
+  --paper2:#fbf8f1;
+  --ink:#11110f;
+  --red:#d63b2b;
+  --blue:#1e5aa8;
+  --yellow:#efc62d;
+  --muted:#6e695f;
+  --ghost:rgba(17,17,15,.17);
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:var(--paper);color:var(--ink);
+  font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  touch-action:none;
+}
+button{
+  appearance:none;border:1px solid var(--ink);background:var(--paper2);
+  color:var(--ink);font:inherit;padding:6px 9px;cursor:pointer;
+}
+button:hover,button:focus-visible{background:var(--ink);color:var(--paper2);outline:none}
+#app,#stage,#p5host,#surface,#overlay{position:fixed;inset:0}
+#stage{overflow:hidden;background:var(--paper)}
+#p5host{z-index:0}
+#surface{z-index:3;user-select:none}
+#overlay{z-index:6;pointer-events:none}
+#surface canvas{display:block}
+
+.block{
+  position:absolute;overflow:hidden;
+  border:7px solid var(--ink);
+  cursor:grab;pointer-events:auto;
+}
+.block:active{cursor:grabbing}
+.block.selected{outline:3px solid var(--paper2);outline-offset:-13px}
+.block.drop-target{outline:5px solid var(--red);outline-offset:-13px}
+.block.drop-target::after{
+  content:"";position:absolute;z-index:9;background:rgba(214,59,43,.22);pointer-events:none;
+}
+.block.drop-left::after{left:0;top:0;bottom:0;width:30%}
+.block.drop-right::after{right:0;top:0;bottom:0;width:30%}
+.block.drop-top::after{left:0;right:0;top:0;height:30%}
+.block.drop-bottom::after{left:0;right:0;bottom:0;height:30%}
+
+.divider{
+  position:absolute;z-index:12;background:var(--ink);
+  pointer-events:auto;touch-action:none;
+}
+.divider.v{width:14px;transform:translateX(-7px);cursor:ew-resize}
+.divider.h{height:14px;transform:translateY(-7px);cursor:ns-resize}
+
+.context{
+  position:absolute;z-index:20;display:flex;gap:4px;
+  background:rgba(243,238,228,.96);padding:4px;border:1px solid var(--ink);
+  pointer-events:auto;
+}
+.context button{padding:5px 7px}
+.readout{
+  position:absolute;z-index:21;background:rgba(243,238,228,.96);
+  border:1px solid var(--ink);padding:4px 6px;pointer-events:none;
+  white-space:nowrap;
+}
+.code{
+  position:absolute;z-index:18;background:rgba(243,238,228,.96);
+  border:1px solid var(--ink);padding:9px;white-space:pre-wrap;
+  overflow:auto;font-size:10px;line-height:1.35;pointer-events:auto;
+}
+.ghostLine{position:absolute;z-index:5;background:var(--ghost)}
+.dragGhost{
+  position:absolute;z-index:30;width:108px;height:72px;border:3px solid var(--ink);
+  background:rgba(243,238,228,.9);display:none;place-items:center;
+  font-weight:800;pointer-events:none;
+}
+#undo{
+  position:fixed;z-index:40;top:10px;right:10px;
+  display:none;border-radius:999px;
+}
+#undo.show{display:block}
+#helpBtn{
+  position:fixed;z-index:40;top:10px;left:10px;
+  width:31px;height:31px;padding:0;border-radius:999px;
+}
+#help{
+  position:fixed;z-index:50;left:10px;top:50px;width:min(390px,calc(100vw - 20px));
+  background:var(--paper2);border:1px solid var(--ink);padding:11px 12px;
+  display:none;
+}
+#help.open{display:block}
+#help b{display:block;margin-bottom:6px}
+#changed{
+  position:fixed;z-index:45;left:50%;bottom:12px;transform:translateX(-50%);
+  background:var(--ink);color:var(--paper2);padding:6px 9px;
+  opacity:0;transition:opacity .15s;pointer-events:none;white-space:nowrap;
+}
+#fault{
+  position:fixed;z-index:45;left:10px;bottom:10px;display:none;
+  background:var(--paper2);border:1px solid var(--ink);padding:7px 9px;
+}
+@media(max-width:720px){
+  .context{gap:3px;padding:3px}
+  .context button{padding:5px 6px}
+  #helpBtn{top:7px;left:7px}
+  #undo{top:7px;right:7px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <div id="p5host"></div>
+    <div id="surface"></div>
+    <div id="overlay"></div>
+    <div id="dragGhost" class="dragGhost"></div>
+  </div>
+
+  <button id="helpBtn" aria-label="Help">?</button>
+  <button id="undo" aria-label="Undo last change">↶ undo</button>
+
+  <div id="help" role="dialog" aria-modal="false">
+    <b>MONDRIAN = PROGRAM = OUTPUT</b>
+    Tap a block to expose only its valid actions. Drag inside it to move its local operation.
+    Drag a thick wall to change a split. Hold a block, then drag it to another block edge to
+    re-parent it. Double-click cycles behavior. Press <b>Esc</b> during a drag to cancel.
+    Press <b>C</b> on a selected block to show only that block’s code. Cmd/Ctrl-Z restores.
+  </div>
+
+  <div id="changed"></div>
+  <div id="fault">p5.js did not load. Structure remains editable.</div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const stage = $("#stage");
+  const surface = $("#surface");
+  const overlay = $("#overlay");
+  const ghost = $("#dragGhost");
+  const undoBtn = $("#undo");
+  const changed = $("#changed");
+
+  const MODES=["rect","ellipse","orbit","pulse","lines","sweep"];
+  const COLORS=["#efc62d","#d63b2b","#1e5aa8","#f7f4ed","#11110f"];
+  let nextId=1;
+
+  const app={
+    root:null,
+    selected:null,
+    history:[],
+    layout:new Map(),
+    parent:new Map(),
+    drag:null,
+    hoverDrop:null,
+    codeOpen:false,
+    p5:null
+  };
+
+  function uid(){return "n"+(nextId++)}
+  function leaf(mode="rect",color=COLORS[Math.floor(Math.random()*COLORS.length)]){
+    return {id:uid(),type:"leaf",mode,color,tx:0,ty:0,seed:Math.random()*1000};
+  }
+  function split(axis,ratio,a,b){return {id:uid(),type:"split",axis,ratio,a,b}}
+  function initial(){
+    nextId=1;
+    const A=leaf("rect","#efc62d");
+    const B=leaf("orbit","#d63b2b");
+    const C=leaf("pulse","#f7f4ed");
+    const D=leaf("lines","#1e5aa8");
+    app.selected=null;
+    return split("v",.58,split("h",.46,A,C),split("h",.46,B,D));
+  }
+
+  function clone(x){return JSON.parse(JSON.stringify(x))}
+  function snapshot(){
+    app.history.push(clone(app.root));
+    if(app.history.length>50) app.history.shift();
+    syncUndo();
+  }
+  function syncUndo(){undoBtn.classList.toggle("show",app.history.length>0)}
+  function undo(){
+    if(!app.history.length)return;
+    app.root=app.history.pop();
+    app.selected=null;app.codeOpen=false;
+    refresh();announce("restored previous state");
+  }
+
+  function walk(node,fn,parent=null,side=null){
+    fn(node,parent,side);
+    if(node.type==="split"){walk(node.a,fn,node,"a");walk(node.b,fn,node,"b")}
+  }
+  function indexParents(){
+    app.parent.clear();
+    walk(app.root,(n,p,side)=>app.parent.set(n.id,{parent:p,side}));
+  }
+  function find(id){
+    let hit=null;
+    walk(app.root,n=>{if(n.id===id)hit=n});
+    return hit;
+  }
+  function replaceNode(id,replacement){
+    indexParents();
+    const info=app.parent.get(id);
+    if(!info?.parent){app.root=replacement;return}
+    info.parent[info.side]=replacement;
+  }
+
+  function computeLayout(){
+    app.layout.clear();
+    const r=stage.getBoundingClientRect();
+    function rec(n,b){
+      app.layout.set(n.id,b);
+      if(n.type==="leaf")return;
+      if(n.axis==="v"){
+        const aw=b.w*n.ratio;
+        rec(n.a,{x:b.x,y:b.y,w:aw,h:b.h});
+        rec(n.b,{x:b.x+aw,y:b.y,w:b.w-aw,h:b.h});
+      }else{
+        const ah=b.h*n.ratio;
+        rec(n.a,{x:b.x,y:b.y,w:b.w,h:ah});
+        rec(n.b,{x:b.x,y:b.y+ah,w:b.w,h:b.h-ah});
+      }
+    }
+    rec(app.root,{x:0,y:0,w:r.width,h:r.height});
+  }
+
+  function renderSurface(){
+    surface.innerHTML="";
+    overlay.innerHTML="";
+    indexParents();computeLayout();
+
+    walk(app.root,n=>{
+      if(n.type!=="leaf")return;
+      const b=app.layout.get(n.id);
+      const el=document.createElement("div");
+      el.className="block"+(n.id===app.selected?" selected":"");
+      el.dataset.id=n.id;
+      Object.assign(el.style,{left:b.x+"px",top:b.y+"px",width:b.w+"px",height:b.h+"px"});
+      el.addEventListener("pointerdown",blockDown);
+      el.addEventListener("dblclick",e=>{e.stopPropagation();app.selected=n.id;cycleMode()});
+      surface.appendChild(el);
+
+      if(n.id===app.selected && !app.drag){
+        renderContext(n,b);
+        if(app.codeOpen) renderCode(n,b);
+      }
+    });
+
+    walk(app.root,n=>{
+      if(n.type!=="split")return;
+      const b=app.layout.get(n.id);
+      const d=document.createElement("div");
+      d.className="divider "+n.axis;
+      d.dataset.id=n.id;
+      if(n.axis==="v"){
+        const x=b.x+b.w*n.ratio;
+        Object.assign(d.style,{left:x+"px",top:b.y+"px",height:b.h+"px"});
+      }else{
+        const y=b.y+b.h*n.ratio;
+        Object.assign(d.style,{left:b.x+"px",top:y+"px",width:b.w+"px"});
+      }
+      d.addEventListener("pointerdown",dividerDown);
+      surface.appendChild(d);
+    });
+
+    if(app.drag?.type==="divider"){
+      const g=document.createElement("div");
+      g.className="ghostLine";
+      const o=app.drag.original;
+      if(app.drag.axis==="v")Object.assign(g.style,{left:(o.x-2)+"px",top:o.y+"px",width:"4px",height:o.h+"px"});
+      else Object.assign(g.style,{left:o.x+"px",top:(o.y-2)+"px",width:o.w+"px",height:"4px"});
+      overlay.appendChild(g);
+
+      const n=find(app.drag.id),b=app.layout.get(app.drag.id);
+      const r=document.createElement("div");
+      r.className="readout";
+      r.textContent=`${app.drag.startRatio.toFixed(2)} → ${n.ratio.toFixed(2)} · ESC cancel`;
+      if(n.axis==="v"){r.style.left=(b.x+b.w*n.ratio+10)+"px";r.style.top=(b.y+b.h*.5)+"px"}
+      else{r.style.left=(b.x+b.w*.5)+"px";r.style.top=(b.y+b.h*n.ratio+10)+"px"}
+      overlay.appendChild(r);
+    }
+
+    syncUndo();
+  }
+
+  function renderContext(n,b){
+    const c=document.createElement("div");
+    c.className="context";
+    c.innerHTML=`
+      <button data-act="v" title="Split left/right">split ↔</button>
+      <button data-act="h" title="Split top/bottom">split ↕</button>
+      <button data-act="mode">behavior</button>
+      <button data-act="code">${app.codeOpen?"hide code":"code"}</button>
+      <button data-act="merge">merge</button>
+    `;
+    c.style.left=Math.max(8,Math.min(innerWidth-c.offsetWidth-8,b.x+8))+"px";
+    c.style.top=Math.max(8,b.y+8)+"px";
+    c.addEventListener("pointerdown",e=>e.stopPropagation());
+    c.addEventListener("click",e=>{
+      const a=e.target.dataset.act;if(!a)return;
+      if(a==="v")splitSelected("v");
+      if(a==="h")splitSelected("h");
+      if(a==="mode")cycleMode();
+      if(a==="code"){app.codeOpen=!app.codeOpen;refresh()}
+      if(a==="merge")mergeSelected();
+    });
+    overlay.appendChild(c);
+
+    requestAnimationFrame(()=>{
+      const w=c.offsetWidth;
+      c.style.left=Math.max(8,Math.min(innerWidth-w-8,b.x+8))+"px";
+    });
+  }
+
+  function renderCode(n,b){
+    const box=document.createElement("div");
+    box.className="code";
+    box.textContent=localCode(n);
+    box.style.left=(b.x+10)+"px";
+    box.style.top=(b.y+48)+"px";
+    box.style.width=Math.max(150,b.w-20)+"px";
+    box.style.maxHeight=Math.max(90,b.h-58)+"px";
+    overlay.appendChild(box);
+  }
+
+  function localCode(n){
+    if(n.mode==="rect")return `fill("${n.color}");\nrect(w*.5 + ${n.tx.toFixed(2)}*w*.32,\n     h*.5 + ${n.ty.toFixed(2)}*h*.32,\n     min(w,h)*.34,\n     min(w,h)*.24);`;
+    if(n.mode==="ellipse")return `fill("${n.color}");\nellipse(w*.5 + ${n.tx.toFixed(2)}*w*.32,\n        h*.5 + ${n.ty.toFixed(2)}*h*.32,\n        min(w,h)*.30);`;
+    if(n.mode==="orbit")return `let a=t*1.4+${n.seed.toFixed(2)};\nellipse(w*.5+cos(a)*w*.20,\n        h*.5+sin(a)*h*.20,\n        min(w,h)*.09);`;
+    if(n.mode==="pulse")return `let s=.82+.18*sin(t*3.0);\nellipse(w*.5,h*.5,min(w,h)*.34*s);`;
+    if(n.mode==="lines")return `for(let i=-3;i<=3;i++){\n  let x=w*.5+i*min(w,h)*.055;\n  line(x,h*.3,x+sin(t*2+i)*10,h*.7);\n}`;
+    return `let x=((t*.17+${n.seed.toFixed(2)})%1)*w;\nline(x,0,x,h);`;
+  }
+
+  let holdTimer=null;
+
+  function blockDown(e){
+    if(e.button!==0 && e.pointerType==="mouse")return;
+    e.preventDefault();e.stopPropagation();
+    const id=e.currentTarget.dataset.id;
+    const n=find(id),b=app.layout.get(id);
+    app.selected=id;app.codeOpen=false;
+    app.drag={type:"param",id,startX:e.clientX,startY:e.clientY,tx:n.tx,ty:n.ty,bounds:b,mutated:false};
+    refresh();
+
+    holdTimer=setTimeout(()=>{
+      if(!app.drag||app.drag.type!=="param"||app.drag.id!==id)return;
+      snapshot();
+      app.drag.type="structure";
+      ghost.style.display="grid";
+      ghost.textContent=n.mode.toUpperCase();
+      ghost.style.left=(e.clientX-54)+"px";
+      ghost.style.top=(e.clientY-36)+"px";
+      announce("move block · release on an edge");
+    },350);
+
+    addEventListener("pointermove",pointerMove);
+    addEventListener("pointerup",pointerUp,{once:true});
+  }
+
+  function dividerDown(e){
+    e.preventDefault();e.stopPropagation();
+    const id=e.currentTarget.dataset.id;
+    const n=find(id),b=app.layout.get(id);
+    snapshot();
+    app.selected=null;app.codeOpen=false;
+    app.drag={
+      type:"divider",id,axis:n.axis,startRatio:n.ratio,
+      original:n.axis==="v"
+        ? {x:b.x+b.w*n.ratio,y:b.y,w:0,h:b.h}
+        : {x:b.x,y:b.y+b.h*n.ratio,w:b.w,h:0},
+      before:clone(app.root)
+    };
+    addEventListener("pointermove",pointerMove);
+    addEventListener("pointerup",pointerUp,{once:true});
+    refresh();
+  }
+
+  function pointerMove(e){
+    if(!app.drag)return;
+
+    if(app.drag.type==="divider"){
+      const n=find(app.drag.id),b=app.layout.get(app.drag.id);
+      if(!n||!b)return;
+      if(n.axis==="v")n.ratio=clamp((e.clientX-b.x)/b.w,.12,.88);
+      else n.ratio=clamp((e.clientY-b.y)/b.h,.12,.88);
+      refresh();
+      return;
+    }
+
+    if(app.drag.type==="param"){
+      const dx=e.clientX-app.drag.startX,dy=e.clientY-app.drag.startY;
+      if(Math.hypot(dx,dy)>8 && holdTimer){clearTimeout(holdTimer);holdTimer=null}
+      if(!app.drag.mutated){snapshot();app.drag.mutated=true}
+      const n=find(app.drag.id);if(!n)return;
+      n.tx=clamp(app.drag.tx+dx/Math.max(50,app.drag.bounds.w),-.9,.9);
+      n.ty=clamp(app.drag.ty+dy/Math.max(50,app.drag.bounds.h),-.9,.9);
+      refresh();
+      return;
+    }
+
+    if(app.drag.type==="structure"){
+      ghost.style.left=(e.clientX-54)+"px";
+      ghost.style.top=(e.clientY-36)+"px";
+      app.hoverDrop=findDropTarget(e.clientX,e.clientY,app.drag.id);
+      markDrop();
+    }
+  }
+
+  function pointerUp(){
+    if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+    removeEventListener("pointermove",pointerMove);
+
+    if(app.drag?.type==="divider"){
+      const n=find(app.drag.id);
+      announce(`split ${app.drag.startRatio.toFixed(2)} → ${n.ratio.toFixed(2)}`);
+    }else if(app.drag?.type==="param" && app.drag.mutated){
+      const n=find(app.drag.id);
+      announce(`position → ${n.tx.toFixed(2)}, ${n.ty.toFixed(2)}`);
+    }else if(app.drag?.type==="structure"){
+      if(app.hoverDrop)reparent(app.drag.id,app.hoverDrop.id,app.hoverDrop.edge);
+      ghost.style.display="none";app.hoverDrop=null;clearDrop();
+    }
+
+    app.drag=null;refresh();
+  }
+
+  function cancelDrag(){
+    if(!app.drag)return;
+    if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+    removeEventListener("pointermove",pointerMove);
+
+    if(app.drag.type==="divider" && app.drag.before){
+      app.root=app.drag.before;
+      if(app.history.length)app.history.pop();
+    }else if(app.drag.type==="param"){
+      const n=find(app.drag.id);
+      if(n){n.tx=app.drag.tx;n.ty=app.drag.ty}
+      if(app.drag.mutated && app.history.length)app.history.pop();
+    }else if(app.drag.type==="structure"){
+      if(app.history.length)app.history.pop();
+      ghost.style.display="none";
+    }
+    app.drag=null;app.hoverDrop=null;clearDrop();refresh();announce("change cancelled");
+  }
+
+  function findDropTarget(x,y,dragId){
+    let hit=null;
+    walk(app.root,n=>{
+      if(hit||n.type!=="leaf"||n.id===dragId)return;
+      const b=app.layout.get(n.id);
+      if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){
+        const px=(x-b.x)/b.w,py=(y-b.y)/b.h;
+        const d={left:px,right:1-px,top:py,bottom:1-py};
+        hit={id:n.id,edge:Object.keys(d).sort((a,b)=>d[a]-d[b])[0]};
+      }
+    });
+    return hit;
+  }
+
+  function markDrop(){
+    clearDrop();
+    if(!app.hoverDrop)return;
+    const el=surface.querySelector(`.block[data-id="${app.hoverDrop.id}"]`);
+    if(el)el.classList.add("drop-target","drop-"+app.hoverDrop.edge);
+  }
+  function clearDrop(){
+    surface.querySelectorAll(".block").forEach(el=>el.classList.remove("drop-target","drop-left","drop-right","drop-top","drop-bottom"));
+  }
+
+  function reparent(dragId,targetId,edge){
+    if(dragId===targetId)return;
+    indexParents();
+    const dragNode=find(dragId),targetNode=find(targetId);
+    const di=app.parent.get(dragId);
+    if(!dragNode||!targetNode||!di?.parent)return;
+
+    const oldParent=di.parent;
+    const sibling=oldParent[di.side==="a"?"b":"a"];
+    const oldInfo=app.parent.get(oldParent.id);
+    if(!oldInfo?.parent)app.root=sibling;
+    else oldInfo.parent[oldInfo.side]=sibling;
+
+    indexParents();
+    const currentTarget=find(targetId),ti=app.parent.get(targetId);
+    if(!currentTarget)return;
+
+    const axis=(edge==="left"||edge==="right")?"v":"h";
+    const first=(edge==="left"||edge==="top")?dragNode:currentTarget;
+    const second=(edge==="left"||edge==="top")?currentTarget:dragNode;
+    const rep=split(axis,.5,first,second);
+
+    if(!ti?.parent)app.root=rep;
+    else ti.parent[ti.side]=rep;
+
+    app.selected=dragId;
+    announce(`moved block ${edge}`);
+  }
+
+  function splitSelected(axis){
+    const n=find(app.selected);if(!n||n.type!=="leaf")return;
+    snapshot();indexParents();
+    const copy=clone(n);copy.id=uid();
+    const fresh=leaf(MODES[(MODES.indexOf(n.mode)+1)%MODES.length]);
+    replaceNode(n.id,split(axis,.5,copy,fresh));
+    app.selected=copy.id;app.codeOpen=false;
+    refresh();announce(axis==="v"?"split left/right":"split top/bottom");
+  }
+
+  function cycleMode(){
+    const n=find(app.selected);if(!n||n.type!=="leaf")return;
+    snapshot();
+    const before=n.mode;
+    n.mode=MODES[(MODES.indexOf(n.mode)+1)%MODES.length];
+    n.color=COLORS[(COLORS.indexOf(n.color)+1+COLORS.length)%COLORS.length];
+    refresh();announce(`${before} → ${n.mode}`);
+  }
+
+  function mergeSelected(){
+    indexParents();
+    const n=find(app.selected),info=app.parent.get(app.selected);
+    if(!n||!info?.parent)return;
+    snapshot();
+    const rep=leaf(n.mode,n.color);rep.tx=n.tx;rep.ty=n.ty;
+    replaceNode(info.parent.id,rep);
+    app.selected=rep.id;app.codeOpen=false;
+    refresh();announce("merged to one block");
+  }
+
+  function announce(text){
+    changed.textContent=text+" · undo available";
+    changed.style.opacity="1";
+    clearTimeout(announce.t);
+    announce.t=setTimeout(()=>changed.style.opacity="0",1100);
+  }
+
+  function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+
+  $("#helpBtn").onclick=()=>$("#help").classList.toggle("open");
+  undoBtn.onclick=undo;
+
+  addEventListener("keydown",e=>{
+    const k=e.key.toLowerCase();
+    if(e.key==="Escape"){cancelDrag();$("#help").classList.remove("open");return}
+    if((e.metaKey||e.ctrlKey)&&k==="z"){e.preventDefault();undo();return}
+    if(!app.selected)return;
+    if(k==="v")splitSelected("v");
+    if(k==="h")splitSelected("h");
+    if(k==="b")cycleMode();
+    if(k==="m")mergeSelected();
+    if(k==="c"){app.codeOpen=!app.codeOpen;refresh()}
+  });
+
+  stage.addEventListener("pointerdown",e=>{
+    if(e.target===stage||e.target===surface){app.selected=null;app.codeOpen=false;refresh()}
+  });
+
+  // One p5 canvas. The same AST drives both visual execution and interaction geometry.
+  function setupP5(){
+    if(!window.p5){$("#fault").style.display="block";return}
+    app.p5=new p5(p=>{
+      p.setup=()=>{
+        const c=p.createCanvas(stage.clientWidth,stage.clientHeight);
+        c.parent("p5host");
+        p.pixelDensity(Math.min(2,devicePixelRatio||1));
+      };
+      p.windowResized=()=>p.resizeCanvas(stage.clientWidth,stage.clientHeight);
+      p.draw=()=>{
+        p.background("#f3eee4");
+        computeLayout();
+        const t=p.millis()/1000;
+        walk(app.root,n=>{
+          if(n.type!=="leaf")return;
+          const b=app.layout.get(n.id);
+          p.push();
+          p.translate(b.x,b.y);
+          p.noStroke();p.fill("#f7f4ed");p.rect(0,0,b.w,b.h);
+
+          const m=Math.min(b.w,b.h);
+          p.translate(b.w*.5+n.tx*b.w*.32,b.h*.5+n.ty*b.h*.32);
+          p.stroke("#11110f");p.strokeWeight(Math.max(1.5,Math.min(3,m*.012)));p.noFill();
+
+          if(n.mode==="rect"){
+            p.fill(n.color);p.rectMode(p.CENTER);p.rect(0,0,m*.34,m*.24);
+          }else if(n.mode==="ellipse"){
+            p.fill(n.color);p.ellipse(0,0,m*.30,m*.30);
+          }else if(n.mode==="orbit"){
+            p.ellipse(0,0,m*.42,m*.42);
+            const a=t*1.4+n.seed;
+            p.fill(n.color);p.ellipse(Math.cos(a)*m*.21,Math.sin(a)*m*.21,m*.09,m*.09);
+          }else if(n.mode==="pulse"){
+            const s=.82+.18*Math.sin(t*3+n.seed);
+            p.fill(n.color);p.ellipse(0,0,m*.34*s,m*.34*s);
+          }else if(n.mode==="lines"){
+            p.stroke(n.color);
+            for(let i=-3;i<=3;i++){
+              const x=i*m*.055;
+              p.line(x,-m*.20,x+Math.sin(t*2+i+n.seed)*10,m*.20);
+            }
+          }else{
+            const x=((t*.17+n.seed)%1-.5)*b.w*.72;
+            p.stroke(n.color);p.line(x,-m*.22,x,m*.22);
+          }
+          p.pop();
+        });
+      };
+    });
+  }
+
+  app.root=initial();
+  refresh();
+  setupP5();
+  addEventListener("resize",refresh);
+})();
+</script>
+</body>
+</html>

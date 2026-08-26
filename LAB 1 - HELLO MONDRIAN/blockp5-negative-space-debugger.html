@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>blockp5 — Program Surface v2</title>
+<script src="https://cdn.jsdelivr.net/npm/acorn@8.15.0/dist/acorn.js"></script>
+<style>
+:root{
+  --ink:#111;
+  --paper:#f5f3ec;
+  --panel:#fff;
+  --line:#d8d5cc;
+  --muted:#77736b;
+  --dark:#30353b;
+  --blue:#315fd3;
+  --error:#b42318;
+  --warn:#9a6700;
+  --header:44px;
+  --condition:0px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+body.conditionVisible{--condition:42px}
+#app{width:100%;height:100dvh;display:grid;grid-template-rows:var(--header) minmax(0,1fr) var(--condition)}
+header{min-width:0;display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--dark);color:#fff;border-bottom:1px solid #22272b;position:relative;z-index:30}
+.brand{font-weight:800;letter-spacing:-.035em;white-space:nowrap;margin-right:2px}.brand small{opacity:.48;font-weight:500;margin-left:4px}
+button{height:30px;border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:0 9px;background:rgba(255,255,255,.08);color:inherit}
+button:hover{background:rgba(255,255,255,.15)} button.active,button.primary{background:#fff;color:#25292d;border-color:#fff}.icon{width:30px;padding:0}.spacer{flex:1}.toolbarSep{width:1px;height:20px;background:rgba(255,255,255,.16);margin:0 2px}
+#revisionButton{min-width:50px}
+#docMenu,#revisionMenu{position:absolute;top:39px;min-width:178px;padding:5px;background:#fff;color:#111;border:1px solid #aaa69e;border-radius:5px;box-shadow:0 10px 30px rgba(0,0,0,.18);display:none;z-index:40}
+#docMenu{right:7px}#revisionMenu{right:44px;max-height:300px;overflow:auto}.open{display:block!important}
+.menuItem{width:100%;height:32px;display:flex;align-items:center;justify-content:space-between;border:0;border-radius:3px;background:transparent;color:#111;padding:0 8px;text-align:left}.menuItem:hover,.revItem:hover{background:#efede7}.menuItem small{color:#8a867f;font-size:10px}
+.revItem{width:100%;min-height:38px;display:grid;grid-template-columns:38px 1fr;align-items:center;gap:5px;border:0;border-radius:3px;background:transparent;color:#111;padding:4px 6px;text-align:left}.revItem strong{font:11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.revItem span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#55514b}
+main{min-width:0;min-height:0;display:grid;grid-template-columns:minmax(320px,46%) minmax(320px,54%)}
+.pane{min-width:0;min-height:0;background:#fff}#leftPane{display:grid;grid-template-rows:34px minmax(0,1fr);border-right:1px solid var(--line)}#worldPane{display:grid;grid-template-rows:34px minmax(0,1fr)}
+.paneHead{display:flex;align-items:center;gap:6px;min-width:0;padding:0 8px 0 10px;border-bottom:1px solid var(--line);background:#faf9f5;font-size:11px;color:#5d5952}.paneHead strong{color:#111;font-weight:750}.paneHead .right{margin-left:auto;display:flex;align-items:center;gap:4px}.paneHead button{height:24px;padding:0 7px;color:#57534c;background:#fff;border:1px solid #d2cfc7;font-size:10px}.paneHead button.active{background:#262a2e;border-color:#262a2e;color:#fff}
+#worldHint{font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#8a867f}
+#semanticZoom{display:flex;align-items:center;gap:2px}#semanticZoom span{width:52px;text-align:center;font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#77736b}
+#sourceArea{min-width:0;min-height:0;position:relative;background:#fbfbfa;overflow:hidden}
+#editor{position:absolute;inset:0;width:100%;height:100%;border:0;outline:0;resize:none;overflow:auto;padding:14px 16px 46px;background:#fbfbfa;color:#181818;tab-size:2;white-space:pre;font:13px/1.56 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;caret-color:var(--blue);z-index:1}#editor::selection{background:#ced9fb}
+#diagOverlay{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}.diagLine{position:absolute;left:0;right:0;height:20.28px;border-left:3px solid var(--error);background:rgba(180,35,24,.045)}.diagLine.warn{border-left-color:var(--warn);background:rgba(154,103,0,.04)}.diagBadge{position:absolute;right:8px;max-width:46%;min-height:19px;padding:3px 6px;border-radius:3px;background:#fff1ef;border:1px solid #e1a29b;color:#7f1d14;font:9px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;box-shadow:0 1px 4px rgba(0,0,0,.08)}.diagBadge.warn{background:#fff8df;border-color:#dfc26b;color:#725100}
+#structure{position:absolute;inset:0;overflow:auto;display:none;padding:12px;background:#f8f6ef;z-index:5}#leftPane.structureMode #editor,#leftPane.structureMode #diagOverlay{display:none}#leftPane.structureMode #structure{display:block}
+.structSection{margin-bottom:12px;border:1px solid #cfcac0;background:#fff}.structTitle{height:30px;display:flex;align-items:center;padding:0 9px;background:#efede6;border-bottom:1px solid #d8d4ca;font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:800;letter-spacing:.05em}.structBody{padding:7px}.opCard{border:1px solid #bcb8af;background:#fff;margin:5px 0;min-height:33px}.opHead{min-height:32px;display:flex;align-items:center;gap:8px;padding:5px 8px}.opHead strong{font:11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.opHead small{margin-left:auto;color:#8a867f;font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.argGrid{display:grid;grid-template-columns:72px 1fr;border-top:1px solid #e2dfd8}.argGrid div{min-height:26px;display:flex;align-items:center;padding:4px 7px;border-bottom:1px solid #ece9e2;font:10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.argGrid div:nth-child(odd){color:#77736b;border-right:1px solid #ece9e2}.overviewBlock{display:grid;grid-template-columns:80px 1fr;min-height:30px;align-items:center;border-bottom:1px solid #e1ddd5;font-size:10px}.overviewBlock strong{padding-left:8px}.overviewBar{height:14px;margin-right:8px;border:1px solid #aaa69d;background:#dedbd3}.emptyStructure{padding:20px;color:#77736b;font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#stage{min-width:0;min-height:0;position:relative;overflow:hidden;background:#d8d8d8}#runner{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f5f3ec}#emptyWorld{position:absolute;inset:0;display:grid;place-items:center;z-index:2;color:#77736b;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:none}
+#traceLayer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5}.traceBox{position:absolute;border:1px solid rgba(49,95,211,.75);outline:1px solid rgba(255,255,255,.7);background:rgba(49,95,211,.035);pointer-events:auto;cursor:pointer}.traceBox:hover,.traceBox.selected{border:2px solid var(--blue);background:rgba(49,95,211,.07)}.traceBox.manipulable{cursor:move}.traceHandle{position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;border:2px solid var(--blue);background:#fff;display:none}.traceBox.selected.manipulable .traceHandle{display:block;cursor:nwse-resize}
+#traceInfo{position:absolute;left:8px;top:8px;max-width:min(360px,calc(100% - 16px));background:rgba(255,255,255,.94);border:1px solid #aaa69e;border-radius:4px;padding:7px 8px;z-index:8;display:none;box-shadow:0 6px 20px rgba(0,0,0,.12);pointer-events:none}#traceInfo strong{display:block;font:11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}#traceInfo small{display:block;color:#6f6b64;margin-top:3px;font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#conditionBar{min-width:0;display:flex;align-items:stretch;background:#f9f8f4;border-top:1px solid var(--line);overflow:hidden}.conditionLabel{width:54px;display:flex;align-items:center;padding:0 10px;border-right:1px solid var(--line);color:#6f6b64;font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:800}.conditionLabel.error{color:var(--error)}.conditionLabel.warn{color:var(--warn)}.conditionMain{min-width:0;flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;overflow:hidden;font:10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.conditionMain.clickable{cursor:pointer}.conditionMain strong{white-space:nowrap}.conditionMain span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.conditionActions{display:flex;align-items:stretch;margin-left:auto}.conditionActions button{height:100%;border:0;border-left:1px solid var(--line);border-radius:0;background:#f3f1eb;color:#57534c;padding:0 11px;font-size:10px}.stateItems{min-width:0;display:flex;align-items:stretch;overflow:auto hidden;scrollbar-width:none}.stateItems::-webkit-scrollbar{display:none}.stateItem{min-width:max-content;height:100%;display:flex;align-items:center;gap:5px;padding:0 9px;border-right:1px solid #e4e1da;font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.stateItem b{font-weight:500;color:#77736b}.stateItem span{font-weight:700}
+#consoleDrawer{position:absolute;left:0;right:0;bottom:var(--condition);height:180px;background:#151719;color:#e5e7e9;border-top:1px solid #292d31;display:none;z-index:18}#consoleDrawer.open{display:grid;grid-template-rows:28px 1fr}#consoleHead{display:flex;align-items:center;padding:0 8px 0 10px;border-bottom:1px solid #292d31;color:#aeb2b5;font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}#clearConsole{margin-left:auto;height:20px;color:#aeb2b5;border-color:#3d4248;background:transparent;font-size:9px}#consoleBody{overflow:auto;padding:7px 10px 12px;font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.log{white-space:pre-wrap;overflow-wrap:anywhere;color:#d8dbdd}.log.system{color:#8faaf9}.log.warn{color:#ffd479}.log.error{color:#ff8d85}
+#fileInput{display:none}.mobileTabs{display:none}
+@media(max-width:760px){:root{--header:48px}header{padding:7px 6px;gap:4px}.brand{font-size:12px}.desktopSecondary{display:none}.mobileTabs{display:flex;margin-left:auto;gap:3px}.mobileTabs button{font-size:10px;padding:0 7px}main{display:block;position:relative}.pane{position:absolute;inset:0}#leftPane{border-right:0}body.mobileWorld #leftPane{display:none}body:not(.mobileWorld) #worldPane{display:none}#consoleDrawer{height:150px}.diagBadge{display:none}.conditionLabel{width:48px;padding:0 7px}.conditionMain{padding:0 7px}.conditionActions button{padding:0 8px}}
+
+/* OPERATIONAL PRAGMATIST SURFACE
+   Objects are named concretely. Controls are verbs. Invalid actions disappear. */
+:root{
+  --paper:#f7f5ee;
+  --panel:#fffef9;
+  --line:#cfcbc0;
+  --dark:#f7f5ee;
+}
+header{
+  background:var(--paper);
+  color:var(--ink);
+  border-bottom:1px solid #bdb8ad;
+}
+.brand{
+  font-size:13px;
+  letter-spacing:-.04em;
+}
+header button{
+  background:transparent;
+  color:#3f3c36;
+  border-color:#c8c3b8;
+  border-radius:2px;
+  font-size:10px;
+  font-weight:650;
+  letter-spacing:.035em;
+}
+header button:hover{background:#ebe8df}
+header button.primary{
+  background:#111;
+  color:#fff;
+  border-color:#111;
+  min-width:54px;
+}
+header #stopBtn{
+  background:#fff;
+  color:#111;
+  border-color:#8f8a80;
+  min-width:54px;
+}
+.paneHead{
+  background:#fffef9;
+  border-bottom-color:#d8d4c9;
+  height:32px;
+}
+.paneHead strong{
+  font-size:10px;
+  letter-spacing:.06em;
+}
+.paneHead > span{
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:#88837a;
+}
+.paneHead button{
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#777168;
+  height:31px;
+  border-bottom:2px solid transparent;
+}
+.paneHead button:hover{background:transparent;color:#111}
+.paneHead button.active{
+  background:transparent;
+  color:#111;
+  border-color:#111;
+}
+#editor{background:#fffefb}
+#stage{background:#e5e2d9}
+#runner{background:#f7f5ee}
+#emptyWorld{background:transparent}
+#conditionBar{background:#fffef9;border-top-color:#bdb8ad}
+.conditionLabel{
+  width:62px;
+  color:#111;
+  background:#f1eee6;
+  letter-spacing:.04em;
+}
+.conditionLabel.error{background:#fff1ef;color:var(--error)}
+.conditionLabel.warn{background:#fff8df;color:var(--warn)}
+.conditionActions button{
+  font-weight:700;
+  letter-spacing:.035em;
+  background:#f7f5ee;
+}
+#traceInfo{
+  border-radius:2px;
+  box-shadow:none;
+}
+#consoleDrawer{box-shadow:0 -10px 30px rgba(0,0,0,.12)}
+
+
+/* NEGATIVE-SPACE DEBUGGER
+   Healthy execution stays small. Failure expands into the operation that did
+   and did not complete. */
+body.breakdownVisible{--condition:258px}
+#conditionBar.breakdown{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr) 116px;
+  align-items:stretch;
+}
+#conditionBar.breakdown .conditionLabel{
+  width:auto;
+  align-items:flex-start;
+  padding:15px 10px 0;
+}
+#conditionBar.breakdown .conditionMain{
+  display:block;
+  padding:12px 14px;
+  overflow:auto;
+}
+#conditionBar.breakdown .conditionActions{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  border-left:1px solid var(--line);
+}
+#conditionBar.breakdown .conditionActions button{
+  height:42px;
+  border-left:0;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+}
+.breakHead{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  margin-bottom:10px;
+}
+.breakHead strong{
+  font:700 13px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.breakHead span{
+  color:#777168;
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.breakGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px 20px;
+}
+.breakSection{
+  min-width:0;
+}
+.breakSection b{
+  display:block;
+  margin-bottom:4px;
+  color:#777168;
+  font:800 8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.08em;
+}
+.breakSection div{
+  color:#181715;
+  font:10px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.breakSection.broken div{color:var(--error);font-weight:700}
+.breakSection.absent div{color:#5e5a53}
+#worldPane.fault #stage::after{
+  content:"LAST FRAME KEPT";
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:7;
+  padding:4px 6px;
+  background:rgba(255,254,249,.9);
+  border:1px solid #bdb8ad;
+  color:#6f6a61;
+  font:8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.06em;
+  pointer-events:none;
+}
+@media(max-width:760px){
+  body.breakdownVisible{--condition:310px}
+  #conditionBar.breakdown{
+    grid-template-columns:52px minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) 42px;
+  }
+  #conditionBar.breakdown .conditionLabel{grid-row:1;padding:13px 7px 0}
+  #conditionBar.breakdown .conditionMain{grid-row:1}
+  #conditionBar.breakdown .conditionActions{
+    grid-column:1 / -1;
+    grid-row:2;
+    flex-direction:row;
+    border-left:0;
+    border-top:1px solid var(--line);
+  }
+  #conditionBar.breakdown .conditionActions button{
+    flex:1;
+    height:41px;
+    border-bottom:0;
+    border-right:1px solid var(--line);
+  }
+  .breakGrid{grid-template-columns:1fr;gap:7px}
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">blockp5</div>
+    <button id="runBtn" class="primary" title="Run · Cmd/Ctrl + Enter">RUN</button>
+    <button id="stopBtn" title="Stop and keep this frame" hidden>STOP</button>
+    <button id="revisionButton" class="desktopSecondary" hidden>RESTORE</button>
+    <div class="spacer desktopSecondary"></div>
+    <button id="openDirectBtn" class="desktopSecondary" title="Open a .js sketch">OPEN</button>
+    <button id="saveDirectBtn" class="desktopSecondary" title="Save sketch.js · Cmd/Ctrl + S">SAVE</button>
+    <button id="docButton" hidden aria-hidden="true">MENU</button>
+    <div class="mobileTabs">
+      <button id="mobileCodeTab" class="active">WRITE</button>
+      <button id="mobileWorldTab">CANVAS</button>
+    </div>
+    <div id="revisionMenu"></div>
+    <div id="docMenu" hidden aria-hidden="true">
+      <button class="menuItem" id="newBtn">New <small>starter</small></button>
+      <button class="menuItem" id="openBtn">Open <small>.js</small></button>
+      <button class="menuItem" id="saveBtn">Save <small>⌘S</small></button>
+      <button class="menuItem" id="copyBtn">Copy code</button>
+      <button class="menuItem" id="consoleMenuBtn">Console <small>logs</small></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="leftPane" class="pane">
+      <div class="paneHead">
+        <strong>SKETCH</strong>
+        <button id="codeModeBtn" class="active">WRITE</button>
+        <button id="structureModeBtn">TRACE</button>
+        <div class="right">
+          <div id="semanticZoom" hidden>
+            <button id="zoomOutBtn" aria-label="Semantic zoom out">−</button>
+            <span id="zoomLabel">OPS</span>
+            <button id="zoomInBtn" aria-label="Semantic zoom in">+</button>
+          </div>
+        </div>
+      </div>
+      <div id="sourceArea">
+        <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-label="p5.js source code"></textarea>
+        <div id="diagOverlay" aria-hidden="true"></div>
+        <div id="structure"></div>
+      </div>
+    </section>
+
+    <section id="worldPane" class="pane">
+      <div class="paneHead">
+        <strong>CANVAS</strong>
+        <span>CLICK SHAPE → SOURCE LINE</span>
+        <div class="right"><span id="worldHint"></span></div>
+      </div>
+      <div id="stage">
+        <iframe id="runner" title="p5.js runtime" sandbox="allow-scripts allow-modals allow-downloads"></iframe>
+        <div id="emptyWorld"></div>
+        <div id="traceLayer"></div>
+        <div id="traceInfo"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="conditionBar" hidden>
+    <div id="conditionLabel" class="conditionLabel">STATE</div>
+    <div id="conditionMain" class="conditionMain"></div>
+    <div id="conditionActions" class="conditionActions"></div>
+  </div>
+
+  <div id="consoleDrawer">
+    <div id="consoleHead">RUNTIME CONSOLE <button id="clearConsole">clear</button></div>
+    <div id="consoleBody"></div>
+  </div>
+  <input id="fileInput" type="file" accept=".js,.txt,text/javascript,text/plain">
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const P5_URL = "https://cdn.jsdelivr.net/npm/p5@2.0.4/lib/p5.min.js";
+  const STORAGE_KEY = "blockp5-program-surface-v2";
+  const REV_KEY = "blockp5-program-surface-revisions-v2";
+
+  const STARTER = `let pulse = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+}
+
+function draw() {
+  background(245, 243, 236);
+
+  fill(49, 95, 211);
+  circle(280, 180, 86);
+
+  pulse = sin(frameCount * 0.04);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}`;
+
+  const editor = document.querySelector("#editor");
+  const leftPane = document.querySelector("#leftPane");
+  const structure = document.querySelector("#structure");
+  const diagOverlay = document.querySelector("#diagOverlay");
+  const semanticZoom = document.querySelector("#semanticZoom");
+  const zoomLabel = document.querySelector("#zoomLabel");
+  const runner = document.querySelector("#runner");
+  const stage = document.querySelector("#stage");
+  const traceLayer = document.querySelector("#traceLayer");
+  const traceInfo = document.querySelector("#traceInfo");
+  const emptyWorld = document.querySelector("#emptyWorld");
+  const worldHint = document.querySelector("#worldHint");
+  const worldPane = document.querySelector("#worldPane");
+  const runBtn = document.querySelector("#runBtn");
+  const stopBtn = document.querySelector("#stopBtn");
+  const revisionButton = document.querySelector("#revisionButton");
+  const revisionMenu = document.querySelector("#revisionMenu");
+  const docButton = document.querySelector("#docButton");
+  const docMenu = document.querySelector("#docMenu");
+  const openDirectBtn = document.querySelector("#openDirectBtn");
+  const saveDirectBtn = document.querySelector("#saveDirectBtn");
+  const fileInput = document.querySelector("#fileInput");
+  const conditionBar = document.querySelector("#conditionBar");
+  const conditionLabel = document.querySelector("#conditionLabel");
+  const conditionMain = document.querySelector("#conditionMain");
+  const conditionActions = document.querySelector("#conditionActions");
+  const consoleDrawer = document.querySelector("#consoleDrawer");
+  const consoleBody = document.querySelector("#consoleBody");
+
+  let runId = 0;
+  let running = false;
+  let sourceDirtySinceRun = false;
+  let saveTimer = null;
+  let lintTimer = null;
+  let currentAnalysis = null;
+  let currentAst = null;
+  let traces = [];
+  let latestState = {};
+  let selectedTraceId = null;
+  let semanticLevel = 1;
+  let revisions = loadRevisions();
+  let interaction = null;
+  let changedUndoCode = null;
+  let changedTimer = null;
+  let lastBreakdown = null;
+
+  const diagnostics = { parse: [], lint: [], runtime: [] };
+
+  const P5_CALLS = new Set([
+    "createCanvas","resizeCanvas","background","clear","fill","noFill","stroke","noStroke","strokeWeight",
+    "circle","ellipse","rect","square","line","point","triangle","quad","arc","bezier","curve",
+    "text","textSize","textAlign","image","loadImage","translate","rotate","scale","push","pop",
+    "frameRate","noLoop","loop","redraw","colorMode","angleMode","random","noise","map","lerp",
+    "sin","cos","tan","abs","min","max","constrain","dist","createVector"
+  ]);
+
+  const P5_MIN_ARGS = {
+    circle:3, ellipse:3, rect:3, square:3, line:4, point:2, triangle:6, quad:8,
+    createCanvas:2, resizeCanvas:2, translate:2, text:3
+  };
+
+  const JS_GLOBALS = new Set([
+    "console","Math","Number","String","Boolean","Array","Object","Date","JSON","Promise","Set","Map",
+    "parseInt","parseFloat","isNaN","Infinity","NaN","undefined","setTimeout","clearTimeout","setInterval","clearInterval",
+    "fetch","alert","confirm","prompt"
+  ]);
+
+  const ARG_NAMES = {
+    circle:["x","y","diameter"], ellipse:["x","y","width","height"], rect:["x","y","width","height"],
+    line:["x1","y1","x2","y2"], point:["x","y"], background:["value"], fill:["value"], stroke:["value"],
+    strokeWeight:["weight"], text:["value","x","y"], image:["image","x","y","width","height"],
+    translate:["x","y","z"], rotate:["angle"], scale:["x","y","z"]
+  };
+
+  function escapeHtml(value) {
+    return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  function stripAcornLocation(message) {
+    return String(message || "Syntax error").replace(/\s*\(\d+:\d+\)\s*$/, "");
+  }
+
+  function allDiagnostics() {
+    return [...diagnostics.parse, ...diagnostics.lint, ...diagnostics.runtime];
+  }
+
+  function blockingDiagnostics() {
+    return allDiagnostics().filter(d => d.severity === "error");
+  }
+
+  function primaryDiagnostic() {
+    const all = allDiagnostics();
+    return all.find(d => d.severity === "error") || all.find(d => d.severity === "warning") || null;
+  }
+
+  function makeDiagnostic({severity="error",phase="lint",message,line=1,column=1,start=0,end=start+1,stack=""}) {
+    return {severity,phase,message:String(message),line:Math.max(1,line||1),column:Math.max(1,column||1),start,end,stack:String(stack||"")};
+  }
+
+  function parseAndLint() {
+    diagnostics.parse = [];
+    diagnostics.lint = [];
+    diagnostics.runtime = [];
+    lastBreakdown = null;
+    worldPane.classList.remove("fault");
+    currentAst = null;
+
+    const code = editor.value;
+
+    if (!window.acorn) {
+      diagnostics.lint.push(makeDiagnostic({
+        severity:"warning", phase:"lint", message:"Load the parser or Run to check this sketch in the runtime.", line:1, column:1
+      }));
+      updateDiagnosticSurface();
+      return;
+    }
+
+    try {
+      currentAst = window.acorn.parse(code, {
+        ecmaVersion:"latest",
+        sourceType:"script",
+        locations:true,
+        allowAwaitOutsideFunction:true
+      });
+    } catch (err) {
+      diagnostics.parse.push(makeDiagnostic({
+        severity:"error",
+        phase:"parse",
+        message:stripAcornLocation(err.message),
+        line:err.loc?.line || 1,
+        column:(err.loc?.column ?? 0) + 1,
+        start:err.pos ?? 0,
+        end:(err.pos ?? 0) + 1,
+        stack:err.stack || ""
+      }));
+      updateDiagnosticSurface();
+      return;
+    }
+
+    lintAst(currentAst, code);
+    updateDiagnosticSurface();
+  }
+
+  function scheduleLint() {
+    clearTimeout(lintTimer);
+    lintTimer = setTimeout(parseAndLint, 90);
+  }
+
+  function walk(node, enter, parent=null, functionName="global") {
+    if (!node || typeof node !== "object") return;
+    let nextFunction = functionName;
+    if (node.type === "FunctionDeclaration" && node.id?.name) nextFunction = node.id.name;
+    enter(node, parent, nextFunction);
+    for (const [key,value] of Object.entries(node)) {
+      if (["loc","start","end"].includes(key)) continue;
+      if (Array.isArray(value)) {
+        for (const child of value) if (child && typeof child.type === "string") walk(child, enter, node, nextFunction);
+      } else if (value && typeof value.type === "string") {
+        walk(value, enter, node, nextFunction);
+      }
+    }
+  }
+
+  function levenshtein(a,b) {
+    const dp = Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+    for(let i=0;i<=a.length;i++) dp[i][0]=i;
+    for(let j=0;j<=b.length;j++) dp[0][j]=j;
+    for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++) {
+      dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+    }
+    return dp[a.length][b.length];
+  }
+
+  function nearestP5(name) {
+    let best=null,bestD=99;
+    for (const candidate of P5_CALLS) {
+      const d=levenshtein(name,candidate);
+      if (d<bestD) {bestD=d;best=candidate;}
+    }
+    return bestD <= (name.length <= 5 ? 1 : 2) ? best : null;
+  }
+
+  function lintAst(ast, code) {
+    const declaredFunctions = new Set();
+    const lifecycleCounts = {setup:0,draw:0};
+
+    for (const node of ast.body || []) {
+      if (node.type === "FunctionDeclaration" && node.id?.name) {
+        declaredFunctions.add(node.id.name);
+        if (node.id.name in lifecycleCounts) lifecycleCounts[node.id.name]++;
+      }
+    }
+
+    for (const name of ["setup","draw"]) {
+      if (lifecycleCounts[name] > 1) {
+        diagnostics.lint.push(makeDiagnostic({severity:"warning",phase:"lint",message:`Keep one ${name}(); remove or rename the duplicate.`,line:1,column:1}));
+      }
+    }
+
+    walk(ast, (node,parent,functionName) => {
+      if (node.type !== "CallExpression" || node.callee?.type !== "Identifier") return;
+      const name = node.callee.name;
+      const line = node.loc?.start.line || 1;
+      const column = (node.loc?.start.column ?? 0)+1;
+
+      if (P5_MIN_ARGS[name] != null && node.arguments.length < P5_MIN_ARGS[name]) {
+        diagnostics.lint.push(makeDiagnostic({
+          severity:"warning", phase:"lint", line, column, start:node.start, end:node.end,
+          message:`Add ${P5_MIN_ARGS[name]-node.arguments.length} argument${P5_MIN_ARGS[name]-node.arguments.length===1?"":"s"} to ${name}().`
+        }));
+      }
+
+      if (name === "createCanvas" && functionName === "draw") {
+        diagnostics.lint.push(makeDiagnostic({
+          severity:"warning", phase:"lint", line, column, start:node.start, end:node.end,
+          message:"Move createCanvas() to setup()."
+        }));
+      }
+
+      if (!P5_CALLS.has(name) && !declaredFunctions.has(name) && !JS_GLOBALS.has(name)) {
+        const guess = nearestP5(name);
+        if (guess) {
+          diagnostics.lint.push(makeDiagnostic({
+            severity:"warning", phase:"lint", line, column, start:node.start, end:node.end,
+            message:`Replace ${name}() with ${guess}(), or define ${name}().`
+          }));
+        }
+      }
+    });
+  }
+
+  function updateDiagnosticSurface() {
+    renderDiagnosticOverlay();
+    updateActions();
+    renderCondition();
+    if (leftPane.classList.contains("structureMode")) renderStructure();
+  }
+
+  function updateActions() {
+    const staticBlocked = blockingDiagnostics().some(d => d.phase !== "runtime");
+    const runtimeFault = diagnostics.runtime.some(d => d.severity === "error");
+
+    if (running) {
+      runBtn.hidden = true;
+      stopBtn.hidden = false;
+    } else {
+      stopBtn.hidden = true;
+      runBtn.hidden = staticBlocked || runtimeFault;
+      runBtn.textContent = "RUN";
+    }
+
+    // During a fault, recovery sits beside the broken operation instead.
+    revisionButton.hidden = revisions.length < 2 || staticBlocked || runtimeFault;
+    revisionButton.textContent = "RESTORE";
+  }
+
+  function showCondition(breakdown=false) {
+    conditionBar.hidden = false;
+    conditionBar.classList.toggle("breakdown", !!breakdown);
+    document.body.classList.add("conditionVisible");
+    document.body.classList.toggle("breakdownVisible", !!breakdown);
+  }
+
+  function hideCondition() {
+    conditionBar.hidden = true;
+    conditionBar.classList.remove("breakdown");
+    document.body.classList.remove("conditionVisible");
+    document.body.classList.remove("breakdownVisible");
+  }
+
+  function sourceLine(line) {
+    return (editor.value.split("\n")[Math.max(0,(line||1)-1)] || "").trim();
+  }
+
+  function inferCallName(line) {
+    const raw = sourceLine(line);
+    const m = raw.match(/\b([A-Za-z_$][\w$]*)\s*\(/);
+    if (!m || m[1] === "function" || m[1] === "if" || m[1] === "for" || m[1] === "while") return "";
+    return m[1];
+  }
+
+  function followingCalls(line, limit=4) {
+    const lines = editor.value.split("\n");
+    const found = [];
+    const seen = new Set();
+
+    for (let i=Math.max(0,line); i<Math.min(lines.length,line+12) && found.length<limit; i++) {
+      const re = /\b([A-Za-z_$][\w$]*)\s*\(/g;
+      let m;
+      while ((m=re.exec(lines[i])) && found.length<limit) {
+        const name=m[1];
+        if (["if","for","while","switch","function","catch"].includes(name) || seen.has(name)) continue;
+        seen.add(name);
+        found.push(`${name}()`);
+      }
+    }
+    return found;
+  }
+
+  function uniqueCompleted(items=[]) {
+    const out = [];
+    for (const item of items) {
+      const label = typeof item === "string" ? item : `${item.name || "operation"}()`;
+      if (!out.includes(label)) out.push(label);
+    }
+    return out.slice(-6);
+  }
+
+  function expectedCondition(message, operation, line) {
+    const msg = String(message || "");
+    if (/is not defined/.test(msg) && operation) return `${operation}() must be defined before line ${line}.`;
+    if (/is not a function/.test(msg) && operation) return `${operation} must resolve to a callable operation.`;
+    if (/Cannot read properties|undefined|null/.test(msg)) return `The value used at line ${line} must exist before this operation runs.`;
+    if (/Could not load p5/.test(msg)) return `p5.js must load before the sketch can start.`;
+    return `${operation || "This statement"} must complete without throwing.`;
+  }
+
+  function buildBreakdown(diag, payload={}) {
+    const runtime = diag.phase === "runtime";
+    const operation = payload.operation || inferCallName(diag.line);
+    const completed = uniqueCompleted(payload.completed || []);
+    const later = followingCalls(diag.line);
+
+    return {
+      operation: runtime
+        ? (operation ? `${operation}()` : (sourceLine(diag.line) || "runtime"))
+        : "preflight",
+      line: diag.line,
+      broken: runtime
+        ? expectedCondition(diag.message, operation, diag.line)
+        : "JavaScript syntax must parse before a runtime can be created.",
+      observed: diag.message,
+      completed: runtime
+        ? (completed.length ? completed.join(" → ") : "runtime created")
+        : "source kept · diagnostics produced",
+      absent: runtime
+        ? (later.length ? later.join(" → ") : "rest of this execution · next frame")
+        : "runtime creation · setup() · draw()",
+      preserved: runtime
+        ? "sketch text · last canvas frame · saved revisions"
+        : "sketch text · previous canvas frame · saved revisions"
+    };
+  }
+
+  function breakdownHtml(b) {
+    return `
+      <div class="breakHead">
+        <strong>${escapeHtml(b.operation)}</strong>
+        <span>LINE ${b.line}</span>
+      </div>
+      <div class="breakGrid">
+        <div class="breakSection broken">
+          <b>FIRST BROKEN CONDITION</b>
+          <div>${escapeHtml(b.broken)}</div>
+        </div>
+        <div class="breakSection">
+          <b>OBSERVED</b>
+          <div>${escapeHtml(b.observed)}</div>
+        </div>
+        <div class="breakSection">
+          <b>COMPLETED BEFORE STOP</b>
+          <div>${escapeHtml(b.completed)}</div>
+        </div>
+        <div class="breakSection absent">
+          <b>NOT COMPLETED</b>
+          <div>${escapeHtml(b.absent)}</div>
+        </div>
+        <div class="breakSection">
+          <b>STATE PRESERVED</b>
+          <div>${escapeHtml(b.preserved)}</div>
+        </div>
+      </div>`;
+  }
+
+  function renderCondition() {
+    clearTimeout(changedTimer);
+    const diag = primaryDiagnostic();
+
+    if (diag && diag.severity === "error") {
+      const b = lastBreakdown || buildBreakdown(diag);
+      lastBreakdown = b;
+      showCondition(true);
+      conditionLabel.textContent = diag.phase === "runtime" ? "STOPPED" : "FIX";
+      conditionLabel.className = "conditionLabel error";
+      conditionMain.className = "conditionMain";
+      conditionMain.onclick = null;
+      conditionMain.innerHTML = breakdownHtml(b);
+
+      const canRestore = revisions.length >= 2;
+      conditionActions.innerHTML =
+        `<button id="condGo">GO TO LINE</button>` +
+        (diag.phase === "runtime" ? `<button id="condRetry">RETRY</button>` : "") +
+        (canRestore ? `<button id="condRestore">RESTORE</button>` : "") +
+        (diag.phase === "runtime" ? `<button id="condConsole">DETAILS</button>` : "");
+
+      document.querySelector("#condGo").onclick = () => jumpToDiagnostic(diag);
+
+      const retry = document.querySelector("#condRetry");
+      if (retry) retry.onclick = () => runProgram({record:false});
+
+      const restore = document.querySelector("#condRestore");
+      if (restore) restore.onclick = () => {
+        const prior = revisions[revisions.length-2];
+        if (!prior) return;
+        editor.value = prior.code;
+        saveLocal();
+        sourceDirtySinceRun = false;
+        parseAndLint();
+        runProgram({record:false});
+      };
+
+      const detail = document.querySelector("#condConsole");
+      if (detail) detail.onclick = openConsole;
+      return;
+    }
+
+    if (diag) {
+      showCondition(false);
+      conditionLabel.textContent = "CHECK";
+      conditionLabel.className = "conditionLabel warn";
+      conditionMain.className = "conditionMain";
+      conditionMain.onclick = null;
+      conditionMain.innerHTML = `<strong>LINE ${diag.line}</strong><span>${escapeHtml(diag.message)}</span>`;
+      conditionActions.innerHTML = `<button id="condGo">GO TO LINE</button>`;
+      document.querySelector("#condGo").onclick = () => jumpToDiagnostic(diag);
+      return;
+    }
+
+    if (running) {
+      showCondition(false);
+      conditionLabel.textContent = "RUNNING";
+      conditionLabel.className = "conditionLabel";
+      conditionMain.className = "conditionMain";
+      conditionMain.onclick = null;
+      conditionMain.innerHTML = `<div class="stateItems">${stateHtml()}</div>`;
+      conditionActions.innerHTML = `<button id="condConsole">LOGS</button>`;
+      document.querySelector("#condConsole").onclick = openConsole;
+      return;
+    }
+
+    if (sourceDirtySinceRun) {
+      showCondition(false);
+      conditionLabel.textContent = "EDITED";
+      conditionLabel.className = "conditionLabel";
+      conditionMain.className = "conditionMain";
+      conditionMain.onclick = null;
+      conditionMain.innerHTML = `<span>Code changed. Canvas still shows the previous run.</span>`;
+      conditionActions.innerHTML = `<button id="condRun">RUN TO APPLY</button>`;
+      document.querySelector("#condRun").onclick = () => runProgram({record:true});
+      return;
+    }
+
+    hideCondition();
+  }
+  function showChanged(message, undoCode) {
+    changedUndoCode = undoCode;
+    showCondition();
+    conditionLabel.textContent = "CHANGED";
+    conditionLabel.className = "conditionLabel";
+    conditionMain.className = "conditionMain";
+    conditionMain.onclick = null;
+    conditionMain.innerHTML = `<span>${escapeHtml(message)}</span>`;
+    conditionActions.innerHTML = `<button id="undoChange">UNDO</button>`;
+    document.querySelector("#undoChange").onclick = () => {
+      if (changedUndoCode == null) return;
+      editor.value = changedUndoCode;
+      saveLocal();
+      parseAndLint();
+      runProgram({record:true});
+      changedUndoCode = null;
+    };
+    clearTimeout(changedTimer);
+    changedTimer = setTimeout(() => renderCondition(), 2600);
+  }
+
+  function stateHtml() {
+    const preferred=["frame","mouseX","mouseY","fps"];
+    const keys=[...preferred.filter(k=>k in latestState),...Object.keys(latestState).filter(k=>!preferred.includes(k))];
+    return keys.map(key=>{
+      let value=latestState[key];
+      if(typeof value==="string"&&value.length>28)value=value.slice(0,25)+"…";
+      return `<div class="stateItem"><b>${escapeHtml(key)}</b><span>${escapeHtml(value)}</span></div>`;
+    }).join("");
+  }
+
+  function jumpToDiagnostic(diag) {
+    showCodeMode();
+    const lines=editor.value.split("\n");
+    let pos=0;
+    for(let i=0;i<diag.line-1&&i<lines.length;i++) pos+=lines[i].length+1;
+    pos+=Math.max(0,diag.column-1);
+    editor.focus();
+    editor.setSelectionRange(pos,Math.min(editor.value.length,pos+1));
+    const lineHeight=20.28;
+    editor.scrollTop=Math.max(0,(diag.line-1)*lineHeight-editor.clientHeight*.35);
+    renderDiagnosticOverlay();
+  }
+
+  function renderDiagnosticOverlay() {
+    const diags=allDiagnostics().filter(d=>d.line);
+    diagOverlay.innerHTML="";
+    if (!diags.length) return;
+    const lineHeight=20.28,paddingTop=14;
+    const visibleTop=editor.scrollTop;
+    const visibleBottom=visibleTop+editor.clientHeight;
+
+    diags.slice(0,20).forEach((d,index)=>{
+      const logicalY=paddingTop+(d.line-1)*lineHeight;
+      if(logicalY+lineHeight<visibleTop||logicalY>visibleBottom)return;
+      const y=logicalY-visibleTop;
+      const line=document.createElement("div");
+      line.className="diagLine"+(d.severity==="warning"?" warn":"");
+      line.style.top=y+"px";
+      diagOverlay.appendChild(line);
+      if(index===0){
+        const badge=document.createElement("div");
+        badge.className="diagBadge"+(d.severity==="warning"?" warn":"");
+        badge.style.top=(y+1)+"px";
+        badge.textContent=d.message;
+        diagOverlay.appendChild(badge);
+      }
+    });
+  }
+
+  /* ---------- program analysis / structure ---------- */
+
+  function isIdentStart(ch){return /[A-Za-z_$]/.test(ch)}
+  function isIdentPart(ch){return /[A-Za-z0-9_$]/.test(ch)}
+  function skipStringOrComment(code,i){
+    const ch=code[i],next=code[i+1];
+    if(ch==="/"&&next==="/"){i+=2;while(i<code.length&&code[i]!=="\n")i++;return i}
+    if(ch==="/"&&next==="*"){i+=2;while(i<code.length-1&&!(code[i]==="*"&&code[i+1]==="/"))i++;return Math.min(code.length,i+2)}
+    if(ch==='"'||ch==="'"||ch==="`"){const quote=ch;i++;while(i<code.length){if(code[i]==="\\"){i+=2;continue}if(code[i]===quote)return i+1;i++}return i}
+    return i;
+  }
+  function findMatchingParen(code,openIndex){let depth=0;for(let i=openIndex;i<code.length;i++){const ch=code[i];if(ch==="/"||ch==='"'||ch==="'"||ch==="`"){const moved=skipStringOrComment(code,i);if(moved!==i){i=moved-1;continue}}if(ch==="(")depth++;if(ch===")"){depth--;if(depth===0)return i}}return-1}
+  function makeArg(code,start,end){let s=start,e=end;while(s<e&&/\s/.test(code[s]))s++;while(e>s&&/\s/.test(code[e-1]))e--;const text=code.slice(s,e),literal=/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(text);return{text,start:s,end:e,literal,number:literal?Number(text):null}}
+  function splitArgs(code,start,end){const args=[];let r=0,s=0,c=0,part=start;for(let i=start;i<end;i++){const ch=code[i];if(ch==="/"||ch==='"'||ch==="'"||ch==="`"){const moved=skipStringOrComment(code,i);if(moved!==i){i=moved-1;continue}}if(ch==="(")r++;else if(ch===")")r--;else if(ch==="[")s++;else if(ch==="]")s--;else if(ch==="{")c++;else if(ch==="}")c--;else if(ch===","&&r===0&&s===0&&c===0){args.push(makeArg(code,part,i));part=i+1}}if(part<=end)args.push(makeArg(code,part,end));return args}
+  function lineOf(code,index){return code.slice(0,index).split("\n").length}
+  function findEnclosingFunction(code,index){const before=code.slice(0,index),re=/function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g;let m,candidate="global";while((m=re.exec(before))){const brace=m.index+m[0].lastIndexOf("{");let depth=0,closes=false;for(let i=brace;i<index;i++){const ch=code[i];if(ch==="/"||ch==='"'||ch==="'"||ch==="`"){const moved=skipStringOrComment(code,i);if(moved!==i){i=moved-1;continue}}if(ch==="{")depth++;if(ch==="}"){depth--;if(depth===0){closes=true;break}}}if(!closes)candidate=m[1]}return candidate}
+  function extractGlobalNames(code){const names=new Set(),re=/(?:^|\n)\s*(?:let|const|var)\s+([A-Za-z_$][\w$]*)/g;let m;while((m=re.exec(code)))names.add(m[1]);return Array.from(names).slice(0,16)}
+  function analyzeProgram(code){
+    const supported=P5_CALLS,calls=[];let i=0,id=1;
+    while(i<code.length){const moved=skipStringOrComment(code,i);if(moved!==i){i=moved;continue}if(!isIdentStart(code[i])){i++;continue}const start=i;i++;while(i<code.length&&isIdentPart(code[i]))i++;const name=code.slice(start,i);let j=i;while(j<code.length&&/\s/.test(code[j]))j++;if(supported.has(name)&&code[j]==="("&&code[start-1]!=="."){const close=findMatchingParen(code,j);if(close!==-1){calls.push({id:id++,name,start,nameEnd:i,open:j,close,end:close+1,args:splitArgs(code,j+1,close),line:lineOf(code,start),scope:findEnclosingFunction(code,start)});i=close+1;continue}}}
+    return{code,calls,globals:extractGlobalNames(code)};
+  }
+  function instrumentProgram(analysis){let out="",cursor=0;for(const call of analysis.calls){out+=analysis.code.slice(cursor,call.start);const argsText=analysis.code.slice(call.open+1,call.close);out+=`__bpCall(${JSON.stringify(call.name)},${call.id},()=>[${argsText}])`;cursor=call.end}return out+analysis.code.slice(cursor)}
+
+  function renderStructure(){
+    currentAnalysis=analyzeProgram(editor.value);
+    if(blockingDiagnostics().some(d=>d.phase==="parse")){
+      structure.innerHTML=`<div class="emptyStructure">Fix the syntax line, then TRACE again.</div>`;return;
+    }
+    if(!currentAnalysis.calls.length){structure.innerHTML=`<div class="emptyStructure">Add a p5 drawing call, then TRACE it.</div>`;return}
+    const groups=new Map();for(const call of currentAnalysis.calls){if(!groups.has(call.scope))groups.set(call.scope,[]);groups.get(call.scope).push(call)}
+    if(semanticLevel===0){structure.innerHTML=Array.from(groups.entries()).map(([scope,calls])=>`<section class="structSection"><div class="structTitle">${escapeHtml(scope.toUpperCase())}</div><div class="overviewBlock"><strong>${calls.length} ops</strong><div class="overviewBar" style="width:${Math.min(100,20+calls.length*11)}%"></div></div></section>`).join("");return}
+    structure.innerHTML=Array.from(groups.entries()).map(([scope,calls])=>{const body=calls.map(call=>{const head=`<div class="opHead"><strong>${escapeHtml(call.name)}()</strong><small>line ${call.line}</small></div>`;if(semanticLevel===1)return`<div class="opCard">${head}</div>`;const labels=ARG_NAMES[call.name]||[];const args=call.args.map((arg,i)=>`<div>${escapeHtml(labels[i]||"arg "+(i+1))}</div><div>${escapeHtml(arg.text||"—")}</div>`).join("");return`<div class="opCard">${head}<div class="argGrid">${args}</div></div>`}).join("");return`<section class="structSection"><div class="structTitle">${escapeHtml(scope.toUpperCase())}</div><div class="structBody">${body}</div></section>`}).join("")
+  }
+  function setSemanticLevel(level){semanticLevel=Math.max(0,Math.min(2,level));zoomLabel.textContent=["GROUPS","CALLS","VALUES"][semanticLevel];renderStructure()}
+
+  /* ---------- runtime ---------- */
+
+  function safeScriptString(value){return JSON.stringify(value).replace(/<\/script/gi,"<\\/script")}
+
+  function runtimeHtml(analysis,id){
+    const transformed=instrumentProgram(analysis);
+    const codeLiteral=safeScriptString(transformed+"\n//# sourceURL=sketch.js");
+    const globals=JSON.stringify(analysis.globals);
+    return `<!doctype html><html><head>
+<link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f5f3ec}canvas{display:block}</style>
+<script>
+(()=>{const RUN_ID=${JSON.stringify(id)},GLOBAL_NAMES=${globals},overrides=Object.create(null),traces=new Map(),recentCompleted=[];let lastTrace=0,lastState=0,faultSent=false;
+const native={log:console.log.bind(console),info:console.info.bind(console),warn:console.warn.bind(console),error:console.error.bind(console)};
+const serialize=v=>{if(typeof v==="string")return v;if(v instanceof Error)return v.stack||v.message;try{return JSON.stringify(v)}catch(_){return String(v)}};
+const send=(type,payload)=>parent.postMessage({source:"blockp5-program-surface",runId:RUN_ID,type,payload},"*");
+const remember=(name,callId)=>{recentCompleted.push({name,callId});if(recentCompleted.length>14)recentCompleted.shift()};
+for(const kind of ["log","info","warn","error"]){console[kind]=(...args)=>{send(kind==="info"?"log":kind,args.map(serialize));native[kind](...args)}}
+function runtimeFault(err,fallback={}){if(faultSent)return;faultSent=true;let line=fallback.line||1,column=fallback.column||1,filename=fallback.filename||"",stack=err?.stack||"";const m=String(stack).match(/sketch\.js:(\d+):(\d+)/);if(m){line=Number(m[1]);column=Number(m[2]);filename="sketch.js"}send("runtimeError",{message:err?.message||fallback.message||"Runtime error",line,column,filename,stack,operation:fallback.operation||"",callId:fallback.callId||null,completed:recentCompleted.slice(-8)});try{if(typeof noLoop==="function")noLoop()}catch(_){}}
+window.addEventListener("error",e=>runtimeFault(e.error,{message:e.message,line:e.lineno,column:e.colno,filename:e.filename}));
+window.addEventListener("unhandledrejection",e=>runtimeFault(e.reason instanceof Error?e.reason:new Error(serialize(e.reason))));
+window.addEventListener("message",e=>{const d=e.data;if(!d||d.source!=="blockp5-host"||d.runId!==RUN_ID)return;if(d.type==="override")overrides[d.callId]=d.args;if(d.type==="freeze"){try{if(typeof noLoop==="function")noLoop()}catch(_){}}});
+window.__bpP5LoadError=()=>runtimeFault(new Error("Could not load p5.js from the CDN."),{line:1,column:1,filename:"runtime"});
+window.__bpCall=function(name,callId,argFactory){let args;try{args=argFactory()}catch(err){runtimeFault(err,{operation:name,callId});throw err}if(overrides[callId]){const o=overrides[callId];args=args.map((v,i)=>o[i]==null?v:o[i])}const fn=window[name];if(typeof fn!=="function"){const err=new Error("p5 function not available: "+name);runtimeFault(err,{operation:name,callId});throw err}try{const result=fn(...args);remember(name,callId);if(["circle","ellipse","rect","line","point"].includes(name))traces.set(callId,{id:callId,name,args:Array.from(args).map(v=>typeof v==="number"?v:serialize(v))});return result}catch(err){runtimeFault(err,{operation:name,callId});throw err}};
+function readState(){const state={};try{state.frame=typeof frameCount==="number"?frameCount:0}catch(_){}try{state.mouseX=typeof mouseX==="number"?Math.round(mouseX):0}catch(_){}try{state.mouseY=typeof mouseY==="number"?Math.round(mouseY):0}catch(_){}try{state.fps=typeof frameRate==="function"?Math.round(frameRate()*10)/10:0}catch(_){}for(const name of GLOBAL_NAMES){try{const value=(0,eval)(name);if(value==null||["number","string","boolean"].includes(typeof value))state[name]=typeof value==="number"?Math.round(value*1000)/1000:value}catch(_){}}return state}
+function pump(now){if(now-lastState>120){send("state",readState());lastState=now}if(now-lastTrace>120){send("traces",Array.from(traces.values()));traces.clear();lastTrace=now}requestAnimationFrame(pump)}requestAnimationFrame(pump);send("system",["runtime starting"]);window.__bpRuntimeFault=runtimeFault;})();
+<\/script>
+<script src="${P5_URL}" crossorigin="anonymous" onerror="window.__bpP5LoadError&&window.__bpP5LoadError()"><\/script>
+<script>try{(0,eval)(${codeLiteral})}catch(err){window.__bpRuntimeFault(err)}<\/script>
+<script>window.addEventListener("load",()=>parent.postMessage({source:"blockp5-program-surface",runId:${JSON.stringify(id)},type:"ready",payload:["running"]},"*"));<\/script>
+</head><body></body></html>`;
+  }
+
+  function runProgram({record=true}={}){
+    parseAndLint();
+    const preflight=blockingDiagnostics().filter(d=>d.phase!=="runtime");
+    if(preflight.length){jumpToDiagnostic(preflight[0]);return}
+    diagnostics.runtime=[];
+    lastBreakdown=null;
+    worldPane.classList.remove("fault");
+    currentAnalysis=analyzeProgram(editor.value);
+    runId++;
+    running=true;
+    sourceDirtySinceRun=false;
+    clearConsole();
+    emptyWorld.style.display="none";
+    selectedTraceId=null;
+    traceInfo.style.display="none";
+    worldHint.textContent="RUNNING";
+    worldPane.classList.remove("fault");
+    if(record)addRevision(editor.value);
+    runner.srcdoc=runtimeHtml(currentAnalysis,runId);
+    renderStructure();
+    updateDiagnosticSurface();
+    if(matchMedia("(max-width:760px)").matches)showMobileWorld();
+  }
+
+  function stopProgram({preserve=false}={}){
+    if(preserve&&!running)return;
+
+    if(preserve){
+      runner.contentWindow?.postMessage({source:"blockp5-host",runId,type:"freeze"},"*");
+      worldHint.textContent = sourceDirtySinceRun ? "PREVIOUS RUN" : "STOPPED · FRAME KEPT";
+    } else {
+      runId++;
+      runner.srcdoc="<!doctype html><html><body style='margin:0;background:#f7f5ee'></body></html>";
+      traces=[];
+      renderTraces();
+      emptyWorld.style.display="grid";
+      worldHint.textContent="NOT RUN";
+    }
+
+    running=false;
+    worldPane.classList.remove("fault");
+    updateActions();
+    renderCondition();
+  }
+
+  function freezeOnEdit(){
+    if(running){
+      sourceDirtySinceRun=true;
+      stopProgram({preserve:true});
+      worldHint.textContent="PREVIOUS RUN";
+    }
+  }
+
+  /* ---------- trace / direct manipulation ---------- */
+
+  function traceGeometry(trace){const a=trace.args.map(Number);if(a.some(v=>Number.isNaN(v)))return null;if(trace.name==="circle"){const[x,y,d]=a;return{x:x-d/2,y:y-d/2,w:d,h:d}}if(trace.name==="ellipse"){const[x,y,w,h=w]=a;return{x:x-w/2,y:y-h/2,w,h}}if(trace.name==="rect"){const[x,y,w,h=w]=a;return{x,y,w,h}}if(trace.name==="point"){const[x,y]=a;return{x:x-5,y:y-5,w:10,h:10}}if(trace.name==="line"){const[x1,y1,x2,y2]=a;return{x:Math.min(x1,x2),y:Math.min(y1,y2),w:Math.max(8,Math.abs(x2-x1)),h:Math.max(8,Math.abs(y2-y1))}}return null}
+  function callForId(id){return currentAnalysis?.calls.find(c=>c.id===Number(id))||null}
+  function isManipulable(call){if(!call||!["circle","ellipse","rect"].includes(call.name))return false;const needed=call.name==="circle"?3:4;return call.args.slice(0,needed).every(a=>a?.literal)}
+  function renderTraces(){traceLayer.innerHTML="";for(const trace of traces){const g=traceGeometry(trace);if(!g)continue;const call=callForId(trace.id),manipulable=isManipulable(call),box=document.createElement("div");box.className="traceBox"+(selectedTraceId===trace.id?" selected":"")+(manipulable?" manipulable":"");box.dataset.id=trace.id;Object.assign(box.style,{left:g.x+"px",top:g.y+"px",width:Math.max(8,g.w)+"px",height:Math.max(8,g.h)+"px"});const handle=document.createElement("div");handle.className="traceHandle";box.appendChild(handle);box.addEventListener("pointerdown",e=>{if(e.target===handle)return;selectTrace(trace.id);if(manipulable)startTraceDrag(e,trace,call)});handle.addEventListener("pointerdown",e=>{e.stopPropagation();selectTrace(trace.id);if(manipulable)startTraceResize(e,trace,call)});traceLayer.appendChild(box)}}
+  function selectTrace(id){selectedTraceId=Number(id);renderTraces();const trace=traces.find(t=>t.id===selectedTraceId),call=callForId(selectedTraceId);if(!trace||!call){traceInfo.style.display="none";return}const labels=ARG_NAMES[call.name]||[];const bindings=call.args.map((a,i)=>`${labels[i]||"arg"+(i+1)} ← ${a.text} = ${trace.args[i]}`).join(" · ");traceInfo.innerHTML=`<strong>${escapeHtml(call.name)}() · LINE ${call.line}</strong><small>${escapeHtml(bindings)}</small><small>${isManipulable(call)?"DRAG TO MOVE · DRAG CORNER TO RESIZE":"EDIT THE SOURCE EXPRESSION TO CHANGE THIS SHAPE"}</small>`;traceInfo.style.display="block"}
+  function startTraceDrag(e,trace,call){e.preventDefault();interaction={kind:"drag",id:trace.id,call,startX:e.clientX,startY:e.clientY,originalArgs:trace.args.map(Number)};window.addEventListener("pointermove",moveTraceInteraction);window.addEventListener("pointerup",endTraceInteraction,{once:true})}
+  function startTraceResize(e,trace,call){e.preventDefault();interaction={kind:"resize",id:trace.id,call,startX:e.clientX,startY:e.clientY,originalArgs:trace.args.map(Number)};window.addEventListener("pointermove",moveTraceInteraction);window.addEventListener("pointerup",endTraceInteraction,{once:true})}
+  function moveTraceInteraction(e){if(!interaction)return;const dx=e.clientX-interaction.startX,dy=e.clientY-interaction.startY,args=interaction.originalArgs.slice();if(interaction.kind==="drag"){args[0]+=dx;args[1]+=dy}else if(interaction.call.name==="circle")args[2]=Math.max(4,interaction.originalArgs[2]+Math.max(dx,dy)*2);else{args[2]=Math.max(4,interaction.originalArgs[2]+dx);args[3]=Math.max(4,interaction.originalArgs[3]+dy)}runner.contentWindow?.postMessage({source:"blockp5-host",runId,type:"override",callId:interaction.id,args},"*");const trace=traces.find(t=>t.id===interaction.id);if(trace)trace.args=args;renderTraces();selectTrace(interaction.id)}
+  function endTraceInteraction(){if(!interaction)return;const trace=traces.find(t=>t.id===interaction.id);if(trace){const previous=editor.value,labels=ARG_NAMES[interaction.call.name]||[],before=interaction.originalArgs,after=trace.args;rewriteLiteralArgs(interaction.call,after);saveLocal();parseAndLint();runProgram({record:true});const changed=after.map((v,i)=>Math.round(v*10)/10!==Math.round(before[i]*10)/10?`${labels[i]||"arg"+(i+1)} ${Math.round(before[i]*10)/10} → ${Math.round(v*10)/10}`:null).filter(Boolean).join(" · ");showChanged(`${interaction.call.name}() · ${changed||"value changed"}`,previous)}interaction=null;window.removeEventListener("pointermove",moveTraceInteraction)}
+  function rewriteLiteralArgs(call,newArgs){let next=editor.value;const replacements=[];for(let i=0;i<call.args.length&&i<newArgs.length;i++){const arg=call.args[i];if(!arg.literal||typeof newArgs[i]!=="number")continue;replacements.push({start:arg.start,end:arg.end,text:String(Math.round(newArgs[i]*10)/10)})}replacements.sort((a,b)=>b.start-a.start);for(const r of replacements)next=next.slice(0,r.start)+r.text+next.slice(r.end);editor.value=next}
+
+  /* ---------- revisions / files ---------- */
+
+  function loadRevisions(){try{const parsed=JSON.parse(localStorage.getItem(REV_KEY)||"[]");return Array.isArray(parsed)?parsed:[]}catch(_){return[]}}
+  function saveRevisions(){localStorage.setItem(REV_KEY,JSON.stringify(revisions.slice(-20)))}
+  function firstMeaningfulLine(code){return code.split("\n").map(s=>s.trim()).find(s=>s&&!s.startsWith("//"))||"empty program"}
+  function addRevision(code){const last=revisions[revisions.length-1];if(last&&last.code===code){updateRevisionUI();return}revisions.push({n:(last?.n||0)+1,code,at:Date.now()});revisions=revisions.slice(-20);saveRevisions();updateRevisionUI()}
+  function updateRevisionUI(){revisionButton.textContent="RESTORE";revisionButton.hidden=revisions.length<2;if(revisions.length<2){revisionMenu.innerHTML="";return}const prior=revisions.slice(0,-1).reverse();revisionMenu.innerHTML=prior.map(rev=>`<button class="revItem" data-rev="${rev.n}"><strong>R${rev.n}</strong><span>restore · ${escapeHtml(firstMeaningfulLine(rev.code))}</span></button>`).join("");revisionMenu.querySelectorAll(".revItem").forEach(btn=>btn.addEventListener("click",()=>{const rev=revisions.find(r=>r.n===Number(btn.dataset.rev));if(!rev)return;editor.value=rev.code;saveLocal();sourceDirtySinceRun=false;parseAndLint();revisionMenu.classList.remove("open");runProgram({record:false})}))}
+  function saveLocal(){localStorage.setItem(STORAGE_KEY,editor.value)}
+  function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveLocal,250)}
+  function newProgram(){stopProgram();editor.value=STARTER;saveLocal();parseAndLint();renderStructure();closeMenus()}
+  function openProgram(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{stopProgram();editor.value=String(reader.result||"");saveLocal();parseAndLint();renderStructure();clearConsole();appendLog("system","opened "+file.name);closeMenus()};reader.onerror=()=>appendLog("error","could not read "+file.name);reader.readAsText(file)}
+  function downloadProgram(){const blob=new Blob([editor.value],{type:"text/javascript;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="sketch.js";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);closeMenus()}
+  async function copyProgram(){try{await navigator.clipboard.writeText(editor.value)}catch(_){editor.focus();editor.select();document.execCommand("copy")}closeMenus()}
+
+  /* ---------- console ---------- */
+
+  function appendLog(kind,message){const row=document.createElement("div");row.className="log "+(kind||"");row.textContent=Array.isArray(message)?message.join(" "):String(message);consoleBody.appendChild(row);consoleBody.scrollTop=consoleBody.scrollHeight}
+  function clearConsole(){consoleBody.innerHTML=""}
+  function openConsole(){consoleDrawer.classList.add("open")}
+  function toggleConsole(){consoleDrawer.classList.toggle("open")}
+
+  /* ---------- modes ---------- */
+
+  function showCodeMode(){leftPane.classList.remove("structureMode");document.querySelector("#codeModeBtn").classList.add("active");document.querySelector("#structureModeBtn").classList.remove("active");semanticZoom.hidden=true;requestAnimationFrame(()=>editor.focus());renderDiagnosticOverlay()}
+  function showStructureMode(){leftPane.classList.add("structureMode");document.querySelector("#codeModeBtn").classList.remove("active");document.querySelector("#structureModeBtn").classList.add("active");semanticZoom.hidden=false;renderStructure()}
+  function showMobileCode(){document.body.classList.remove("mobileWorld");document.querySelector("#mobileCodeTab").classList.add("active");document.querySelector("#mobileWorldTab").classList.remove("active")}
+  function showMobileWorld(){document.body.classList.add("mobileWorld");document.querySelector("#mobileCodeTab").classList.remove("active");document.querySelector("#mobileWorldTab").classList.add("active")}
+  function closeMenus(){docMenu.classList.remove("open");revisionMenu.classList.remove("open")}
+
+  /* ---------- editor ---------- */
+
+  function handleEditorKeydown(e){
+    if(e.key==="Tab"){e.preventDefault();const start=editor.selectionStart,end=editor.selectionEnd;if(start===end)editor.setRangeText("  ",start,end,"end");else{const value=editor.value,lineStart=value.lastIndexOf("\n",start-1)+1,selected=value.slice(lineStart,end),changed=selected.split("\n").map(line=>e.shiftKey?(line.startsWith("  ")?line.slice(2):line.startsWith(" ")?line.slice(1):line):"  "+line).join("\n");editor.setRangeText(changed,lineStart,end,"select")}freezeOnEdit();scheduleSave();scheduleLint();return}
+    const command=e.metaKey||e.ctrlKey;if(command&&e.key==="Enter"){e.preventDefault();runProgram({record:true})}if(command&&e.key.toLowerCase()==="s"){e.preventDefault();downloadProgram()}
+  }
+
+  /* ---------- runtime messages ---------- */
+
+  window.addEventListener("message",e=>{
+    const d=e.data;if(!d||d.source!=="blockp5-program-surface"||d.runId!==runId)return;
+    if(d.type==="ready"){if(running)appendLog("system","p5.js running");return}
+    if(d.type==="system"){appendLog("system",d.payload);return}
+    if(d.type==="state"){latestState=d.payload||{};if(running&&!primaryDiagnostic())renderCondition();return}
+    if(d.type==="traces"){traces=Array.isArray(d.payload)?d.payload:[];renderTraces();return}
+    if(d.type==="runtimeError"){
+      const p=d.payload||{};
+      const diag=makeDiagnostic({severity:"error",phase:"runtime",message:p.message||"Runtime error",line:p.line||1,column:p.column||1,stack:p.stack||""});
+      diagnostics.runtime=[diag];
+      lastBreakdown=buildBreakdown(diag,p);
+      running=false;
+      worldPane.classList.add("fault");
+      worldHint.textContent="STOPPED";
+      appendLog("error",[`${p.message||"Runtime error"} · line ${p.line||"?"}`,p.stack||""]);
+      updateDiagnosticSurface();
+      return;
+    }
+    if(d.type==="error"){appendLog("error",d.payload);return}
+    if(d.type==="warn"){appendLog("warn",d.payload);return}
+    if(d.type==="log")appendLog("",d.payload);
+  });
+
+  /* ---------- events ---------- */
+
+  runBtn.addEventListener("click",()=>runProgram({record:true}));
+  stopBtn.addEventListener("click",()=>stopProgram({preserve:true}));
+  document.querySelector("#codeModeBtn").addEventListener("click",showCodeMode);
+  document.querySelector("#structureModeBtn").addEventListener("click",showStructureMode);
+  document.querySelector("#zoomOutBtn").addEventListener("click",()=>setSemanticLevel(semanticLevel-1));
+  document.querySelector("#zoomInBtn").addEventListener("click",()=>setSemanticLevel(semanticLevel+1));
+  document.querySelector("#mobileCodeTab").addEventListener("click",showMobileCode);
+  document.querySelector("#mobileWorldTab").addEventListener("click",showMobileWorld);
+  revisionButton.addEventListener("click",e=>{e.stopPropagation();revisionMenu.classList.toggle("open");docMenu.classList.remove("open")});
+  docButton.addEventListener("click",e=>{e.stopPropagation()});
+  document.querySelector("#newBtn").addEventListener("click",newProgram);
+  document.querySelector("#openBtn").addEventListener("click",()=>fileInput.click());
+  document.querySelector("#saveBtn").addEventListener("click",downloadProgram);
+  document.querySelector("#copyBtn").addEventListener("click",copyProgram);
+  document.querySelector("#consoleMenuBtn").addEventListener("click",()=>{toggleConsole();closeMenus()});
+  document.querySelector("#clearConsole").addEventListener("click",clearConsole);
+  openDirectBtn.addEventListener("click",()=>fileInput.click());
+  saveDirectBtn.addEventListener("click",downloadProgram);
+  fileInput.addEventListener("change",()=>{openProgram(fileInput.files?.[0]);fileInput.value=""});
+  editor.addEventListener("input",()=>{freezeOnEdit();sourceDirtySinceRun=true;scheduleSave();scheduleLint();if(leftPane.classList.contains("structureMode"))renderStructure()});
+  editor.addEventListener("keydown",handleEditorKeydown);
+  editor.addEventListener("scroll",renderDiagnosticOverlay);
+  document.addEventListener("pointerdown",e=>{if(!docMenu.contains(e.target)&&e.target!==docButton)docMenu.classList.remove("open");if(!revisionMenu.contains(e.target)&&e.target!==revisionButton)revisionMenu.classList.remove("open")});
+  window.addEventListener("resize",()=>{renderTraces();renderDiagnosticOverlay()});
+  window.addEventListener("beforeunload",saveLocal);
+
+  /* ---------- boot ---------- */
+
+  editor.value=localStorage.getItem(STORAGE_KEY)||STARTER;
+  parseAndLint();
+  renderStructure();
+  updateRevisionUI();
+  setSemanticLevel(1);
+  worldHint.textContent="NOT RUN";
+  updateActions();
+})();
+</script>
+</body>
+</html>
