@@ -49,77 +49,70 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); }
-body { font-family: var(--sans); overflow: hidden; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+body { font-family: var(--sans); }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Main Grid Shell */
-.app { height: 100%; display: grid; grid-template-rows: 52px minmax(0, 1fr); }
+/* Desktop Shell: Locked Split Grid */
+@media (min-width: 861px) {
+  html, body { height: 100%; overflow: hidden; }
+  .app { height: 100%; display: grid; grid-template-rows: 54px minmax(0, 1fr); }
+  main { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(440px, 1fr); }
+  .field { min-width: 0; min-height: 0; display: grid; place-items: center; padding: 16px; border-right: 1px solid var(--hair-strong); position: relative; background: var(--paper); }
+  .wheel-wrap { width: min(78vw, calc(100vh - 90px), 820px); aspect-ratio: 1; position: relative; }
+  .detail { min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; background: var(--panel); }
+  .dossier-scroll { min-height: 0; overflow-y: auto; padding: 16px 20px 24px; }
+  .mobile-week-bar { display: none; }
+}
 
-/* Minimalist Clean Header */
+/* Minimal Clean Header */
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 clamp(16px, 2.5vw, 28px);
+  padding: 0 clamp(14px, 2vw, 24px);
+  height: 54px;
   border-bottom: 1px solid var(--hair-strong);
   background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
-.brand-icon { width: 26px; height: 26px; display: block; flex-shrink: 0; }
-.brand-titles { display: flex; align-items: baseline; gap: 10px; }
+.brand-icon { width: 28px; height: 28px; display: block; flex-shrink: 0; }
+.brand-titles { display: flex; align-items: baseline; gap: 8px; }
 .brand strong { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 .brand span { font: 600 10px/1.2 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 
-.header-right { display: flex; align-items: center; gap: 12px; }
+.header-right { display: flex; align-items: center; gap: 8px; }
 .guide-btn {
+  min-height: 38px;
   border: 1px solid var(--hair-strong);
   background: var(--surface);
-  font: 800 10px/1 var(--mono);
+  font: 800 11px/1 var(--mono);
   letter-spacing: .08em;
   text-transform: uppercase;
-  padding: 6px 12px;
+  padding: 0 12px;
   cursor: pointer;
   color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all .12s ease;
 }
 .guide-btn:hover { background: var(--ink); color: var(--paper); }
 .header-status {
-  font: 700 10px/1 var(--mono);
+  font: 700 10.5px/1 var(--mono);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 .header-status b { color: var(--ink); }
 
-/* Main Split View */
-main {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(420px, 1fr);
-}
-
-/* Left Field: 16-Week Radial Semester Wheel */
-.field {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  border-right: 1px solid var(--hair-strong);
-  position: relative;
-  background: var(--paper);
-}
-.wheel-wrap {
-  width: min(78vw, calc(100vh - 90px), 820px);
-  aspect-ratio: 1;
-  position: relative;
-}
+/* Left Field: Radial Wheel (Desktop) */
 #wheel { width: 100%; height: 100%; display: block; overflow: visible; }
-
-/* SVG Wheel Styling */
 .week-sector { fill: transparent; stroke: var(--hair); stroke-width: 1.1; transition: fill .12s ease, stroke .12s ease, stroke-width .12s ease; cursor: pointer; }
 .week-sector:hover { fill: rgba(17, 17, 15, 0.03); stroke: var(--ink); }
 .week-sector.selected { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2.4; }
@@ -142,14 +135,6 @@ main {
 .center-title { font: 700 26px/1 var(--sans); letter-spacing: -.035em; fill: var(--ink); }
 .center-state { font: 700 9px/1 var(--mono); letter-spacing: .11em; fill: var(--accent); }
 .center-date { font: 600 10px/1.3 var(--mono); letter-spacing: .04em; fill: var(--muted); }
-
-/* Right Field: Dossier Folder Workspace */
-.detail {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  background: var(--panel);
-}
 
 /* Object Banner */
 .object-banner {
@@ -181,50 +166,52 @@ main {
 }
 .object-banner p {
   margin: 0;
-  font-size: 12.5px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.45;
   color: var(--muted);
 }
 
 /* Cognitive Spectrum Filter Bar */
 .spectrum-strip {
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--hair-strong);
   background: var(--paper);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .spectrum-label-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font: 800 9px/1 var(--mono);
+  font: 800 10px/1 var(--mono);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 .spectrum-pills {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
 }
 .spectrum-pills::-webkit-scrollbar { display: none; }
 .spec-pill {
-  flex: 1;
-  min-width: 58px;
-  padding: 6px 4px;
+  flex: 1 0 auto;
+  min-height: 38px;
+  padding: 0 12px;
   border: 1px solid var(--hair);
   background: var(--surface);
-  font: 800 8.5px/1 var(--mono);
+  font: 800 10.5px/1 var(--mono);
   letter-spacing: .04em;
   text-transform: uppercase;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   transition: all .12s ease;
   white-space: nowrap;
 }
@@ -233,22 +220,15 @@ main {
   background: var(--ink);
   color: var(--paper);
 }
-.spec-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.spec-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 
-/* Scrollable Dossier List */
-.dossier-scroll {
-  min-height: 0;
-  overflow-y: auto;
-  padding: 16px 20px 24px;
-}
-
-/* Tactile Folder Card */
+/* Tactile Dossier Folder Card */
 .folder-card {
   position: relative;
   background: var(--card-bg);
   border: 1px solid var(--hair-strong);
-  margin-bottom: 18px;
-  box-shadow: 0 3px 0 var(--hair);
+  margin-bottom: 20px;
+  box-shadow: 0 4px 0 var(--hair);
   display: flex;
   flex-direction: column;
 }
@@ -256,44 +236,41 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   background: var(--folder-tab);
   border-bottom: 1px solid var(--hair-strong);
   border-right: 1px solid var(--hair-strong);
   align-self: flex-start;
 }
-.folder-tag { font: 800 10px/1 var(--mono); color: var(--ink); letter-spacing: .08em; }
-.folder-type { font: 700 8.5px/1 var(--mono); text-transform: uppercase; color: var(--muted); }
+.folder-tag { font: 800 11px/1 var(--mono); color: var(--ink); letter-spacing: .08em; }
+.folder-type { font: 700 9px/1 var(--mono); text-transform: uppercase; color: var(--muted); }
 .folder-tier-badge {
-  font: 800 8px/1 var(--mono);
+  font: 800 9px/1 var(--mono);
   text-transform: uppercase;
   background: var(--accent);
   color: #fff;
-  padding: 2px 5px;
+  padding: 3px 6px;
 }
 .folder-lvl-pill {
-  font: 800 8px/1 var(--mono);
+  font: 800 9px/1 var(--mono);
   text-transform: uppercase;
-  padding: 2px 5px;
+  padding: 3px 6px;
   border-radius: 2px;
   color: #fff;
 }
 
 .folder-body {
-  padding: 14px 16px;
+  padding: 16px 18px;
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-columns: 130px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
-}
-@media (max-width: 500px) {
-  .folder-body { grid-template-columns: 1fr; gap: 10px; }
 }
 
 /* Visual Canvas Preview Thumbnail Box */
 .folder-preview-box {
-  width: 120px;
-  height: 90px;
+  width: 130px;
+  height: 98px;
   background: #f0eee6;
   border: 1px solid var(--hair-strong);
   display: grid;
@@ -301,6 +278,7 @@ main {
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+  cursor: pointer;
 }
 .folder-preview-svg {
   width: 100%;
@@ -313,47 +291,47 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 90px;
+  min-height: 98px;
 }
 .folder-title-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .frog-badge-img {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
   display: inline-block;
 }
 .folder-title {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -.02em;
   color: var(--ink);
 }
 .folder-desc {
-  margin: 4px 0 8px;
-  font-size: 12px;
-  line-height: 1.4;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
   color: var(--muted);
 }
 .folder-meta {
   display: flex;
-  gap: 8px;
-  font: 9px/1 var(--mono);
+  gap: 10px;
+  font: 10px/1 var(--mono);
   color: var(--muted);
   text-transform: uppercase;
 }
 
-/* Folder Actions */
+/* Folder Actions - Compliant with Fitts's Law 48px Height */
 .folder-actions {
   display: flex;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 18px;
   background: var(--panel);
   border-top: 1px solid var(--hair);
 }
@@ -362,9 +340,9 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  padding: 0 10px;
-  font: 800 10px/1 var(--mono);
+  min-height: 44px;
+  padding: 0 14px;
+  font: 800 12px/1 var(--mono);
   letter-spacing: .06em;
   text-transform: uppercase;
   text-decoration: none;
@@ -377,20 +355,152 @@ main {
 .dossier-btn:hover { background: var(--ink); color: var(--paper); }
 .dossier-btn.primary { background: var(--ink); color: var(--paper); }
 .dossier-btn.primary:hover { background: var(--surface); color: var(--ink); }
-.dossier-btn.icon-btn { flex: 0 0 28px; padding: 0; }
+.dossier-btn.icon-btn { flex: 0 0 44px; padding: 0; }
 
-/* Control Footer */
+/* Control Footer (Desktop) */
 .control-footer {
   border-top: 1px solid var(--hair-strong);
-  padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: var(--paper);
 }
-.ctrl-nav { display: flex; gap: 6px; }
-.ctrl-nav button { width: 34px; height: 34px; border: 1px solid var(--hair-strong); background: var(--surface); font: 800 12px var(--mono); }
-.trace-text { font: 650 9.5px/1.3 var(--mono); letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+.ctrl-nav { display: flex; gap: 8px; }
+.ctrl-nav button { width: 44px; height: 44px; border: 1px solid var(--hair-strong); background: var(--surface); font: 800 14px var(--mono); }
+.trace-text { font: 700 11px/1.3 var(--mono); letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+
+/* ========================================================================= */
+/* MOBILE SPECIFIC OPTIMIZATIONS (Fitts's Law & Touch Ergonomics)            */
+/* ========================================================================= */
+@media (max-width: 860px) {
+  html, body {
+    height: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app {
+    height: auto !important;
+    display: block !important;
+  }
+  main {
+    display: block !important;
+  }
+  
+  header {
+    height: 52px;
+    padding: 0 12px;
+  }
+  .brand span { display: none; }
+  .header-status { display: none; }
+  .guide-btn { min-height: 36px; padding: 0 10px; font-size: 10px; }
+
+  /* Mobile Week Touch Bar (Fitts's Law Target) */
+  .mobile-week-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hair-strong);
+    background: var(--surface);
+    position: sticky;
+    top: 52px;
+    z-index: 90;
+  }
+  .mob-nav-btn {
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--hair-strong);
+    background: var(--paper);
+    font: 800 16px var(--mono);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+  }
+  .mob-week-info {
+    text-align: center;
+  }
+  .mob-week-code { font: 800 11px/1 var(--mono); color: var(--accent); text-transform: uppercase; margin-bottom: 3px; }
+  .mob-week-title { font: 800 15px/1.1 var(--sans); color: var(--ink); letter-spacing: -.02em; }
+
+  /* Collapsible Wheel View on Mobile */
+  .field {
+    border-right: 0;
+    border-bottom: 1px solid var(--hair-strong);
+    padding: 12px 10px;
+    background: var(--paper);
+  }
+  .wheel-wrap {
+    width: min(92vw, 340px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  .object-banner {
+    padding: 16px 14px 12px;
+  }
+  .object-banner h1 {
+    font-size: 22px;
+  }
+
+  .spectrum-strip {
+    padding: 10px 14px;
+    position: sticky;
+    top: 114px;
+    z-index: 80;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .spec-pill {
+    min-height: 42px;
+    padding: 0 14px;
+    font-size: 11px;
+  }
+
+  .dossier-scroll {
+    padding: 14px 12px 60px;
+    overflow: visible;
+  }
+
+  /* Full Vertical Card Layout on Mobile */
+  .folder-card {
+    margin-bottom: 20px;
+  }
+  .folder-body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+  .folder-preview-box {
+    width: 100%;
+    height: 140px;
+  }
+  .folder-title {
+    font-size: 17px;
+  }
+  .folder-desc {
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  /* 48px Thumb Target Actions on Mobile */
+  .folder-actions {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .dossier-btn {
+    min-height: 48px;
+    font-size: 13px;
+  }
+  .dossier-btn.icon-btn {
+    flex: 0 0 48px;
+    min-height: 48px;
+  }
+
+  .control-footer {
+    display: none; /* Replaced by sticky mobile week bar */
+  }
+}
 
 /* Runner Sheet & Teaching Guide Drawer */
 .runner-sheet {
@@ -422,7 +532,8 @@ main {
 }
 .runner-scrim.open { opacity: 1; pointer-events: auto; }
 .runner-bar {
-  padding: 8px 14px;
+  padding: 10px 14px;
+  min-height: 50px;
   border-bottom: 1px solid var(--hair-strong);
   display: flex;
   align-items: center;
@@ -430,7 +541,7 @@ main {
   background: var(--panel);
   gap: 10px;
 }
-.runner-name { font: 800 12px/1.2 var(--mono); text-transform: uppercase; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.runner-name { font: 800 13px/1.2 var(--mono); text-transform: uppercase; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .runner-cmds { display: flex; gap: 6px; align-items: center; }
 .runner-frame { flex: 1; width: 100%; height: 100%; border: none; background: #fff; }
 
@@ -454,46 +565,33 @@ main {
   flex: 1;
   overflow-y: auto;
   padding: 24px clamp(16px, 3vw, 32px);
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .guide-content h1 { font-size: 24px; letter-spacing: -.03em; margin: 0 0 8px; }
 .guide-content h2 { font-size: 16px; margin: 24px 0 8px; border-bottom: 1px solid var(--hair-strong); padding-bottom: 4px; text-transform: uppercase; font-family: var(--mono); }
 .guide-content p { margin: 0 0 12px; color: #333; }
-.guide-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font: 11.5px/1.4 var(--mono); }
+.guide-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font: 12px/1.4 var(--mono); }
 .guide-table th, .guide-table td { border: 1px solid var(--hair-strong); padding: 8px 10px; text-align: left; }
 .guide-table th { background: var(--panel); }
 
 /* Notification */
 .toast-msg {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%) translateY(80px);
   background: var(--ink);
   color: var(--paper);
-  font: 800 10px/1 var(--mono);
+  font: 800 11px/1 var(--mono);
   letter-spacing: .08em;
   text-transform: uppercase;
-  padding: 8px 16px;
+  padding: 10px 18px;
   border: 1px solid var(--hair-strong);
   z-index: 2000;
   transition: transform .2s ease;
 }
 .toast-msg.show { transform: translateX(-50%) translateY(0); }
-
-@media (max-width: 860px) {
-  .app { grid-template-rows: 48px minmax(0, 1fr); }
-  header { padding: 0 14px; }
-  main { grid-template-columns: 1fr; grid-template-rows: minmax(0, 42%) minmax(0, 58%); }
-  .field { border-right: 0; border-bottom: 1px solid var(--hair-strong); padding: 8px; }
-  .wheel-wrap { width: min(96vw, 38vh, 420px); }
-  .object-banner { padding: 12px 14px 8px; }
-  .object-banner h1 { font-size: 20px; }
-  .spectrum-strip { padding: 6px 14px; }
-  .dossier-scroll { padding: 12px 14px; }
-  .control-footer { padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); }
-}
 </style>
 </head>
 <body>
@@ -508,12 +606,22 @@ main {
       </div>
     </a>
     <div class="header-right">
-      <button class="guide-btn" id="openGuideBtn">Teaching Notes & Spectrum Arc</button>
+      <button class="guide-btn" id="openGuideBtn">Teaching Guide</button>
       <div class="header-status">
         Week <b id="headWeek">03</b> · <b id="headPhase">Foundation</b>
       </div>
     </div>
   </header>
+
+  <!-- Mobile Week Touch Bar (Fitts's Law Ergonomics) -->
+  <div class="mobile-week-bar">
+    <button class="mob-nav-btn" id="mobPrevBtn" type="button" aria-label="Previous Week">[<]</button>
+    <div class="mob-week-info">
+      <div class="mob-week-code" id="mobWeekCode">WEEK 03 · FOUNDATION</div>
+      <div class="mob-week-title" id="mobWeekTitle">Lab 01 · Hello Mondrian</div>
+    </div>
+    <button class="mob-nav-btn" id="mobNextBtn" type="button" aria-label="Next Week">[>]</button>
+  </div>
 
   <main>
     <!-- Left Field: 16-Week Radial Semester Wheel -->
@@ -558,7 +666,7 @@ main {
       <!-- Scrollable Dossier Card Container -->
       <section class="dossier-scroll" id="dossierContainer"></section>
 
-      <!-- Operational Control Footer -->
+      <!-- Operational Control Footer (Desktop) -->
       <footer class="control-footer">
         <div class="trace-text" id="trace">Select any week sector on the wheel.</div>
         <div class="ctrl-nav">
@@ -574,14 +682,14 @@ main {
 <div class="runner-scrim" id="guideScrim"></div>
 <aside class="guide-drawer" id="guideDrawer">
   <div class="runner-bar">
-    <div class="runner-name">Teaching Notes & Cognitive Spectrum Guide</div>
-    <button id="closeGuideBtn" class="dossier-btn icon-btn" style="flex:0 0 28px; height:28px;">X</button>
+    <div class="runner-name">Teaching Guide & Spectrum Blueprint</div>
+    <button id="closeGuideBtn" class="dossier-btn icon-btn" style="flex:0 0 44px; min-height:44px;">X</button>
   </div>
   <div class="guide-content">
     <h1>Lab 1: Hello Mondrian — Lesson Blueprint</h1>
-    <p><b>Core Pedagogical Objective:</b> Make causality visible. Show the visible consequence first; open the mechanism second.</p>
+    <p><b>Core Principle:</b> Make causality visible. Show the visible consequence first; open the mechanism second.</p>
     
-    <h2>1. The Cognitive Friction Spectrum</h2>
+    <h2>1. Cognitive Toxicity Spectrum</h2>
     <table class="guide-table">
       <tr><th>Level</th><th>Color / Frog</th><th>Target Group & Purpose</th></tr>
       <tr><td><b>L1 · Mild</b></td><td><span style="color:var(--lvl1-blue);">Azure Blue</span></td><td>Zero-Friction Scaffolding (blockp5, visual atlases) for students feeling "Too Hard".</td></tr>
@@ -614,8 +722,8 @@ main {
   <div class="runner-bar">
     <div class="runner-name" id="runnerTitle">Runtime Runner</div>
     <div class="runner-cmds">
-      <a id="runnerDirectLink" href="#" target="_blank" class="dossier-btn primary" style="flex:0 0 auto; height:26px; font-size:9px; padding:0 10px;">Full Window</a>
-      <button id="runnerCloseBtn" class="dossier-btn icon-btn" style="flex:0 0 26px; height:26px;">X</button>
+      <a id="runnerDirectLink" href="#" target="_blank" class="dossier-btn primary" style="flex:0 0 auto; min-height:38px; font-size:11px; padding:0 12px;">Full Window</a>
+      <button id="runnerCloseBtn" class="dossier-btn icon-btn" style="flex:0 0 38px; min-height:38px;">X</button>
     </div>
   </div>
   <iframe id="runnerIframe" class="runner-frame" src="about:blank"></iframe>
@@ -786,6 +894,11 @@ main {
   const svg = document.getElementById("wheel");
   const headWeek = document.getElementById("headWeek");
   const headPhase = document.getElementById("headPhase");
+  const mobWeekCode = document.getElementById("mobWeekCode");
+  const mobWeekTitle = document.getElementById("mobWeekTitle");
+  const mobPrevBtn = document.getElementById("mobPrevBtn");
+  const mobNextBtn = document.getElementById("mobNextBtn");
+
   const objectCode = document.getElementById("objectCode");
   const objectCount = document.getElementById("objectCount");
   const detailTitle = document.getElementById("detailTitle");
@@ -915,6 +1028,9 @@ main {
     const w = weeks[selectedWeek];
     headWeek.textContent = String(selectedWeek + 1).padStart(2, "0");
     headPhase.textContent = w.phase;
+    mobWeekCode.textContent = `WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${w.phase}`;
+    mobWeekTitle.textContent = w.name;
+
     objectCode.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} · ${w.phase}`;
     detailTitle.textContent = w.title;
     detailClaim.textContent = w.claim;
@@ -979,7 +1095,7 @@ main {
           </div>
 
           <div class="folder-body">
-            <div class="folder-preview-box">
+            <div class="folder-preview-box" onclick="launchRunner('${path}', '${item.title.replace(/'/g, "\\'")}')" title="Tap to preview">
               ${previewSvg}
             </div>
 
@@ -1081,8 +1197,13 @@ main {
   }
   window.copyPath = copyPath;
 
+  // Desktop Controls
   prevBtn.addEventListener("click", () => selectWeek(selectedWeek - 1));
   nextBtn.addEventListener("click", () => selectWeek(selectedWeek + 1));
+
+  // Mobile Controls (Fitts's Law 48px Target Buttons)
+  mobPrevBtn.addEventListener("click", () => selectWeek(selectedWeek - 1));
+  mobNextBtn.addEventListener("click", () => selectWeek(selectedWeek + 1));
 
   window.addEventListener("keydown", e => {
     if (e.key === "Escape") { closeRunner(); closeGuide(); }
