@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Intro to Computational Media — Interactive Semester Wheel & Spectrum</title>
+<title>Intro to Computational Media — Semester Wheel & Linear Timeline</title>
 <link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
 <style>
 :root {
@@ -144,6 +144,32 @@ header {
 .brand strong { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 .brand span { font: 700 10px/1 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.view-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--hair-strong);
+  background: var(--surface);
+  padding: 2px;
+}
+.view-mode-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  font: 800 10px/1 var(--mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: all .12s ease;
+}
+.view-mode-btn.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 .header-status {
   font: 800 10.5px/1 var(--mono);
   letter-spacing: .08em;
@@ -199,12 +225,12 @@ header {
 }
 .week-num-text.selected { fill: var(--accent); font-weight: 900; }
 
-/* Clear Fall 2026 Date Badges */
+/* High-Contrast Crisp Date Badges (11px Bold) */
 .week-date-text {
-  font: 800 10px/1 var(--mono);
-  letter-spacing: .06em;
+  font: 900 11px/1 var(--mono);
+  letter-spacing: .08em;
   text-transform: uppercase;
-  fill: var(--muted);
+  fill: var(--ink);
   pointer-events: none;
 }
 .week-date-text.selected { fill: var(--accent); font-weight: 900; }
@@ -228,18 +254,87 @@ header {
 .bullseye-sub { font: 800 14px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--accent); }
 .bullseye-state { font: 800 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
 
-/* Spin Prompt Hint */
-.spin-hint {
-  font: 800 9.5px/1 var(--mono);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 6px;
+/* =========================================================================
+   FOLD-FLAT LINEAR TIMELINE MODE (SCOOTER / MOBILE ERGONOMIC VIEW)
+   ========================================================================= */
+.flat-timeline-wrap {
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+.flat-timeline-wrap.active { display: block; }
+.wheel-wrap.hidden { display: none; }
+
+.flat-timeline-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flat-week-card {
+  border: 1.5px solid var(--hair-strong);
+  background: var(--surface);
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all .12s ease;
+  min-height: 52px;
 }
-.spin-hint span { color: var(--accent); }
+.flat-week-card:hover {
+  background: var(--panel);
+  border-color: var(--accent);
+}
+.flat-week-card.selected {
+  border-width: 2.5px;
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  box-shadow: 0 2px 0 var(--accent);
+}
+.flat-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.flat-card-num {
+  font: 900 20px/1 var(--mono);
+  color: var(--ink);
+  width: 32px;
+}
+.flat-week-card.selected .flat-card-num { color: var(--accent); }
+.flat-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.flat-card-title {
+  font: 800 14px/1.1 var(--sans);
+  text-transform: uppercase;
+  color: var(--ink);
+  letter-spacing: -.01em;
+}
+.flat-card-phase {
+  font: 800 9.5px/1 var(--mono);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.flat-card-date {
+  font: 900 12.5px/1 var(--mono);
+  color: var(--ink);
+  background: var(--folder-tab);
+  border: 1px solid var(--hair-strong);
+  padding: 4px 8px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+.flat-week-card.selected .flat-card-date {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
 
 /* Clean Detail Topbar */
 .clean-topbar {
@@ -814,8 +909,17 @@ header {
         <span>Semester Wheel Archive</span>
       </div>
     </a>
-    <div class="header-status">
-      Week <b id="headWeek">03</b> · <b id="headPhase">Foundation</b>
+    
+    <div class="header-controls">
+      <!-- Wheel vs Flat Mode Toggle -->
+      <div class="view-mode-toggle" role="group" aria-label="View Mode">
+        <button id="viewWheelBtn" class="view-mode-btn active" type="button">Wheel</button>
+        <button id="viewFlatBtn" class="view-mode-btn" type="button">Flat</button>
+      </div>
+
+      <div class="header-status">
+        Week <b id="headWeek">03</b> · <b id="headPhase">Foundation</b>
+      </div>
     </div>
   </header>
 
@@ -830,14 +934,19 @@ header {
   </div>
 
   <main>
-    <!-- Left Field: 16-Week Concentric Bauhaus Rotatable Wheel -->
-    <section class="field" aria-label="Sixteen week semester wheel">
-      <div class="wheel-wrap" id="wheelWrapper" title="Click & Drag to Spin the Wheel">
+    <!-- Left Field: 16-Week Concentric Bauhaus Wheel OR Flat Fold Timeline -->
+    <section class="field" aria-label="Sixteen week semester navigation">
+      <!-- 1. Wheel View -->
+      <div class="wheel-wrap" id="wheelWrapper" title="Drag to rotate">
         <svg id="wheel" viewBox="0 0 1000 1000" role="img" aria-label="Bauhaus Curriculum Semester Wheel">
           <title>Interactive Bauhaus Semester Wheel</title>
         </svg>
       </div>
-      <div class="spin-hint"><span>[DRAG TO SPIN]</span> Always-Upright Orientation & Dates</div>
+
+      <!-- 2. Flat Fold Linear Timeline (For Scooter / Thumb Ergonomics) -->
+      <div class="flat-timeline-wrap" id="flatTimelineWrapper">
+        <div class="flat-timeline-grid" id="flatTimelineGrid"></div>
+      </div>
     </section>
 
     <!-- Right Field: Dossier Folder Workspace -->
@@ -1152,6 +1261,7 @@ header {
   // State
   let selectedWeek = 2; // Week 3 (Lab 01)
   let activeSpectrumLvl = "arc";
+  let currentViewMode = "wheel"; // 'wheel' or 'flat'
   let pendingAction = null;
   let currentRotation = 0;
   let activeQrUrl = "";
@@ -1159,6 +1269,11 @@ header {
   // DOM
   const svg = document.getElementById("wheel");
   const wheelWrapper = document.getElementById("wheelWrapper");
+  const flatTimelineWrapper = document.getElementById("flatTimelineWrapper");
+  const flatTimelineGrid = document.getElementById("flatTimelineGrid");
+  const viewWheelBtn = document.getElementById("viewWheelBtn");
+  const viewFlatBtn = document.getElementById("viewFlatBtn");
+
   const headWeek = document.getElementById("headWeek");
   const headPhase = document.getElementById("headPhase");
   const headerFrog = document.getElementById("headerFrog");
@@ -1302,7 +1417,7 @@ header {
       path.addEventListener("click", () => selectWeek(i));
       spinGroup.appendChild(path);
 
-      // Wrapper group for all text elements inside this sector
+      // Group containing text elements
       const secGroup = el("g", { id: `sec-text-${i}` });
       spinGroup.appendChild(secGroup);
 
@@ -1315,7 +1430,7 @@ header {
       }, String(i + 1).padStart(2, "0"));
       secGroup.appendChild(numNode);
 
-      // 2. Clear Date Badge (Radius 334)
+      // 2. High-Contrast Date Badge (Radius 334)
       const dp = point(334, mid);
       const dateNode = el("text", {
         x: dp[0], y: dp[1] + 4,
@@ -1350,7 +1465,7 @@ header {
 
     spinGroup.appendChild(el("circle", { cx, cy, r: rWeekInner, class: "bauhaus-ring thick" }));
 
-    // 4. Center Bullseye: Big & Minimalist ("Less is More")
+    // 4. Center Bullseye Core
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye + 20, class: "bullseye-outer" }));
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye, class: "bullseye-center" }));
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye - 16, class: "bullseye-mid" }));
@@ -1368,6 +1483,25 @@ header {
     updateWheelRotation();
   }
 
+  // Render Flat Fold Timeline Mode (Scooter / Thumb Ergonomics)
+  function renderFlatTimeline() {
+    flatTimelineGrid.innerHTML = weeks.map((w, i) => {
+      const isSelected = i === selectedWeek;
+      return `
+        <div class="flat-week-card${isSelected ? " selected" : ""}" onclick="selectWeek(${i})" role="button" tabindex="0">
+          <div class="flat-card-left">
+            <div class="flat-card-num">${String(i + 1).padStart(2, "0")}</div>
+            <div class="flat-card-info">
+              <div class="flat-card-title">${w.name}</div>
+              <div class="flat-card-phase">${w.phase}</div>
+            </div>
+          </div>
+          <div class="flat-card-date">${w.date}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
   // Dynamic Always-Upright Orientation Engine
   function updateWheelRotation(anim = false) {
     if (!spinGroup) return;
@@ -1377,12 +1511,11 @@ header {
     }
     spinGroup.style.transform = `rotate(${currentRotation}deg)`;
 
-    // Auto-Orient each text node so it stays readable and never inverted
     sectorTextElements.forEach(item => {
       const worldAngle = ((item.midAngle + currentRotation) % 360 + 360) % 360;
       let rot = item.midAngle;
       if (worldAngle > 90 && worldAngle < 270) {
-        rot += 180; // Flip upright!
+        rot += 180;
       }
       
       item.numNode.setAttribute("transform", `rotate(${rot}, ${item.np[0]}, ${item.np[1]})`);
@@ -1390,6 +1523,33 @@ header {
       item.titleGroup.setAttribute("transform", `rotate(${rot}, ${item.tp[0]}, ${item.tp[1]})`);
     });
   }
+
+  // View Mode Switching: Wheel vs Flat Fold
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    if (mode === "flat") {
+      viewFlatBtn.classList.add("active");
+      viewWheelBtn.classList.remove("active");
+      wheelWrapper.classList.add("hidden");
+      flatTimelineWrapper.classList.add("active");
+      renderFlatTimeline();
+      // Auto-scroll to selected card
+      setTimeout(() => {
+        const activeCard = flatTimelineGrid.querySelector(".flat-week-card.selected");
+        if (activeCard) activeCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }, 50);
+    } else {
+      viewWheelBtn.classList.add("active");
+      viewFlatBtn.classList.remove("active");
+      flatTimelineWrapper.classList.remove("active");
+      wheelWrapper.classList.remove("hidden");
+      renderWheel();
+    }
+    playClickSound();
+    triggerHaptic();
+  }
+  viewWheelBtn.addEventListener("click", () => setViewMode("wheel"));
+  viewFlatBtn.addEventListener("click", () => setViewMode("flat"));
 
   // Rotation Drag Physics
   let isDragging = false;
@@ -1548,10 +1708,12 @@ header {
     if (animateSnap) {
       currentRotation = -selectedWeek * slice;
       renderWheel();
+      if (currentViewMode === "flat") renderFlatTimeline();
       playClickSound();
       triggerHaptic();
     } else {
       renderWheel();
+      if (currentViewMode === "flat") renderFlatTimeline();
     }
     renderDetail();
     trace.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} · ${weeks[selectedWeek].date} · ${weeks[selectedWeek].name}`;
