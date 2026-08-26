@@ -10,16 +10,16 @@
   --paper: #f4f2ea;
   --surface: #ffffff;
   --ink: #11110f;
-  --muted: #6e6b63;
-  --hair: #d4d0c4;
+  --muted: #5e5b53;
+  --hair: #cfcac0;
   --hair-strong: #11110f;
-  --accent: #1f57a6;
-  --accent-bg: rgba(31, 87, 166, 0.08);
+  --accent: #1e52a8;
+  --accent-bg: rgba(30, 82, 168, 0.10);
   --panel: #f9f7f1;
   --card-bg: #ffffff;
   --folder-tab: #e8e5dc;
   
-  /* Poison Dart Frog Spectrum Palette */
+  /* Bauhaus / Poison Dart Frog Spectrum */
   --lvl1-blue: #2a86ff;
   --lvl2-mint: #2ec4b6;
   --lvl3-gold: #f5a623;
@@ -29,7 +29,7 @@
 
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --serif: Georgia, "Times New Roman", Times, serif;
-  --sans: Arial, Helvetica, sans-serif;
+  --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,11 +37,11 @@
     --paper: #0e0e0c;
     --surface: #151513;
     --ink: #f2f0e6;
-    --muted: #8c897f;
-    --hair: #282723;
+    --muted: #9c988e;
+    --hair: #2b2a26;
     --hair-strong: #f2f0e6;
-    --accent: #5294e2;
-    --accent-bg: rgba(82, 148, 226, 0.12);
+    --accent: #5896e6;
+    --accent-bg: rgba(88, 150, 230, 0.14);
     --panel: #131210;
     --card-bg: #181816;
     --folder-tab: #22211e;
@@ -55,25 +55,25 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Desktop Shell: Locked Split Grid */
+/* Desktop Split Layout */
 @media (min-width: 861px) {
   html, body { height: 100%; overflow: hidden; }
-  .app { height: 100%; display: grid; grid-template-rows: 54px minmax(0, 1fr); }
-  main { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(440px, 1fr); }
-  .field { min-width: 0; min-height: 0; display: grid; place-items: center; padding: 16px; border-right: 1px solid var(--hair-strong); position: relative; background: var(--paper); }
-  .wheel-wrap { width: min(78vw, calc(100vh - 90px), 820px); aspect-ratio: 1; position: relative; }
+  .app { height: 100%; display: grid; grid-template-rows: 50px minmax(0, 1fr); }
+  main { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(440px, 1fr); }
+  .field { min-width: 0; min-height: 0; display: grid; place-items: center; padding: 18px; border-right: 1px solid var(--hair-strong); position: relative; background: var(--paper); }
+  .wheel-wrap { width: min(80vw, calc(100vh - 86px), 840px); aspect-ratio: 1; position: relative; }
   .detail { min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; background: var(--panel); }
   .dossier-scroll { min-height: 0; overflow-y: auto; padding: 16px 20px 24px; }
   .mobile-week-bar { display: none; }
 }
 
-/* Minimal Clean Header */
+/* Minimal Bauhaus Header (No Top Clutter) */
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 clamp(14px, 2vw, 24px);
-  height: 54px;
+  padding: 0 clamp(16px, 2.5vw, 28px);
+  height: 50px;
   border-bottom: 1px solid var(--hair-strong);
   background: var(--paper);
   position: sticky;
@@ -83,58 +83,76 @@ header {
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
 .brand-icon { width: 28px; height: 28px; display: block; flex-shrink: 0; }
 .brand-titles { display: flex; align-items: baseline; gap: 8px; }
-.brand strong { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
-.brand span { font: 600 10px/1.2 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.brand strong { font-size: 13.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.brand span { font: 700 10.5px/1 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 
-.header-right { display: flex; align-items: center; gap: 8px; }
-.guide-btn {
-  min-height: 38px;
-  border: 1px solid var(--hair-strong);
-  background: var(--surface);
-  font: 800 11px/1 var(--mono);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  padding: 0 12px;
-  cursor: pointer;
-  color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .12s ease;
-}
-.guide-btn:hover { background: var(--ink); color: var(--paper); }
 .header-status {
-  font: 700 10.5px/1 var(--mono);
+  font: 800 11px/1 var(--mono);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 .header-status b { color: var(--ink); }
 
-/* Left Field: Radial Wheel (Desktop) */
+/* ========================================================================= */
+/* BAUHAUS CONCENTRIC WHEEL SVG STYLING                                      */
+/* ========================================================================= */
 #wheel { width: 100%; height: 100%; display: block; overflow: visible; }
-.week-sector { fill: transparent; stroke: var(--hair); stroke-width: 1.1; transition: fill .12s ease, stroke .12s ease, stroke-width .12s ease; cursor: pointer; }
-.week-sector:hover { fill: rgba(17, 17, 15, 0.03); stroke: var(--ink); }
-.week-sector.selected { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2.4; }
-.week-sector.closed { fill: rgba(17, 17, 15, 0.04); }
-.week-sector.current { stroke: var(--ink); stroke-width: 2.2; }
-.ring { fill: none; stroke: var(--hair-strong); stroke-width: 1.35; }
-.ring.light { stroke: var(--hair); stroke-width: 1; }
-.phase-arc { fill: none; stroke: var(--hair-strong); stroke-width: 2.2; stroke-linecap: square; }
-.phase-name { font: 700 15px/1 var(--sans); letter-spacing: .095em; text-transform: uppercase; fill: var(--ink); }
-.phase-sub { font: 600 9px/1 var(--mono); letter-spacing: .07em; text-transform: uppercase; fill: var(--muted); }
-.week-number { font: 700 13px/1 var(--mono); letter-spacing: .05em; fill: var(--ink); pointer-events: none; }
-.week-number.selected { fill: var(--accent); font-weight: 900; }
-.week-number.closed { fill: var(--muted); }
-.action-slot { fill: none; stroke: var(--hair); stroke-width: 1; pointer-events: none; }
-.action-slot.done { fill: var(--ink); stroke: var(--ink); }
-.action-slot.selected { stroke: var(--accent); }
-.now-dot { fill: var(--accent); pointer-events: none; }
-.center-ring { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 1.5; }
-.center-week { font: 700 12px/1 var(--mono); letter-spacing: .1em; fill: var(--muted); }
-.center-title { font: 700 26px/1 var(--sans); letter-spacing: -.035em; fill: var(--ink); }
-.center-state { font: 700 9px/1 var(--mono); letter-spacing: .11em; fill: var(--accent); }
-.center-date { font: 600 10px/1.3 var(--mono); letter-spacing: .04em; fill: var(--muted); }
+
+/* Structural Bauhaus Rings */
+.bauhaus-ring { fill: none; stroke: var(--hair-strong); stroke-width: 2.2; }
+.bauhaus-ring.thick { stroke-width: 3.5; }
+.bauhaus-ring.inner-div { stroke-width: 1.5; stroke: var(--hair); }
+
+/* Phase Bands (Outer Tier) */
+.phase-bg { fill: none; stroke: var(--hair-strong); stroke-width: 3; }
+.phase-band-text { font: 800 13px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; fill: var(--ink); }
+
+/* Week Sectors */
+.week-sector {
+  fill: var(--paper);
+  stroke: var(--hair-strong);
+  stroke-width: 1.4;
+  transition: fill .12s ease, stroke .12s ease;
+  cursor: pointer;
+}
+.week-sector:hover {
+  fill: rgba(17, 17, 15, 0.05);
+}
+.week-sector.selected {
+  fill: var(--accent-bg);
+  stroke: var(--accent);
+  stroke-width: 2.8;
+}
+.week-num-text {
+  font: 900 16px/1 var(--mono);
+  letter-spacing: .05em;
+  fill: var(--ink);
+  pointer-events: none;
+}
+.week-num-text.selected {
+  fill: var(--accent);
+}
+.week-label-text {
+  font: 800 9.5px/1 var(--sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  fill: var(--ink);
+  pointer-events: none;
+}
+.week-label-text.selected {
+  fill: var(--accent);
+  font-weight: 900;
+}
+
+/* Center Bullseye Core */
+.bullseye-outer { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 2.5; }
+.bullseye-mid { fill: none; stroke: var(--hair-strong); stroke-width: 1.5; }
+.bullseye-center { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 3; }
+.bullseye-super { font: 800 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
+.bullseye-hero { font: 900 24px/1 var(--sans); letter-spacing: -.03em; text-transform: uppercase; fill: var(--ink); }
+.bullseye-sub { font: 800 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--accent); }
+.bullseye-state { font: 800 9px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
 
 /* Object Banner */
 .object-banner {
@@ -149,18 +167,18 @@ header {
   margin-bottom: 4px;
 }
 .object-code {
-  font: 800 11px/1 var(--mono);
+  font: 800 11.5px/1 var(--mono);
   letter-spacing: .1em;
   color: var(--accent);
 }
 .object-count {
-  font: 700 10px/1 var(--mono);
+  font: 700 10.5px/1 var(--mono);
   color: var(--muted);
 }
 .object-banner h1 {
   margin: 0 0 4px;
   font-size: clamp(20px, 2.2vw, 28px);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -.03em;
   line-height: 1.15;
 }
@@ -275,7 +293,7 @@ header {
   align-items: start;
 }
 
-/* Visual Canvas Preview Thumbnail Box */
+/* Visual Canvas Preview Box */
 .folder-preview-box {
   width: 130px;
   height: 98px;
@@ -335,7 +353,7 @@ header {
   text-transform: uppercase;
 }
 
-/* Folder Actions - Compliant with Fitts's Law 48px Height */
+/* Folder Actions */
 .folder-actions {
   display: flex;
   gap: 8px;
@@ -365,18 +383,36 @@ header {
 .dossier-btn.primary:hover { background: var(--surface); color: var(--ink); }
 .dossier-btn.icon-btn { flex: 0 0 44px; padding: 0; }
 
-/* Control Footer (Desktop) */
+/* Control Footer (Prominent Teaching Notes & Nav) */
 .control-footer {
   border-top: 1px solid var(--hair-strong);
-  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: var(--paper);
+  gap: 12px;
 }
-.ctrl-nav { display: flex; gap: 8px; }
-.ctrl-nav button { width: 44px; height: 44px; border: 1px solid var(--hair-strong); background: var(--surface); font: 800 14px var(--mono); }
+.footer-left { display: flex; align-items: center; gap: 12px; }
+.guide-footer-btn {
+  min-height: 40px;
+  border: 1px solid var(--hair-strong);
+  background: var(--surface);
+  font: 800 11px/1 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 0 16px;
+  cursor: pointer;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s ease;
+}
+.guide-footer-btn:hover { background: var(--ink); color: var(--paper); }
 .trace-text { font: 700 11px/1.3 var(--mono); letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+.ctrl-nav { display: flex; gap: 8px; }
+.ctrl-nav button { width: 42px; height: 42px; border: 1px solid var(--hair-strong); background: var(--surface); font: 800 14px var(--mono); }
 
 /* Passphrase Modal */
 .pass-modal-scrim {
@@ -405,25 +441,9 @@ header {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-.pass-header {
-  font: 800 12px/1 var(--mono);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--lvl5-red);
-  margin-bottom: 8px;
-}
-.pass-card h2 {
-  font-size: 20px;
-  letter-spacing: -.02em;
-  margin: 0 0 6px;
-  color: var(--ink);
-}
-.pass-card p {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--muted);
-  margin: 0 0 16px;
-}
+.pass-header { font: 800 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--lvl5-red); margin-bottom: 8px; }
+.pass-card h2 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 6px; color: var(--ink); }
+.pass-card p { font-size: 13px; line-height: 1.4; color: var(--muted); margin: 0 0 16px; }
 .pass-input {
   width: 100%;
   height: 48px;
@@ -460,10 +480,9 @@ header {
   main {
     display: block !important;
   }
-  header { height: 52px; padding: 0 12px; }
+  header { height: 50px; padding: 0 12px; }
   .brand span { display: none; }
   .header-status { display: none; }
-  .guide-btn { min-height: 36px; padding: 0 10px; font-size: 10px; }
 
   .mobile-week-bar {
     display: flex;
@@ -473,7 +492,7 @@ header {
     border-bottom: 1px solid var(--hair-strong);
     background: var(--surface);
     position: sticky;
-    top: 52px;
+    top: 50px;
     z-index: 90;
   }
   .mob-nav-btn {
@@ -494,11 +513,11 @@ header {
   .field {
     border-right: 0;
     border-bottom: 1px solid var(--hair-strong);
-    padding: 12px 10px;
+    padding: 14px 10px;
     background: var(--paper);
   }
   .wheel-wrap {
-    width: min(92vw, 340px);
+    width: min(94vw, 360px);
     aspect-ratio: 1;
     margin: 0 auto;
   }
@@ -507,12 +526,12 @@ header {
   .spectrum-strip {
     padding: 10px 14px;
     position: sticky;
-    top: 114px;
+    top: 112px;
     z-index: 80;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
   }
   .spec-pill { min-height: 42px; padding: 0 14px; font-size: 11px; }
-  .dossier-scroll { padding: 14px 12px 60px; overflow: visible; }
+  .dossier-scroll { padding: 14px 12px 16px; overflow: visible; }
   .folder-card { margin-bottom: 20px; }
   .folder-body { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
   .folder-preview-box { width: 100%; height: 140px; }
@@ -521,7 +540,16 @@ header {
   .folder-actions { padding: 10px 14px; gap: 8px; }
   .dossier-btn { min-height: 48px; font-size: 13px; }
   .dossier-btn.icon-btn { flex: 0 0 48px; min-height: 48px; }
-  .control-footer { display: none; }
+
+  .control-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 14px 40px;
+  }
+  .footer-left { width: 100%; flex-direction: column; gap: 10px; }
+  .guide-footer-btn { width: 100%; min-height: 48px; font-size: 12px; }
+  .ctrl-nav { display: none; }
 }
 
 /* Runner Sheet & Guide Drawer */
@@ -616,20 +644,17 @@ header {
 </head>
 <body>
 <div class="app">
-  <!-- Minimalist Clean Header -->
+  <!-- Minimal Clean Bauhaus Header -->
   <header>
     <a href="index.html" class="brand">
       <img src="frog-blue.svg" alt="Blue Frog" class="brand-icon" />
       <div class="brand-titles">
         <strong>Intro to Computational Media</strong>
-        <span>Semester Wheel & Spectrum</span>
+        <span>Semester Wheel Archive</span>
       </div>
     </a>
-    <div class="header-right">
-      <button class="guide-btn" id="openGuideBtn">Teaching Guide</button>
-      <div class="header-status">
-        Week <b id="headWeek">03</b> · <b id="headPhase">Foundation</b>
-      </div>
+    <div class="header-status">
+      Week <b id="headWeek">03</b> · <b id="headPhase">Foundation</b>
     </div>
   </header>
 
@@ -644,11 +669,11 @@ header {
   </div>
 
   <main>
-    <!-- Left Field: 16-Week Radial Semester Wheel -->
+    <!-- Left Field: 16-Week Concentric Bauhaus Wheel -->
     <section class="field" aria-label="Sixteen week semester wheel">
       <div class="wheel-wrap">
-        <svg id="wheel" viewBox="0 0 1000 1000" role="img" aria-label="16-Week Course Semester Wheel">
-          <title>16-Week Course Semester Wheel</title>
+        <svg id="wheel" viewBox="0 0 1000 1000" role="img" aria-label="Bauhaus Curriculum Semester Wheel">
+          <title>Bauhaus Curriculum Semester Wheel</title>
         </svg>
       </div>
     </section>
@@ -686,9 +711,12 @@ header {
       <!-- Scrollable Dossier Card Container -->
       <section class="dossier-scroll" id="dossierContainer"></section>
 
-      <!-- Operational Control Footer (Desktop) -->
+      <!-- Operational Control Footer (Teaching Notes & Nav) -->
       <footer class="control-footer">
-        <div class="trace-text" id="trace">Select any week sector on the wheel.</div>
+        <div class="footer-left">
+          <button class="guide-footer-btn" id="openGuideBtn">[ Teaching Notes & Spectrum Blueprint ]</button>
+          <div class="trace-text" id="trace">Select any week sector on the wheel.</div>
+        </div>
         <div class="ctrl-nav">
           <button id="prevBtn" type="button" aria-label="Previous week">[<]</button>
           <button id="nextBtn" type="button" aria-label="Next week">[>]</button>
@@ -848,36 +876,35 @@ header {
     }
   }
 
-  // 16-Week Curriculum
+  // 16-Week Curriculum with Bauhaus Labels
   const weeks = [
-    { phase: "FOUNDATION", name: "Primitive", title: "Primitive first.", claim: "Begin with operations small enough to understand end-to-end." },
-    { phase: "FOUNDATION", name: "Visible cause", title: "Make causality visible.", claim: "Show the visible consequence first; open the mechanism second." },
-    { phase: "FOUNDATION", name: "Lab 01", title: "Lab 01 · Hello Mondrian", claim: "Run the lab first. Know the exercise from the inside. 30 prototypes, quizzes, and debuggers cataloged." },
-    { phase: "FOUNDATION", name: "Lab 02", title: "Give structure consequence.", claim: "A computational operation should become perceptible, not remain a definition." },
-    { phase: "FOUNDATION", name: "Lab 03", title: "Agency over features.", claim: "The unit of instruction is agency gained, not software features completed." },
-    { phase: "FOUNDATION", name: "Lab 04-06", title: "Finish the foundation.", claim: "Six bounded labs establish enough friction with code to make delegation legible." },
-    { phase: "DELEGATION", name: "LLM enters", title: "Delegate after contact.", claim: "The LLM becomes an instrument only after students have something of their own to delegate." },
-    { phase: "DELEGATION", name: "Milestone 01", title: "Change the course form.", claim: "Move from tightly bounded labs toward increasingly self-directed milestones." },
-    { phase: "AGENCY", name: "Agency", title: "What can I cause to happen?", claim: "Syntax becomes subordinate to computational agency." },
-    { phase: "AGENCY", name: "Milestone 02", title: "Make something authored.", claim: "The artifact should bear enough choices that a student can say: I made this." },
-    { phase: "AGENCY", name: "Game systems", title: "Converge on a game.", claim: "A game forces representation, input, state, feedback, timing, rules, and audiovisual form into one artifact." },
-    { phase: "PUBLIC", name: "Public work", title: "Audience enters specification.", claim: "Public work changes what counts as finished." },
-    { phase: "PUBLIC", name: "Discussion", title: "Discussion is coursework.", claim: "Reading should terminate in an act of interpretation." },
-    { phase: "PUBLIC", name: "Guest critique", title: "Make guests causal.", claim: "A speaker should enter the curriculum's causal structure." },
-    { phase: "ASSESS", name: "Assessment", title: "Make competence legible.", claim: "Students should know most requirements in advance." },
-    { phase: "ASSESS", name: "Final close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
+    { short: "PRIMITIVE", phase: "FOUNDATION", name: "Primitive", title: "Primitive first.", claim: "Begin with operations small enough to understand end-to-end." },
+    { short: "VISIBLE CAUSE", phase: "FOUNDATION", name: "Visible cause", title: "Make causality visible.", claim: "Show the visible consequence first; open the mechanism second." },
+    { short: "HELLO MONDRIAN", phase: "FOUNDATION", name: "Lab 01", title: "Lab 01 · Hello Mondrian", claim: "Run the lab first. Know the exercise from the inside. 30 prototypes, quizzes, and debuggers cataloged." },
+    { short: "STRUCTURE", phase: "FOUNDATION", name: "Lab 02", title: "Give structure consequence.", claim: "A computational operation should become perceptible, not remain a definition." },
+    { short: "AGENCY", phase: "FOUNDATION", name: "Lab 03", title: "Agency over features.", claim: "The unit of instruction is agency gained, not software features completed." },
+    { short: "BOUNDED LABS", phase: "FOUNDATION", name: "Lab 04-06", title: "Finish the foundation.", claim: "Six bounded labs establish enough friction with code to make delegation legible." },
+    { short: "LLM ENTERS", phase: "DELEGATION", name: "LLM enters", title: "Delegate after contact.", claim: "The LLM becomes an instrument only after students have something of their own to delegate." },
+    { short: "MILESTONE 01", phase: "DELEGATION", name: "Milestone 01", title: "Change the course form.", claim: "Move from tightly bounded labs toward increasingly self-directed milestones." },
+    { short: "AUTONOMY", phase: "AGENCY", name: "Agency", title: "What can I cause to happen?", claim: "Syntax becomes subordinate to computational agency." },
+    { short: "MILESTONE 02", phase: "AGENCY", name: "Milestone 02", title: "Make something authored.", claim: "The artifact should bear enough choices that a student can say: I made this." },
+    { short: "GAME SYSTEMS", phase: "AGENCY", name: "Game systems", title: "Converge on a game.", claim: "A game forces representation, input, state, feedback, timing, rules, and audiovisual form into one artifact." },
+    { short: "PUBLIC WORK", phase: "PUBLIC", name: "Public work", title: "Audience enters specification.", claim: "Public work changes what counts as finished." },
+    { short: "INTERPRETATION", phase: "PUBLIC", name: "Discussion", title: "Discussion is coursework.", claim: "Reading should terminate in an act of interpretation." },
+    { short: "GUEST CRITIQUE", phase: "PUBLIC", name: "Guest critique", title: "Make guests causal.", claim: "A speaker should enter the curriculum's causal structure." },
+    { short: "ASSESSMENT", phase: "ASSESS", name: "Assessment", title: "Make competence legible.", claim: "Students should know most requirements in advance." },
+    { short: "FINAL CLOSE", phase: "ASSESS", name: "Final close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
   ];
 
   const phaseBands = [
-    { name: "FOUNDATION", sub: "DIRECT CONTACT WITH COMPUTATION", start: 0, end: 5 },
-    { name: "DELEGATION", sub: "AFTER CONTACT, THEN MILESTONES", start: 6, end: 7 },
-    { name: "AGENCY / PUBLIC", sub: "AUTHOR · TEST · SHOW", start: 8, end: 13 },
-    { name: "ASSESS / CLOSE", sub: "LEGIBLE CRITERIA · PUBLIC WORK", start: 14, end: 15 }
+    { name: "PHASE I: FOUNDATION", sub: "DIRECT CONTACT WITH COMPUTATION", start: 0, end: 5 },
+    { name: "PHASE II: DELEGATION", sub: "AFTER CONTACT · MILESTONES", start: 6, end: 7 },
+    { name: "PHASE III: AGENCY & PUBLIC", sub: "AUTHOR · TEST · SHOWCASE", start: 8, end: 13 },
+    { name: "PHASE IV: ASSESSMENT", sub: "LEGIBLE CRITERIA · WORK", start: 14, end: 15 }
   ];
 
-  // 30 Lab 1 Artifacts Mapped to Cognitive Toxicity Spectrum (1 to 6)
+  // 30 Lab 1 Artifacts
   const LAB_ARTIFACTS = [
-    // Level 1: Azure Blue (Mild Entry / Scaffolding)
     { handle: "BP.01", lvl: 1, file: "blockp5-program-surface.html", url: "blockp5-program-surface.html", title: "blockp5 Surface (v1.0)", ext: "html", type: "Visual Blocks", sizeStr: "48.8 KB", purpose: "Visual block workspace enabling geometric manipulation without syntax fear." },
     { handle: "BP.02", lvl: 1, file: "blockp5-program-surface-fixed.html", url: "blockp5-program-surface-fixed.html", title: "blockp5 Surface (v1.1 Fixed)", ext: "html", type: "Visual Blocks", sizeStr: "48.8 KB", purpose: "Stabilized canvas event listeners and block snapping mechanics." },
     { handle: "BP.04", lvl: 1, file: "blockp5-one-unknown.html", url: "blockp5-one-unknown.html", title: "blockp5: One Unknown at a Time", ext: "html", type: "Visual Blocks", sizeStr: "38.5 KB", purpose: "Strictly isolates user control to a single variable at a time to build causal intuition." },
@@ -886,7 +913,6 @@ header {
     { handle: "ZA.07", lvl: 1, file: "p5-playable-slides-six-principles.html", url: "p5-playable-slides-six-principles.html", title: "Playable Slides (Six Principles)", ext: "html", type: "Playable Slides", sizeStr: "21.6 KB", purpose: "Interactive slide deck with live embedded p5 sketches." },
     { handle: "CY.05", lvl: 1, file: "P5_HELLO_WORLD_CALL_YOUR_SHOTS_REBUILT.html", url: "P5_HELLO_WORLD_CALL_YOUR_SHOTS_REBUILT.html", title: "Call Your Shots: Hello World (Rebuilt)", ext: "html", type: "Web App", sizeStr: "32.0 KB", purpose: "Rebuilt shot-calling playground with live step prediction." },
 
-    // Level 2: Mint Green (Guided Exploration)
     { handle: "ZA.01", lvl: 2, file: "zero-assumption-hello-world.html", url: "zero-assumption-hello-world.html", title: "Zero-Assumption Inspector (v0.6)", ext: "html", type: "Web App", sizeStr: "40.2 KB", purpose: "Step-by-step token and drawing state inspector. Observe variable mutations live." },
     { handle: "ZA.03", lvl: 2, file: "p5-runtime-ide.html", url: "p5-runtime-ide.html", title: "p5 Runtime IDE", ext: "html", type: "Web App", sizeStr: "27.3 KB", purpose: "Streamlined lightweight runtime IDE for testing single operations." },
     { handle: "CY.06", lvl: 2, file: "P5_HELLO_WORLD_NATIVE_EDITOR.html", url: "P5_HELLO_WORLD_NATIVE_EDITOR.html", title: "Hello p5.js: Native Editor", ext: "html", type: "Web App", sizeStr: "40.1 KB", purpose: "Native web editor embedding shot-calling execution directly into code loop." },
@@ -894,7 +920,6 @@ header {
     { handle: "ZA.08", lvl: 2, file: "index(20260824-204106).html", url: "index-20260824-204106.html", title: "Hello Canvas: From Scratch", ext: "html", type: "Web App", sizeStr: "33.0 KB", purpose: "Raw canvas implementation breaking down pixel matrices from first principles." },
     { handle: "TH.04", lvl: 2, file: "p5-from-scratch/index.html", url: "p5-from-scratch/index.html", title: "p5 From Scratch — Offline Studio", ext: "html", type: "Offline Studio", sizeStr: "Extracted", purpose: "Standalone offline starter suite with index.html, sketch.js, and runner." },
 
-    // Level 3: Toxic Gold (Core Production & Classroom Wager)
     { handle: "CY.01", lvl: 3, isCore: true, tier: "Act 1 · The Opener Wager", file: "call-your-shot-impostor-presentation (2).html", url: "call-your-shot-impostor-presentation-v3.html", title: "Call Your Shot: Impostor Test (v3)", ext: "html", type: "Presentation", sizeStr: "3.60 MB", purpose: "Two sketches, one shared visual, an impostor bug, executable evidence wager loop." },
     { handle: "CY.02", lvl: 3, file: "call-your-shot-impostor-presentation (1).html", url: "call-your-shot-impostor-presentation-v2.html", title: "Call Your Shot: Impostor Test (v2)", ext: "html", type: "Presentation", sizeStr: "3.59 MB", purpose: "Earlier iteration of Impostor presentation suite with embedded diagnostic assets." },
     { handle: "CY.03", lvl: 3, file: "call-your-shot-impostor-presentation.html", url: "call-your-shot-impostor-presentation.html", title: "Call Your Shot: Impostor Test (v1)", ext: "html", type: "Presentation", sizeStr: "1.45 MB", purpose: "Base version of the Impostor Test slide deck before media expansions." },
@@ -902,7 +927,6 @@ header {
     { handle: "ZA.02", lvl: 3, isCore: true, tier: "Act 4 · Studio Coding", file: "p5-native-zero-assumption-0.8.html", url: "p5-native-zero-assumption-0.8.html", title: "Zero-Assumption Editor (v0.8)", ext: "html", type: "Web App", sizeStr: "51.4 KB", purpose: "Full zero-assumption web editor designed to eliminate invisible runtime assumptions." },
     { handle: "TH.05", lvl: 3, file: "p5-lecture-universe/index.html", url: "p5-lecture-universe/index.html", title: "p5 Lecture Universe — Studio Suite", ext: "html", type: "Offline Suite", sizeStr: "Extracted", purpose: "Full standalone suite of native lecture demos, editor runners, and live canvas stages." },
 
-    // Level 4: Fire Orange (Forensic Diagnostics & Negative Space)
     { handle: "CY.04", lvl: 4, file: "call-your-shot-pinball-quiz.html", url: "call-your-shot-pinball-quiz.html", title: "Call Your Shot: Pinball Quiz", ext: "html", type: "Interactive Quiz", sizeStr: "1.46 MB", purpose: "Gamified pinball quiz: tests setup vs draw execution flow and state variables." },
     { handle: "MN.01", lvl: 4, isCore: true, isMondrian: true, tier: "Act 3 · Coordinate Forensics", file: "mondrian-negative-space-debug.html", url: "mondrian-negative-space-debug.html", title: "Mondrian Negative-Space Debugger", ext: "html", type: "Debugger", sizeStr: "51.3 KB", purpose: "Calculates and visualizes empty negative rectangular spaces across the Mondrian grid." },
     { handle: "MN.02", lvl: 4, isMondrian: true, file: "mondrian-negative-space-debug (1).html", url: "mondrian-negative-space-debug-v2.html", title: "Mondrian Negative-Space Debugger (Copy)", ext: "html", type: "Debugger", sizeStr: "51.3 KB", purpose: "Exact duplicate copy of negative-space debugger." },
@@ -910,11 +934,9 @@ header {
     { handle: "MN.04", lvl: 4, isMondrian: true, file: "mondrian-p5-ide-0.5 (1).html", url: "mondrian-p5-ide-0.5-v2.html", title: "Mondrian IDE (v0.5 Copy)", ext: "html", type: "Web App", sizeStr: "55.2 KB", purpose: "Exact duplicate copy of Mondrian IDE 0.5." },
     { handle: "BP.03", lvl: 4, file: "blockp5-negative-space-debugger.html", url: "blockp5-negative-space-debugger.html", title: "blockp5 Surface (v2 Negative Space)", ext: "html", type: "Visual Blocks", sizeStr: "64.0 KB", purpose: "Negative-space detection integrated directly into visual block nodes." },
 
-    // Level 5: Strawberry Fire Red (Maximum Intensity & Quines)
     { handle: "MN.05", lvl: 5, isCore: true, isMondrian: true, tier: "Act 5 · Mind-Bender Closer", file: "mondrian_quine.html", url: "mondrian_quine.html", title: "Mondrian Quine", ext: "html", type: "Web App", sizeStr: "16.9 KB", purpose: "Renders a Piet Mondrian composition while generating its own exact source code." },
     { handle: "MN.06", lvl: 5, isMondrian: true, file: "mondrian-quine-void.html", url: "mondrian-quine-void.html", title: "Mondrian Quine: Void Surface", ext: "html", type: "Web App", sizeStr: "21.6 KB", purpose: "Quine variation exploring dark void surfaces and inverted coordinate typography." },
 
-    // Level 6: Fluorescent Violet (Theory & Patents)
     { handle: "TH.01", lvl: 6, file: "HELLO_WORLD_THEORY_TEXT_IMAGE.pdf", url: "HELLO_WORLD_THEORY_TEXT_IMAGE.pdf", title: "Theory: Text & Image", ext: "pdf", type: "PDF", sizeStr: "409.6 KB", purpose: "Foundational theory notes: code as text specification vs sensory visual output." },
     { handle: "TH.02", lvl: 6, file: "HELLO_WORLD_P5_THEORY_TEXT_IMAGE_ERROR_PROMPT_REBUILT.pdf", url: "HELLO_WORLD_P5_THEORY_TEXT_IMAGE_ERROR_PROMPT_REBUILT.pdf", title: "Theory: Error & Prompt Rebuilt", ext: "pdf", type: "PDF", sizeStr: "167.0 KB", purpose: "Extended lecture addressing error handling and AI prompting boundaries." },
     { handle: "TH.03", lvl: 6, file: "20110024177 (2).pdf", url: "20110024177_2.pdf", title: "Patent Reference (20110024177) · Negative Space Programming", ext: "pdf", type: "Patent PDF", sizeStr: "326.3 KB", purpose: "Technical patent documentation on negative-space program surfaces, spatial coordinate bounding, and compiler representations." }
@@ -969,7 +991,14 @@ header {
 
   const NS = "http://www.w3.org/2000/svg";
   const cx = 500, cy = 500;
-  const inner = 245, outer = 405, phaseR = 455;
+  
+  // Concentric Radii (Bauhaus Proportions)
+  const rOuterPhase = 485;
+  const rPhaseInner = 440;
+  const rWeekOuter = 438;
+  const rWeekInner = 245;
+  const rInnerSub = 243;
+  const rCenterBullseye = 165;
   const slice = 360 / 16;
 
   function point(r, deg) {
@@ -1001,68 +1030,94 @@ header {
     return "./lab01/" + fileRef;
   }
 
-  // Draw 16-Week Semester Wheel
+  // Draw Concentric Bauhaus Wheel
   function renderWheel() {
     svg.replaceChildren();
 
     const defs = el("defs");
     svg.appendChild(defs);
 
-    // Phase Arcs
+    // 1. Outer Concentric Boundary Rings (Bauhaus 1922 Style)
+    svg.appendChild(el("circle", { cx, cy, r: rOuterPhase, class: "bauhaus-ring thick" }));
+    svg.appendChild(el("circle", { cx, cy, r: rPhaseInner, class: "bauhaus-ring thick" }));
+
+    // 2. Outer Phase Arcs & Heavy Typography
     phaseBands.forEach((p, idx) => {
-      const a1 = p.start * slice + 2.5, a2 = (p.end + 1) * slice - 2.5;
+      const a1 = p.start * slice + 1.2, a2 = (p.end + 1) * slice - 1.2;
       const mid = (a1 + a2) / 2;
       const bottom = mid > 90 && mid < 270;
-      const pathId = `phase-${idx}`;
-      const path = el("path", { id: pathId, d: arcPath(phaseR, a1, a2, bottom) });
+      const pathId = `phase-arc-${idx}`;
+      
+      const arcR = (rOuterPhase + rPhaseInner) / 2;
+      const path = el("path", { id: pathId, d: arcPath(arcR, a1, a2, bottom) });
       defs.appendChild(path);
-      svg.appendChild(el("path", { d: arcPath(phaseR, a1, a2, false), class: "phase-arc" }));
-      const text = el("text", { class: "phase-name" });
+
+      const text = el("text", { class: "phase-band-text" });
       const tp = el("textPath", { href: `#${pathId}`, startOffset: "50%", "text-anchor": "middle" }, p.name);
-      text.appendChild(tp); svg.appendChild(text);
-      const subPathId = `phase-sub-${idx}`;
-      const subR = phaseR - 24;
-      const sp = el("path", { id: subPathId, d: arcPath(subR, a1, a2, bottom) }); defs.appendChild(sp);
-      const st = el("text", { class: "phase-sub" }); st.appendChild(el("textPath", { href: `#${subPathId}`, startOffset: "50%", "text-anchor": "middle" }, p.sub)); svg.appendChild(st);
+      text.appendChild(tp);
+      svg.appendChild(text);
+
+      // Phase boundary dividing lines
+      const divAngle = p.start * slice;
+      const pOuter = point(rOuterPhase, divAngle);
+      const pInner = point(rPhaseInner, divAngle);
+      svg.appendChild(el("line", { x1: pOuter[0], y1: pOuter[1], x2: pInner[0], y2: pInner[1], class: "bauhaus-ring thick" }));
     });
 
-    // Rings
-    svg.appendChild(el("circle", { cx, cy, r: outer, class: "ring" }));
-    svg.appendChild(el("circle", { cx, cy, r: inner, class: "ring" }));
-    svg.appendChild(el("circle", { cx, cy, r: inner - 18, class: "ring light" }));
-
+    // 3. Middle 16 Sectors with Bold Week Numbers & Legible Labels
     weeks.forEach((w, i) => {
-      const a1 = i * slice + 1.2, a2 = (i + 1) * slice - 1.2, mid = (i + 0.5) * slice;
+      const a1 = i * slice + 0.8, a2 = (i + 1) * slice - 0.8, mid = (i + 0.5) * slice;
+      const isSelected = i === selectedWeek;
+      
       const path = el("path", {
-        d: sectorPath(inner, outer, a1, a2),
-        class: `week-sector${i === selectedWeek ? " selected" : ""}`,
-        tabindex: "0", role: "button", "aria-label": `Week ${i + 1}: ${w.name}`
+        d: sectorPath(rWeekInner, rWeekOuter, a1, a2),
+        class: `week-sector${isSelected ? " selected" : ""}`,
+        tabindex: "0", role: "button", "aria-label": `Week ${i + 1}: ${w.short}`
       });
       path.addEventListener("click", () => selectWeek(i));
       svg.appendChild(path);
 
-      const np = point(376, mid);
-      const num = el("text", { x: np[0], y: np[1] + 4, "text-anchor": "middle", class: `week-number${i === selectedWeek ? " selected" : ""}` }, String(i + 1).padStart(2, "0"));
-      svg.appendChild(num);
+      // Concentric curved text path for Week Short Title inside the sector!
+      const labelRadius = 295;
+      const bottom = mid > 90 && mid < 270;
+      const sectorPathId = `sector-label-${i}`;
+      const lp = el("path", { id: sectorPathId, d: arcPath(labelRadius, a1 + 1, a2 - 1, bottom) });
+      defs.appendChild(lp);
 
-      // 3 Action Slots
-      for (let j = 0; j < 3; j++) {
-        const angle = mid + (j - 1) * 3.4;
-        const pp = point(293, angle);
-        const slot = el("rect", { x: pp[0] - 4.5, y: pp[1] - 4.5, width: 9, height: 9, rx: 1, class: `action-slot${i === selectedWeek ? " selected" : ""}` });
-        svg.appendChild(slot);
-      }
+      const labelText = el("text", { class: `week-label-text${isSelected ? " selected" : ""}` });
+      const ltp = el("textPath", { href: `#${sectorPathId}`, startOffset: "50%", "text-anchor": "middle" }, w.short);
+      labelText.appendChild(ltp);
+      svg.appendChild(labelText);
+
+      // Bold Week Number (High Contrast, Large 16px)
+      const np = point(380, mid);
+      const num = el("text", {
+        x: np[0],
+        y: np[1] + 6,
+        "text-anchor": "middle",
+        class: `week-num-text${isSelected ? " selected" : ""}`
+      }, String(i + 1).padStart(2, "0"));
+      svg.appendChild(num);
     });
 
-    // Center Core
-    svg.appendChild(el("circle", { cx, cy, r: 170, class: "center-ring" }));
-    const w = weeks[selectedWeek];
-    svg.appendChild(el("text", { x: cx, y: cy - 48, "text-anchor": "middle", class: "center-week" }, `W${String(selectedWeek + 1).padStart(2, "0")} · ${w.phase}`));
-    const title = el("text", { x: cx, y: cy + 4, "text-anchor": "middle", class: "center-title" });
-    title.textContent = w.name;
-    svg.appendChild(title);
-    svg.appendChild(el("text", { x: cx, y: cy + 54, "text-anchor": "middle", class: "center-date" }, selectedWeek === 2 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIAL TOOLS" : "30 PROTOTYPES") : "CURRICULUM WEEK"));
-    svg.appendChild(el("text", { x: cx, y: cy + 86, "text-anchor": "middle", class: "center-state" }, "ACTIVE"));
+    // 4. Middle Concentric Divider Ring
+    svg.appendChild(el("circle", { cx, cy, r: rWeekInner, class: "bauhaus-ring thick" }));
+    svg.appendChild(el("circle", { cx, cy, r: rInnerSub, class: "bauhaus-ring inner-div" }));
+
+    // 5. Center Bullseye Core (Bauhaus Concentric Focus)
+    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye + 25, class: "bullseye-outer" }));
+    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye, class: "bullseye-center" }));
+    svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye - 14, class: "bullseye-mid" }));
+
+    const activeW = weeks[selectedWeek];
+    svg.appendChild(el("text", { x: cx, y: cy - 62, "text-anchor": "middle", class: "bullseye-super" }, "COMPUTATIONAL MEDIA"));
+    
+    const heroTitle = el("text", { x: cx, y: cy - 8, "text-anchor": "middle", class: "bullseye-hero" });
+    heroTitle.textContent = activeW.name;
+    svg.appendChild(heroTitle);
+
+    svg.appendChild(el("text", { x: cx, y: cy + 42, "text-anchor": "middle", class: "bullseye-sub" }, `W${String(selectedWeek + 1).padStart(2, "0")} · ${activeW.phase}`));
+    svg.appendChild(el("text", { x: cx, y: cy + 82, "text-anchor": "middle", class: "bullseye-state" }, selectedWeek === 2 ? (activeSpectrumLvl === "arc" ? "5 CORE ESSENTIALS" : "30 PROTOTYPES") : "CURRICULUM WEEK"));
   }
 
   function renderDetail() {
@@ -1101,7 +1156,6 @@ header {
       return item.lvl === Number(activeSpectrumLvl);
     });
 
-    // Update spectrum description
     if (activeSpectrumLvl === "arc") {
       spectrumDesc.textContent = "5-Act Curated Sequence: Impostor -> Loop -> Forensics -> Studio -> Quine";
     } else if (activeSpectrumLvl === "all") {
