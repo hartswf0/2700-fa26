@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MONDRIAN / P5 0.5 — Negative-Space Debugger</title>
+<style>
+:root{
+  --paper:#f4f1e8;
+  --ink:#111;
+  --red:#df3d28;
+  --yellow:#f1cf3a;
+  --blue:#17569a;
+  --white:#f7f5ee;
+  --fault:#ff5a5f;
+  --trace:#00a8ff;
+  --line:8px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{touch-action:none}
+button,textarea{font:inherit}
+button{appearance:none;border:0;background:none;color:inherit;cursor:pointer}
+#app{height:100%;display:grid;grid-template-rows:44px 1fr}
+#topbar{display:flex;align-items:center;gap:4px;padding:4px 7px;background:var(--white);border-bottom:5px solid var(--ink);z-index:60}
+.brand{font:900 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.09em;white-space:nowrap;padding:0 7px 0 2px}
+.viewBtn,.toolBtn{height:29px;padding:0 9px;border:2px solid transparent;background:transparent;font:900 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+.viewBtn.active{border-color:var(--ink);background:var(--yellow)}
+.toolBtn{border-color:var(--ink);background:var(--white);min-width:32px}
+.toolBtn:disabled{display:none}
+.spacer{flex:1}
+#truth{font:800 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.62;white-space:nowrap;padding:0 4px}
+#truth:empty{display:none}
+#main{position:relative;min-height:0;background:#d8d8d3}
+#workspace{position:absolute;inset:0;display:grid;grid-template-columns:1.08fr .92fr;background:#d8d8d3}
+#programPane,#worldPane{position:relative;min-width:0;min-height:0;overflow:hidden}
+#programPane{border-right:6px solid var(--ink)}
+body.world-only #workspace{grid-template-columns:1fr}
+body.world-only #programPane{display:none}
+body.program-only #workspace{grid-template-columns:1fr}
+body.program-only #worldPane{display:none}
+.paneName{position:absolute;z-index:30;left:9px;top:9px;padding:5px 7px;background:var(--ink);color:#fff;font:900 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;pointer-events:none}
+#fieldWrap{width:100%;height:100%;display:grid;place-items:center;overflow:hidden;padding:18px;background:#d8d8d3}
+#field{position:relative;width:min(91%,72vh);aspect-ratio:1;background:var(--white);border:var(--line) solid var(--ink);box-shadow:0 8px 22px rgba(0,0,0,.12);transform-origin:center center}
+.block{position:absolute;border:4px solid var(--ink);overflow:hidden;user-select:none;touch-action:none;cursor:grab;isolation:isolate}
+.block:active{cursor:grabbing}
+.block.selected{z-index:20;outline:3px dashed currentColor;outline-offset:-10px}
+.block.executing{z-index:22;box-shadow:0 0 0 4px var(--trace) inset,0 0 0 2px var(--trace)}
+.block.fault{box-shadow:inset 0 -5px 0 var(--fault)}
+.block.selected.fault{box-shadow:inset 0 -5px 0 var(--fault),0 0 0 2px var(--fault)}
+.block.selected.fault:not(.editing){overflow:visible}
+.faultToken{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--fault);text-decoration-thickness:2px;text-underline-offset:2px}
+.address{position:absolute;z-index:4;left:6px;top:6px;display:inline-flex;align-items:center;gap:5px;padding:2px 4px;background:rgba(255,255,255,.82);color:#111;font:900 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.03em;pointer-events:none}
+.address .faultDot{display:none;width:6px;height:6px;background:var(--fault);border-radius:50%}
+.block.fault .address .faultDot{display:inline-block}
+.codeText{position:absolute;z-index:3;left:7px;right:7px;top:27px;bottom:8px;margin:0;overflow:hidden;white-space:pre-wrap;word-break:break-word;font:800 10px/1.32 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:none}
+.codeEditor{position:absolute;z-index:9;left:6px;right:6px;top:25px;bottom:28px;width:calc(100% - 12px);height:calc(100% - 53px);resize:none;border:1px solid currentColor;outline:0;padding:5px;background:rgba(255,255,255,.14);color:inherit;font:800 10px/1.32 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;display:none;user-select:text;touch-action:auto}
+.block.editing .codeText{display:none}
+.block.editing .codeEditor{display:block}
+.diagnostic{position:absolute;z-index:12;left:4px;right:4px;bottom:4px;min-height:18px;padding:4px 5px;background:var(--fault);color:#111;font:900 9px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;display:none;pointer-events:auto;cursor:default}
+.block.fault .diagnostic{display:block}
+.block.selected.fault:not(.editing) .diagnostic{display:none}
+.block:not(.selected) .diagnostic{max-height:19px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.faultSheet{position:absolute;z-index:80;left:calc(100% + 8px);top:0;width:330px;max-width:min(78vw,360px);max-height:min(68vh,480px);display:none;overflow:auto;padding:10px;background:rgba(247,245,238,.985);color:#111;border:4px solid var(--ink);box-shadow:8px 8px 0 rgba(17,17,17,.14);font:800 9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;touch-action:auto;user-select:text}
+.faultSheet.left{left:auto;right:calc(100% + 8px)}
+.faultSheet.up{top:auto;bottom:0}
+.block.selected.fault:not(.editing) .faultSheet{display:block}
+.faultTitle{font:1000 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0 0 8px;padding-bottom:6px;border-bottom:3px solid var(--ink)}
+.faultSection{margin:0 0 7px}
+.faultLabel{display:block;font-weight:1000;letter-spacing:.06em;margin-bottom:2px}
+.faultValue{display:block;font-weight:750;white-space:pre-wrap}
+.faultActions{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;padding-top:6px;border-top:2px solid var(--ink)}
+.faultAction{height:24px;padding:0 7px;border:2px solid var(--ink);background:var(--white);color:#111;font:1000 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.faultAction.primary{background:var(--yellow)}
+#probe{position:absolute;width:1px;height:1px;left:-9999px;top:-9999px;border:0;visibility:hidden}
+.resizeHandle{position:absolute;z-index:15;right:-4px;bottom:-4px;width:21px;height:21px;background:currentColor;display:none;cursor:nwse-resize}
+.block.selected:not(.editing) .resizeHandle{display:block}
+.contextRail{position:absolute;z-index:25;right:4px;top:4px;display:none;gap:4px;align-items:center}
+.block.selected:not(.editing) .contextRail{display:flex}
+.localBtn{width:25px;height:25px;border:2px solid currentColor;background:rgba(255,255,255,.86);color:#111;font:900 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:0}
+.localBtn[disabled]{opacity:.25;cursor:default}
+.swatch{width:25px;height:25px;border:2px solid currentColor;padding:0}
+.splitV,.splitH{position:absolute;z-index:24;display:none;background:var(--yellow);color:#111;border:2px solid var(--ink);font:900 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;width:19px;height:19px;padding:0}
+.block.selected:not(.editing) .splitV,.block.selected:not(.editing) .splitH{display:block}
+.splitV{left:50%;top:-10px;transform:translateX(-50%)}
+.splitH{left:-10px;top:50%;transform:translateY(-50%)}
+#splitGuide{position:absolute;z-index:45;background:var(--ink);pointer-events:none;display:none}
+#previousGhost{position:absolute;z-index:1;border:2px dashed rgba(17,17,17,.45);pointer-events:none;display:none}
+#preview{width:100%;height:100%;display:block;border:0;background:#d8d8d3}
+#history{position:absolute;z-index:35;left:50%;bottom:9px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px 6px;background:rgba(247,245,238,.92);border:2px solid var(--ink)}
+.historyDot{width:7px;height:7px;border:1px solid var(--ink);background:#bbb}
+.historyDot.current{background:var(--yellow)}
+#traceControls{position:absolute;z-index:40;right:10px;bottom:10px;display:none;gap:5px;padding:5px;background:rgba(247,245,238,.94);border:2px solid var(--ink)}
+body.trace-on #traceControls{display:flex}
+#rawPane{position:absolute;inset:0;background:#111;color:#eee;display:none;grid-template-rows:40px 1fr}
+body.raw-mode #workspace{display:none}
+body.raw-mode #rawPane{display:grid}
+#rawHeader{display:flex;align-items:center;gap:5px;padding:5px 7px;border-bottom:1px solid #333}
+#rawHeader strong{font:900 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+#rawSource{width:100%;height:100%;resize:none;border:0;outline:0;background:#111;color:#eee;padding:13px;font:12px/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media(max-width:780px){
+  #app{grid-template-rows:44px 1fr}
+  .brand{display:none}
+  #topbar{overflow-x:auto;white-space:nowrap}
+  #truth{display:none}
+  #workspace{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+  #programPane{border-right:0;border-bottom:5px solid var(--ink)}
+  body.world-only #workspace,body.program-only #workspace{grid-template-rows:1fr}
+  #fieldWrap{padding:8px}
+  #field{width:min(80vw,39vh)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">MONDRIAN / P5</div>
+    <button class="viewBtn active" data-view="both">PROGRAM · WORLD</button>
+    <button class="viewBtn" data-view="program">PROGRAM</button>
+    <button class="viewBtn" data-view="world">WORLD</button>
+    <button class="viewBtn" data-view="raw">SOURCE</button>
+    <div class="spacer"></div>
+    <button class="toolBtn" id="undoBtn" title="Undo">↶</button>
+    <button class="toolBtn" id="redoBtn" title="Redo">↷</button>
+    <button class="toolBtn" id="traceBtn" title="Trace execution">TRACE</button>
+    <div id="truth"></div>
+  </header>
+
+  <main id="main">
+    <section id="workspace">
+      <section id="programPane">
+        <div class="paneName">PROGRAM</div>
+        <div id="fieldWrap">
+          <div id="field">
+            <div id="previousGhost"></div>
+            <div id="splitGuide"></div>
+          </div>
+        </div>
+        <div id="history" aria-hidden="true"></div>
+      </section>
+
+      <section id="worldPane">
+        <div class="paneName">WORLD</div>
+        <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+        <iframe id="probe" sandbox="allow-scripts allow-same-origin" aria-hidden="true"></iframe>
+        <div id="traceControls">
+          <button class="toolBtn" id="playBtn">PLAY</button>
+          <button class="toolBtn" id="stepBtn">STEP</button>
+          <button class="toolBtn" id="stopBtn">STOP</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="rawPane">
+      <header id="rawHeader">
+        <strong>GENERATED P5.JS · SUPPORTING EVIDENCE</strong>
+        <div class="spacer"></div>
+        <button class="toolBtn" id="copyBtn">COPY</button>
+        <button class="toolBtn" id="saveBtn">SAVE</button>
+      </header>
+      <textarea id="rawSource" spellcheck="false" readonly></textarea>
+    </section>
+  </main>
+</div>
+
+<script>
+const DESIGN = 600;
+const COLORS = ["#f7f5ee", "#df3d28", "#f1cf3a", "#17569a", "#111111"];
+const MIN_BLOCK = 5;
+const P5_FUNCTIONS = new Set([
+  "arc","background","beginShape","bezier","circle","clear","color","curve","ellipse","endShape",
+  "fill","image","line","noFill","noLoop","noStroke","point","pop","push","quad","rect","redraw",
+  "resizeCanvas","rotate","scale","square","stroke","strokeWeight","text","textAlign","textSize","translate",
+  "triangle","createCanvas","random","randomSeed","map","constrain","floor","ceil","round","min","max","abs",
+  "sin","cos","tan","frameRate","loop"
+]);
+const BUILTIN_CALLS = new Set(["console","Math","Number","String","Array","Object","JSON","parseInt","parseFloat","isNaN","setTimeout","setInterval"]);
+
+const state = {
+  nodes: [],
+  selection: null,
+  history: [],
+  future: [],
+  nextId: 1,
+  nextAddress: 1,
+  view: "both",
+  zoom: 1,
+  editing: null,
+  traceOn: false,
+  traceIndex: -1,
+  traceTimer: null,
+  activeTraceId: null,
+  lastChange: null,
+  editBefore: null
+};
+
+const field = document.querySelector("#field");
+const fieldWrap = document.querySelector("#fieldWrap");
+const preview = document.querySelector("#preview");
+const probe = document.querySelector("#probe");
+const splitGuide = document.querySelector("#splitGuide");
+const previousGhost = document.querySelector("#previousGhost");
+const rawSource = document.querySelector("#rawSource");
+const undoBtn = document.querySelector("#undoBtn");
+const redoBtn = document.querySelector("#redoBtn");
+const historyEl = document.querySelector("#history");
+const truth = document.querySelector("#truth");
+let interaction = null;
+let currentCompilation = { code:"", blockOrder:[] };
+let runtimeDebounce = null;
+let runtimeToken = 0;
+let stagedRuntime = null;
+
+function uid(){ return "b_" + Math.random().toString(36).slice(2,10); }
+function addr(n){ return "#" + String(n).padStart(2,"0"); }
+function clone(v){ return JSON.parse(JSON.stringify(v)); }
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+function r2(v){ return Math.round(v*100)/100; }
+function r3(v){ return Math.round(v*1000)/1000; }
+function toDesign(v){ return r2(v/100*DESIGN); }
+function fromDesign(v){ return v/DESIGN*100; }
+function selected(){ return state.nodes.find(n=>n.id===state.selection)||null; }
+
+function defaultSource(node){
+  return `fill(${JSON.stringify(node.fill)});\nrect(${toDesign(node.x)}, ${toDesign(node.y)}, ${toDesign(node.w)}, ${toDesign(node.h)});`;
+}
+
+function makeNode(x,y,w,h,fill=COLORS[0], address=null){
+  const node = {
+    id: uid(),
+    address: address || addr(state.nextAddress++),
+    type:"rect",
+    x,y,w,h,fill,
+    source:"",
+    diagnostics:[],
+    runtimeError:null,
+    fault:null,
+    lastValid:null,
+    parent:null,
+    lastRuntimeSignature:null,
+    runtimeRepeatCount:0
+  };
+  node.source = defaultSource(node);
+  node.lastValid = semanticsSnapshot(node);
+  return node;
+}
+
+function semanticsSnapshot(n){ return {x:n.x,y:n.y,w:n.w,h:n.h,fill:n.fill,source:n.source}; }
+function restoreSemantics(n,s){ Object.assign(n,{x:s.x,y:s.y,w:s.w,h:s.h,fill:s.fill,source:s.source}); }
+
+function defaultProgram(){
+  state.nextAddress = 1;
+  return [
+    makeNode(0,0,58,56,COLORS[1]),
+    makeNode(58,0,42,28,COLORS[2]),
+    makeNode(58,28,21,28,COLORS[0]),
+    makeNode(79,28,21,28,COLORS[0]),
+    makeNode(0,56,25,24,COLORS[4]),
+    makeNode(0,80,25,20,COLORS[0]),
+    makeNode(25,56,33,12,COLORS[0]),
+    makeNode(25,68,33,12,COLORS[0]),
+    makeNode(25,80,33,20,COLORS[4]),
+    makeNode(58,56,42,24,COLORS[3]),
+    makeNode(58,80,30,20,COLORS[0]),
+    makeNode(88,80,12,20,COLORS[1])
+  ];
+}
+
+function snapshot(){ return clone(state.nodes); }
+function same(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+function commit(before,label,detail=""){
+  if(same(before,state.nodes)) return;
+  state.history.push({nodes:before,label});
+  if(state.history.length>50) state.history.shift();
+  state.future=[];
+  state.lastChange = detail || label;
+  saveLocal();
+  updateRecovery();
+}
+function mutate(label,fn,detail=""){
+  const before=snapshot();
+  fn();
+  commit(before,label,detail);
+  rebuild(true);
+}
+function undo(){
+  const item=state.history.pop(); if(!item) return;
+  state.future.push({nodes:snapshot(),label:item.label});
+  state.nodes=clone(item.nodes);
+  state.selection=state.nodes.some(n=>n.id===state.selection)?state.selection:(state.nodes[0]?.id??null);
+  state.editing=null;
+  rebuild(true); saveLocal(); updateRecovery();
+  showTruth(`RESTORED · ${item.label}`);
+}
+function redo(){
+  const item=state.future.pop(); if(!item) return;
+  state.history.push({nodes:snapshot(),label:item.label});
+  state.nodes=clone(item.nodes);
+  state.selection=state.nodes.some(n=>n.id===state.selection)?state.selection:(state.nodes[0]?.id??null);
+  state.editing=null;
+  rebuild(true); saveLocal(); updateRecovery();
+  showTruth(`REAPPLIED · ${item.label}`);
+}
+function updateRecovery(){
+  undoBtn.disabled=state.history.length===0;
+  redoBtn.disabled=state.future.length===0;
+  historyEl.innerHTML="";
+  const count=Math.min(8,state.history.length+1);
+  for(let i=0;i<count;i++){
+    const d=document.createElement("span");
+    d.className="historyDot"+(i===count-1?" current":"");
+    historyEl.appendChild(d);
+  }
+}
+
+function contrast(fill){
+  const hex=fill.replace("#","");
+  if(hex.length!==6) return "#111";
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff";
+}
+
+function renderProgram(){
+  [...field.querySelectorAll(".block")].forEach(el=>el.remove());
+  for(const node of state.nodes){
+    const color=contrast(node.fill);
+    const el=document.createElement("div");
+    el.className="block"+
+      (node.id===state.selection?" selected":"")+
+      (node.id===state.editing?" editing":"")+
+      (nodeHasFault(node)?" fault":"")+
+      (node.id===state.activeTraceId?" executing":"");
+    el.dataset.id=node.id;
+    Object.assign(el.style,{left:node.x+"%",top:node.y+"%",width:node.w+"%",height:node.h+"%",background:node.fill,color});
+
+    const address=document.createElement("div");
+    address.className="address";
+    address.innerHTML=`<span class="faultDot"></span><span>${escapeHTML(node.address)}</span>`;
+    el.appendChild(address);
+
+    const code=document.createElement("pre");
+    code.className="codeText";
+    code.innerHTML=displaySourceHTML(node);
+    el.appendChild(code);
+
+    const editor=document.createElement("textarea");
+    editor.className="codeEditor";
+    editor.spellcheck=false;
+    editor.value=node.source;
+    editor.setAttribute("aria-label",`${node.address} source`);
+    editor.addEventListener("pointerdown",e=>e.stopPropagation());
+    editor.addEventListener("keydown",e=>{
+      if(e.key==="Escape"){ e.preventDefault(); finishEditing(node.id,true); }
+      if((e.metaKey||e.ctrlKey)&&e.key==="Enter"){ e.preventDefault(); finishEditing(node.id,true); }
+      if(e.key==="Tab"){
+        e.preventDefault();
+        const s=editor.selectionStart,t=editor.selectionEnd;
+        editor.value=editor.value.slice(0,s)+"  "+editor.value.slice(t);
+        editor.selectionStart=editor.selectionEnd=s+2;
+        updateNodeSource(node.id,editor.value,false);
+      }
+    });
+    editor.addEventListener("input",()=>updateNodeSource(node.id,editor.value,false));
+    editor.addEventListener("blur",()=>{ if(state.editing===node.id) finishEditing(node.id,true); });
+    el.appendChild(editor);
+
+    const diag=document.createElement("div");
+    diag.className="diagnostic";
+    diag.textContent=localDiagnostic(node);
+    el.appendChild(diag);
+
+    const faultSheet=document.createElement("div");
+    faultSheet.className="faultSheet" + (node.x>54?" left":"") + (node.y>54?" up":"");
+    faultSheet.addEventListener("pointerdown",e=>e.stopPropagation());
+    if(nodeHasFault(node)) renderFaultSheet(node,faultSheet);
+    el.appendChild(faultSheet);
+
+    const resize=document.createElement("div");
+    resize.className="resizeHandle";
+    resize.title="Resize";
+    el.appendChild(resize);
+
+    const splitV=document.createElement("button");
+    splitV.className="splitV"; splitV.textContent="│"; splitV.title="Split vertically";
+    const splitH=document.createElement("button");
+    splitH.className="splitH"; splitH.textContent="─"; splitH.title="Split horizontally";
+    el.append(splitV,splitH);
+
+    const rail=document.createElement("div");
+    rail.className="contextRail";
+    const edit=document.createElement("button");
+    edit.className="localBtn"; edit.textContent="{}"; edit.title="Edit this block";
+    edit.addEventListener("pointerdown",e=>e.stopPropagation());
+    edit.addEventListener("click",e=>{e.stopPropagation();beginEditing(node.id);});
+    rail.appendChild(edit);
+    const sw=document.createElement("button");
+    sw.className="swatch"; sw.style.background=node.fill; sw.title="Cycle fill";
+    sw.addEventListener("pointerdown",e=>e.stopPropagation());
+    sw.addEventListener("click",e=>{e.stopPropagation();cycleColor(node.id);});
+    rail.appendChild(sw);
+    const merge=document.createElement("button");
+    merge.className="localBtn"; merge.textContent="M"; merge.title="Merge adjacent region";
+    merge.disabled=!findMergeCandidate(node);
+    merge.addEventListener("pointerdown",e=>e.stopPropagation());
+    merge.addEventListener("click",e=>{e.stopPropagation();mergeSelected();});
+    rail.appendChild(merge);
+    const del=document.createElement("button");
+    del.className="localBtn"; del.textContent="×"; del.title="Delete";
+    del.addEventListener("pointerdown",e=>e.stopPropagation());
+    del.addEventListener("click",e=>{e.stopPropagation();deleteSelected();});
+    rail.appendChild(del);
+    el.appendChild(rail);
+
+    el.addEventListener("pointerdown",blockPointerDown);
+    el.addEventListener("dblclick",e=>{ if(!e.target.closest("button,.codeEditor")){e.stopPropagation();beginEditing(node.id);} });
+    resize.addEventListener("pointerdown",resizePointerDown);
+    splitV.addEventListener("pointerdown",e=>splitPointerDown(e,"v"));
+    splitH.addEventListener("pointerdown",e=>splitPointerDown(e,"h"));
+    field.appendChild(el);
+  }
+
+  if(state.editing){
+    requestAnimationFrame(()=>{
+      const ed=field.querySelector(`.block[data-id="${CSS.escape(state.editing)}"] .codeEditor`);
+      if(ed && document.activeElement!==ed){ ed.focus(); ed.selectionStart=ed.selectionEnd=ed.value.length; }
+    });
+  }
+}
+
+function displaySource(node){
+  if(state.zoom<.82) return node.address;
+  const lines=node.source.split("\n");
+  if(state.zoom<1.12 && lines.length>2) return lines.slice(0,2).join("\n")+"\n…";
+  return node.source;
+}
+function faultToken(node){
+  const f=effectiveFault(node);
+  if(!f) return null;
+  if(f.token) return f.token;
+  if(f.repair?.from) return f.repair.from;
+  return null;
+}
+function displaySourceHTML(node){
+  const shown=displaySource(node);
+  const token=faultToken(node);
+  if(!token || !shown.includes(token)) return escapeHTML(shown);
+  const i=shown.indexOf(token);
+  return escapeHTML(shown.slice(0,i))+`<span class="faultToken">${escapeHTML(token)}</span>`+escapeHTML(shown.slice(i+token.length));
+}
+function sourceLineFor(node,token){
+  if(!token) return null;
+  const lines=node.source.split("\n");
+  const i=lines.findIndex(line=>line.includes(token));
+  return i>=0?i+1:null;
+}
+function nodeHasFault(node){ return !!(node.fault || node.runtimeError || node.diagnostics?.length); }
+function localDiagnostic(node){
+  const fault=effectiveFault(node);
+  return fault ? `${fault.stage} · ${fault.message}` : "";
+}
+function effectiveFault(node){
+  if(node.fault) return node.fault;
+  if(node.runtimeError) return makeRuntimeFault(node,{message:node.runtimeError,completedIds:[],omittedIds:[]});
+  if(node.diagnostics?.length) return makeLintFault(node,node.diagnostics[0]);
+  return null;
+}
+function opContract(node){
+  return {
+    does:[`execute ${node.address} source in order`,`draw ${node.address} rectangle`],
+    doesNot:["mutate another block","continue after invalid source or geometry"],
+    requires:["source parses","required operations exist","rect geometry is finite and inside the canvas"],
+    preserves:["last valid world","source text","unrelated blocks","undo history"],
+    rejects:["unknown required calls","missing rect/fill","non-positive or out-of-bounds geometry"],
+    recovers:["edit this block","undo","retry after repair"]
+  };
+}
+function makeLintFault(node,d){
+  const map={
+    syntax:{stage:"PARSE",stoppedAt:"parse source",completed:["resolve block"],omitted:["validate required operations","validate geometry","set fill","draw rectangle","confirm block"],boundary:"parse source before runtime install"},
+    operation:{stage:"REQUIRE",stoppedAt:"verify required operation",completed:["resolve block","parse source"],omitted:["validate geometry","set fill","draw rectangle","confirm block"],boundary:"verify required calls before READY"},
+    geometry:{stage:"INVARIANT",stoppedAt:"validate geometry",completed:["resolve block","parse source","verify required operations"],omitted:["set fill","draw rectangle","confirm block"],boundary:"reject invalid geometry before execution"},
+    semantic:{stage:"INVARIANT",stoppedAt:"validate block contract",completed:["resolve block","parse source"],omitted:["set fill","draw rectangle","confirm block"],boundary:"validate block contract before execution"}
+  };
+  const shape=map[d.kind]||map.semantic;
+  return {...shape,message:d.message,token:d.token||null,line:d.line||null,expected:d.expected||"block contract satisfied",received:d.received||"current source",preserved:opContract(node).preserves,recovery:d.repair?[`replace ${d.repair.from} → ${d.repair.to}`,"edit source","undo"]:["edit source","undo"],repair:d.repair||null};
+}
+function inferRuntimeCondition(message,node){
+  const text=String(message||"runtime exception");
+  let m=text.match(/([A-Za-z_$][\w$]*) is not defined/);
+  if(m){
+    const name=m[1];
+    return {
+      token:name,
+      expected:`${name} declared or supplied before ${node.address} executes`,
+      received:`${name} unavailable`,
+      boundary:`verify dependency ${name} before ${node.address} can run`
+    };
+  }
+  m=text.match(/([A-Za-z_$][\w$]*) is not a function/);
+  if(m){
+    const name=m[1];
+    return {
+      token:name,
+      expected:`${name} is callable`,
+      received:`${name} is not callable`,
+      boundary:`verify callable dependency ${name} before installing the operation`
+    };
+  }
+  if(/Cannot read (properties|property) of (undefined|null)/i.test(text)){
+    return {
+      token:null,
+      expected:"required object exists before property access",
+      received:text,
+      boundary:"guard the required object before dereference"
+    };
+  }
+  return {
+    token:null,
+    expected:"block completes without throwing",
+    received:text,
+    boundary:"contain the block and assert its required dependencies before execution"
+  };
+}
+function makeRuntimeFault(node,data){
+  const priorBlocks=(data.completedIds||[]).map(id=>state.nodes.find(n=>n.id===id)?.address||id);
+  const laterBlocks=(data.omittedIds||[]).filter(id=>id!==node.id).map(id=>state.nodes.find(n=>n.id===id)?.address||id);
+  const condition=inferRuntimeCondition(data.message,node);
+  const completedSteps=(data.completedSteps||[]).filter(Boolean);
+  const current=data.currentStep||null;
+  const omittedSteps=(data.omittedSteps||[]).filter(Boolean);
+  const completed=[];
+  if(priorBlocks.length) completed.push(`blocks ${priorBlocks.join(", ")} completed`);
+  completed.push(...completedSteps);
+  if(!completed.length) completed.push("source parsed","block contract checked");
+  const omitted=[];
+  if(current) omitted.push(`${current} did not complete`);
+  omitted.push(...omittedSteps);
+  if(laterBlocks.length) omitted.push(`blocks ${laterBlocks.join(", ")} did not run`);
+  if(!omitted.length) omitted.push(`${node.address} did not confirm`);
+  return {
+    stage:"RUNTIME",
+    message:data.message||"runtime operation stopped",
+    token:condition.token,
+    line:sourceLineFor(node,condition.token),
+    stoppedAt:current?`${node.address} · ${current}`:`execute ${node.address}`,
+    completed,
+    omitted,
+    expected:condition.expected,
+    received:condition.received,
+    preserved:["last valid world","current source","all block geometry","undo history"],
+    recovery:["edit this block","retry","undo"],
+    boundary:condition.boundary,
+    repeatCount:node.runtimeRepeatCount||1
+  };
+}
+function renderFaultSheet(node,host){
+  const f=effectiveFault(node); if(!f) return;
+  host.innerHTML="";
+  const title=document.createElement("div"); title.className="faultTitle"; title.textContent=`${node.address}${f.line?":"+f.line:""} STOPPED · ${f.stage}`; host.appendChild(title);
+  const condition=[f.message, f.expected?`expected: ${f.expected}`:"", f.received?`received: ${f.received}`:""].filter(Boolean).join("\n");
+  const sections=[
+    ["FIRST BROKEN CONDITION",condition],
+    ["STOPPED AT",f.stoppedAt],
+    ["COMPLETED",(f.completed||[]).join("\n")],
+    ["DID NOT HAPPEN",(f.omitted||[]).join("\n")],
+    ["STATE PRESERVED",(f.preserved||[]).join("\n")],
+    ["VALID NEXT ACTIONS",(f.recovery||[]).join("\n")],
+    ["REPEATED",f.repeatCount>1?`${f.repeatCount} attempts reached the same broken condition`:""],
+    ["BOUNDARY TO ADD",f.boundary]
+  ];
+  for(const [label,value] of sections){
+    if(!value) continue;
+    const sec=document.createElement("div"); sec.className="faultSection";
+    const l=document.createElement("span");l.className="faultLabel";l.textContent=label;
+    const v=document.createElement("span");v.className="faultValue";v.textContent=value;
+    sec.append(l,v);host.appendChild(sec);
+  }
+  const actions=document.createElement("div"); actions.className="faultActions";
+  if(f.repair){
+    const fix=document.createElement("button");fix.className="faultAction primary";fix.textContent=`FIX ${f.repair.to}`;
+    fix.addEventListener("click",e=>{e.stopPropagation();applyRepair(node.id,f.repair);});actions.appendChild(fix);
+  }
+  const edit=document.createElement("button");edit.className="faultAction";edit.textContent="EDIT";edit.addEventListener("click",e=>{e.stopPropagation();beginEditing(node.id);});actions.appendChild(edit);
+  if(f.stage==="RUNTIME"){
+    const retry=document.createElement("button");retry.className="faultAction primary";retry.textContent="RETRY";retry.addEventListener("click",e=>{e.stopPropagation();stageRuntime(currentCompilation.code);});actions.appendChild(retry);
+  }
+  if(state.history.length){
+    const back=document.createElement("button");back.className="faultAction";back.textContent="UNDO";back.addEventListener("click",e=>{e.stopPropagation();undo();});actions.appendChild(back);
+  }
+  host.appendChild(actions);
+}
+function applyRepair(id,repair){
+  const node=state.nodes.find(n=>n.id===id); if(!node) return;
+  const before=snapshot();
+  const pattern=new RegExp(`\\b${repair.from.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\s*\\(`);
+  node.source=node.source.replace(pattern,`${repair.to}(`);
+  const result=lintAndParse(node,node.source);node.diagnostics=result.diagnostics;node.fault=result.diagnostics.length?makeLintFault(node,result.diagnostics[0]):null;node.runtimeError=null;
+  if(!result.diagnostics.length&&result.semantic){applySemantic(node,result.semantic);node.lastValid=semanticsSnapshot(node);}
+  commit(before,"repair",`${node.address} ${repair.from} → ${repair.to}`);rebuild(!nodeHasFault(node));
+}
+function escapeHTML(s){return String(s).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
+
+function beginEditing(id){
+  state.selection=id;
+  state.editing=id;
+  state.editBefore=snapshot();
+  interaction=null;
+  renderProgram();
+  const n=state.nodes.find(x=>x.id===id);
+  showTruth(`${n?.address||"BLOCK"} · EDITING`);
+}
+function finishEditing(id,commitChange){
+  const node=state.nodes.find(n=>n.id===id); if(!node) return;
+  const before=state.editBefore;
+  state.editing=null;
+  state.editBefore=null;
+  if(commitChange){
+    const result=lintAndParse(node,node.source);
+    node.diagnostics=result.diagnostics;
+    node.fault=result.diagnostics.length ? makeLintFault(node,result.diagnostics[0]) : null;
+    if(!result.diagnostics.length && result.semantic){
+      applySemantic(node,result.semantic);
+      node.lastValid=semanticsSnapshot(node);
+      node.runtimeError=null;
+      node.fault=null;
+      if(before) commit(before,"edit",`${node.address} source changed`);
+      rebuild(true);
+      saveLocal();
+      showTruth(`${node.address} CHANGED · CHECKING WORLD`);
+    }else{
+      if(before) commit(before,"edit",`${node.address} contains a fault`);
+      saveLocal();
+      renderProgram();
+      updateRecovery();
+      showTruth(`${node.address} · FAULT`);
+    }
+  }
+}
+
+function updateNodeSource(id,source,recordHistory){
+  const node=state.nodes.find(n=>n.id===id); if(!node) return;
+  if(recordHistory){
+    const before=snapshot(); node.source=source; commit(before,"edit",`${node.address} changed`);
+  }else node.source=source;
+
+  const result=lintAndParse(node,source);
+  node.diagnostics=result.diagnostics;
+  node.fault=result.diagnostics.length ? makeLintFault(node,result.diagnostics[0]) : null;
+  node.runtimeError=null;
+  if(!result.diagnostics.length && result.semantic){
+    applySemantic(node,result.semantic);
+    node.lastValid=semanticsSnapshot(node);
+    node.fault=null;
+    compileOnly();
+    syncBlockElement(node);
+    scheduleRuntimeRebuild();
+  }else{
+    syncBlockElement(node);
+  }
+}
+
+
+function syncBlockElement(node){
+  const el=field.querySelector(`.block[data-id="${CSS.escape(node.id)}"]`);
+  if(!el) return;
+  const color=contrast(node.fill);
+  Object.assign(el.style,{left:node.x+"%",top:node.y+"%",width:node.w+"%",height:node.h+"%",background:node.fill,color});
+  const fault=nodeHasFault(node);
+  el.classList.toggle("fault",fault);
+  const diag=el.querySelector(".diagnostic"); if(diag) diag.textContent=localDiagnostic(node);
+  const sheet=el.querySelector(".faultSheet"); if(sheet){ sheet.innerHTML=""; if(fault) renderFaultSheet(node,sheet); }
+  const pre=el.querySelector(".codeText"); if(pre) pre.innerHTML=displaySourceHTML(node);
+}
+function scheduleRuntimeRebuild(){
+  clearTimeout(runtimeDebounce);
+  runtimeDebounce=setTimeout(()=>{
+    const editing=state.editing && state.nodes.find(n=>n.id===state.editing);
+    if(editing && editing.diagnostics?.length) return;
+    compileOnly();
+    stageRuntime(currentCompilation.code);
+  },180);
+}
+
+function lintAndParse(node,source){
+  const diagnostics=[];
+  try{ new Function(source); }
+  catch(err){ diagnostics.push({kind:"syntax",message:cleanSyntax(err.message),expected:"valid JavaScript syntax",received:"source that does not parse"}); return {diagnostics,semantic:null}; }
+
+  const declared=new Set([
+    ...[...source.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m=>m[1]),
+    ...[...source.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/g)].map(m=>m[1])
+  ]);
+  const calls=[...source.matchAll(/(^|[^\w$.])([A-Za-z_$][\w$]*)\s*\(/gm)].map(m=>m[2]);
+  for(const name of calls){
+    if(P5_FUNCTIONS.has(name)||BUILTIN_CALLS.has(name)||declared.has(name)||["if","for","while","switch","function"].includes(name)) continue;
+    if(name.startsWith("__")) continue;
+    const suggestion=closestFunction(name);
+    if(suggestion && editDistance(name,suggestion)<=2){
+      diagnostics.push({kind:"operation",message:`${name}() is unavailable · use ${suggestion}()`,expected:`required operation ${suggestion}()`,received:`${name}()`,token:name,line:sourceLineFor(node,name),repair:{from:name,to:suggestion}});
+    }else{
+      diagnostics.push({kind:"operation",message:`${name}() is not installed for this block`,expected:`declare ${name}() here or call an available p5 operation`,received:`${name}()`,token:name,line:sourceLineFor(node,name)});
+    }
+    break;
+  }
+
+  const fillMatch=source.match(/\bfill\s*\(\s*(["'])(#[0-9a-fA-F]{6})\1\s*\)\s*;?/);
+  const rectMatch=source.match(/\brect\s*\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)\s*;?/);
+
+  if(!rectMatch){ diagnostics.push({kind:"semantic",message:"This spatial block needs rect(x, y, w, h)"}); }
+  if(!fillMatch){ diagnostics.push({kind:"semantic",message:"Use a literal fill(\"#RRGGBB\") so the block can adopt its color"}); }
+  if(diagnostics.length) return {diagnostics,semantic:null};
+
+  const [x,y,w,h]=rectMatch.slice(1).map(Number);
+  if(![x,y,w,h].every(Number.isFinite)){ diagnostics.push({kind:"geometry",message:"rect() arguments must be finite numbers",expected:"four finite numbers",received:`${x}, ${y}, ${w}, ${h}`}); }
+  if(w<=0||h<=0){ diagnostics.push({kind:"geometry",message:"width and height must be greater than 0",expected:"w > 0 and h > 0",received:`w=${w}, h=${h}`}); }
+  if(x<0||y<0||x+w>DESIGN||y+h>DESIGN){ diagnostics.push({kind:"geometry",message:`rect() must remain inside 0…${DESIGN}`,expected:`0 ≤ x,y and x+w,y+h ≤ ${DESIGN}`,received:`rect(${x}, ${y}, ${w}, ${h})`}); }
+  if(diagnostics.length) return {diagnostics,semantic:null};
+
+  return {diagnostics,semantic:{x:fromDesign(x),y:fromDesign(y),w:fromDesign(w),h:fromDesign(h),fill:fillMatch[2]}};
+}
+function cleanSyntax(msg){ return String(msg).replace(/Unexpected token ['"]?([^'"]+)['"]?/i,"Unexpected $1"); }
+function closestFunction(name){
+  let best=null,bestD=Infinity;
+  for(const fn of P5_FUNCTIONS){ const d=editDistance(name,fn); if(d<bestD){bestD=d;best=fn;} }
+  return best;
+}
+function editDistance(a,b){
+  const m=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+  for(let i=0;i<=a.length;i++)m[i][0]=i;
+  for(let j=0;j<=b.length;j++)m[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return m[a.length][b.length];
+}
+function applySemantic(node,s){ Object.assign(node,s); }
+function syncSourceFromSemantics(node){
+  node.source=defaultSource(node);
+  node.diagnostics=[];
+  node.runtimeError=null;
+  node.fault=null;
+  node.lastValid=semanticsSnapshot(node);
+}
+function setColor(id,color){
+  const node=state.nodes.find(n=>n.id===id); if(!node) return;
+  mutate("color",()=>{node.fill=color;syncSourceFromSemantics(node);},`${node.address} fill → ${color}`);
+}
+function cycleColor(id){
+  const node=state.nodes.find(n=>n.id===id); if(!node) return;
+  const i=Math.max(0,COLORS.indexOf(node.fill));
+  setColor(id,COLORS[(i+1)%COLORS.length]);
+}
+
+function blockPointerDown(event){
+  if(event.target.closest("button,.resizeHandle,.codeEditor,.contextRail,.diagnostic")) return;
+  event.preventDefault();
+  const id=event.currentTarget.dataset.id;
+  if(state.editing && state.editing!==id) finishEditing(state.editing,true);
+  state.selection=id;
+  const node=selected(); if(!node) return;
+  const box=field.getBoundingClientRect();
+  interaction={mode:"drag",id,startX:event.clientX,startY:event.clientY,original:clone(node),before:snapshot(),fieldWidth:box.width,fieldHeight:box.height};
+  showGhost(node);
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  renderProgram();
+}
+function resizePointerDown(event){
+  event.preventDefault(); event.stopPropagation();
+  const id=event.currentTarget.parentElement.dataset.id;
+  state.selection=id; const node=selected(); if(!node) return;
+  const box=field.getBoundingClientRect();
+  interaction={mode:"resize",id,startX:event.clientX,startY:event.clientY,original:clone(node),before:snapshot(),fieldWidth:box.width,fieldHeight:box.height};
+  showGhost(node);
+}
+function splitPointerDown(event,axis){
+  event.preventDefault();event.stopPropagation();
+  const id=event.currentTarget.parentElement.dataset.id;
+  state.selection=id; interaction={mode:"split",id,axis,ratio:.5,before:snapshot()};
+  showSplitGuide(axis,.5);
+}
+
+window.addEventListener("pointermove",event=>{
+  if(!interaction) return;
+  const node=state.nodes.find(n=>n.id===interaction.id); if(!node) return;
+  if(interaction.mode==="drag"||interaction.mode==="resize"){
+    const dx=(event.clientX-interaction.startX)/interaction.fieldWidth*100;
+    const dy=(event.clientY-interaction.startY)/interaction.fieldHeight*100;
+    if(interaction.mode==="drag"){
+      node.x=clamp(interaction.original.x+dx,0,100-node.w);
+      node.y=clamp(interaction.original.y+dy,0,100-node.h);
+    }else{
+      node.w=clamp(interaction.original.w+dx,MIN_BLOCK,100-node.x);
+      node.h=clamp(interaction.original.h+dy,MIN_BLOCK,100-node.y);
+    }
+    syncSourceFromSemantics(node);
+    renderProgram(); compileOnly(); postLiveBlocks();
+  }
+  if(interaction.mode==="split"){
+    const box=field.getBoundingClientRect();
+    const lx=(event.clientX-box.left)/box.width*100,ly=(event.clientY-box.top)/box.height*100;
+    const axisLen=interaction.axis==="v"?node.w:node.h;
+    const raw=interaction.axis==="v"?(lx-node.x)/node.w:(ly-node.y)/node.h;
+    const edge=MIN_BLOCK/axisLen;
+    interaction.ratio=clamp(raw,edge,1-edge);
+    showSplitGuide(interaction.axis,interaction.ratio);
+  }
+});
+window.addEventListener("pointerup",()=>{
+  if(!interaction) return;
+  const done=interaction; interaction=null; hideGhost(); hideSplitGuide();
+  if(done.mode==="split") return performSplit(done.id,done.axis,done.ratio,done.before);
+  const node=state.nodes.find(n=>n.id===done.id);
+  if(node){
+    syncSourceFromSemantics(node);
+    const detail=done.mode==="drag"?`${node.address} moved to ${toDesign(node.x)}, ${toDesign(node.y)}`:`${node.address} resized to ${toDesign(node.w)} × ${toDesign(node.h)}`;
+    commit(done.before,done.mode,detail);
+  }
+  rebuild(true);
+});
+
+function showGhost(node){
+  Object.assign(previousGhost.style,{display:"block",left:node.x+"%",top:node.y+"%",width:node.w+"%",height:node.h+"%"});
+}
+function hideGhost(){ previousGhost.style.display="none"; }
+function showSplitGuide(axis,ratio){
+  const n=selected(); if(!n) return;
+  splitGuide.style.display="block";
+  if(axis==="v") Object.assign(splitGuide.style,{left:(n.x+n.w*ratio)+"%",top:n.y+"%",width:"4px",height:n.h+"%"});
+  else Object.assign(splitGuide.style,{left:n.x+"%",top:(n.y+n.h*ratio)+"%",width:n.w+"%",height:"4px"});
+}
+function hideSplitGuide(){ splitGuide.style.display="none"; }
+function performSplit(id,axis,ratio,before){
+  const n=state.nodes.find(x=>x.id===id); if(!n) return;
+  const oldAddr=n.address;
+  if(axis==="v"){
+    const a=n.w*ratio,b=n.w-a; if(a<MIN_BLOCK||b<MIN_BLOCK)return;
+    const second=makeNode(n.x+a,n.y,b,n.h,COLORS[0],oldAddr+"B"); second.parent=n.id;
+    n.w=a;n.address=oldAddr+"A";n.parent=n.parent||n.id;syncSourceFromSemantics(n);syncSourceFromSemantics(second);
+    state.nodes.push(second);state.selection=second.id;
+  }else{
+    const a=n.h*ratio,b=n.h-a;if(a<MIN_BLOCK||b<MIN_BLOCK)return;
+    const second=makeNode(n.x,n.y+a,n.w,b,COLORS[0],oldAddr+"B");second.parent=n.id;
+    n.h=a;n.address=oldAddr+"A";n.parent=n.parent||n.id;syncSourceFromSemantics(n);syncSourceFromSemantics(second);
+    state.nodes.push(second);state.selection=second.id;
+  }
+  commit(before,"split",`${oldAddr} → ${oldAddr}A + ${oldAddr}B`); rebuild(true);
+}
+function findMergeCandidate(n){
+  const same=(a,b)=>Math.abs(a-b)<.25;
+  return state.nodes.find(o=>o.id!==n.id&&(
+    (same(n.y,o.y)&&same(n.h,o.h)&&(same(n.x+n.w,o.x)||same(o.x+o.w,n.x)))||
+    (same(n.x,o.x)&&same(n.w,o.w)&&(same(n.y+n.h,o.y)||same(o.y+o.h,n.y)))
+  ));
+}
+function mergeSelected(){
+  const n=selected();if(!n)return;const o=findMergeCandidate(n);if(!o)return;
+  mutate("merge",()=>{
+    const minX=Math.min(n.x,o.x),minY=Math.min(n.y,o.y),maxX=Math.max(n.x+n.w,o.x+o.w),maxY=Math.max(n.y+n.h,o.y+o.h);
+    Object.assign(n,{x:minX,y:minY,w:maxX-minX,h:maxY-minY,address:n.address.replace(/[AB]+$/,""),fill:n.fill});
+    syncSourceFromSemantics(n); state.nodes=state.nodes.filter(x=>x.id!==o.id); state.selection=n.id;
+  },`${n.address} recombined`);
+}
+function deleteSelected(){
+  const n=selected();if(!n)return;
+  mutate("delete",()=>{state.nodes=state.nodes.filter(x=>x.id!==n.id);state.selection=state.nodes[0]?.id??null;},`${n.address} removed`);
+}
+
+function statementLabel(line,index){
+  const t=line.trim();
+  let m=t.match(/^fill\s*\(/); if(m) return "set fill";
+  m=t.match(/^rect\s*\(/); if(m) return "draw rectangle";
+  m=t.match(/^image\s*\(/); if(m) return "draw image";
+  m=t.match(/^([A-Za-z_$][\w$]*)\s*\(/); if(m) return `${m[1]}()`;
+  m=t.match(/^(?:let|const|var)\s+([A-Za-z_$][\w$]*)/); if(m) return `bind ${m[1]}`;
+  return `source line ${index+1}`;
+}
+function instrumentBlockSource(node){
+  const source=node.diagnostics?.length ? (node.lastValid?.source || defaultSource(node)) : node.source;
+  const raw=source.split("\n");
+  const code=[];
+  const plan=[];
+  raw.forEach((line,index)=>{
+    const t=line.trim();
+    const simple=t && !/^\/\//.test(t) && !/[{}]/.test(t) && /;\s*$/.test(t);
+    if(simple){
+      const label=statementLabel(line,index);
+      plan.push(label);
+      code.push(`__mdBegin(${JSON.stringify(node.id)}, ${JSON.stringify(label)});`);
+      code.push(line);
+      code.push(`__mdComplete(${JSON.stringify(node.id)}, ${JSON.stringify(label)});`);
+    }else code.push(line);
+  });
+  return {code,plan};
+}
+
+function compileProgram(){
+  const validNodes=state.nodes;
+  const lines=[];
+  const plans={};
+  lines.push("/* GENERATED BY MONDRIAN / P5 0.5 */");
+  lines.push(`const DESIGN_SIZE = ${DESIGN};`);
+  lines.push("const __mdTracker = { currentBlock:null, currentStep:null, completedSteps:{}, plans:{} }; ");
+  lines.push("function __mdBegin(blockId,label){ __mdTracker.currentBlock=blockId; __mdTracker.currentStep=label; (__mdTracker.completedSteps[blockId] ||= []); }");
+  lines.push("function __mdComplete(blockId,label){ (__mdTracker.completedSteps[blockId] ||= []).push(label); __mdTracker.currentStep=null; }");
+  lines.push("");
+  lines.push("function setup() {");
+  lines.push("  createCanvas(DESIGN_SIZE, DESIGN_SIZE);");
+  lines.push("  noLoop();");
+  lines.push("}");
+  lines.push("");
+  for(const n of validNodes){
+    const inst=instrumentBlockSource(n); plans[n.id]=inst.plan;
+    lines.push(`function __block_${safeId(n.id)}() { // ${n.address}`);
+    for(const srcLine of inst.code) lines.push("  "+srcLine);
+    lines.push("}");
+    lines.push("");
+  }
+  lines.push(`__mdTracker.plans = ${JSON.stringify(plans)};`);
+  lines.push("function draw() {");
+  lines.push("  background('#f7f5ee');");
+  lines.push("  stroke('#111111');");
+  lines.push("  strokeWeight(8);");
+  lines.push("  strokeJoin(MITER);");
+  lines.push("  const __completed = [];");
+  validNodes.forEach((n,index)=>{
+    const omitted=validNodes.slice(index).map(x=>x.id);
+    lines.push(`  try { __mdTracker.currentBlock=${JSON.stringify(n.id)}; __block_${safeId(n.id)}(); __completed.push(${JSON.stringify(n.id)}); __mdTracker.currentBlock=null; } catch (error) {`);
+    lines.push(`    const __plan=__mdTracker.plans[${JSON.stringify(n.id)}]||[]; const __done=__mdTracker.completedSteps[${JSON.stringify(n.id)}]||[]; const __current=__mdTracker.currentStep; const __at=__current?__plan.indexOf(__current):__done.length; const __omitted=__plan.slice(Math.max(0,__at+(__current?1:0)));`);
+    lines.push(`    parent.postMessage({type:'runtime-fault',role:window.__MONDRIAN_ROLE,token:window.__MONDRIAN_TOKEN,blockId:${JSON.stringify(n.id)},message:error && error.message ? error.message : String(error),completedIds:__completed.slice(),omittedIds:${JSON.stringify(omitted)},completedSteps:__done.slice(),currentStep:__current,omittedSteps:__omitted}, '*');`);
+    lines.push("    return;");
+    lines.push("  }");
+  });
+  lines.push("  parent.postMessage({type:'runtime-ok',role:window.__MONDRIAN_ROLE,token:window.__MONDRIAN_TOKEN,completedIds:__completed.slice()}, '*');");
+  lines.push("}");
+  lines.push("");
+  lines.push("window.__mondrianTrace = function(id) {");
+  lines.push("  redraw();");
+  lines.push("  setTimeout(() => {");
+  lines.push("    const block = window.__traceBlocks && window.__traceBlocks[id];");
+  lines.push("    if (!block) return;");
+  lines.push("    push(); noFill(); stroke('#00a8ff'); strokeWeight(5);");
+  lines.push("    rect(block.x/100*width+4,block.y/100*height+4,block.w/100*width-8,block.h/100*height-8); pop();");
+  lines.push("  }, 0);");
+  lines.push("};");
+  lines.push("window.__traceBlocks = "+JSON.stringify(Object.fromEntries(validNodes.map(n=>[n.id,{x:n.x,y:n.y,w:n.w,h:n.h}])))+";");
+  return {code:lines.join("\n"),blockOrder:validNodes.map(n=>n.id),plans};
+}
+function safeId(id){ return String(id).replace(/[^A-Za-z0-9_$]/g,"_"); }
+function runtimeDocument(code,role="world",token=0){
+  const safe=code.replace(/<\/script>/gi,"<\\/script>");
+  return `<!doctype html><html><head>
+<link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#d8d8d3}body{display:grid;place-items:center}canvas{display:block;max-width:92vw!important;max-height:92vh!important;width:auto!important;height:auto!important;box-shadow:0 8px 24px rgba(0,0,0,.14)}</style><script>window.__MONDRIAN_ROLE=${JSON.stringify(role)};window.__MONDRIAN_TOKEN=${token};window.onerror=function(message,source,line,col,error){parent.postMessage({type:'runtime-global-fault',role:window.__MONDRIAN_ROLE,token:window.__MONDRIAN_TOKEN,message:String(message)},'*');};<\/script><script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"><\/script></head><body><script>${safe}\nwindow.addEventListener('message',e=>{if(e.data?.type==='trace'&&window.__mondrianTrace)window.__mondrianTrace(e.data.id);});<\/script></body></html>`;
+}
+function compileOnly(){ currentCompilation=compileProgram(); rawSource.value=currentCompilation.code; }
+function stageRuntime(code){
+  const token=++runtimeToken;
+  stagedRuntime={token,code};
+  probe.srcdoc=runtimeDocument(code,"probe",token);
+  showTruth("CHECKING CURRENT PROGRAM");
+}
+function rebuild(runtime){
+  state.nodes.forEach(n=>{ if(!Array.isArray(n.diagnostics))n.diagnostics=[]; });
+  compileOnly(); renderProgram(); updateRecovery();
+  if(runtime && !state.nodes.some(n=>n.diagnostics?.length)) stageRuntime(currentCompilation.code);
+}
+function postLiveBlocks(){
+  // Source and spatial semantics are one object. For arbitrary edited p5 code,
+  // rebuilding is safer than pretending every line is hot-swappable.
+  if(!state.editing) return;
+}
+
+function setView(view){
+  state.view=view;
+  document.body.classList.toggle("world-only",view==="world");
+  document.body.classList.toggle("program-only",view==="program");
+  document.body.classList.toggle("raw-mode",view==="raw");
+  document.querySelectorAll(".viewBtn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  if(view==="raw") compileOnly();
+}
+function orderedTrace(){ return [...state.nodes].sort((a,b)=>a.y-b.y||a.x-b.x).map(n=>n.id); }
+function traceStep(){
+  const ids=orderedTrace();if(!ids.length)return;
+  state.traceIndex=(state.traceIndex+1)%ids.length;state.activeTraceId=ids[state.traceIndex];
+  preview.contentWindow?.postMessage({type:"trace",id:state.activeTraceId},"*");renderProgram();
+  const n=state.nodes.find(x=>x.id===state.activeTraceId);showTruth(`${n?.address||"BLOCK"} · EXECUTING`);
+}
+function playTrace(){
+  state.traceOn=true;document.body.classList.add("trace-on");
+  if(state.traceTimer)return;
+  state.traceIndex=-1;traceStep();state.traceTimer=setInterval(traceStep,520);
+}
+function stopTrace(){
+  if(state.traceTimer)clearInterval(state.traceTimer);state.traceTimer=null;state.traceOn=false;state.traceIndex=-1;state.activeTraceId=null;document.body.classList.remove("trace-on");renderProgram();showTruth("");
+}
+
+function showTruth(message){ truth.textContent=message; }
+fieldWrap.addEventListener("wheel",e=>{e.preventDefault();state.zoom=clamp(state.zoom+(e.deltaY<0?.1:-.1),.75,1.8);field.style.transform=`scale(${state.zoom})`;renderProgram();},{passive:false});
+field.addEventListener("pointerdown",e=>{ if(e.target===field){ if(state.editing)finishEditing(state.editing,true);state.selection=null;renderProgram(); } });
+
+function saveLocal(){
+  try{ localStorage.setItem("mondrian-p5-0.5",JSON.stringify({nodes:state.nodes,nextAddress:state.nextAddress})); }catch{}
+}
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem("mondrian-p5-0.5");if(!raw)return false;
+    const data=JSON.parse(raw);if(!Array.isArray(data.nodes)||!data.nodes.length)return false;
+    state.nodes=data.nodes.map(n=>({...n,diagnostics:[],runtimeError:null,fault:null,lastValid:n.lastValid||semanticsSnapshot(n)}));
+    state.nextAddress=data.nextAddress||state.nodes.length+1;return true;
+  }catch{return false;}
+}
+
+window.addEventListener("message",event=>{
+  const data=event.data||{};
+  if(data.type==="runtime-ok" && data.role==="probe"){
+    if(!stagedRuntime || data.token!==stagedRuntime.token) return;
+    for(const n of state.nodes){ n.runtimeError=null; if(n.fault?.stage==="RUNTIME") n.fault=null; n.lastRuntimeSignature=null; n.runtimeRepeatCount=0; }
+    preview.srcdoc=runtimeDocument(stagedRuntime.code,"world",data.token);
+    showTruth(`${state.nodes.length} BLOCKS · CURRENT WORLD`);
+    renderProgram();
+    return;
+  }
+  if(data.type==="runtime-fault" && data.role==="probe"){
+    if(!stagedRuntime || data.token!==stagedRuntime.token) return;
+    const n=state.nodes.find(x=>x.id===data.blockId);if(!n)return;
+    n.runtimeError=data.message||"Runtime failure";
+    const signature=String(data.message||"Runtime failure");
+    if(n.lastRuntimeSignature===signature) n.runtimeRepeatCount=(n.runtimeRepeatCount||1)+1;
+    else { n.lastRuntimeSignature=signature; n.runtimeRepeatCount=1; }
+    n.fault=makeRuntimeFault(n,data);
+    state.selection=n.id;
+    renderProgram();
+    showTruth(`${n.address} STOPPED · LAST VALID WORLD PRESERVED`);
+    return;
+  }
+  if(data.type==="runtime-global-fault" && data.role==="probe"){
+    if(!stagedRuntime || data.token!==stagedRuntime.token) return;
+    showTruth(`RUNTIME UNAVAILABLE · LAST WORLD PRESERVED`);
+    return;
+  }
+});
+
+document.querySelectorAll(".viewBtn").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+undoBtn.addEventListener("click",undo);redoBtn.addEventListener("click",redo);
+document.querySelector("#traceBtn").addEventListener("click",()=>{ if(state.traceOn)stopTrace();else{state.traceOn=true;document.body.classList.add("trace-on");showTruth("TRACE · STEP OR PLAY");} });
+document.querySelector("#playBtn").addEventListener("click",playTrace);
+document.querySelector("#stepBtn").addEventListener("click",()=>{state.traceOn=true;document.body.classList.add("trace-on");traceStep();});
+document.querySelector("#stopBtn").addEventListener("click",stopTrace);
+document.querySelector("#copyBtn").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(currentCompilation.code);showTruth("SOURCE COPIED");}catch{showTruth("COPY FAILED");}});
+document.querySelector("#saveBtn").addEventListener("click",()=>{const blob=new Blob([currentCompilation.code],{type:"text/javascript"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="sketch.js";a.click();URL.revokeObjectURL(url);showTruth("SKETCH.JS SAVED");});
+
+window.addEventListener("keydown",e=>{
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();return;}
+  if(mod&&e.key==="Enter"){e.preventDefault();if(state.editing)finishEditing(state.editing,true);rebuild(true);return;}
+  if((e.key==="Delete"||e.key==="Backspace")&&!state.editing&&state.view!=="raw"){e.preventDefault();deleteSelected();return;}
+  if(e.key==="Escape"&&state.traceOn){stopTrace();return;}
+});
+
+if(!loadLocal())state.nodes=defaultProgram();
+state.selection=state.nodes[0]?.id??null;
+for(const n of state.nodes){
+  if(!n.source)n.source=defaultSource(n);
+  const res=lintAndParse(n,n.source);n.diagnostics=res.diagnostics;n.fault=res.diagnostics.length?makeLintFault(n,res.diagnostics[0]):null;if(!res.diagnostics.length&&res.semantic)applySemantic(n,res.semantic);
+}
+rebuild(true);setView("both");updateRecovery();
+</script>
+</body>
+</html>

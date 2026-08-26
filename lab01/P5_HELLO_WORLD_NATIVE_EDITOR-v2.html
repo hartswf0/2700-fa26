@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-mint.svg" />
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hello p5.js — Call Your Shot</title>
+<style>
+:root{
+  --p5:#ed225d;
+  --ink:#3b3b3b;
+  --muted:#6f6f6f;
+  --line:#d4d4d4;
+  --line2:#ececec;
+  --panel:#f7f7f7;
+  --panel2:#efefef;
+  --selection:#d7d7d7;
+  --blue:#0075c4;
+  --green:#008a72;
+  --orange:#b55a00;
+  --red:#c82829;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#fff;font-size:13px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{min-height:100%;display:grid;grid-template-rows:32px 48px minmax(600px,1fr);background:white}
+/* --- p5-like chrome --- */
+.menubar{height:32px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fafafa;position:relative;z-index:30}
+.p5logo{width:40px;height:32px;background:var(--p5);color:#fff;display:grid;place-items:center;font-weight:700;font-size:17px;letter-spacing:-1px;user-select:none}
+.menu-wrap{display:flex;align-items:center;height:100%}
+.menu{position:relative;height:100%}
+.menu>button{height:100%;border:0;background:transparent;padding:0 11px;color:#555}
+.menu>button:hover,.menu.open>button{background:#eee}
+.menu>button::after{content:' ▾';font-size:9px;color:#777}
+.dropdown{display:none;position:absolute;top:31px;left:0;min-width:210px;background:white;border:1px solid #c7c7c7;box-shadow:0 3px 9px rgba(0,0,0,.14);padding:5px 0;z-index:50}
+.menu.open .dropdown{display:block}
+.dropdown button{display:flex;justify-content:space-between;gap:24px;width:100%;border:0;background:white;text-align:left;padding:7px 12px;color:#444}
+.dropdown button:hover{background:#ececec}
+.dropdown .sep{height:1px;background:#e2e2e2;margin:5px 0}
+.dropdown small{color:#999}
+.account{margin-left:auto;padding-right:20px;color:#666;font-size:12px}.account span{margin:0 8px}.account a{color:#666;text-decoration:none}
+.toolbar{height:48px;border-bottom:1px dashed #c7c7c7;background:#fff;display:flex;align-items:center;padding:0 14px;gap:12px;position:relative;z-index:20}
+.round{width:34px;height:34px;border-radius:50%;border:0;background:#ddd;display:grid;place-items:center;padding:0}
+.round:hover{background:#cfcfcf}.round.stop{background:var(--p5)}
+.play-icon{width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:11px solid #555;margin-left:3px}
+.stop-icon{width:12px;height:12px;background:white}
+.toolcheck{display:flex;align-items:center;gap:6px;color:#555;font-size:12px;white-space:nowrap}.toolcheck input{accent-color:var(--p5)}
+.project{display:flex;align-items:center;gap:6px;min-width:0;margin-left:4px;color:#666;white-space:nowrap}
+.project button{border:0;background:transparent;padding:2px;color:#999}.project button:hover{color:#444}
+.project-name{overflow:hidden;text-overflow:ellipsis;max-width:420px}
+.lesson-arrows{display:flex;margin-left:4px}.lesson-arrows button{border:0;background:transparent;padding:6px 8px;color:#777;font-size:18px;line-height:1}.lesson-arrows button:hover{background:#eee}
+.version{margin-left:auto;background:#e8e8e8;border-radius:14px;padding:5px 9px;color:#666;font-size:11px;white-space:nowrap}.version .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#168ad4;margin-left:3px}
+.gear{width:34px;height:34px;border-radius:50%;border:0;background:#ddd;font-size:18px;display:grid;place-items:center}.gear:hover{background:#cfcfcf}
+/* --- workspace --- */
+.workspace{display:grid;grid-template-columns:minmax(420px,50%) minmax(420px,50%);min-height:0;height:calc(100vh - 80px)}
+.left{display:grid;grid-template-rows:24px minmax(0,1fr) 130px;border-right:1px solid #aaa;min-width:0;position:relative}
+.right{display:grid;grid-template-rows:24px minmax(0,1fr) 124px;min-width:0}
+.tabs,.preview-head,.console-head,.shot-head{height:24px;background:#f4f4f4;border-bottom:1px solid #bfbfbf;display:flex;align-items:center;color:#555;font-size:11px}
+.drawer-toggle{width:34px;height:24px;border:0;border-right:1px solid #d0d0d0;background:#efefef;font-size:18px;line-height:1}.drawer-toggle:hover{background:#e5e5e5}
+.filetab{height:24px;padding:6px 12px 0;border-right:1px solid #d4d4d4;background:white;min-width:90px}.filetab.alt{background:#f1f1f1}.filetab button{border:0;background:transparent;padding:0;color:#666;width:100%;text-align:left}
+.preview-head{justify-content:space-between;padding-left:8px}.preview-tools{display:flex;align-items:center;gap:10px;padding-right:9px}.preview-tools label{display:flex;align-items:center;gap:4px;color:#777}.preview-tools input{accent-color:var(--p5)}
+.lesson-drawer{display:none;position:absolute;top:24px;left:0;bottom:130px;width:245px;background:white;border-right:1px solid #aaa;z-index:10;overflow:auto}.lesson-drawer.open{display:block}
+.lesson-drawer h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#777;padding:10px 12px 6px;margin:0;border-bottom:1px solid #eee}
+.lesson-item{width:100%;border:0;background:white;text-align:left;padding:8px 12px 8px 16px;border-bottom:1px solid #f0f0f0;color:#555}.lesson-item:hover{background:#f2f2f2}.lesson-item.active{background:#e7e7e7;color:#222}.lesson-item small{display:block;color:#999;margin-top:2px}
+/* --- editor --- */
+.editor-wrap{position:relative;overflow:hidden;background:white;min-height:0}
+.line-numbers{position:absolute;left:0;top:0;width:47px;bottom:0;background:#fafafa;border-right:1px solid #e4e4e4;color:#aaa;text-align:right;padding:14px 8px 14px 0;font:13px/21px Menlo,Consolas,monospace;white-space:pre;user-select:none;overflow:hidden}
+.highlight{position:absolute;left:48px;right:0;top:0;bottom:0;margin:0;padding:14px 12px;font:13px/21px Menlo,Consolas,monospace;white-space:pre;overflow:auto;pointer-events:none;color:#555;tab-size:2}
+.code-input{position:absolute;left:48px;right:0;top:0;bottom:0;width:calc(100% - 48px);height:100%;resize:none;border:0;outline:0;background:transparent;padding:14px 12px;font:13px/21px Menlo,Consolas,monospace;white-space:pre;overflow:auto;color:transparent;caret-color:#111;tab-size:2;selection-color:transparent}
+.code-input::selection{background:rgba(160,160,160,.35)}
+.kw{color:#6a4a3c}.p5fn{color:#0075c4;font-weight:600}.num{color:#555}.str{color:#008a72}.com{color:#999}.builtin{color:#8a2be2}.op{color:#555}
+.current-line{position:absolute;left:48px;right:0;height:21px;background:rgba(190,190,190,.45);pointer-events:none;z-index:0;top:14px}
+.highlight,.code-input{z-index:1}.current-line{z-index:0}
+/* --- console --- */
+.console{background:#fafafa;border-top:1px solid #bbb;min-height:0;display:grid;grid-template-rows:24px 1fr}
+.console-head{justify-content:space-between;padding-left:3px}.console-head span:first-child{padding-left:0}.clear-btn{border:0;background:transparent;color:#777;padding:3px 8px}.clear-btn:hover{background:#e9e9e9}
+.console-body{overflow:auto;padding:7px 8px;font:12px/18px Menlo,Consolas,monospace;color:#444;background:#fff}
+.console-line{display:flex;gap:7px;align-items:flex-start;border-bottom:1px solid #fafafa;padding:1px 0}.console-line .mark{color:#aaa;flex:0 0 auto}.console-line.error{color:#b40020}.console-line.guide{color:#4f4f4f}.console-line.guide .mark{color:var(--p5)}.console-line.success{color:#08765f}
+.token-table{margin:4px 0 7px 18px;border-collapse:collapse;font:12px/17px Menlo,Consolas,monospace}.token-table td{border-bottom:1px solid #eee;padding:2px 8px 2px 0;vertical-align:top}.token-table td:first-child{color:#0075c4;font-weight:600;min-width:100px}.token-table td:nth-child(2){color:#777}
+/* --- preview --- */
+.preview-body{position:relative;overflow:auto;background:white;min-height:0}
+.runtime-frame{width:100%;height:100%;min-height:400px;border:0;background:white;display:block}
+.stopped{position:absolute;inset:0;display:grid;place-items:start;padding:18px;color:#999;background:white;font:13px Menlo,Consolas,monospace}.stopped.hidden{display:none}
+.grid-overlay{position:absolute;left:0;top:0;width:400px;height:400px;pointer-events:none;display:none;background-image:linear-gradient(to right,rgba(0,0,0,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.09) 1px,transparent 1px);background-size:50px 50px;border:1px solid rgba(0,0,0,.25)}.grid-overlay.on{display:block}.coord-label{position:absolute;font:10px Menlo,Consolas,monospace;color:#777;background:rgba(255,255,255,.82);padding:1px 2px}.coords-overlay{display:none;position:absolute;left:0;top:0;width:400px;height:400px;pointer-events:none}.coords-overlay.on{display:block}
+/* --- shot panel --- */
+.shot-panel{border-top:1px solid #bbb;background:#fafafa;display:grid;grid-template-rows:24px 1fr;min-height:0}.shot-head{padding:0 8px;justify-content:space-between}.shot-head strong{font-weight:normal;color:#555}.shot-status{color:#999}
+.shot-body{padding:8px 10px;overflow:auto}.shot-q{font-size:13px;color:#333;margin-bottom:7px}.shot-options{display:flex;flex-wrap:wrap;gap:6px}.shot-option{border:1px solid #bdbdbd;background:white;border-radius:2px;padding:5px 8px;color:#555}.shot-option:hover{background:#f0f0f0}.shot-option.chosen{border-color:#888;background:#e7e7e7}.shot-option.correct{border-color:#008a72;background:#edf8f5}.shot-option.wrong{border-color:#c82829;background:#fff0f2}.shot-feedback{margin-top:7px;color:#666;font-size:12px}.shot-feedback b{color:#333}
+/* --- imposter --- */
+.imposter-preview{padding:12px;background:white;min-height:100%;display:none}.imposter-preview.on{display:block}.suspects{display:grid;grid-template-columns:1fr 1fr;gap:12px}.suspect{border:1px solid #bdbdbd;background:#fff}.suspect h4{font-size:12px;font-weight:normal;margin:0;padding:6px 8px;background:#f3f3f3;border-bottom:1px solid #ccc;display:flex;justify-content:space-between}.suspect-frame{width:100%;height:320px;border:0;background:white}.imposter-controls{margin-top:10px;border-top:1px solid #ddd;padding-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.native-btn{border:1px solid #bbb;background:#f5f5f5;padding:6px 9px;border-radius:2px;color:#555}.native-btn:hover{background:#e8e8e8}.imposter-result{margin-left:auto;color:#666}.imposter-result strong{color:#222}
+/* responsive */
+@media(max-width:900px){#app{grid-template-rows:32px auto auto}.toolbar{height:auto;min-height:48px;flex-wrap:wrap;padding:7px 10px}.workspace{grid-template-columns:1fr;height:auto}.left{min-height:620px;border-right:0;border-bottom:1px solid #aaa}.right{min-height:650px}.project-name{max-width:240px}.account{display:none}.version{margin-left:0}.suspects{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="menubar">
+    <div class="p5logo">p5*</div>
+    <div class="menu-wrap">
+      <div class="menu"><button>File</button><div class="dropdown"><button data-action="reset">Reset sketch <small>⌘R</small></button><button data-action="download">Download sketch.js</button><div class="sep"></div><button data-action="first">First lesson</button></div></div>
+      <div class="menu"><button>Edit</button><div class="dropdown"><button data-action="selectall">Select all <small>⌘A</small></button><button data-action="reset">Restore lesson code</button></div></div>
+      <div class="menu"><button>Sketch</button><div class="dropdown"><button data-action="run">Run <small>⌘↵</small></button><button data-action="stop">Stop</button><div class="sep"></div><button data-action="prev">Previous lesson <small>←</small></button><button data-action="next">Next lesson <small>→</small></button></div></div>
+      <div class="menu"><button>Help</button><div class="dropdown"><button data-action="help">What am I looking at?</button><button data-action="shortcuts">Keyboard shortcuts</button></div></div>
+      <div class="menu"><button>English</button><div class="dropdown"><button>English</button></div></div>
+    </div>
+    <div class="account"><a href="#">Log in</a><span>or</span><a href="#">Sign up</a></div>
+  </div>
+
+  <div class="toolbar">
+    <button class="round" id="runBtn" title="Run"><span class="play-icon"></span></button>
+    <button class="round stop" id="stopBtn" title="Stop"><span class="stop-icon"></span></button>
+    <label class="toolcheck"><input type="checkbox" id="autoRefresh"> Auto-refresh</label>
+    <label class="toolcheck"><input type="checkbox" id="guideToggle" checked> Guide</label>
+    <div class="project"><span class="project-name" id="projectName">Hello p5.js</span><button id="openLessons" title="Choose lesson">✎</button></div>
+    <div class="lesson-arrows"><button id="prevBtn" title="Previous lesson">‹</button><button id="nextBtn" title="Next lesson">›</button></div>
+    <div class="version">p5.js 2.3.2 <span class="dot"></span></div>
+    <button class="gear" id="gearBtn" title="Settings">⚙</button>
+  </div>
+
+  <div class="workspace">
+    <section class="left">
+      <div class="tabs"><button class="drawer-toggle" id="drawerToggle">›</button><div id="fileTabs" class="filetab">sketch.js</div></div>
+      <div class="lesson-drawer" id="lessonDrawer"><h3>Hello p5.js</h3><div id="lessonList"></div></div>
+      <div class="editor-wrap" id="editorWrap">
+        <div class="current-line" id="currentLine"></div>
+        <pre class="line-numbers" id="lineNumbers"></pre>
+        <pre class="highlight" id="highlight"></pre>
+        <textarea class="code-input" id="codeInput" spellcheck="false" aria-label="p5.js code editor"></textarea>
+      </div>
+      <div class="console">
+        <div class="console-head"><span>Console</span><button class="clear-btn" id="clearConsole">Clear ▾</button></div>
+        <div class="console-body" id="consoleBody" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="preview-head"><span>Preview</span><div class="preview-tools"><label><input id="gridToggle" type="checkbox"> Grid</label><label><input id="coordsToggle" type="checkbox"> Coordinates</label></div></div>
+      <div class="preview-body" id="previewBody">
+        <iframe class="runtime-frame" id="runtimeFrame" sandbox="allow-scripts"></iframe>
+        <div class="stopped" id="stopped">Press ▶ to run the sketch.</div>
+        <div class="grid-overlay" id="gridOverlay"></div>
+        <div class="coords-overlay" id="coordsOverlay"></div>
+        <div class="imposter-preview" id="imposterPreview"></div>
+      </div>
+      <div class="shot-panel">
+        <div class="shot-head"><strong>Call your shot</strong><span class="shot-status" id="shotStatus">Choose before Run</span></div>
+        <div class="shot-body" id="shotBody"></div>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+(() => {
+const P5_URL = 'https://cdn.jsdelivr.net/npm/p5@2.3.2/lib/p5.min.js';
+const lessons = [
+  {
+    id:'orientation', title:'00 — What are you looking at?', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n}`,
+    question:'Before you press Run, which part is already real?',
+    options:['The gray canvas','The program text in sketch.js','A running draw() loop'], answer:1,
+    why:'The code already exists as text. The canvas and draw loop appear only when the runtime executes the sketch.',
+    intro:'Editor = what you write. Preview = what runs. Console = what the program reports.',
+    notes:{
+      1:{label:'function setup() {',items:[['function','JavaScript keyword: begin a function declaration.'],['setup','A special lifecycle name that p5.js looks for.'],['()','This function declares no parameters.'],['{','Begin the block of instructions that belongs to setup.']]},
+      2:{label:'createCanvas(400, 400);',items:[['createCanvas','A function supplied by p5.js, not built into plain JavaScript.'],['first 400','Width: 400 pixels across.'],['second 400','Height: 400 pixels down.'],[',','Separates one argument from the next.'],[';','Ends this statement.']]},
+      5:{label:'function draw() {',items:[['draw','Another special p5.js lifecycle name. p5 calls it repeatedly after setup.']]},
+      6:{label:'background(220);',items:[['background','p5.js drawing operation.'],['220','Grayscale value on the default 0–255 scale: light gray.']]}
+    }
+  },
+  {
+    id:'setup', title:'01 — One line: function setup() {', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n}`,
+    question:'Who calls setup() when this sketch starts?',
+    options:['You must write setup(); yourself','p5.js calls it once','The browser calls it every frame'], answer:1,
+    why:'You declare setup(). p5.js supplies the lifecycle rule that calls it once when the sketch begins.',
+    intro:'Declaration is not execution. You write the function; p5 decides when to call this special one.',
+    notes:{1:{label:'function setup() {',items:[['function','Declare a function.'],['setup','Name with special meaning to p5.js.'],['()','No parameters declared.'],['{','Start the function body.']]}}
+  },
+  {
+    id:'canvas', title:'02 — One line: createCanvas(400, 400);', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n}`,
+    question:'If only the FIRST 400 becomes 700, what changes?',
+    options:['Canvas width','Canvas height','Gray level'], answer:0,
+    why:'Argument order gives the values their roles: createCanvas(width, height). The first number controls horizontal size.',
+    intro:'Same number, different job. A value gets its role from where the operation uses it.',
+    grid:true,
+    notes:{2:{label:'createCanvas(400, 400);',items:[['createCanvas','p5.js operation that creates the main HTML canvas.'],['400 #1','WIDTH — horizontal size. Unit: pixels. Try 700.'],['400 #2','HEIGHT — vertical size. Unit: pixels. Try 250.'],['(','Begin the argument list.'],[',','Next argument.'],[')','End the argument list.'],[';','Statement boundary.']]}}
+  },
+  {
+    id:'draw', title:'03 — One line: function draw() {', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n  console.log(frameCount);\n}`,
+    question:'The picture can look perfectly still. What will the console do?',
+    options:['Print 1 once','Print increasing frame numbers','Stay empty'], answer:1,
+    why:'draw() repeats. Repainting the same gray pixels can hide that repeated execution, but frameCount exposes it.',
+    intro:'A still image does not prove a still runtime.',
+    notes:{5:{label:'function draw() {',items:[['draw','p5 calls this repeatedly after setup.'],['frame','One pass through draw is one iteration of the sketch loop.']]},7:{label:'console.log(frameCount);',items:[['console.log','Write a value to the browser console.'],['frameCount','p5-supplied count of completed frames.'],['.','Property/method access punctuation in JavaScript.']]}}
+  },
+  {
+    id:'background', title:'04 — One line: background(220);', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n}`,
+    question:'What should background(0) look like?',
+    options:['Black','White','Red'], answer:0,
+    why:'With one number, background uses grayscale by default: 0 is black and 255 is white.',
+    intro:'A number can represent color because this operation interprets it as a grayscale value.',
+    notes:{6:{label:'background(220);',items:[['background','Paint the canvas using the current call. It is an operation, not a permanent “background object.”'],['220','Grayscale brightness. Common default range: 0 black → 255 white.'],['Try','Replace 220 with 0, 128, or 255 and Run.']]}}
+  },
+  {
+    id:'coordinates', title:'05 — Put something somewhere', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(100, 150, 50);\n}`,
+    question:'Where should circle(100, 150, 50) appear?',
+    options:['100 right, 150 down','150 right, 100 down','100 up, 150 right'], answer:0,
+    why:'In the default 2D canvas, (0,0) is top-left. x increases right; y increases down.',
+    intro:'Position is not “where it looks nice.” It is a pair of values in a coordinate system.',
+    grid:true, coords:true,
+    notes:{7:{label:'circle(100, 150, 50);',items:[['circle','p5.js drawing operation.'],['100','x coordinate — horizontal position, 100 pixels from the left.'],['150','y coordinate — vertical position, 150 pixels from the top.'],['50','diameter — total width of the circle.'],['Anchor','By default, circle(x,y,d) uses x,y as its CENTER.']]}}
+  },
+  {
+    id:'rgb', title:'06 — Give the mark a color', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  fill(255, 0, 0);\n  circle(200, 200, 80);\n}`,
+    question:'What color does fill(255, 0, 0) request?',
+    options:['Red','Green','Blue'], answer:0,
+    why:'With three values, p5 reads them as red, green, blue channel amounts. 255 red + 0 green + 0 blue gives red.',
+    intro:'The same numeric type can play a different role when a different operation reads it.',
+    grid:true, coords:true,
+    notes:{7:{label:'fill(255, 0, 0);',items:[['fill','Set the fill style used by shapes drawn afterward.'],['255','Red channel amount.'],['0 #1','Green channel amount.'],['0 #2','Blue channel amount.'],['State','fill persists until another fill/noFill call changes it.']]},8:{label:'circle(200, 200, 80);',items:[['200 #1','x = center of a 400-pixel-wide canvas.'],['200 #2','y = center of a 400-pixel-high canvas.'],['80','diameter.']]}}
+  },
+  {
+    id:'text', title:'07 — Actually say Hello, world!', file:'sketch.js',
+    code:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  fill(0);\n  textSize(28);\n  text("Hello, world!", 100, 100);\n}`,
+    question:'In text("Hello, world!", 100, 100), what is the first 100?',
+    options:['x position','y position','text size'], answer:0,
+    why:'text() receives the string first, then x, then y. textSize(28) controls size separately.',
+    intro:'Words can be values too. Quotes mark a string value; the next values place it.',
+    grid:true, coords:true,
+    notes:{9:{label:'text("Hello, world!", 100, 100);',items:[['"Hello, world!"','String value — literal text between quotation marks.'],['100 #1','x position.'],['100 #2','y position.'],['text','p5.js operation that draws text onto the canvas.']]},8:{label:'textSize(28);',items:[['28','Text size in pixels for later text drawing.']]}}
+  },
+  {
+    id:'state', title:'08 — Make a value survive the next frame', file:'sketch.js',
+    code:`let x = 40;\n\nfunction setup() {\n  createCanvas(400, 200);\n}\n\nfunction draw() {\n  background(245);\n  circle(x, 100, 40);\n  x = x + 2;\n}`,
+    question:'After one frame with x = 40, what value is stored by x = x + 2?',
+    options:['40','42','2'], answer:1,
+    why:'The right side reads the current value 40, adds 2, then = stores the result 42 back into x for the next frame.',
+    intro:'Now the next frame can differ from the last one because one value survives and changes.',
+    notes:{1:{label:'let x = 40;',items:[['let','Declare a variable binding.'],['x','Human-chosen name. Convention: x often means horizontal position.'],['=','Assign/store the value on the right into the name on the left.'],['40','Starting x position.']]},10:{label:'x = x + 2;',items:[['x left','Where the new value will be stored.'],['x right','Read the current value.'],['+ 2','Compute a value two larger.'],['Transition','current state → calculation → next state.']]}}
+  },
+  {
+    id:'imposter-center', title:'09 — Imposter: same screenshot, weaker rule', type:'imposter', file:'A.js / B.js',
+    question:'Both look centered at 400×400. Which one is the imposter when the canvas size changes?',
+    options:['A','B'], answer:0,
+    why:'A memorizes today’s center as 200,200. B expresses the relationship width/2,height/2, so it adapts when the world changes.',
+    testLabel:'Resize to 700 × 300',
+    a:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, 80);\n}`,
+    b:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(width / 2, height / 2, 80);\n}`,
+    aTest:`function setup() {\n  createCanvas(700, 300);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, 80);\n}`,
+    bTest:`function setup() {\n  createCanvas(700, 300);\n}\n\nfunction draw() {\n  background(245);\n  circle(width / 2, height / 2, 80);\n}`
+  },
+  {
+    id:'imposter-magic', title:'10 — Imposter: the magic-number trap', type:'imposter', file:'A.js / B.js',
+    question:'Both draw the same 80px circle. Which code becomes easier to break when the required size changes everywhere?',
+    options:['A','B'], answer:0,
+    why:'A duplicates the assumption 80. B gives the shared assumption one name, so one change updates every dependent use.',
+    testLabel:'Change size from 80 to 150',
+    a:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, 80);\n  text("diameter: 80", 150, 300);\n}`,
+    b:`let size = 80;\n\nfunction setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, size);\n  text("diameter: " + size, 150, 300);\n}`,
+    aTest:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, 150);\n  text("diameter: 80", 150, 300);\n}`,
+    bTest:`let size = 150;\n\nfunction setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  circle(200, 200, size);\n  text("diameter: " + size, 150, 300);\n}`
+  },
+  {
+    id:'imposter-anchor', title:'11 — Imposter: same picture, hidden anchor rule', type:'imposter', file:'A.js / B.js',
+    question:'Both rectangles appear centered now. Which version makes the intent harder to preserve when width and height change?',
+    options:['A','B'], answer:0,
+    why:'A manually subtracts half the current size into the x/y numbers. B states the intended anchor explicitly with rectMode(CENTER) and keeps the center as width/2,height/2.',
+    testLabel:'Resize canvas and rectangle',
+    a:`function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(245);\n  rect(150, 175, 100, 50);\n}`,
+    b:`function setup() {\n  createCanvas(400, 400);\n  rectMode(CENTER);\n}\n\nfunction draw() {\n  background(245);\n  rect(width / 2, height / 2, 100, 50);\n}`,
+    aTest:`function setup() {\n  createCanvas(700, 300);\n}\n\nfunction draw() {\n  background(245);\n  rect(150, 175, 160, 90);\n}`,
+    bTest:`function setup() {\n  createCanvas(700, 300);\n  rectMode(CENTER);\n}\n\nfunction draw() {\n  background(245);\n  rect(width / 2, height / 2, 160, 90);\n}`
+  }
+];
+
+let index = 0;
+let imposterTab = 'A';
+let imposterTest = false;
+let shotChoice = null;
+let autoTimer = null;
+const $ = s => document.querySelector(s);
+const codeInput = $('#codeInput'), highlight = $('#highlight'), lineNumbers = $('#lineNumbers'), currentLine = $('#currentLine');
+const consoleBody = $('#consoleBody'), runtimeFrame = $('#runtimeFrame'), stopped = $('#stopped');
+const gridOverlay = $('#gridOverlay'), coordsOverlay = $('#coordsOverlay'), imposterPreview = $('#imposterPreview');
+const lessonDrawer = $('#lessonDrawer'), lessonList = $('#lessonList');
+
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function highlightCode(code){
+  let out = esc(code);
+  out = out.replace(/(&quot;.*?&quot;|&#39;.*?&#39;)/g,'<span class="str">$1</span>');
+  out = out.replace(/(\/\/.*)$/gm,'<span class="com">$1</span>');
+  out = out.replace(/\b(function|let|const|if|else|return|for|while)\b/g,'<span class="kw">$1</span>');
+  out = out.replace(/\b(createCanvas|background|circle|rect|rectMode|fill|text|textSize|console\.log)\b/g,'<span class="p5fn">$1</span>');
+  out = out.replace(/\b(width|height|frameCount|CENTER|mouseX|mouseY)\b/g,'<span class="builtin">$1</span>');
+  out = out.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="num">$1</span>');
+  return out;
+}
+function setEditor(code){codeInput.value=code;syncEditor();codeInput.scrollTop=0;highlight.scrollTop=0;updateCurrentLine();}
+function syncEditor(){
+  const code=codeInput.value;
+  highlight.innerHTML=highlightCode(code)+'\n';
+  lineNumbers.textContent=code.split('\n').map((_,i)=>i+1).join('\n');
+}
+function currentLineNumber(){return codeInput.value.slice(0,codeInput.selectionStart).split('\n').length;}
+function updateCurrentLine(){
+  const n=currentLineNumber();
+  currentLine.style.top=(14+(n-1)*21-codeInput.scrollTop)+'px';
+  if($('#guideToggle').checked) inspectLine(n);
+}
+function consoleLine(text,kind=''){const d=document.createElement('div');d.className='console-line '+kind;d.innerHTML=`<span class="mark">${kind==='guide'?'›':'•'}</span><span>${text}</span>`;consoleBody.appendChild(d);consoleBody.scrollTop=consoleBody.scrollHeight;}
+function clearConsole(){consoleBody.innerHTML='';}
+function guideIntro(lesson){if(!$('#guideToggle').checked)return;consoleLine(esc(lesson.intro||'Select a line to inspect what each part is doing.'),'guide');}
+function inspectLine(n){
+  const l=lessons[index]; if(l.type==='imposter') return;
+  const note=l.notes && l.notes[n]; if(!note)return;
+  clearConsole();
+  consoleLine(`<b>Line ${n}</b> — ${esc(note.label)}`,'guide');
+  const table=document.createElement('table');table.className='token-table';
+  table.innerHTML=note.items.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('');
+  consoleBody.appendChild(table);
+  consoleLine('Change one value, predict the consequence, then press Run.','guide');
+}
+function srcdocFor(code){
+  const safeCode=code.replace(/<\/script/gi,'<\\/script');
+  return `<!doctype html><html><head>
+<link rel="icon" type="image/svg+xml" href="frog-mint.svg" />
+<meta charset="utf-8"><style>html,body{margin:0;padding:0;background:white;font-family:Arial,sans-serif}canvas{display:block}</style><script>\n(function(){\nconst send=(type,payload={})=>parent.postMessage({source:'p5lesson',type,...payload},'*');\nconst oldLog=console.log.bind(console);console.log=(...a)=>{oldLog(...a);send('log',{message:a.map(v=>typeof v==='object'?JSON.stringify(v):String(v)).join(' ')})};\nwindow.addEventListener('error',e=>send('error',{message:e.message||'Runtime error'}));\nwindow.addEventListener('unhandledrejection',e=>send('error',{message:String(e.reason||'Unhandled promise rejection')}));\nsetTimeout(()=>{if(!window.p5)send('error',{message:'p5.js did not load. Check internet access, then Run again.'})},2500);\n})();<\/script><script src="${P5_URL}"><\/script><script>${safeCode}<\/script></head><body></body></html>`;
+}
+function runCode(code=codeInput.value){
+  if(lessons[index].type==='imposter'){runImposter(false);return;}
+  stopped.classList.add('hidden');
+  imposterPreview.classList.remove('on'); runtimeFrame.style.display='block';
+  clearConsole(); if($('#guideToggle').checked)consoleLine('Run — browser loads p5.js, then executes sketch.js.','guide');
+  runtimeFrame.srcdoc=srcdocFor(code);
+}
+function stopCode(){runtimeFrame.srcdoc='<!doctype html><body style="margin:0;background:white"></body>';stopped.classList.remove('hidden');consoleLine('Sketch stopped.','guide');}
+function renderShot(){
+  const l=lessons[index]; shotChoice=null; $('#shotStatus').textContent=l.type==='imposter'?'Vote before test':'Choose before Run';
+  $('#shotBody').innerHTML=`<div class="shot-q">${esc(l.question)}</div><div class="shot-options">${l.options.map((o,i)=>`<button class="shot-option" data-shot="${i}">${esc(o)}</button>`).join('')}</div><div class="shot-feedback" id="shotFeedback">${l.type==='imposter'?'Both versions are allowed to look convincing at first.':'Make a prediction; then use Run to test it.'}</div>`;
+  document.querySelectorAll('[data-shot]').forEach(b=>b.addEventListener('click',()=>chooseShot(Number(b.dataset.shot))));
+}
+function chooseShot(choice){
+  const l=lessons[index]; shotChoice=choice;
+  document.querySelectorAll('[data-shot]').forEach((b,i)=>{b.classList.toggle('chosen',i===choice);b.classList.remove('correct','wrong')});
+  $('#shotStatus').textContent='Shot called';
+  $('#shotFeedback').innerHTML=`You called <b>${esc(l.options[choice])}</b>. ${l.type==='imposter'?'Now run the change test.':'Press Run to see whether the runtime agrees.'}`;
+  if(l.type==='imposter'){revealShot(true);}
+}
+function revealShot(force=false){
+  const l=lessons[index]; if(shotChoice==null && !force)return;
+  document.querySelectorAll('[data-shot]').forEach((b,i)=>{if(i===l.answer)b.classList.add('correct'); if(i===shotChoice&&i!==l.answer)b.classList.add('wrong')});
+  const ok=shotChoice===l.answer;
+  $('#shotFeedback').innerHTML=`<b>${ok?'Called it.':'The imposter got through.'}</b> ${esc(l.why)}`;
+  $('#shotStatus').textContent=ok?'Correct':'Revealed';
+}
+function renderLessonList(){lessonList.innerHTML=lessons.map((l,i)=>`<button class="lesson-item ${i===index?'active':''}" data-lesson="${i}">${esc(l.title)}<small>${l.type==='imposter'?'Imposter test':'Whole sketch + one focused idea'}</small></button>`).join('');document.querySelectorAll('[data-lesson]').forEach(b=>b.addEventListener('click',()=>{index=Number(b.dataset.lesson);lessonDrawer.classList.remove('open');loadLesson();}));}
+function loadLesson(){
+  const l=lessons[index];
+  $('#projectName').textContent=l.title;
+  $('#gridToggle').checked=!!l.grid; $('#coordsToggle').checked=!!l.coords; updateOverlays();
+  imposterTab='A';imposterTest=false;
+  stopped.classList.remove('hidden');
+  runtimeFrame.srcdoc='<!doctype html><body style="margin:0;background:white"></body>';
+  clearConsole();
+  if(l.type==='imposter'){
+    renderImposterEditor();
+    runtimeFrame.style.display='none'; stopped.classList.add('hidden'); imposterPreview.classList.add('on'); renderImposterPreview();
+  } else {
+    imposterPreview.classList.remove('on');runtimeFrame.style.display='block';
+    $('#fileTabs').className='filetab';$('#fileTabs').innerHTML='sketch.js';
+    setEditor(l.code);guideIntro(l);
+  }
+  renderShot();renderLessonList();
+}
+function renderImposterEditor(){
+  const l=lessons[index];
+  $('#fileTabs').className='filetab';
+  $('#fileTabs').innerHTML=`<button id="tabA">A.js</button> / <button id="tabB">B.js</button>`;
+  setEditor(imposterTab==='A'?(imposterTest?l.aTest:l.a):(imposterTest?l.bTest:l.b));
+  setTimeout(()=>{const a=$('#tabA'),b=$('#tabB'); if(a)a.onclick=()=>{imposterTab='A';renderImposterEditor();}; if(b)b.onclick=()=>{imposterTab='B';renderImposterEditor();};},0);
+  if($('#guideToggle').checked){clearConsole();consoleLine('Imposter rule: the screenshot is allowed to match. Judge the code by what happens when the requirement changes.','guide');}
+}
+function renderImposterPreview(){
+  const l=lessons[index];
+  imposterPreview.innerHTML=`<div class="suspects"><div class="suspect"><h4><span>A.js</span><span>${imposterTest?'after change':'before change'}</span></h4><iframe id="susA" class="suspect-frame" sandbox="allow-scripts"></iframe></div><div class="suspect"><h4><span>B.js</span><span>${imposterTest?'after change':'before change'}</span></h4><iframe id="susB" class="suspect-frame" sandbox="allow-scripts"></iframe></div></div><div class="imposter-controls"><button class="native-btn" id="testBtn">${esc(l.testLabel)}</button><button class="native-btn" id="resetTestBtn">Reset comparison</button><span class="imposter-result" id="imposterResult">Look first. Vote below.</span></div>`;
+  $('#susA').srcdoc=srcdocFor(imposterTest?l.aTest:l.a);$('#susB').srcdoc=srcdocFor(imposterTest?l.bTest:l.b);
+  $('#testBtn').onclick=()=>{imposterTest=true;renderImposterPreview();renderImposterEditor();revealShot(true);$('#imposterResult').innerHTML='<strong>Change test running.</strong> Now compare the rule, not just the first screenshot.';};
+  $('#resetTestBtn').onclick=()=>{imposterTest=false;renderImposterPreview();renderImposterEditor();};
+}
+function runImposter(test){if(test)imposterTest=true;renderImposterPreview();renderImposterEditor();revealShot(true);}
+function updateOverlays(){gridOverlay.classList.toggle('on',$('#gridToggle').checked);coordsOverlay.classList.toggle('on',$('#coordsToggle').checked);coordsOverlay.innerHTML='';if($('#coordsToggle').checked){const points=[['0,0',2,2],['100',92,2],['200',192,2],['300',292,2],['400',385,2],['100',2,94],['200',2,194],['300',2,294],['400',2,386]];points.forEach(([t,x,y])=>{const s=document.createElement('span');s.className='coord-label';s.textContent=t;s.style.left=x+'px';s.style.top=y+'px';coordsOverlay.appendChild(s);});}}
+function next(){index=(index+1)%lessons.length;loadLesson();}
+function prev(){index=Math.max(0,index-1);loadLesson();}
+
+codeInput.addEventListener('input',()=>{syncEditor();updateCurrentLine();if($('#autoRefresh').checked&&!lessons[index].type){clearTimeout(autoTimer);autoTimer=setTimeout(()=>runCode(),650);}});
+codeInput.addEventListener('click',updateCurrentLine);codeInput.addEventListener('keyup',updateCurrentLine);codeInput.addEventListener('scroll',()=>{highlight.scrollTop=codeInput.scrollTop;highlight.scrollLeft=codeInput.scrollLeft;lineNumbers.scrollTop=codeInput.scrollTop;updateCurrentLine();});
+$('#runBtn').onclick=()=>{runCode();revealShot();};$('#stopBtn').onclick=stopCode;$('#prevBtn').onclick=prev;$('#nextBtn').onclick=next;
+$('#drawerToggle').onclick=()=>lessonDrawer.classList.toggle('open');$('#openLessons').onclick=()=>lessonDrawer.classList.toggle('open');
+$('#clearConsole').onclick=clearConsole;$('#gridToggle').onchange=updateOverlays;$('#coordsToggle').onchange=updateOverlays;
+$('#guideToggle').onchange=()=>{clearConsole();if($('#guideToggle').checked){const l=lessons[index]; if(l.type==='imposter')consoleLine('Guide on: use the change test to expose hidden assumptions.','guide');else guideIntro(l);}};
+$('#gearBtn').onclick=()=>{consoleLine('Settings: Guide, Grid, Coordinates, and Auto-refresh are available in the toolbar.','guide');};
+window.addEventListener('message',e=>{const d=e.data;if(!d||d.source!=='p5lesson')return;if(d.type==='log')consoleLine(esc(d.message));if(d.type==='error'){consoleLine(esc(d.message),'error');revealShot();}});
+
+document.querySelectorAll('.menu>button').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const m=btn.parentElement;document.querySelectorAll('.menu').forEach(x=>{if(x!==m)x.classList.remove('open')});m.classList.toggle('open');}));
+document.addEventListener('click',()=>document.querySelectorAll('.menu').forEach(x=>x.classList.remove('open')));
+document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.action;if(a==='run'){runCode();revealShot()}if(a==='stop')stopCode();if(a==='prev')prev();if(a==='next')next();if(a==='first'){index=0;loadLesson()}if(a==='reset'){const l=lessons[index];if(l.type==='imposter'){imposterTest=false;imposterTab='A';renderImposterEditor();renderImposterPreview()}else setEditor(l.code)}if(a==='selectall'){codeInput.focus();codeInput.select()}if(a==='download'){const blob=new Blob([codeInput.value],{type:'text/javascript'});const u=URL.createObjectURL(blob);const link=document.createElement('a');link.href=u;link.download='sketch.js';link.click();setTimeout(()=>URL.revokeObjectURL(u),500)}if(a==='help'){clearConsole();consoleLine('Editor: program text. Preview: running result. Console: messages, errors, and Guide explanations. Press Run to execute the whole sketch.','guide')}if(a==='shortcuts'){clearConsole();consoleLine('Shortcuts: Ctrl/Cmd+Enter = Run · Left/Right arrows = lessons when the editor is not focused.','guide')}}));
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runCode();revealShot();return;}if(document.activeElement===codeInput)return;if(e.key==='ArrowRight')next();if(e.key==='ArrowLeft')prev();});
+
+loadLesson();
+})();
+</script>
+</body>
+</html>

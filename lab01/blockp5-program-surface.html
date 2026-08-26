@@ -1,0 +1,1957 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>blockp5 — Program Surface</title>
+
+<style>
+:root{
+  --ink:#111;
+  --paper:#f5f3ec;
+  --panel:#fff;
+  --soft:#ebe8df;
+  --line:#d8d5cc;
+  --muted:#77736b;
+  --dark:#30353b;
+  --blue:#315fd3;
+  --danger:#b42318;
+  --header:44px;
+  --state:42px;
+}
+*{box-sizing:border-box}
+html,body{
+  width:100%;
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+#app{
+  width:100%;
+  height:100dvh;
+  display:grid;
+  grid-template-rows:var(--header) 1fr var(--state);
+}
+header{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 8px;
+  background:var(--dark);
+  color:#fff;
+  border-bottom:1px solid #22272b;
+  position:relative;
+  z-index:20;
+}
+.brand{
+  font-weight:800;
+  letter-spacing:-.035em;
+  white-space:nowrap;
+  margin-right:2px;
+}
+.brand small{
+  opacity:.5;
+  font-weight:500;
+  margin-left:4px;
+}
+.toolbarSep{
+  width:1px;
+  height:20px;
+  background:rgba(255,255,255,.16);
+  margin:0 2px;
+}
+button{
+  height:30px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:4px;
+  padding:0 9px;
+  background:rgba(255,255,255,.08);
+  color:inherit;
+}
+button:hover{background:rgba(255,255,255,.15)}
+button.active,
+button.primary{
+  background:#fff;
+  color:#25292d;
+  border-color:#fff;
+}
+button.icon{
+  width:30px;
+  padding:0;
+}
+.spacer{flex:1}
+#status{
+  font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  opacity:.65;
+  min-width:42px;
+  text-align:right;
+}
+#revisionButton{
+  min-width:50px;
+}
+#docMenu,
+#revisionMenu{
+  position:absolute;
+  top:39px;
+  min-width:170px;
+  padding:5px;
+  background:#fff;
+  color:#111;
+  border:1px solid #aaa69e;
+  border-radius:5px;
+  box-shadow:0 10px 30px rgba(0,0,0,.18);
+  display:none;
+  z-index:40;
+}
+#docMenu{right:7px}
+#revisionMenu{right:70px;max-height:300px;overflow:auto}
+#docMenu.open,#revisionMenu.open{display:block}
+.menuItem{
+  width:100%;
+  height:32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border:0;
+  border-radius:3px;
+  background:transparent;
+  color:#111;
+  padding:0 8px;
+  text-align:left;
+}
+.menuItem:hover{background:#efede7}
+.menuItem small{color:#8a867f;font-size:10px}
+.revItem{
+  width:100%;
+  min-height:38px;
+  display:grid;
+  grid-template-columns:38px 1fr;
+  align-items:center;
+  gap:5px;
+  border:0;
+  border-radius:3px;
+  background:transparent;
+  color:#111;
+  padding:4px 6px;
+  text-align:left;
+}
+.revItem:hover{background:#efede7}
+.revItem strong{
+  font:11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.revItem span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:11px;
+  color:#55514b;
+}
+
+main{
+  min-width:0;
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(320px,46%) minmax(320px,54%);
+}
+.pane{
+  min-width:0;
+  min-height:0;
+  background:#fff;
+}
+#leftPane{
+  display:grid;
+  grid-template-rows:34px minmax(0,1fr);
+  border-right:1px solid var(--line);
+}
+#worldPane{
+  display:grid;
+  grid-template-rows:34px minmax(0,1fr);
+}
+.paneHead{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  padding:0 8px 0 10px;
+  border-bottom:1px solid var(--line);
+  background:#faf9f5;
+  font-size:11px;
+  color:#5d5952;
+}
+.paneHead strong{
+  color:#111;
+  font-weight:750;
+}
+.paneHead .right{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.paneHead button{
+  height:24px;
+  padding:0 7px;
+  color:#57534c;
+  background:#fff;
+  border:1px solid #d2cfc7;
+  font-size:10px;
+}
+.paneHead button.active{
+  background:#262a2e;
+  border-color:#262a2e;
+  color:#fff;
+}
+#semanticZoom{
+  display:flex;
+  align-items:center;
+  gap:2px;
+}
+#semanticZoom span{
+  width:50px;
+  text-align:center;
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:#77736b;
+}
+
+#sourceArea{
+  min-width:0;
+  min-height:0;
+  position:relative;
+  background:#fbfbfa;
+}
+#editor{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+  outline:0;
+  resize:none;
+  overflow:auto;
+  padding:14px 16px 46px;
+  background:#fbfbfa;
+  color:#181818;
+  tab-size:2;
+  white-space:pre;
+  font:13px/1.56 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  caret-color:var(--blue);
+}
+#editor::selection{background:#ced9fb}
+#structure{
+  position:absolute;
+  inset:0;
+  overflow:auto;
+  display:none;
+  padding:12px;
+  background:#f8f6ef;
+}
+#leftPane.structureMode #editor{display:none}
+#leftPane.structureMode #structure{display:block}
+
+.structSection{
+  margin-bottom:12px;
+  border:1px solid #cfcac0;
+  background:#fff;
+}
+.structTitle{
+  height:30px;
+  display:flex;
+  align-items:center;
+  padding:0 9px;
+  background:#efede6;
+  border-bottom:1px solid #d8d4ca;
+  font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-weight:800;
+  letter-spacing:.05em;
+}
+.structBody{padding:7px}
+.opCard{
+  position:relative;
+  border:1px solid #bcb8af;
+  background:#fff;
+  margin:5px 0;
+  min-height:33px;
+}
+.opHead{
+  min-height:32px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:5px 8px;
+}
+.opHead strong{
+  font:11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.opHead small{
+  margin-left:auto;
+  color:#8a867f;
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.argGrid{
+  display:grid;
+  grid-template-columns:72px 1fr;
+  border-top:1px solid #e2dfd8;
+}
+.argGrid div{
+  min-height:26px;
+  display:flex;
+  align-items:center;
+  padding:4px 7px;
+  border-bottom:1px solid #ece9e2;
+  font:10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.argGrid div:nth-child(odd){
+  color:#77736b;
+  border-right:1px solid #ece9e2;
+}
+.overviewBlock{
+  display:grid;
+  grid-template-columns:80px 1fr;
+  min-height:30px;
+  align-items:center;
+  border-bottom:1px solid #e1ddd5;
+  font-size:10px;
+}
+.overviewBlock:last-child{border-bottom:0}
+.overviewBlock strong{padding-left:8px}
+.overviewBar{
+  height:14px;
+  margin-right:8px;
+  border:1px solid #aaa69d;
+  background:#dedbd3;
+}
+.emptyStructure{
+  padding:20px;
+  color:#77736b;
+  font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+#stage{
+  min-width:0;
+  min-height:0;
+  position:relative;
+  overflow:hidden;
+  background:#d8d8d8;
+}
+#runner{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+  background:#f5f3ec;
+}
+#traceLayer{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:5;
+}
+.traceBox{
+  position:absolute;
+  border:1px solid rgba(49,95,211,.75);
+  outline:1px solid rgba(255,255,255,.7);
+  background:rgba(49,95,211,.035);
+  pointer-events:auto;
+  cursor:pointer;
+}
+.traceBox:hover,
+.traceBox.selected{
+  border:2px solid var(--blue);
+  background:rgba(49,95,211,.07);
+}
+.traceBox.manipulable{cursor:move}
+.traceHandle{
+  position:absolute;
+  right:-6px;
+  bottom:-6px;
+  width:12px;
+  height:12px;
+  border:2px solid var(--blue);
+  background:#fff;
+  display:none;
+}
+.traceBox.selected.manipulable .traceHandle{display:block;cursor:nwse-resize}
+#traceInfo{
+  position:absolute;
+  left:8px;
+  top:8px;
+  max-width:min(360px,calc(100% - 16px));
+  background:rgba(255,255,255,.94);
+  border:1px solid #aaa69e;
+  border-radius:4px;
+  padding:7px 8px;
+  z-index:8;
+  display:none;
+  box-shadow:0 6px 20px rgba(0,0,0,.12);
+  pointer-events:none;
+}
+#traceInfo strong{
+  display:block;
+  font:11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+#traceInfo small{
+  display:block;
+  color:#6f6b64;
+  margin-top:3px;
+  font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+#emptyWorld{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  z-index:2;
+  color:#77736b;
+  font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  pointer-events:none;
+}
+
+#stateBar{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:0;
+  background:#f9f8f4;
+  border-top:1px solid var(--line);
+  overflow:hidden;
+}
+.stateLabel{
+  height:100%;
+  display:flex;
+  align-items:center;
+  padding:0 10px;
+  border-right:1px solid var(--line);
+  color:#6f6b64;
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-weight:800;
+}
+#stateItems{
+  min-width:0;
+  flex:1;
+  display:flex;
+  align-items:stretch;
+  overflow:auto hidden;
+  scrollbar-width:none;
+}
+#stateItems::-webkit-scrollbar{display:none}
+.stateItem{
+  min-width:max-content;
+  height:100%;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  padding:0 9px;
+  border-right:1px solid #e4e1da;
+  font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.stateItem b{font-weight:500;color:#77736b}
+.stateItem span{font-weight:700}
+#consoleToggle{
+  height:100%;
+  border:0;
+  border-left:1px solid var(--line);
+  border-radius:0;
+  background:#f3f1eb;
+  color:#57534c;
+  padding:0 10px;
+  font-size:10px;
+}
+#consoleToggle.error{color:var(--danger);font-weight:800}
+#consoleDrawer{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:var(--state);
+  height:180px;
+  background:#151719;
+  color:#e5e7e9;
+  border-top:1px solid #292d31;
+  display:none;
+  z-index:18;
+}
+#consoleDrawer.open{display:grid;grid-template-rows:28px 1fr}
+#consoleHead{
+  display:flex;
+  align-items:center;
+  padding:0 8px 0 10px;
+  border-bottom:1px solid #292d31;
+  color:#aeb2b5;
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+#clearConsole{
+  margin-left:auto;
+  height:20px;
+  color:#aeb2b5;
+  border-color:#3d4248;
+  background:transparent;
+  font-size:9px;
+}
+#consoleBody{
+  overflow:auto;
+  padding:7px 10px 12px;
+  font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.log{white-space:pre-wrap;overflow-wrap:anywhere;color:#d8dbdd}
+.log.system{color:#8faaf9}
+.log.warn{color:#ffd479}
+.log.error{color:#ff8d85}
+
+#fileInput{display:none}
+
+.mobileTabs{display:none}
+
+@media(max-width:760px){
+  :root{--header:48px;--state:44px}
+  header{padding:7px 6px;gap:4px}
+  .brand{font-size:12px}
+  .desktopSecondary{display:none}
+  .mobileTabs{
+    display:flex;
+    margin-left:auto;
+    gap:3px;
+  }
+  .mobileTabs button{font-size:10px;padding:0 7px}
+  #status{display:none}
+  main{
+    display:block;
+    position:relative;
+  }
+  .pane{
+    position:absolute;
+    inset:0;
+  }
+  #leftPane{border-right:0}
+  body.mobileWorld #leftPane{display:none}
+  body:not(.mobileWorld) #worldPane{display:none}
+  #consoleDrawer{
+    height:150px;
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <header>
+    <div class="brand">blockp5 <small>program surface</small></div>
+
+    <button id="runBtn" class="primary" title="Run · Cmd/Ctrl + Enter">▶ Run</button>
+    <button id="stopBtn" title="Stop">■</button>
+
+    <div class="toolbarSep desktopSecondary"></div>
+
+    <button id="revisionButton" class="desktopSecondary">R0</button>
+
+    <div class="spacer desktopSecondary"></div>
+    <div id="status">READY</div>
+
+    <button id="docButton" class="icon desktopSecondary" title="Document">•••</button>
+
+    <div class="mobileTabs">
+      <button id="mobileCodeTab" class="active">PROGRAM</button>
+      <button id="mobileWorldTab">WORLD</button>
+    </div>
+
+    <div id="revisionMenu"></div>
+
+    <div id="docMenu">
+      <button class="menuItem" id="newBtn">New <small>starter</small></button>
+      <button class="menuItem" id="openBtn">Open <small>.js</small></button>
+      <button class="menuItem" id="saveBtn">Save <small>⌘S</small></button>
+      <button class="menuItem" id="copyBtn">Copy code</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="leftPane" class="pane">
+      <div class="paneHead">
+        <strong>PROGRAM</strong>
+        <button id="codeModeBtn" class="active">CODE</button>
+        <button id="structureModeBtn">STRUCTURE</button>
+
+        <div class="right">
+          <div id="semanticZoom" hidden>
+            <button id="zoomOutBtn">−</button>
+            <span id="zoomLabel">OPS</span>
+            <button id="zoomInBtn">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="sourceArea">
+        <textarea id="editor"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          aria-label="p5.js source code"
+        ></textarea>
+        <div id="structure"></div>
+      </div>
+    </section>
+
+    <section id="worldPane" class="pane">
+      <div class="paneHead">
+        <strong>WORLD</strong>
+        <span>click a traced shape to inspect its cause</span>
+        <div class="right">
+          <span id="worldHint"></span>
+        </div>
+      </div>
+
+      <div id="stage">
+        <iframe
+          id="runner"
+          title="p5.js runtime"
+          sandbox="allow-scripts allow-modals allow-downloads"
+        ></iframe>
+        <div id="emptyWorld">RUN THE PROGRAM</div>
+        <div id="traceLayer"></div>
+        <div id="traceInfo"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="stateBar">
+    <div class="stateLabel">STATE</div>
+    <div id="stateItems"></div>
+    <button id="consoleToggle">CONSOLE</button>
+  </div>
+
+  <div id="consoleDrawer">
+    <div id="consoleHead">
+      RUNTIME CONSOLE
+      <button id="clearConsole">clear</button>
+    </div>
+    <div id="consoleBody"></div>
+  </div>
+
+  <input id="fileInput" type="file" accept=".js,.txt,text/javascript,text/plain">
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const P5_URL = "https://cdn.jsdelivr.net/npm/p5@2.0.4/lib/p5.min.js";
+  const STORAGE_KEY = "blockp5-program-surface-v1";
+  const REV_KEY = "blockp5-program-surface-revisions-v1";
+
+  const STARTER = `let pulse = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+}
+
+function draw() {
+  background(245, 243, 236);
+
+  fill(49, 95, 211);
+  circle(280, 180, 86);
+
+  pulse = sin(frameCount * 0.04);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}`;
+
+  const editor = document.querySelector("#editor");
+  const leftPane = document.querySelector("#leftPane");
+  const structure = document.querySelector("#structure");
+  const semanticZoom = document.querySelector("#semanticZoom");
+  const zoomLabel = document.querySelector("#zoomLabel");
+  const runner = document.querySelector("#runner");
+  const stage = document.querySelector("#stage");
+  const traceLayer = document.querySelector("#traceLayer");
+  const traceInfo = document.querySelector("#traceInfo");
+  const emptyWorld = document.querySelector("#emptyWorld");
+  const stateItems = document.querySelector("#stateItems");
+  const consoleToggle = document.querySelector("#consoleToggle");
+  const consoleDrawer = document.querySelector("#consoleDrawer");
+  const consoleBody = document.querySelector("#consoleBody");
+  const status = document.querySelector("#status");
+  const worldHint = document.querySelector("#worldHint");
+  const revisionButton = document.querySelector("#revisionButton");
+  const revisionMenu = document.querySelector("#revisionMenu");
+  const docButton = document.querySelector("#docButton");
+  const docMenu = document.querySelector("#docMenu");
+  const fileInput = document.querySelector("#fileInput");
+
+  let runId = 0;
+  let saveTimer = null;
+  let currentAnalysis = null;
+  let traces = [];
+  let latestState = {};
+  let selectedTraceId = null;
+  let semanticLevel = 1;
+  let revisions = loadRevisions();
+  let interaction = null;
+
+  /* =========================================================
+     <PROGRAM ANALYSIS>
+     Text is authoritative.
+     Structure and instrumentation are projections.
+     ========================================================= */
+
+  function isIdentStart(ch) {
+    return /[A-Za-z_$]/.test(ch);
+  }
+
+  function isIdentPart(ch) {
+    return /[A-Za-z0-9_$]/.test(ch);
+  }
+
+  function skipStringOrComment(code, i) {
+    const ch = code[i];
+    const next = code[i + 1];
+
+    if (ch === "/" && next === "/") {
+      i += 2;
+      while (i < code.length && code[i] !== "\n") i++;
+      return i;
+    }
+
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < code.length - 1 && !(code[i] === "*" && code[i + 1] === "/")) i++;
+      return Math.min(code.length, i + 2);
+    }
+
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const quote = ch;
+      i++;
+      while (i < code.length) {
+        if (code[i] === "\\") {
+          i += 2;
+          continue;
+        }
+        if (code[i] === quote) return i + 1;
+        i++;
+      }
+      return i;
+    }
+
+    return i;
+  }
+
+  function findMatchingParen(code, openIndex) {
+    let depth = 0;
+
+    for (let i = openIndex; i < code.length; i++) {
+      const ch = code[i];
+
+      if (ch === "/" || ch === '"' || ch === "'" || ch === "`") {
+        const moved = skipStringOrComment(code, i);
+        if (moved !== i) {
+          i = moved - 1;
+          continue;
+        }
+      }
+
+      if (ch === "(") depth++;
+      if (ch === ")") {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+
+    return -1;
+  }
+
+  function splitArgs(code, start, end) {
+    const args = [];
+    let depthRound = 0;
+    let depthSquare = 0;
+    let depthCurly = 0;
+    let partStart = start;
+
+    for (let i = start; i < end; i++) {
+      const ch = code[i];
+
+      if (ch === "/" || ch === '"' || ch === "'" || ch === "`") {
+        const moved = skipStringOrComment(code, i);
+        if (moved !== i) {
+          i = moved - 1;
+          continue;
+        }
+      }
+
+      if (ch === "(") depthRound++;
+      else if (ch === ")") depthRound--;
+      else if (ch === "[") depthSquare++;
+      else if (ch === "]") depthSquare--;
+      else if (ch === "{") depthCurly++;
+      else if (ch === "}") depthCurly--;
+      else if (
+        ch === "," &&
+        depthRound === 0 &&
+        depthSquare === 0 &&
+        depthCurly === 0
+      ) {
+        args.push(makeArg(code, partStart, i));
+        partStart = i + 1;
+      }
+    }
+
+    if (partStart <= end) args.push(makeArg(code, partStart, end));
+    return args;
+  }
+
+  function makeArg(code, start, end) {
+    let s = start;
+    let e = end;
+
+    while (s < e && /\s/.test(code[s])) s++;
+    while (e > s && /\s/.test(code[e - 1])) e--;
+
+    const text = code.slice(s, e);
+
+    return {
+      text,
+      start: s,
+      end: e,
+      literal: /^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(text),
+      number: /^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : null
+    };
+  }
+
+  function lineOf(code, index) {
+    return code.slice(0, index).split("\n").length;
+  }
+
+  function findEnclosingFunction(code, index) {
+    const before = code.slice(0, index);
+    const re = /function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g;
+    let match;
+    let candidate = "global";
+
+    while ((match = re.exec(before))) {
+      const brace = match.index + match[0].lastIndexOf("{");
+      let depth = 0;
+      let closesBefore = false;
+
+      for (let i = brace; i < index; i++) {
+        const ch = code[i];
+
+        if (ch === "/" || ch === '"' || ch === "'" || ch === "`") {
+          const moved = skipStringOrComment(code, i);
+          if (moved !== i) {
+            i = moved - 1;
+            continue;
+          }
+        }
+
+        if (ch === "{") depth++;
+        if (ch === "}") {
+          depth--;
+          if (depth === 0) {
+            closesBefore = true;
+            break;
+          }
+        }
+      }
+
+      if (!closesBefore) candidate = match[1];
+    }
+
+    return candidate;
+  }
+
+  function extractGlobalNames(code) {
+    const names = new Set();
+    const re = /(?:^|\n)\s*(?:let|const|var)\s+([A-Za-z_$][\w$]*)/g;
+    let m;
+
+    while ((m = re.exec(code))) names.add(m[1]);
+
+    return Array.from(names).slice(0, 16);
+  }
+
+  function analyzeProgram(code) {
+    const supported = new Set([
+      "circle","ellipse","rect","line","point",
+      "background","fill","stroke","strokeWeight",
+      "text","image","translate","rotate","scale"
+    ]);
+
+    const calls = [];
+    let i = 0;
+    let callId = 1;
+
+    while (i < code.length) {
+      const moved = skipStringOrComment(code, i);
+      if (moved !== i) {
+        i = moved;
+        continue;
+      }
+
+      if (!isIdentStart(code[i])) {
+        i++;
+        continue;
+      }
+
+      const start = i;
+      i++;
+      while (i < code.length && isIdentPart(code[i])) i++;
+
+      const name = code.slice(start, i);
+
+      let j = i;
+      while (j < code.length && /\s/.test(code[j])) j++;
+
+      if (
+        supported.has(name) &&
+        code[j] === "(" &&
+        code[start - 1] !== "." &&
+        code[start - 1] !== "'" &&
+        code[start - 1] !== '"'
+      ) {
+        const close = findMatchingParen(code, j);
+
+        if (close !== -1) {
+          const args = splitArgs(code, j + 1, close);
+          calls.push({
+            id: callId++,
+            name,
+            start,
+            nameEnd:i,
+            open:j,
+            close,
+            end:close + 1,
+            args,
+            line:lineOf(code, start),
+            scope:findEnclosingFunction(code, start)
+          });
+          i = close + 1;
+          continue;
+        }
+      }
+    }
+
+    return {
+      code,
+      calls,
+      globals:extractGlobalNames(code)
+    };
+  }
+
+  function instrumentProgram(analysis) {
+    const code = analysis.code;
+    const calls = analysis.calls;
+    let out = "";
+    let cursor = 0;
+
+    for (const call of calls) {
+      out += code.slice(cursor, call.start);
+
+      const argsText = code.slice(call.open + 1, call.close);
+      out += `__bpCall(${JSON.stringify(call.name)},${call.id},()=>[${argsText}])`;
+
+      cursor = call.end;
+    }
+
+    out += code.slice(cursor);
+    return out;
+  }
+
+  /* =========================================================
+     <STRUCTURE PROJECTION>
+     ========================================================= */
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;");
+  }
+
+  const ARG_NAMES = {
+    circle:["x","y","diameter"],
+    ellipse:["x","y","width","height"],
+    rect:["x","y","width","height"],
+    line:["x1","y1","x2","y2"],
+    point:["x","y"],
+    background:["value"],
+    fill:["value"],
+    stroke:["value"],
+    strokeWeight:["weight"],
+    text:["value","x","y"],
+    image:["image","x","y","width","height"],
+    translate:["x","y","z"],
+    rotate:["angle"],
+    scale:["x","y","z"]
+  };
+
+  function renderStructure() {
+    currentAnalysis = analyzeProgram(editor.value);
+
+    if (!currentAnalysis.calls.length) {
+      structure.innerHTML =
+        `<div class="emptyStructure">No recognized p5 drawing operations yet.<br><br>
+        Structure mode currently surfaces common global-mode calls such as
+        background(), fill(), circle(), ellipse(), rect(), line(), text(),
+        translate(), rotate(), and scale().</div>`;
+      return;
+    }
+
+    const groups = new Map();
+
+    for (const call of currentAnalysis.calls) {
+      if (!groups.has(call.scope)) groups.set(call.scope, []);
+      groups.get(call.scope).push(call);
+    }
+
+    if (semanticLevel === 0) {
+      structure.innerHTML = Array.from(groups.entries()).map(([scope,calls]) => {
+        const width = Math.min(100, 20 + calls.length * 11);
+        return `<section class="structSection">
+          <div class="structTitle">${escapeHtml(scope.toUpperCase())}</div>
+          <div class="overviewBlock">
+            <strong>${calls.length} ops</strong>
+            <div class="overviewBar" style="width:${width}%"></div>
+          </div>
+        </section>`;
+      }).join("");
+      return;
+    }
+
+    structure.innerHTML = Array.from(groups.entries()).map(([scope,calls]) => {
+      const body = calls.map(call => {
+        const head = `<div class="opHead">
+          <strong>${escapeHtml(call.name)}()</strong>
+          <small>line ${call.line}</small>
+        </div>`;
+
+        if (semanticLevel === 1) {
+          return `<div class="opCard">${head}</div>`;
+        }
+
+        const labels = ARG_NAMES[call.name] || [];
+        const args = call.args.map((arg, i) => `
+          <div>${escapeHtml(labels[i] || "arg " + (i + 1))}</div>
+          <div>${escapeHtml(arg.text || "—")}</div>
+        `).join("");
+
+        return `<div class="opCard">
+          ${head}
+          <div class="argGrid">${args}</div>
+        </div>`;
+      }).join("");
+
+      return `<section class="structSection">
+        <div class="structTitle">${escapeHtml(scope.toUpperCase())}</div>
+        <div class="structBody">${body}</div>
+      </section>`;
+    }).join("");
+  }
+
+  function setSemanticLevel(level) {
+    semanticLevel = Math.max(0, Math.min(2, level));
+    zoomLabel.textContent = ["OVERVIEW","OPS","PARAMS"][semanticLevel];
+    renderStructure();
+  }
+
+  /* =========================================================
+     <RUNTIME>
+     Fresh iframe per Run.
+     ========================================================= */
+
+  function safeInline(code) {
+    return code.replace(/<\/script/gi, "<\\/script");
+  }
+
+  function runtimeHtml(analysis, id) {
+    const transformed = safeInline(instrumentProgram(analysis));
+    const globals = JSON.stringify(analysis.globals);
+
+    return `<!doctype html>
+<html>
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f5f3ec}
+canvas{display:block}
+</style>
+
+<script>
+(() => {
+  const RUN_ID = ${JSON.stringify(id)};
+  const GLOBAL_NAMES = ${globals};
+  const overrides = Object.create(null);
+  const traces = new Map();
+  let lastTraceSend = 0;
+  let lastStateSend = 0;
+
+  const nativeConsole = {
+    log:console.log.bind(console),
+    info:console.info.bind(console),
+    warn:console.warn.bind(console),
+    error:console.error.bind(console)
+  };
+
+  function serialize(v) {
+    if (typeof v === "string") return v;
+    if (v instanceof Error) return v.stack || v.message;
+    try { return JSON.stringify(v); }
+    catch (_) { return String(v); }
+  }
+
+  function send(type, payload) {
+    parent.postMessage({
+      source:"blockp5-program-surface",
+      runId:RUN_ID,
+      type,
+      payload
+    }, "*");
+  }
+
+  for (const kind of ["log","info","warn","error"]) {
+    console[kind] = (...args) => {
+      send(kind === "info" ? "log" : kind, args.map(serialize));
+      nativeConsole[kind](...args);
+    };
+  }
+
+  window.addEventListener("error", e => {
+    send("error", [
+      e.message || "Runtime error",
+      e.filename ? (e.filename + ":" + e.lineno + ":" + e.colno) : ""
+    ]);
+  });
+
+  window.addEventListener("unhandledrejection", e => {
+    send("error", ["Unhandled promise rejection", serialize(e.reason)]);
+  });
+
+  window.addEventListener("message", e => {
+    const d = e.data;
+    if (!d || d.source !== "blockp5-host" || d.runId !== RUN_ID) return;
+
+    if (d.type === "override") {
+      overrides[d.callId] = d.args;
+    }
+  });
+
+  window.__bpP5LoadError = () => {
+    send("error", ["Could not load p5.js from the CDN."]);
+  };
+
+  window.__bpCall = function(name, callId, argFactory) {
+    let args;
+
+    try {
+      args = argFactory();
+    } catch (err) {
+      send("error", ["Argument evaluation failed in " + name + "()", serialize(err)]);
+      return;
+    }
+
+    if (overrides[callId]) {
+      const o = overrides[callId];
+      args = args.map((v, i) => o[i] == null ? v : o[i]);
+    }
+
+    const fn = window[name];
+
+    if (typeof fn !== "function") {
+      throw new Error("p5 function not available: " + name);
+    }
+
+    const result = fn(...args);
+
+    if (["circle","ellipse","rect","line","point"].includes(name)) {
+      traces.set(callId, {
+        id:callId,
+        name,
+        args:Array.from(args).map(v => typeof v === "number" ? v : serialize(v))
+      });
+    }
+
+    return result;
+  };
+
+  function readState() {
+    const state = {};
+
+    try { state.frame = typeof frameCount === "number" ? frameCount : 0; } catch (_) {}
+    try { state.mouseX = typeof mouseX === "number" ? Math.round(mouseX) : 0; } catch (_) {}
+    try { state.mouseY = typeof mouseY === "number" ? Math.round(mouseY) : 0; } catch (_) {}
+    try { state.fps = typeof frameRate === "function" ? Math.round(frameRate() * 10) / 10 : 0; } catch (_) {}
+
+    for (const name of GLOBAL_NAMES) {
+      try {
+        const value = (0,eval)(name);
+        if (
+          value == null ||
+          typeof value === "number" ||
+          typeof value === "string" ||
+          typeof value === "boolean"
+        ) {
+          state[name] =
+            typeof value === "number"
+              ? Math.round(value * 1000) / 1000
+              : value;
+        }
+      } catch (_) {}
+    }
+
+    return state;
+  }
+
+  function pump(now) {
+    if (now - lastStateSend > 120) {
+      send("state", readState());
+      lastStateSend = now;
+    }
+
+    if (now - lastTraceSend > 120) {
+      send("traces", Array.from(traces.values()));
+      traces.clear();
+      lastTraceSend = now;
+    }
+
+    requestAnimationFrame(pump);
+  }
+
+  requestAnimationFrame(pump);
+  send("system", ["runtime starting"]);
+})();
+<\/script>
+
+<script src="${P5_URL}" crossorigin="anonymous"
+  onerror="window.__bpP5LoadError && window.__bpP5LoadError()"><\/script>
+
+<script>
+${transformed}
+<\/script>
+
+<script>
+window.addEventListener("load", () => {
+  parent.postMessage({
+    source:"blockp5-program-surface",
+    runId:${JSON.stringify(id)},
+    type:"ready",
+    payload:["running"]
+  }, "*");
+});
+<\/script>
+</head>
+<body></body>
+</html>`;
+  }
+
+  function runProgram({record=true} = {}) {
+    const code = editor.value;
+    currentAnalysis = analyzeProgram(code);
+    runId++;
+
+    clearConsole();
+    setStatus("RUN");
+    emptyWorld.style.display = "none";
+    selectedTraceId = null;
+    traceInfo.style.display = "none";
+
+    if (record) addRevision(code);
+
+    runner.srcdoc = runtimeHtml(currentAnalysis, runId);
+    renderStructure();
+
+    if (matchMedia("(max-width:760px)").matches) showMobileWorld();
+  }
+
+  function stopProgram() {
+    runId++;
+    runner.srcdoc = "<!doctype html><html><body style='margin:0;background:#f5f3ec'></body></html>";
+    traces = [];
+    renderTraces();
+    emptyWorld.style.display = "grid";
+    setStatus("STOP");
+    appendLog("system","runtime stopped");
+  }
+
+  /* =========================================================
+     <TRACE PROJECTION>
+     Runtime drawing calls become inspectable geometry.
+     ========================================================= */
+
+  function traceGeometry(trace) {
+    const a = trace.args.map(Number);
+    if (a.some(v => Number.isNaN(v))) return null;
+
+    if (trace.name === "circle") {
+      const [x,y,d] = a;
+      return {x:x-d/2,y:y-d/2,w:d,h:d};
+    }
+
+    if (trace.name === "ellipse") {
+      const [x,y,w,h=w] = a;
+      return {x:x-w/2,y:y-h/2,w,h};
+    }
+
+    if (trace.name === "rect") {
+      const [x,y,w,h=w] = a;
+      return {x,y,w,h};
+    }
+
+    if (trace.name === "point") {
+      const [x,y] = a;
+      return {x:x-5,y:y-5,w:10,h:10};
+    }
+
+    if (trace.name === "line") {
+      const [x1,y1,x2,y2] = a;
+      return {
+        x:Math.min(x1,x2),
+        y:Math.min(y1,y2),
+        w:Math.max(8,Math.abs(x2-x1)),
+        h:Math.max(8,Math.abs(y2-y1))
+      };
+    }
+
+    return null;
+  }
+
+  function stageScale() {
+    const rect = stage.getBoundingClientRect();
+    const iframeWindow = runner.contentWindow;
+
+    let canvasW = rect.width;
+    let canvasH = rect.height;
+
+    try {
+      if (iframeWindow && iframeWindow.width) canvasW = iframeWindow.width;
+      if (iframeWindow && iframeWindow.height) canvasH = iframeWindow.height;
+    } catch (_) {}
+
+    return {
+      sx:rect.width / Math.max(1,canvasW),
+      sy:rect.height / Math.max(1,canvasH)
+    };
+  }
+
+  function callForId(id) {
+    if (!currentAnalysis) return null;
+    return currentAnalysis.calls.find(c => c.id === Number(id)) || null;
+  }
+
+  function isManipulable(call) {
+    if (!call) return false;
+    if (!["circle","ellipse","rect"].includes(call.name)) return false;
+
+    const needed =
+      call.name === "circle" ? 3 :
+      call.name === "ellipse" ? 4 :
+      4;
+
+    return call.args.slice(0,needed).every(arg => arg && arg.literal);
+  }
+
+  function renderTraces() {
+    traceLayer.innerHTML = "";
+
+    const {sx,sy} = stageScale();
+
+    for (const trace of traces) {
+      const g = traceGeometry(trace);
+      if (!g) continue;
+
+      const call = callForId(trace.id);
+      const box = document.createElement("div");
+      const manipulable = isManipulable(call);
+
+      box.className =
+        "traceBox" +
+        (selectedTraceId === trace.id ? " selected" : "") +
+        (manipulable ? " manipulable" : "");
+
+      box.dataset.id = trace.id;
+
+      Object.assign(box.style,{
+        left:(g.x*sx)+"px",
+        top:(g.y*sy)+"px",
+        width:Math.max(8,g.w*sx)+"px",
+        height:Math.max(8,g.h*sy)+"px"
+      });
+
+      const handle = document.createElement("div");
+      handle.className = "traceHandle";
+      box.appendChild(handle);
+
+      box.addEventListener("pointerdown", e => {
+        if (e.target === handle) return;
+        selectTrace(trace.id);
+
+        if (manipulable) startTraceDrag(e, trace, call, g);
+      });
+
+      handle.addEventListener("pointerdown", e => {
+        e.stopPropagation();
+        selectTrace(trace.id);
+
+        if (manipulable) startTraceResize(e, trace, call, g);
+      });
+
+      traceLayer.appendChild(box);
+    }
+  }
+
+  function selectTrace(id) {
+    selectedTraceId = Number(id);
+    renderTraces();
+
+    const trace = traces.find(t => t.id === selectedTraceId);
+    const call = callForId(selectedTraceId);
+
+    if (!trace || !call) {
+      traceInfo.style.display = "none";
+      return;
+    }
+
+    const labels = ARG_NAMES[call.name] || [];
+    const bindings = call.args.map((a,i) => {
+      const value = trace.args[i];
+      const label = labels[i] || ("arg" + (i+1));
+      return `${label} ← ${a.text} = ${value}`;
+    }).join(" · ");
+
+    traceInfo.innerHTML = `
+      <strong>${escapeHtml(call.name)}() · line ${call.line}</strong>
+      <small>${escapeHtml(bindings)}</small>
+      <small>${isManipulable(call)
+        ? "literal geometry — drag or resize directly"
+        : "dynamic binding — inspect without destroying its expression"}</small>
+    `;
+    traceInfo.style.display = "block";
+  }
+
+  function startTraceDrag(e, trace, call, geom) {
+    e.preventDefault();
+
+    const {sx,sy} = stageScale();
+
+    interaction = {
+      kind:"drag",
+      id:trace.id,
+      call,
+      startX:e.clientX,
+      startY:e.clientY,
+      originalArgs:trace.args.map(Number),
+      sx,sy
+    };
+
+    window.addEventListener("pointermove", moveTraceInteraction);
+    window.addEventListener("pointerup", endTraceInteraction, {once:true});
+  }
+
+  function startTraceResize(e, trace, call, geom) {
+    e.preventDefault();
+
+    const {sx,sy} = stageScale();
+
+    interaction = {
+      kind:"resize",
+      id:trace.id,
+      call,
+      startX:e.clientX,
+      startY:e.clientY,
+      originalArgs:trace.args.map(Number),
+      sx,sy
+    };
+
+    window.addEventListener("pointermove", moveTraceInteraction);
+    window.addEventListener("pointerup", endTraceInteraction, {once:true});
+  }
+
+  function moveTraceInteraction(e) {
+    if (!interaction) return;
+
+    const dx = (e.clientX - interaction.startX) / interaction.sx;
+    const dy = (e.clientY - interaction.startY) / interaction.sy;
+    const args = interaction.originalArgs.slice();
+
+    if (interaction.kind === "drag") {
+      args[0] += dx;
+      args[1] += dy;
+    }
+
+    if (interaction.kind === "resize") {
+      if (interaction.call.name === "circle") {
+        args[2] = Math.max(4, interaction.originalArgs[2] + Math.max(dx,dy) * 2);
+      } else {
+        args[2] = Math.max(4, interaction.originalArgs[2] + dx);
+        args[3] = Math.max(4, interaction.originalArgs[3] + dy);
+      }
+    }
+
+    sendOverride(interaction.id, args);
+
+    const trace = traces.find(t => t.id === interaction.id);
+    if (trace) trace.args = args;
+    renderTraces();
+    selectTrace(interaction.id);
+  }
+
+  function endTraceInteraction() {
+    if (!interaction) return;
+
+    const trace = traces.find(t => t.id === interaction.id);
+
+    if (trace) {
+      rewriteLiteralArgs(interaction.call, trace.args);
+      saveLocal();
+      renderStructure();
+      runProgram({record:true});
+    }
+
+    interaction = null;
+    window.removeEventListener("pointermove", moveTraceInteraction);
+  }
+
+  function sendOverride(callId, args) {
+    runner.contentWindow?.postMessage({
+      source:"blockp5-host",
+      runId,
+      type:"override",
+      callId,
+      args
+    }, "*");
+  }
+
+  function rewriteLiteralArgs(call, newArgs) {
+    const source = editor.value;
+    const replacements = [];
+
+    for (let i = 0; i < call.args.length && i < newArgs.length; i++) {
+      const arg = call.args[i];
+      if (!arg.literal || typeof newArgs[i] !== "number") continue;
+
+      replacements.push({
+        start:arg.start,
+        end:arg.end,
+        text:String(Math.round(newArgs[i] * 10) / 10)
+      });
+    }
+
+    replacements.sort((a,b) => b.start - a.start);
+
+    let next = source;
+
+    for (const r of replacements) {
+      next = next.slice(0,r.start) + r.text + next.slice(r.end);
+    }
+
+    editor.value = next;
+  }
+
+  /* =========================================================
+     <STATE STRIP>
+     ========================================================= */
+
+  function renderState() {
+    const preferred = ["frame","mouseX","mouseY","fps"];
+    const keys = [
+      ...preferred.filter(k => k in latestState),
+      ...Object.keys(latestState).filter(k => !preferred.includes(k))
+    ];
+
+    stateItems.innerHTML = keys.map(key => {
+      let value = latestState[key];
+
+      if (typeof value === "string" && value.length > 28) {
+        value = value.slice(0,25) + "…";
+      }
+
+      return `<div class="stateItem">
+        <b>${escapeHtml(key)}</b>
+        <span>${escapeHtml(value)}</span>
+      </div>`;
+    }).join("");
+  }
+
+  /* =========================================================
+     <REVISION / CONSTRAINED PLAY>
+     ========================================================= */
+
+  function loadRevisions() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(REV_KEY) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveRevisions() {
+    localStorage.setItem(REV_KEY, JSON.stringify(revisions.slice(-20)));
+  }
+
+  function addRevision(code) {
+    const last = revisions[revisions.length - 1];
+
+    if (last && last.code === code) {
+      updateRevisionUI();
+      return;
+    }
+
+    revisions.push({
+      n:(last?.n || 0) + 1,
+      code,
+      at:Date.now()
+    });
+
+    revisions = revisions.slice(-20);
+    saveRevisions();
+    updateRevisionUI();
+  }
+
+  function firstMeaningfulLine(code) {
+    return code
+      .split("\n")
+      .map(s => s.trim())
+      .find(s => s && !s.startsWith("//")) || "empty program";
+  }
+
+  function updateRevisionUI() {
+    const current = revisions[revisions.length - 1];
+    revisionButton.textContent = current ? ("R" + current.n) : "R0";
+
+    if (!revisions.length) {
+      revisionMenu.innerHTML =
+        `<div style="padding:12px;color:#777;font-size:11px">Run creates a revision.</div>`;
+      return;
+    }
+
+    revisionMenu.innerHTML = [...revisions].reverse().map((rev,index) => `
+      <button class="revItem" data-rev="${rev.n}">
+        <strong>R${rev.n}</strong>
+        <span>${escapeHtml(firstMeaningfulLine(rev.code))}</span>
+      </button>
+    `).join("");
+
+    revisionMenu.querySelectorAll(".revItem").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const n = Number(btn.dataset.rev);
+        const rev = revisions.find(r => r.n === n);
+        if (!rev) return;
+
+        editor.value = rev.code;
+        saveLocal();
+        renderStructure();
+        revisionMenu.classList.remove("open");
+        runProgram({record:false});
+      });
+    });
+  }
+
+  /* =========================================================
+     <CONSOLE>
+     ========================================================= */
+
+  function appendLog(kind, message) {
+    const row = document.createElement("div");
+    row.className = "log " + (kind || "");
+    row.textContent = Array.isArray(message) ? message.join(" ") : String(message);
+    consoleBody.appendChild(row);
+    consoleBody.scrollTop = consoleBody.scrollHeight;
+
+    if (kind === "error") {
+      consoleToggle.classList.add("error");
+      consoleToggle.textContent = "ERROR";
+    }
+  }
+
+  function clearConsole() {
+    consoleBody.innerHTML = "";
+    consoleToggle.classList.remove("error");
+    consoleToggle.textContent = "CONSOLE";
+  }
+
+  /* =========================================================
+     <DOCUMENT>
+     ========================================================= */
+
+  function saveLocal() {
+    localStorage.setItem(STORAGE_KEY, editor.value);
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveLocal, 250);
+  }
+
+  function newProgram() {
+    editor.value = STARTER;
+    saveLocal();
+    renderStructure();
+    runProgram({record:true});
+    closeMenus();
+  }
+
+  function openProgram(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      editor.value = String(reader.result || "");
+      saveLocal();
+      renderStructure();
+      clearConsole();
+      appendLog("system","opened " + file.name);
+      closeMenus();
+    };
+
+    reader.onerror = () => appendLog("error","could not read " + file.name);
+    reader.readAsText(file);
+  }
+
+  function downloadProgram() {
+    const blob = new Blob([editor.value], {type:"text/javascript;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = "sketch.js";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    closeMenus();
+  }
+
+  async function copyProgram() {
+    try {
+      await navigator.clipboard.writeText(editor.value);
+      setStatus("COPIED");
+    } catch (_) {
+      editor.focus();
+      editor.select();
+      document.execCommand("copy");
+    }
+    closeMenus();
+  }
+
+  /* =========================================================
+     <MODES>
+     ========================================================= */
+
+  function showCodeMode() {
+    leftPane.classList.remove("structureMode");
+    document.querySelector("#codeModeBtn").classList.add("active");
+    document.querySelector("#structureModeBtn").classList.remove("active");
+    semanticZoom.hidden = true;
+    requestAnimationFrame(() => editor.focus());
+  }
+
+  function showStructureMode() {
+    leftPane.classList.add("structureMode");
+    document.querySelector("#codeModeBtn").classList.remove("active");
+    document.querySelector("#structureModeBtn").classList.add("active");
+    semanticZoom.hidden = false;
+    renderStructure();
+  }
+
+  function showMobileCode() {
+    document.body.classList.remove("mobileWorld");
+    document.querySelector("#mobileCodeTab").classList.add("active");
+    document.querySelector("#mobileWorldTab").classList.remove("active");
+  }
+
+  function showMobileWorld() {
+    document.body.classList.add("mobileWorld");
+    document.querySelector("#mobileCodeTab").classList.remove("active");
+    document.querySelector("#mobileWorldTab").classList.add("active");
+  }
+
+  function closeMenus() {
+    docMenu.classList.remove("open");
+    revisionMenu.classList.remove("open");
+  }
+
+  /* =========================================================
+     <EDITOR>
+     ========================================================= */
+
+  function handleEditorKeydown(e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+
+      if (start === end) {
+        editor.setRangeText("  ", start, end, "end");
+      } else {
+        const value = editor.value;
+        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+        const selected = value.slice(lineStart, end);
+        const changed = selected
+          .split("\n")
+          .map(line => e.shiftKey
+            ? (line.startsWith("  ") ? line.slice(2) : line.startsWith(" ") ? line.slice(1) : line)
+            : "  " + line)
+          .join("\n");
+
+        editor.setRangeText(changed, lineStart, end, "select");
+      }
+
+      scheduleSave();
+      renderStructure();
+      return;
+    }
+
+    const command = e.metaKey || e.ctrlKey;
+
+    if (command && e.key === "Enter") {
+      e.preventDefault();
+      runProgram({record:true});
+    }
+
+    if (command && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      downloadProgram();
+    }
+  }
+
+  /* =========================================================
+     <MESSAGES>
+     ========================================================= */
+
+  window.addEventListener("message", e => {
+    const d = e.data;
+
+    if (!d || d.source !== "blockp5-program-surface") return;
+    if (d.runId !== runId) return;
+
+    if (d.type === "ready") {
+      setStatus("LIVE");
+      appendLog("system","p5.js running");
+      return;
+    }
+
+    if (d.type === "system") {
+      appendLog("system",d.payload);
+      return;
+    }
+
+    if (d.type === "state") {
+      latestState = d.payload || {};
+      renderState();
+      return;
+    }
+
+    if (d.type === "traces") {
+      traces = Array.isArray(d.payload) ? d.payload : [];
+      renderTraces();
+      return;
+    }
+
+    if (d.type === "error") {
+      appendLog("error",d.payload);
+      setStatus("ERROR");
+      return;
+    }
+
+    if (d.type === "warn") {
+      appendLog("warn",d.payload);
+      return;
+    }
+
+    if (d.type === "log") {
+      appendLog("",d.payload);
+    }
+  });
+
+  /* =========================================================
+     <EVENTS>
+     ========================================================= */
+
+  document.querySelector("#runBtn").addEventListener("click", () => runProgram({record:true}));
+  document.querySelector("#stopBtn").addEventListener("click", stopProgram);
+
+  document.querySelector("#codeModeBtn").addEventListener("click", showCodeMode);
+  document.querySelector("#structureModeBtn").addEventListener("click", showStructureMode);
+
+  document.querySelector("#zoomOutBtn").addEventListener("click", () => setSemanticLevel(semanticLevel - 1));
+  document.querySelector("#zoomInBtn").addEventListener("click", () => setSemanticLevel(semanticLevel + 1));
+
+  document.querySelector("#mobileCodeTab").addEventListener("click", showMobileCode);
+  document.querySelector("#mobileWorldTab").addEventListener("click", showMobileWorld);
+
+  revisionButton.addEventListener("click", e => {
+    e.stopPropagation();
+    revisionMenu.classList.toggle("open");
+    docMenu.classList.remove("open");
+  });
+
+  docButton.addEventListener("click", e => {
+    e.stopPropagation();
+    docMenu.classList.toggle("open");
+    revisionMenu.classList.remove("open");
+  });
+
+  document.querySelector("#newBtn").addEventListener("click", newProgram);
+  document.querySelector("#openBtn").addEventListener("click", () => fileInput.click());
+  document.querySelector("#saveBtn").addEventListener("click", downloadProgram);
+  document.querySelector("#copyBtn").addEventListener("click", copyProgram);
+
+  fileInput.addEventListener("change", () => {
+    openProgram(fileInput.files?.[0]);
+    fileInput.value = "";
+  });
+
+  editor.addEventListener("input", () => {
+    scheduleSave();
+    if (leftPane.classList.contains("structureMode")) renderStructure();
+  });
+
+  editor.addEventListener("keydown", handleEditorKeydown);
+
+  consoleToggle.addEventListener("click", () => {
+    consoleDrawer.classList.toggle("open");
+  });
+
+  document.querySelector("#clearConsole").addEventListener("click", clearConsole);
+
+  document.addEventListener("pointerdown", e => {
+    if (!docMenu.contains(e.target) && e.target !== docButton) docMenu.classList.remove("open");
+    if (!revisionMenu.contains(e.target) && e.target !== revisionButton) revisionMenu.classList.remove("open");
+  });
+
+  window.addEventListener("resize", renderTraces);
+  window.addEventListener("beforeunload", saveLocal);
+
+  /* =========================================================
+     <BOOT>
+     ========================================================= */
+
+  editor.value = localStorage.getItem(STORAGE_KEY) || STARTER;
+  renderStructure();
+  updateRevisionUI();
+  setSemanticLevel(1);
+  appendLog("system","Program Surface ready");
+  appendLog("system","Run creates a fresh isolated p5.js world.");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Mondrian — Negative-Space Debugging Architecture</title>
+<style>
+:root{
+  --paper:#f3efe5; --white:#fffdf8; --ink:#111;
+  --muted:#7b766b; --red:#d83a2f; --blue:#1c4fa4;
+  --yellow:#f0cf38; --green:#2f7b48; --orange:#d98628;
+  --purple:#7351a8; --cyan:#5b99a0; --line:5px; --gap:8px;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font-family:var(--sans);overflow:hidden}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #6699e6;outline-offset:2px}
+
+#app{height:100%;display:grid;grid-template-rows:44px minmax(0,1fr);background:var(--paper)}
+.top{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;
+  border-bottom:var(--line) solid var(--ink);background:var(--white)
+}
+.brand{font-size:12px;font-weight:950;letter-spacing:.14em}
+.spacer{flex:1}
+.top button{
+  border:2px solid var(--ink);background:var(--white);padding:6px 9px;
+  font-size:10px;font-weight:950;letter-spacing:.06em
+}
+.top button:hover,.top button.on{background:var(--ink);color:white}
+
+.stage{min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
+.stage.output-open{grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr)}
+.program-pane,.output-pane{min-height:0;overflow:auto}
+.output-pane{display:none;border-left:var(--line) solid var(--ink);background:#d9d3c6;padding:10px}
+.stage.output-open .output-pane{display:block}
+
+.workspace{
+  min-width:780px;min-height:100%;padding:12px;
+  background:
+    radial-gradient(circle at 1px 1px,#b5afa2 1px,transparent 1.1px) 0 0/16px 16px,
+    #d8d1c4
+}
+.program{
+  border:var(--line) solid var(--ink);background:var(--ink);
+  display:grid;gap:var(--gap);padding:var(--gap)
+}
+.program-head{
+  min-height:34px;background:var(--white);
+  display:flex;align-items:center;gap:10px;padding:7px 9px
+}
+.program-head strong{font-size:11px;letter-spacing:.12em}
+.program-head small{font:9px var(--mono);color:var(--muted)}
+.execution-arrow{margin-left:auto;font:900 10px var(--mono);letter-spacing:.08em;color:#5a554d}
+
+.lifecycle{
+  display:grid;
+  grid-template-columns:.65fr .95fr 2.5fr;
+  gap:var(--gap);
+  background:var(--ink);
+  align-items:stretch
+}
+.frame{
+  background:var(--white);
+  position:relative;
+  min-height:190px;
+  border:0;
+  transition:box-shadow .14s ease, transform .14s ease
+}
+.frame[data-frame="draw"]{min-height:455px}
+.frame.executing{
+  box-shadow:inset 0 0 0 5px var(--red);
+  z-index:2
+}
+.frame.changed{
+  box-shadow:inset 0 0 0 5px var(--yellow);
+}
+.frame-head{
+  min-height:36px;padding:6px 8px;border-bottom:3px solid var(--ink);
+  background:#ece8de;display:flex;align-items:center;gap:7px
+}
+.frame-head strong{font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.frame-head .truth{margin-left:auto;font:9px var(--mono);color:var(--muted);white-space:nowrap}
+.dot{width:10px;height:10px;border:2px solid var(--ink);background:white;flex:none}
+[data-frame="preload"] .dot{background:var(--cyan)}
+[data-frame="setup"] .dot{background:var(--blue)}
+[data-frame="draw"] .dot{background:var(--red)}
+
+.frame-body{
+  min-height:150px;padding:7px;display:grid;gap:6px;align-content:start
+}
+.frame[data-frame="draw"] .frame-body{min-height:410px}
+.frame-body.drag-target,.branch-body.drag-target,.loop-body.drag-target,.inner-body.drag-target{
+  background:#eef4ff;box-shadow:inset 0 0 0 4px #6f9fdf
+}
+
+.state-band{
+  background:var(--white);
+  min-height:88px;
+  display:grid;
+  grid-template-columns:150px 1fr;
+  align-items:stretch
+}
+.state-label{
+  border-right:3px solid var(--ink);background:#eee9dc;
+  display:flex;align-items:center;gap:8px;padding:10px
+}
+.state-label .dot{background:var(--yellow)}
+.state-label strong{font-size:10px;letter-spacing:.12em}
+.state-values{
+  padding:7px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px
+}
+.state-cell{
+  border:3px solid var(--ink);background:white;padding:7px 8px;
+  min-width:0;transition:box-shadow .15s ease,background .15s ease
+}
+.state-cell.hot{box-shadow:inset 0 0 0 4px var(--yellow);background:#fff8cd}
+.state-cell strong{display:block;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.state-cell span{display:block;margin-top:4px;font:11px var(--mono);overflow:hidden;text-overflow:ellipsis}
+
+.support{
+  display:grid;grid-template-columns:1fr 1.35fr;gap:var(--gap);background:var(--ink)
+}
+.support-room{background:var(--white);min-height:92px}
+.support-head{
+  border-bottom:3px solid var(--ink);background:#ece8de;
+  padding:6px 8px;display:flex;align-items:center;gap:7px
+}
+.support-head strong{font-size:9px;letter-spacing:.11em}
+.support-head .hint{margin-left:auto;font:9px var(--mono);color:var(--muted)}
+.support-body{padding:7px;display:grid;gap:5px;align-content:start}
+
+.stmt{
+  border:3px solid var(--ink);background:white;min-height:41px;
+  display:grid;grid-template-columns:10px 1fr;cursor:grab;user-select:none
+}
+.stmt.selected{box-shadow:inset 0 0 0 4px #6f9fdf}
+.stmt.executing{box-shadow:inset 0 0 0 4px var(--red)}
+.bar{border-right:3px solid var(--ink);background:#ddd}
+.stmt[data-kind="draw"] .bar{background:var(--red)}
+.stmt[data-kind="state"] .bar{background:var(--yellow)}
+.stmt[data-kind="control"] .bar{background:var(--green)}
+.stmt[data-kind="event"] .bar{background:var(--orange)}
+.stmt[data-kind="function"] .bar{background:var(--blue)}
+.stmt[data-kind="transform"] .bar{background:var(--purple)}
+.stmt[data-kind="raw"] .bar{background:#111}
+.stmt-main{padding:6px 8px;min-width:0}
+.stmt-title{font-size:9px;font-weight:950;letter-spacing:.09em;text-transform:uppercase}
+.stmt-summary{margin-top:3px;font:10px/1.35 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.control{
+  border:3px solid var(--ink);background:var(--ink);display:grid;gap:6px
+}
+.control.selected{box-shadow:0 0 0 4px #6f9fdf}
+.control.executing{box-shadow:0 0 0 5px var(--red)}
+.control-head{
+  min-height:34px;background:#e8f0e9;padding:6px 8px;
+  display:flex;align-items:center;gap:8px
+}
+.control-head strong{font-size:9px;letter-spacing:.1em}
+.control-head span{margin-left:auto;font:9px var(--mono);color:#59635a}
+.branches{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--ink)}
+.branch{background:white;min-height:96px}
+.branch-label{
+  border-bottom:2px solid var(--ink);padding:4px 6px;background:#f0ede5;
+  font:900 9px var(--mono)
+}
+.branch-body,.loop-body,.inner-body{
+  min-height:58px;padding:6px;display:grid;gap:5px;align-content:start
+}
+.loop-body{background:white}
+.loop-tail{background:#e8f0e9;border-top:2px solid var(--ink);padding:4px 6px;font:900 9px var(--mono)}
+
+.portal{
+  border:3px solid var(--ink);background:white;padding:6px 8px;
+  display:flex;align-items:center;gap:8px;font-size:9px;font-weight:950;letter-spacing:.07em
+}
+.portal .arrow{margin-left:auto;color:var(--orange);font:900 10px var(--mono)}
+.subroom{border:3px solid var(--ink);background:white}
+.subroom.selected{box-shadow:inset 0 0 0 4px #6f9fdf}
+.subroom-head{
+  border-bottom:2px solid var(--ink);background:#e8edf6;
+  padding:6px 7px;font-size:9px;font-weight:950;letter-spacing:.08em
+}
+.subroom.transform .subroom-head{background:#eee8f6}
+
+.empty{min-height:46px;display:grid;place-items:center;border:2px dashed transparent}
+.empty:hover{border-color:#aaa}
+.add{
+  width:28px;height:28px;border:2px solid var(--ink);background:white;
+  font:900 18px/1 var(--sans);display:grid;place-items:center;opacity:.16
+}
+.empty:hover .add,.add:focus{opacity:1}
+
+.inline-editor{
+  border:4px solid var(--ink);background:var(--white);
+  padding:8px;display:grid;gap:7px;box-shadow:5px 5px 0 rgba(0,0,0,.16)
+}
+.edit-row{display:grid;grid-template-columns:86px 1fr;gap:7px;align-items:center}
+.edit-row label{font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.edit-row input,.edit-row textarea,.edit-row select{
+  width:100%;border:2px solid var(--ink);background:#fff;padding:6px;font:10px var(--mono)
+}
+.edit-row textarea{min-height:70px;resize:vertical}
+.edit-actions{display:flex;gap:6px;justify-content:flex-end}
+.edit-actions button{
+  border:2px solid var(--ink);background:#fff;padding:5px 8px;font-size:9px;font-weight:950
+}
+.edit-actions .primary{background:var(--ink);color:white}
+.edit-actions .danger{border-color:var(--red);color:var(--red)}
+
+.context{
+  position:fixed;z-index:60;width:min(250px,calc(100vw - 20px));
+  border:4px solid var(--ink);background:var(--white);box-shadow:6px 6px 0 rgba(0,0,0,.18);
+  display:none
+}
+.context.open{display:block}
+.context-head{padding:6px 8px;border-bottom:2px solid var(--ink);font:900 9px var(--mono);color:var(--muted)}
+.context-grid{display:grid;grid-template-columns:1fr 1fr}
+.context button{
+  border:0;border-right:1px solid #aaa;border-bottom:1px solid #aaa;background:white;
+  padding:8px;text-align:left;font-size:10px;font-weight:900
+}
+.context button:hover{background:#eee}
+.context button:disabled{opacity:.22;cursor:not-allowed}
+
+.change-trace{
+  position:fixed;right:10px;bottom:10px;z-index:50;display:none;
+  align-items:center;gap:8px;border:3px solid var(--ink);background:var(--white);
+  padding:7px 8px;font:9px var(--mono);box-shadow:4px 4px 0 rgba(0,0,0,.16)
+}
+.change-trace.show{display:flex}
+.change-trace button{border:2px solid var(--ink);background:#fff;padding:4px 7px;font-size:9px;font-weight:950}
+
+.runtime-action{
+  position:fixed;right:12px;bottom:12px;z-index:45;
+  border:4px solid var(--ink);background:var(--white);padding:9px 13px;
+  font-size:11px;font-weight:950;letter-spacing:.08em;box-shadow:4px 4px 0 rgba(0,0,0,.16)
+}
+.runtime-action.stop{background:var(--ink);color:white}
+
+.output-card{height:100%;min-height:420px;border:4px solid var(--ink);background:#111;display:grid;grid-template-rows:1fr auto}
+iframe{width:100%;height:100%;min-height:420px;border:0;background:white}
+.output-meta{
+  background:var(--white);border-top:3px solid var(--ink);padding:6px 8px;
+  display:flex;align-items:center;gap:8px;font:9px var(--mono)
+}
+.output-meta span:last-child{margin-left:auto;color:var(--muted)}
+
+.code-overlay{
+  position:fixed;inset:44px 0 0 0;z-index:55;background:rgba(17,17,17,.96);color:#f5f1e9;
+  display:none;grid-template-rows:auto 1fr
+}
+.code-overlay.open{display:grid}
+.code-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:2px solid #555}
+.code-head strong{font-size:10px;letter-spacing:.1em}
+.code-head button{margin-left:auto;border:2px solid white;background:transparent;color:white;padding:5px 8px;font-size:9px;font-weight:900}
+.code-overlay pre{margin:0;padding:14px;overflow:auto;font:11px/1.5 var(--mono);white-space:pre}
+
+
+.fault-card{
+  border:5px solid var(--red);
+  background:#fff5f1;
+  display:grid;
+  gap:0;
+  box-shadow:6px 6px 0 rgba(0,0,0,.18);
+}
+.fault-card .fault-title{
+  display:flex;align-items:center;gap:8px;
+  background:var(--red);color:white;
+  padding:7px 9px;font-size:10px;font-weight:950;letter-spacing:.1em;
+}
+.fault-card .fault-title span:last-child{margin-left:auto;font:9px var(--mono)}
+.fault-section{
+  display:grid;grid-template-columns:132px 1fr;
+  border-top:2px solid var(--ink);min-height:38px
+}
+.fault-section strong{
+  padding:7px 8px;background:#eee9df;
+  border-right:2px solid var(--ink);
+  font-size:8px;letter-spacing:.1em;text-transform:uppercase
+}
+.fault-section div{
+  padding:7px 8px;font:10px/1.4 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere
+}
+.fault-section.negative div{background:#fff7d6}
+.fault-section.preserved div{background:#edf5ed}
+.fault-section.blocked div{background:#f6e7e4}
+.fault-actions{
+  display:flex;gap:6px;justify-content:flex-end;
+  border-top:2px solid var(--ink);padding:7px 8px;background:#fff
+}
+.fault-actions button{
+  border:2px solid var(--ink);background:white;padding:5px 8px;font-size:9px;font-weight:950
+}
+.fault-actions button.primary{background:var(--ink);color:white}
+.fault-actions button.danger{border-color:var(--red);color:var(--red)}
+.runtime-action:disabled{opacity:.38;cursor:not-allowed}
+
+@media(max-width:920px){
+  .stage.output-open{grid-template-columns:1fr}
+  .stage.output-open .output-pane{position:fixed;inset:44px 0 0 0;z-index:35;border-left:0;padding:8px}
+  .workspace{min-width:720px}
+  .lifecycle{grid-template-columns:.7fr 1fr 2.2fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand">MONDRIAN</div>
+    <div class="spacer"></div>
+    <button id="codeBtn">CODE</button>
+    <button id="outputBtn">OUTPUT</button>
+  </header>
+
+  <main class="stage" id="stage">
+    <section class="program-pane">
+      <div class="workspace">
+        <div class="program">
+          <div class="program-head">
+            <strong id="programName">PROGRAM · MONDRIAN_SKETCH</strong>
+            <small id="programTruth">stopped · editable</small>
+            <span class="execution-arrow">PRELOAD → SETUP → DRAW →</span>
+          </div>
+
+          <section class="lifecycle">
+            <section class="frame" data-frame="preload">
+              <div class="frame-head">
+                <span class="dot"></span><strong>Preload</strong><span class="truth">before</span>
+              </div>
+              <div class="frame-body" data-scope="preload"></div>
+            </section>
+
+            <section class="frame" data-frame="setup">
+              <div class="frame-head">
+                <span class="dot"></span><strong>Setup</strong><span class="truth">once</span>
+              </div>
+              <div class="frame-body" data-scope="setup"></div>
+            </section>
+
+            <section class="frame" data-frame="draw">
+              <div class="frame-head">
+                <span class="dot"></span><strong>Draw</strong><span class="truth" id="drawTruth">every frame</span>
+              </div>
+              <div class="frame-body" data-scope="draw"></div>
+            </section>
+          </section>
+
+          <section class="state-band">
+            <div class="state-label"><span class="dot"></span><strong>STATE</strong></div>
+            <div class="state-values" id="stateValues"></div>
+          </section>
+
+          <section class="support">
+            <section class="support-room">
+              <div class="support-head">
+                <strong>EVENT PORTALS</strong><span class="hint">outside → scope</span>
+              </div>
+              <div class="support-body" data-scope="events"></div>
+            </section>
+            <section class="support-room">
+              <div class="support-head">
+                <strong>FUNCTION ROOMS</strong><span class="hint">reusable</span>
+              </div>
+              <div class="support-body" data-scope="functions"></div>
+            </section>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <aside class="output-pane">
+      <div class="output-card">
+        <iframe id="preview" sandbox="allow-scripts"></iframe>
+        <div class="output-meta"><span id="runtimeState">stopped</span><span id="frameState">frame 0</span></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="context" id="contextMenu">
+  <div class="context-head" id="contextTitle">ADD</div>
+  <div class="context-grid" id="contextGrid"></div>
+</div>
+
+<div class="change-trace" id="changeTrace">
+  <span id="changeText">changed</span>
+  <button id="undoVisible">UNDO</button>
+</div>
+
+<button class="runtime-action" id="runtimeBtn">RUN ▸</button>
+
+<div class="code-overlay" id="codeOverlay">
+  <div class="code-head">
+    <strong>GENERATED P5.JS</strong>
+    <button id="copyCode">COPY</button>
+    <button id="closeCode">CLOSE</button>
+  </div>
+  <pre id="codeView"></pre>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+let serial=1;
+const uid=p=>`${p}_${serial++}`;
+const initial={
+  name:"mondrian_sketch",
+  globals:[
+    {id:uid("var"),type:"var",kind:"state",name:"speed",value:"2.5"},
+    {id:uid("var"),type:"var",kind:"state",name:"count",value:"0"},
+    {id:uid("palette"),type:"palette",kind:"state",name:"palette",colors:["#d83a2f","#f0cf38","#1c4fa4","#111111","#f7f4ea"]}
+  ],
+  preload:[],
+  setup:[
+    {id:uid("canvas"),type:"createCanvas",kind:"function",w:"800",h:"800",renderer:"P2D"},
+    {id:uid("fps"),type:"frameRate",kind:"function",fps:"60"}
+  ],
+  draw:[
+    {id:uid("bg"),type:"background",kind:"draw",color:"#f7f4ea"},
+    {id:uid("if"),type:"if",kind:"control",condition:"mouseIsPressed",
+      then:[
+        {id:uid("fill"),type:"fill",kind:"draw",color:"#d83a2f"},
+        {id:uid("rect"),type:"rect",kind:"draw",x:"40",y:"40",w:"420",h:"420",stroke:"#111111",strokeWeight:"18"}
+      ],
+      else:[
+        {id:uid("fill"),type:"fill",kind:"draw",color:"#1c4fa4"},
+        {id:uid("rect"),type:"rect",kind:"draw",x:"40",y:"40",w:"420",h:"420",stroke:"#111111",strokeWeight:"18"}
+      ]
+    },
+    {id:uid("loop"),type:"loop",kind:"control",iterator:"i",start:"0",end:"3",step:"1",
+      body:[
+        {id:uid("fill"),type:"fillExpr",kind:"draw",expr:"palette[(i + 1) % palette.length]"},
+        {id:uid("rect"),type:"rect",kind:"draw",x:"500",y:"40 + i*160",w:"240",h:"140",stroke:"#111111",strokeWeight:"18"}
+      ]
+    },
+    {id:uid("call"),type:"call",kind:"function",name:"drawFooter",args:""}
+  ],
+  events:[
+    {id:uid("event"),type:"event",kind:"event",event:"mousePressed",body:[
+      {id:uid("raw"),type:"raw",kind:"raw",code:"count += 1;"}
+    ]}
+  ],
+  functions:[
+    {id:uid("fn"),type:"function",kind:"function",name:"drawFooter",args:"",body:[
+      {id:uid("fill"),type:"fill",kind:"draw",color:"#111111"},
+      {id:uid("rect"),type:"rect",kind:"draw",x:"40",y:"700",w:"700",h:"55",stroke:"#111111",strokeWeight:"0"},
+      {id:uid("fill"),type:"fill",kind:"draw",color:"#f0cf38"},
+      {id:uid("rect"),type:"rect",kind:"draw",x:"560",y:"700",w:"180",h:"55",stroke:"#111111",strokeWeight:"0"}
+    ]}
+  ]
+};
+
+let program=structuredClone(initial);
+let selectedId=null, dragId=null, outputOpen=false, running=false, currentFrame=0, currentPhase=null, currentNode=null, lastChange=null;
+let faultRecord=null, faultRevision=null, recentTrace=[];
+const history=[];
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const roots={};
+["preload","setup","draw","events","functions"].forEach(s=>roots[s]=$(`[data-scope="${s}"]`));
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function safe(s){const v=String(s||"value").replace(/[^\w$]/g,"_");return /^[A-Za-z_$]/.test(v)?v:"_"+v}
+function ind(s,n=2){return String(s).split("\n").filter(Boolean).map(x=>" ".repeat(n)+x).join("\n")}
+
+function saveHistory(msg){
+  history.push(JSON.stringify(program)); if(history.length>60)history.shift();
+  lastChange=msg; renderChange();
+}
+function undo(){
+  if(!history.length)return;
+  program=JSON.parse(history.pop()); selectedId=null; faultRecord=null; faultRevision=null; currentNode=null; lastChange="restored previous architecture";
+  updateRuntime(); renderAll();
+}
+$("#undoVisible").onclick=undo;
+
+function renderChange(){
+  const el=$("#changeTrace");
+  if(lastChange&&history.length){$("#changeText").textContent=lastChange;el.classList.add("show")}
+  else el.classList.remove("show");
+}
+
+function walk(list,meta,fn){
+  for(let i=0;i<list.length;i++){
+    const n=list[i];
+    if(fn(n,{...meta,list,index:i}))return true;
+    if(n.type==="if"){
+      if(walk(n.then,{parent:n,slot:"then"},fn))return true;
+      if(walk(n.else,{parent:n,slot:"else"},fn))return true;
+    }
+    if(["loop","event","function","transform"].includes(n.type)){
+      if(walk(n.body||[],{parent:n,slot:"body"},fn))return true;
+    }
+  }
+  return false;
+}
+function findNode(id){
+  let hit=null;
+  for(const scope of ["preload","setup","draw","events","functions"]){
+    walk(program[scope],{scope},(n,info)=>{if(n.id===id){hit={node:n,info};return true}});
+    if(hit)break;
+  }
+  return hit;
+}
+function removeNode(id){
+  const hit=findNode(id); if(!hit)return null;
+  return hit.info.list.splice(hit.info.index,1)[0];
+}
+function listFor(token){
+  if(roots[token])return program[token];
+  const [id,slot]=token.split(":"); const hit=findNode(id);
+  return hit?.node?.[slot]||null;
+}
+
+
+function programSignature(){return JSON.stringify(program)}
+
+function contractFor(n){
+  const common={
+    requires:["operation is reachable in its declared scope"],
+    ensures:["operation completes before execution advances"],
+    preserves:["program AST","unsaved edits","last confirmed output"],
+    rejects:["invalid state before mutation"],
+    recovers:["edit the failed operation","undo the last structural change","run again after the condition changes"]
+  };
+  switch(n?.type){
+    case "createCanvas": return {
+      requires:["operation is inside SETUP","width and height are valid expressions"],
+      ensures:["canvas capability exists before DRAW begins"],
+      preserves:["program AST","unsaved edits"],
+      rejects:["canvas creation outside SETUP"],
+      recovers:["move createCanvas to SETUP","edit dimensions","undo"]
+    };
+    case "call": return {
+      requires:[`function ${n.name} is registered before this call becomes executable`],
+      ensures:[`${n.name} returns or completes without throwing`],
+      preserves:["caller state until the call begins","program AST","last rendered output"],
+      rejects:["call to an unregistered function"],
+      recovers:[`create or rename function ${n.name}`,"change the call target","undo"]
+    };
+    case "loop": return {
+      requires:["step is non-zero","loop bounds are evaluable"],
+      ensures:["each admitted iteration completes or the loop stops on failure"],
+      preserves:["program AST","state outside mutations declared inside the loop"],
+      rejects:["zero-step iteration"],
+      recovers:["edit the iteration rule","undo"]
+    };
+    case "if": return {
+      requires:["condition is a non-empty evaluable expression"],
+      ensures:["exactly one branch is selected for each evaluation"],
+      preserves:["unselected branch","program AST"],
+      rejects:["missing condition"],
+      recovers:["edit the condition","undo"]
+    };
+    case "rect": case "ellipse": case "line": case "text":
+      return {
+        requires:["all required geometry expressions are present","drawing context exists"],
+        ensures:[`${n.type} operation completes in the current frame`],
+        preserves:["program AST","previous confirmed revision"],
+        rejects:["missing required geometry"],
+        recovers:["edit geometry","undo"]
+      };
+    case "raw": return {
+      requires:["raw JavaScript parses and its referenced capabilities exist"],
+      ensures:["raw operation returns control to its containing scope"],
+      preserves:["program AST","work outside mutations performed by raw code"],
+      rejects:["uncaught runtime exception"],
+      recovers:["edit raw code","undo"]
+    };
+    default:return common;
+  }
+}
+
+function preflight(){
+  const functionNames=new Set(program.functions.map(f=>f.name));
+  let failure=null;
+
+  const inspect=(n,info)=>{
+    if(n.type==="createCanvas" && info.scope!=="setup"){
+      failure={nodeId:n.id,operation:"createCanvas",condition:"createCanvas must execute inside SETUP",expected:"scope = setup",observed:`scope = ${info.scope||info.slot||"nested"}`};
+      return true;
+    }
+    if(n.type==="call" && !functionNames.has(n.name)){
+      failure={nodeId:n.id,operation:`call ${n.name}()`,condition:`required function ${n.name} must be registered before the call is enabled`,expected:`function ${n.name} exists`,observed:"required function is absent"};
+      return true;
+    }
+    if(n.type==="loop" && Number(n.step)===0){
+      failure={nodeId:n.id,operation:"loop",condition:"loop step must be non-zero",expected:"step ≠ 0",observed:"step = 0"};
+      return true;
+    }
+    if(n.type==="if" && !String(n.condition||"").trim()){
+      failure={nodeId:n.id,operation:"if",condition:"conditional partition requires an evaluable condition",expected:"non-empty condition",observed:"condition is empty"};
+      return true;
+    }
+    if(["rect","ellipse"].includes(n.type) && ["x","y","w","h"].some(k=>!String(n[k]??"").trim())){
+      failure={nodeId:n.id,operation:n.type,condition:`${n.type} requires x, y, width, and height expressions`,expected:"all geometry expressions present",observed:"one or more geometry expressions are absent"};
+      return true;
+    }
+    return false;
+  };
+
+  for(const scope of ["preload","setup","draw","events","functions"]){
+    if(walk(program[scope],{scope},inspect))break;
+  }
+  return failure;
+}
+
+function makeFault(base, trace=[]){
+  const hit=base.nodeId?findNode(base.nodeId):null;
+  const n=hit?.node||null;
+  const c=contractFor(n);
+  const actual=trace.length
+    ? trace.slice(-7).map((t,i)=>`${i+1}. ${t.label}${t.id?`  [${t.id}]`:""}`).join("\n")
+    : "preflight stopped execution before the invalid operation ran";
+  return {
+    nodeId:base.nodeId||null,
+    operation:base.operation||n?.type||"runtime",
+    condition:base.condition||"operation must complete without an uncaught runtime failure",
+    expected:base.expected||"required condition remains true",
+    observed:base.observed||base.message||"runtime condition failed",
+    actual,
+    notCompleted:(c.ensures||["operation completion"]).join("\n"),
+    preserved:(c.preserves||["program AST","unsaved edits"]).join("\n"),
+    blocked:(c.rejects||["continued execution from invalid state"]).join("\n"),
+    next:(c.recovers||["edit","undo","retry after change"]).join("\n")
+  };
+}
+
+function raiseFault(base, trace=[]){
+  running=false;
+  faultRecord=makeFault(base,trace);
+  faultRevision=programSignature();
+  selectedId=faultRecord.nodeId||selectedId;
+  currentNode=faultRecord.nodeId||currentNode;
+  updateRuntime();
+  renderArchitecture();
+}
+
+function faultSection(label,value,cls=""){
+  const row=document.createElement("div");row.className=`fault-section ${cls}`.trim();
+  const h=document.createElement("strong");h.textContent=label;
+  const v=document.createElement("div");v.textContent=value||"—";
+  row.append(h,v);return row;
+}
+
+function attachFaultAfter(anchor,record){
+  if(!anchor || document.querySelector(".fault-card"))return;
+  const card=document.createElement("div");card.className="fault-card";
+  const title=document.createElement("div");title.className="fault-title";
+  title.innerHTML=`<span>STOPPED · ${esc(record.operation)}</span><span>RUN BLOCKED</span>`;
+  card.appendChild(title);
+  card.appendChild(faultSection("FIRST BROKEN CONDITION",`${record.condition}\n\nexpected: ${record.expected}\nobserved: ${record.observed}`,"negative"));
+  card.appendChild(faultSection("ACTUAL TRACE",record.actual));
+  card.appendChild(faultSection("DID NOT COMPLETE",record.notCompleted,"negative"));
+  card.appendChild(faultSection("STATE PRESERVED",record.preserved,"preserved"));
+  card.appendChild(faultSection("BLOCKED",record.blocked,"blocked"));
+  card.appendChild(faultSection("NEXT VALID ACTIONS",record.next));
+
+  const actions=document.createElement("div");actions.className="fault-actions";
+  actions.innerHTML=`<button data-undo>UNDO</button><button class="primary" data-edit>EDIT CONDITION</button>`;
+  actions.querySelector("[data-undo]").onclick=e=>{e.stopPropagation();undo()};
+  actions.querySelector("[data-edit]").onclick=e=>{
+    e.stopPropagation();
+    selectedId=record.nodeId;
+    const hit=findNode(record.nodeId);
+    renderArchitecture();
+    const fresh=document.querySelector(`[data-id="${record.nodeId}"]`);
+    if(hit&&fresh)attachEditorAfter(fresh,hit.node);
+  };
+  card.appendChild(actions);
+  anchor.insertAdjacentElement("afterend",card);
+}
+
+
+function summary(n){
+  switch(n.type){
+    case "createCanvas":return`createCanvas(${n.w}, ${n.h}${n.renderer==="WEBGL"?", WEBGL":""})`;
+    case "frameRate":return`frameRate(${n.fps})`;
+    case "background":return`background(${n.color})`;
+    case "fill":return`fill(${n.color})`;
+    case "fillExpr":return`fill(${n.expr})`;
+    case "rect":return`rect(${n.x}, ${n.y}, ${n.w}, ${n.h})`;
+    case "ellipse":return`ellipse(${n.x}, ${n.y}, ${n.w}, ${n.h})`;
+    case "line":return`line(${n.x1}, ${n.y1}, ${n.x2}, ${n.y2})`;
+    case "text":return`text("${n.text}", ${n.x}, ${n.y})`;
+    case "call":return`${n.name}(${n.args||""})`;
+    case "raw":return n.code;
+    default:return n.type;
+  }
+}
+
+function makeEmpty(token){
+  const e=document.createElement("div");e.className="empty";
+  const b=document.createElement("button");b.className="add";b.textContent="+";
+  b.title=`Add to ${token}`;
+  b.onclick=ev=>{ev.stopPropagation();openAddMenu(token,b.getBoundingClientRect())};
+  e.appendChild(b);wireDrop(e,token);return e;
+}
+
+function makeStmt(n){
+  const el=document.createElement("div");
+  el.className="stmt"+(selectedId===n.id?" selected":"")+(currentNode===n.id?" executing":"");
+  el.dataset.id=n.id;el.dataset.kind=n.kind||"draw";el.draggable=true;
+  el.innerHTML=`<div class="bar"></div><div class="stmt-main"><div class="stmt-title">${esc(n.type)}</div><div class="stmt-summary">${esc(summary(n))}</div></div>`;
+  el.onclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture()};
+  el.ondblclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture();const fresh=document.querySelector(`[data-id="${n.id}"]`);if(fresh)attachEditorAfter(fresh,n)};
+  el.ondragstart=e=>{dragId=n.id;e.dataTransfer.setData("text/plain",n.id)};
+  el.ondragend=()=>{dragId=null;$$(".drag-target").forEach(x=>x.classList.remove("drag-target"))};
+  return el;
+}
+
+function renderNode(n){
+  if(n.type==="if"){
+    const wrap=document.createElement("div");
+    wrap.className="control"+(selectedId===n.id?" selected":"")+(currentNode===n.id?" executing":"");wrap.dataset.id=n.id;
+    const head=document.createElement("div");head.className="control-head";
+    head.innerHTML=`<strong>IF · partition</strong><span>${esc(n.condition)}</span>`;
+    head.onclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture();attachEditorAfter(wrap,n)};
+    wrap.appendChild(head);
+    const branches=document.createElement("div");branches.className="branches";
+    for(const [slot,label] of [["then","TRUE"],["else","FALSE"]]){
+      const branch=document.createElement("div");branch.className="branch";
+      branch.innerHTML=`<div class="branch-label">${label}</div>`;
+      const body=document.createElement("div");body.className="branch-body";body.dataset.scope=`${n.id}:${slot}`;wireDrop(body,body.dataset.scope);
+      n[slot].forEach(ch=>body.appendChild(renderNode(ch)));body.appendChild(makeEmpty(body.dataset.scope));
+      branch.appendChild(body);branches.appendChild(branch);
+    }
+    wrap.appendChild(branches);return wrap;
+  }
+
+  if(n.type==="loop"){
+    const wrap=document.createElement("div");
+    wrap.className="control"+(selectedId===n.id?" selected":"")+(currentNode===n.id?" executing":"");wrap.dataset.id=n.id;
+    const head=document.createElement("div");head.className="control-head";
+    head.innerHTML=`<strong>FOR · repeated territory</strong><span>${esc(n.iterator)} ${esc(n.start)}→${esc(n.end)}</span>`;
+    head.onclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture();attachEditorAfter(wrap,n)};
+    wrap.appendChild(head);
+    const body=document.createElement("div");body.className="loop-body";body.dataset.scope=`${n.id}:body`;wireDrop(body,body.dataset.scope);
+    n.body.forEach(ch=>body.appendChild(renderNode(ch)));body.appendChild(makeEmpty(body.dataset.scope));
+    wrap.appendChild(body);
+    const tail=document.createElement("div");tail.className="loop-tail";tail.textContent="× ITERATION SPACE";wrap.appendChild(tail);
+    return wrap;
+  }
+
+  if(n.type==="event"){
+    const holder=document.createElement("div");
+    const p=document.createElement("div");p.className="portal";p.dataset.id=n.id;
+    p.innerHTML=`<span>${esc(n.event)}</span><span class="arrow">OUTSIDE →</span>`;
+    p.onclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture();attachEditorAfter(holder,n)};
+    const room=document.createElement("div");room.className="subroom";
+    room.innerHTML=`<div class="subroom-head">EVENT ROOM · ${esc(n.event)}()</div>`;
+    const body=document.createElement("div");body.className="inner-body";body.dataset.scope=`${n.id}:body`;wireDrop(body,body.dataset.scope);
+    n.body.forEach(ch=>body.appendChild(renderNode(ch)));body.appendChild(makeEmpty(body.dataset.scope));
+    room.appendChild(body);holder.append(p,room);return holder;
+  }
+
+  if(n.type==="function"){
+    const room=document.createElement("div");room.className="subroom"+(selectedId===n.id?" selected":"");room.dataset.id=n.id;
+    const h=document.createElement("div");h.className="subroom-head";h.textContent=`FUNCTION · ${n.name}(${n.args||""})`;
+    h.onclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture();attachEditorAfter(room,n)};
+    const body=document.createElement("div");body.className="inner-body";body.dataset.scope=`${n.id}:body`;wireDrop(body,body.dataset.scope);
+    n.body.forEach(ch=>body.appendChild(renderNode(ch)));body.appendChild(makeEmpty(body.dataset.scope));
+    room.append(h,body);return room;
+  }
+
+  if(n.type==="transform"){
+    const room=document.createElement("div");room.className="subroom transform"+(selectedId===n.id?" selected":"");room.dataset.id=n.id;
+    const h=document.createElement("div");h.className="subroom-head";h.textContent=`COORDINATE FRAME · translate(${n.tx}, ${n.ty}) · rotate(${n.angle})`;
+    h.onclick=e=>{e.stopPropagation();selectedId=n.id;renderArchitecture();attachEditorAfter(room,n)};
+    const body=document.createElement("div");body.className="inner-body";body.dataset.scope=`${n.id}:body`;wireDrop(body,body.dataset.scope);
+    n.body.forEach(ch=>body.appendChild(renderNode(ch)));body.appendChild(makeEmpty(body.dataset.scope));
+    room.append(h,body);return room;
+  }
+
+  return makeStmt(n);
+}
+
+function renderState(){
+  const box=$("#stateValues");box.innerHTML="";
+  for(const n of program.globals){
+    const cell=document.createElement("div");cell.className="state-cell";
+    cell.dataset.stateId=n.id;
+    if(n.type==="var"){
+      cell.innerHTML=`<strong>${esc(n.name)}</strong><span>${esc(n.value)}</span>`;
+      cell.onclick=()=>{selectedId=n.id;openStateEditor(cell,n)};
+    }else if(n.type==="palette"){
+      cell.innerHTML=`<strong>${esc(n.name)}</strong><span>${n.colors.map(c=>`■`).join(" ")}</span>`;
+    }
+    box.appendChild(cell);
+  }
+  box.appendChild(makeEmpty("globals"));
+}
+
+function renderArchitecture(){
+  for(const scope of ["preload","setup","draw","events","functions"]){
+    const root=roots[scope];root.innerHTML="";
+    program[scope].forEach(n=>root.appendChild(renderNode(n)));
+    root.appendChild(makeEmpty(scope));
+    if(!root.dataset.wired){wireDrop(root,scope);root.dataset.wired="1"}
+  }
+  renderState();
+
+  $$(".frame").forEach(f=>{
+    const name=f.dataset.frame;
+    f.classList.toggle("executing",running&&currentPhase===name);
+  });
+
+  $("#programName").textContent=`PROGRAM · ${program.name.toUpperCase()}`;
+  $("#programTruth").textContent=running?"running · causality visible":"stopped · editable";
+  $("#drawTruth").textContent=running&&currentPhase==="draw"?`frame ${currentFrame}`:"every frame";
+
+  if(selectedId){
+    const hit=findNode(selectedId);
+    const el=document.querySelector(`[data-id="${selectedId}"]`);
+    if(hit&&el&&!["if","loop","event","function","transform"].includes(hit.node.type))attachEditorAfter(el,hit.node);
+  }
+
+  if(faultRecord){
+    const faultEl=faultRecord.nodeId
+      ? document.querySelector(`[data-id="${faultRecord.nodeId}"]`)
+      : document.querySelector(`[data-frame="${currentPhase||"draw"}"]`);
+    if(faultEl)attachFaultAfter(faultEl,faultRecord);
+  }
+}
+
+function wireDrop(el,token){
+  el.ondragover=e=>{e.preventDefault();el.classList.add("drag-target")};
+  el.ondragleave=e=>{if(!el.contains(e.relatedTarget))el.classList.remove("drag-target")};
+  el.ondrop=e=>{
+    e.preventDefault();e.stopPropagation();el.classList.remove("drag-target");
+    const id=e.dataTransfer.getData("text/plain")||dragId;
+    const hit=findNode(id),dest=listFor(token);if(!hit||!dest)return;
+    if(hit.node.type==="createCanvas"&&token!=="setup")return;
+    saveHistory(`moved ${hit.node.type} → ${labelToken(token)}`);
+    const moved=removeNode(id);dest.push(moved);selectedId=id;renderAll();
+  };
+}
+
+function labelToken(t){return t.includes(":")?t.split(":")[1].toUpperCase():t.toUpperCase()}
+
+function fieldsFor(n){
+  switch(n.type){
+    case "var":return[{key:"name",label:"name"},{key:"value",label:"value"}];
+    case "createCanvas":return[{key:"w",label:"width"},{key:"h",label:"height"},{key:"renderer",label:"renderer",type:"select",options:["P2D","WEBGL"]}];
+    case "frameRate":return[{key:"fps",label:"fps"}];
+    case "background":case "fill":return[{key:"color",label:"color",type:"color"}];
+    case "fillExpr":return[{key:"expr",label:"expression"}];
+    case "rect":case "ellipse":return[
+      {key:"x",label:"x"},{key:"y",label:"y"},{key:"w",label:"width"},{key:"h",label:"height"},
+      ...(n.type==="rect"?[{key:"stroke",label:"stroke",type:"color"},{key:"strokeWeight",label:"weight"}]:[])
+    ];
+    case "line":return[{key:"x1",label:"x1"},{key:"y1",label:"y1"},{key:"x2",label:"x2"},{key:"y2",label:"y2"}];
+    case "text":return[{key:"text",label:"text"},{key:"x",label:"x"},{key:"y",label:"y"}];
+    case "raw":return[{key:"code",label:"raw p5",type:"textarea"}];
+    case "call":return[{key:"name",label:"function"},{key:"args",label:"arguments"}];
+    case "if":return[{key:"condition",label:"condition"}];
+    case "loop":return[{key:"iterator",label:"iterator"},{key:"start",label:"start"},{key:"end",label:"end"},{key:"step",label:"step"}];
+    case "event":return[{key:"event",label:"event",type:"select",options:["mousePressed","mouseReleased","mouseMoved","mouseDragged","keyPressed","keyReleased","windowResized"]}];
+    case "function":return[{key:"name",label:"name"},{key:"args",label:"arguments"}];
+    case "transform":return[{key:"tx",label:"translate x"},{key:"ty",label:"translate y"},{key:"angle",label:"rotate radians"}];
+    default:return[];
+  }
+}
+
+function attachEditorAfter(anchor,n){
+  if(document.querySelector(`.inline-editor[data-editor="${n.id}"]`))return;
+  const ed=document.createElement("div");ed.className="inline-editor";ed.dataset.editor=n.id;
+  for(const f of fieldsFor(n)){
+    const row=document.createElement("div");row.className="edit-row";
+    const lab=document.createElement("label");lab.textContent=f.label;
+    let inp;
+    if(f.type==="select"){
+      inp=document.createElement("select");
+      f.options.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;if(String(n[f.key])===v)o.selected=true;inp.appendChild(o)});
+    }else if(f.type==="textarea"){inp=document.createElement("textarea");inp.value=n[f.key]??""}
+    else{inp=document.createElement("input");inp.type=f.type||"text";inp.value=n[f.key]??""}
+    inp.dataset.key=f.key;row.append(lab,inp);ed.appendChild(row);
+  }
+  const actions=document.createElement("div");actions.className="edit-actions";
+  actions.innerHTML=`<button data-close>CLOSE</button><button class="danger" data-delete>DELETE</button><button class="primary" data-apply>APPLY</button>`;
+  ed.appendChild(actions);
+  actions.querySelector("[data-close]").onclick=()=>{selectedId=null;renderArchitecture()};
+  actions.querySelector("[data-delete]").onclick=()=>{saveHistory(`deleted ${n.type}`);removeNode(n.id);selectedId=null;renderAll()};
+  actions.querySelector("[data-apply]").onclick=()=>{
+    saveHistory(`changed ${n.type}`);
+    ed.querySelectorAll("[data-key]").forEach(inp=>n[inp.dataset.key]=inp.value);
+    renderAll();
+  };
+  anchor.insertAdjacentElement("afterend",ed);
+}
+
+function openStateEditor(cell,n){
+  const old=document.querySelector(`.inline-editor[data-editor="${n.id}"]`);if(old){old.remove();return}
+  attachEditorAfter(cell,n);
+}
+function findGlobal(id){return program.globals.find(x=>x.id===id)}
+
+const menuItems=[
+  ["background","BACKGROUND",["draw","setup"]],
+  ["rect","RECTANGLE",["draw","setup","function","event","branch","loop"]],
+  ["ellipse","ELLIPSE",["draw","setup","function","event","branch","loop"]],
+  ["line","LINE",["draw","setup","function","event","branch","loop"]],
+  ["text","TEXT",["draw","setup","function","event","branch","loop"]],
+  ["if","IF / PARTITION",["draw","setup","function","event","branch","loop"]],
+  ["loop","LOOP / REPEAT",["draw","setup","function","event","branch","loop"]],
+  ["transform","TRANSFORM",["draw","setup","function","event","branch","loop"]],
+  ["raw","RAW P5",["draw","setup","function","event","branch","loop"]],
+  ["var","VARIABLE",["globals"]],
+  ["event","EVENT PORTAL",["events"]],
+  ["function","FUNCTION ROOM",["functions"]],
+  ["createCanvas","CREATE CANVAS",["setup"]]
+];
+function scopeClass(t){
+  if(["globals","events","functions","setup","draw","preload"].includes(t))return t;
+  if(t.includes(":then")||t.includes(":else"))return"branch";
+  if(t.includes(":body")){
+    const hit=findNode(t.split(":")[0]);
+    return hit?.node?.type==="loop"?"loop":hit?.node?.type==="event"?"event":"function";
+  }
+  return t;
+}
+function openAddMenu(token,rect){
+  $("#contextTitle").textContent=`ADD TO ${labelToken(token)}`;
+  const grid=$("#contextGrid");grid.innerHTML="";
+  const cls=scopeClass(token);
+  menuItems.forEach(([type,label,valid])=>{
+    const b=document.createElement("button");b.textContent=label;b.disabled=!valid.includes(cls);
+    b.onclick=()=>{addNode(type,token);closeMenu()};grid.appendChild(b);
+  });
+  const menu=$("#contextMenu");menu.classList.add("open");
+  menu.style.left=Math.min(window.innerWidth-260,Math.max(10,rect.left))+"px";
+  menu.style.top=Math.min(window.innerHeight-320,Math.max(50,rect.bottom+4))+"px";
+}
+function closeMenu(){$("#contextMenu").classList.remove("open")}
+document.addEventListener("click",e=>{if(!$("#contextMenu").contains(e.target))closeMenu()});
+
+function makeNode(type){
+  switch(type){
+    case "var":return{id:uid("var"),type:"var",kind:"state",name:"value",value:"0"};
+    case "createCanvas":return{id:uid("canvas"),type:"createCanvas",kind:"function",w:"800",h:"800",renderer:"P2D"};
+    case "background":return{id:uid("bg"),type:"background",kind:"draw",color:"#f7f4ea"};
+    case "rect":return{id:uid("rect"),type:"rect",kind:"draw",x:"100",y:"100",w:"180",h:"160",stroke:"#111111",strokeWeight:"12"};
+    case "ellipse":return{id:uid("ellipse"),type:"ellipse",kind:"draw",x:"200",y:"200",w:"120",h:"120"};
+    case "line":return{id:uid("line"),type:"line",kind:"draw",x1:"20",y1:"20",x2:"200",y2:"200"};
+    case "text":return{id:uid("text"),type:"text",kind:"draw",text:"MONDRIAN",x:"40",y:"80"};
+    case "if":return{id:uid("if"),type:"if",kind:"control",condition:"mouseX < width/2",then:[],else:[]};
+    case "loop":return{id:uid("loop"),type:"loop",kind:"control",iterator:"i",start:"0",end:"5",step:"1",body:[]};
+    case "event":return{id:uid("event"),type:"event",kind:"event",event:"keyPressed",body:[]};
+    case "function":return{id:uid("fn"),type:"function",kind:"function",name:"newFunction",args:"",body:[]};
+    case "transform":return{id:uid("transform"),type:"transform",kind:"transform",tx:"0",ty:"0",angle:"0",body:[]};
+    case "raw":return{id:uid("raw"),type:"raw",kind:"raw",code:"// p5.js"};
+  }
+}
+function addNode(type,token){
+  const n=makeNode(type);
+  if(token==="globals"){saveHistory(`added ${type} → STATE`);program.globals.push(n);selectedId=n.id;renderAll();return}
+  const dest=listFor(token);if(!dest)return;
+  saveHistory(`added ${type} → ${labelToken(token)}`);dest.push(n);selectedId=n.id;renderAll();
+}
+
+function compileNode(n){
+  const mark=`__trace(${JSON.stringify(n.id)}, ${JSON.stringify(n.type)});`;
+  switch(n.type){
+    case "createCanvas":return`${mark}\ncreateCanvas(${n.w}, ${n.h}${n.renderer==="WEBGL"?", WEBGL":""});`;
+    case "frameRate":return`${mark}\nframeRate(${n.fps});`;
+    case "background":return`${mark}\nbackground(${JSON.stringify(n.color)});`;
+    case "fill":return`${mark}\nfill(${JSON.stringify(n.color)});`;
+    case "fillExpr":return`${mark}\nfill(${n.expr});`;
+    case "rect":return`${mark}\nstroke(${JSON.stringify(n.stroke||"#111111")});\nstrokeWeight(${n.strokeWeight??1});\nrect(${n.x}, ${n.y}, ${n.w}, ${n.h});`;
+    case "ellipse":return`${mark}\nellipse(${n.x}, ${n.y}, ${n.w}, ${n.h});`;
+    case "line":return`${mark}\nline(${n.x1}, ${n.y1}, ${n.x2}, ${n.y2});`;
+    case "text":return`${mark}\ntext(${JSON.stringify(n.text)}, ${n.x}, ${n.y});`;
+    case "raw":return`${mark}\n${n.code||""}`;
+    case "call":return`${mark}\n${safe(n.name)}(${n.args||""});`;
+    case "if":return`${mark}\nif (${n.condition}) {\n${ind(compileList(n.then))}\n} else {\n${ind(compileList(n.else))}\n}`;
+    case "loop":return`${mark}\nfor (let ${safe(n.iterator)}=${n.start}; ${safe(n.iterator)}<${n.end}; ${safe(n.iterator)}+=${n.step}) {\n${ind(compileList(n.body))}\n}`;
+    case "transform":return`${mark}\npush();\ntranslate(${n.tx}, ${n.ty});\nrotate(${n.angle});\n${compileList(n.body)}\npop();`;
+    default:return`${mark}\n// ${n.type}`;
+  }
+}
+function compileList(list){return list.map(compileNode).join("\n")}
+function compileProgram(){
+  const globals=program.globals.map(n=>n.type==="var"?`let ${safe(n.name)} = ${n.value};`:n.type==="palette"?`const ${safe(n.name)} = ${JSON.stringify(n.colors)};`:"").join("\n");
+  const preload=compileList(program.preload),setup=compileList(program.setup),draw=compileList(program.draw);
+  const events=program.events.map(e=>`function ${safe(e.event)}() {\n${ind(compileList(e.body))}\n}`).join("\n\n");
+  const funcs=program.functions.map(f=>`function ${safe(f.name)}(${f.args||""}) {\n${ind(compileList(f.body))}\n}`).join("\n\n");
+  return `${globals}
+
+${preload.trim()?`function preload() {\n${ind(preload)}\n}\n\n`:""}function setup() {
+${ind(setup)}
+}
+
+function draw() {
+${ind(draw)}
+}
+
+${events}
+
+${funcs}`.trim();
+}
+function runtimeHTML(code){
+  const clean=code.replace(/<\/script/gi,"<\\/script");
+  return`<!doctype html><html><head>
+<link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
+<meta charset="utf-8"><style>
+html,body{margin:0;height:100%;background:#ddd8cb;display:grid;place-items:center;overflow:hidden}
+canvas{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 0 0 4px #111}
+</style><script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"><\/script></head>
+<body><script>
+let __lastNode=null;
+let __traceLog=[];
+function __trace(id,label){
+  __lastNode={id,label};
+  __traceLog.push({id,label});
+  if(__traceLog.length>16)__traceLog.shift();
+  parent.postMessage({type:"trace",id,label,trace:__traceLog.slice()},"*");
+}
+window.addEventListener("error",e=>{
+  parent.postMessage({
+    type:"fault",
+    message:e.message||"runtime error",
+    node:__lastNode,
+    trace:__traceLog.slice()
+  },"*");
+});
+${clean}
+setTimeout(()=>parent.postMessage({type:"phase",phase:"preload"},"*"),30);
+setTimeout(()=>parent.postMessage({type:"phase",phase:"setup"},"*"),130);
+setTimeout(()=>parent.postMessage({type:"phase",phase:"draw"},"*"),260);
+setInterval(()=>parent.postMessage({type:"frame",frame:(window.frameCount||0)},"*"),250);
+<\/script></body></html>`;
+}
+function run(){
+  const pre=preflight();
+  if(pre){
+    recentTrace=[];
+    raiseFault(pre,[]);
+    return;
+  }
+  faultRecord=null;faultRevision=null;recentTrace=[];
+  running=true;currentPhase="preload";currentNode=null;
+  $("#preview").srcdoc=runtimeHTML(compileProgram());
+  if(!outputOpen)setOutput(true);
+  updateRuntime();
+  renderArchitecture();
+}
+function stop(){
+  running=false;currentPhase=null;currentNode=null;
+  $("#preview").srcdoc=`<html><body style="margin:0;background:#ddd8cb"></body></html>`;
+  updateRuntime();renderArchitecture()
+}
+function updateRuntime(){
+  const btn=$("#runtimeBtn");
+  btn.textContent=running?"■ STOP":faultRecord?"FIX TO RUN":"RUN ▸";
+  btn.classList.toggle("stop",running);
+  btn.disabled=!!faultRecord && !running;
+  btn.title=faultRecord&&!running?"Change the broken condition or undo before running again.":"";
+  $("#runtimeState").textContent=running?"running":faultRecord?"stopped on broken condition":"stopped";
+  $("#programTruth").textContent=running?"running · actual trace visible":faultRecord?"stopped · obligation violated":"stopped · editable";
+}
+$("#runtimeBtn").onclick=()=>running?stop():run();
+
+window.addEventListener("message",e=>{
+  if(!e.data||typeof e.data!=="object")return;
+  if(e.data.type==="phase"){
+    currentPhase=e.data.phase;
+    renderArchitecture();
+  }
+  if(e.data.type==="trace"){
+    currentNode=e.data.id||null;
+    recentTrace=Array.isArray(e.data.trace)?e.data.trace.slice(-16):recentTrace;
+    if(running && currentPhase==="draw")renderArchitecture();
+  }
+  if(e.data.type==="frame"){
+    currentFrame=e.data.frame||0;currentPhase="draw";
+    $("#frameState").textContent=`frame ${currentFrame}`;
+    $("#drawTruth").textContent=`frame ${currentFrame}`;
+    if(currentFrame%10===0){
+      const speed=program.globals.find(x=>x.type==="var"&&x.name==="speed");
+      if(speed){
+        const el=document.querySelector(`[data-state-id="${speed.id}"]`);
+        if(el){el.classList.add("hot");setTimeout(()=>el.classList.remove("hot"),350)}
+      }
+    }
+  }
+  if(e.data.type==="fault"){
+    const node=e.data.node||{};
+    raiseFault({
+      nodeId:node.id||currentNode,
+      operation:node.label||"runtime",
+      condition:"current operation must complete without an uncaught runtime failure",
+      expected:"operation completes and control advances to the next valid operation",
+      observed:e.data.message||"runtime failure"
+    },Array.isArray(e.data.trace)?e.data.trace:recentTrace);
+  }
+});
+function setOutput(v){
+  outputOpen=v;$("#stage").classList.toggle("output-open",v);
+  $("#outputBtn").classList.toggle("on",v);$("#outputBtn").textContent=v?"CLOSE OUTPUT":"OUTPUT";
+}
+$("#outputBtn").onclick=()=>setOutput(!outputOpen);
+$("#codeBtn").onclick=()=>{$("#codeView").textContent=compileProgram();$("#codeOverlay").classList.add("open")};
+$("#closeCode").onclick=()=>$("#codeOverlay").classList.remove("open");
+$("#copyCode").onclick=async()=>{try{await navigator.clipboard.writeText(compileProgram());$("#copyCode").textContent="COPIED";setTimeout(()=>$("#copyCode").textContent="COPY",800)}catch{}};
+
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){e.preventDefault();undo()}
+  if(e.key==="Escape"){selectedId=null;closeMenu();$("#codeOverlay").classList.remove("open");renderArchitecture()}
+  if((e.metaKey||e.ctrlKey)&&e.key==="Enter"){e.preventDefault();running?stop():run()}
+});
+
+function renderAll(rerun=true){
+  if(faultRecord && faultRevision!==programSignature()){
+    faultRecord=null;faultRevision=null;currentNode=null;
+    updateRuntime();
+  }
+  renderArchitecture();renderChange();$("#codeView").textContent=compileProgram();
+  if(running&&rerun)run()
+}
+
+renderAll(false);updateRuntime();
+})();
+</script>
+</body>
+</html>

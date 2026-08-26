@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>blockp5 — one unknown at a time</title>
+<style>
+:root{
+  --bg:#f4f1e8;
+  --paper:#fffdf7;
+  --ink:#111;
+  --muted:#716d64;
+  --line:#cfc9bd;
+  --soft:#ece7db;
+  --accent:#111;
+  --bad:#a32020;
+  --good:#1f6a3a;
+  --header:44px;
+  --stepbar:42px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+#app{height:100dvh;display:grid;grid-template-rows:var(--header) 1fr var(--stepbar)}
+header{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;
+  border-bottom:1px solid var(--line);background:var(--paper)
+}
+.brand{font-weight:800;letter-spacing:-.04em;font-size:14px}
+.spacer{flex:1}
+button{
+  height:30px;border:1px solid #bbb4a8;background:#fff;color:#222;border-radius:3px;padding:0 9px
+}
+button:hover{background:#f0ece2}
+button.primary{background:#111;color:#fff;border-color:#111}
+button:disabled{opacity:.35;cursor:default}
+#runState{
+  font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);
+  min-width:90px;text-align:right
+}
+
+main{
+  min-width:0;min-height:0;
+  display:grid;
+  grid-template-columns:minmax(360px,1.08fr) minmax(320px,.92fr);
+}
+.panel{min-width:0;min-height:0;background:var(--paper)}
+#left{
+  display:grid;grid-template-rows:32px minmax(0,1fr) 172px;
+  border-right:1px solid var(--line)
+}
+#right{
+  display:grid;grid-template-rows:32px minmax(0,1fr) 172px;
+}
+.panelHead{
+  display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);
+  font-size:10px;color:var(--muted);background:#faf8f1
+}
+.panelHead strong{color:#111;letter-spacing:.06em}
+.panelHead .right{margin-left:auto}
+#sourceWrap{
+  min-height:0;overflow:auto;padding:14px 16px 28px;background:#fffefb
+}
+#fullSketch{
+  margin:0;
+  font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  white-space:pre-wrap
+}
+.codeLine{
+  display:block;min-height:21px;padding:0 5px;border-left:3px solid transparent
+}
+.codeLine.current{
+  background:#f0ece2;border-left-color:#111
+}
+.codeLine.future{color:#b0aaa0}
+.codeLine.past{color:#57534c}
+.token{
+  display:inline-block;border-bottom:1px dotted #999;cursor:pointer;border-radius:2px;padding:0 1px
+}
+.token:hover,.token.selected{background:#ded8ca;border-bottom-color:#111}
+.token.literal{font-weight:750}
+.token.owner-js::after,
+.token.owner-p5::after,
+.token.owner-you::after,
+.token.owner-browser::after{
+  content:attr(data-owner);display:inline-block;margin-left:4px;
+  font:8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:#8d887e;vertical-align:middle
+}
+#semanticCard{
+  min-height:0;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;background:#faf8f2
+}
+.cardCol{padding:12px 14px;min-width:0}
+.cardCol + .cardCol{border-left:1px solid var(--line)}
+.kicker{font:800 8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.1em;color:#777168;margin-bottom:6px}
+#does{
+  font-size:15px;line-height:1.3;font-weight:750;letter-spacing:-.02em
+}
+#given,#detailText{
+  margin-top:7px;color:#625e57;font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+#valueTable{display:grid;grid-template-columns:76px 1fr;gap:0;margin-top:3px}
+#valueTable div{
+  min-height:23px;padding:4px 5px;border-bottom:1px solid #e1ddd2;
+  font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+#valueTable div:nth-child(odd){color:#777168}
+
+#stage{
+  min-width:0;min-height:0;position:relative;overflow:hidden;background:#ddd9d0
+}
+#runner{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f4f1e8}
+#runtimeOverlay{
+  position:absolute;left:8px;top:8px;z-index:4;
+  background:rgba(255,253,247,.94);border:1px solid #aaa49a;padding:7px 8px;
+  font:9px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  display:none;max-width:250px
+}
+#runtimeOverlay.show{display:block}
+#axisOverlay{
+  position:absolute;z-index:3;pointer-events:none;display:none;
+  border-left:1px solid #333;border-top:1px solid #333
+}
+#axisOverlay.show{display:block}
+.axisLabel{position:absolute;font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#222;background:rgba(255,253,247,.86);padding:2px 3px}
+.axisLabel.x{top:-18px;right:0}
+.axisLabel.y{left:-42px;bottom:0}
+.origin{position:absolute;left:-2px;top:-17px;font:8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(255,253,247,.9);padding:2px}
+.gridLineV,.gridLineH{position:absolute;background:rgba(40,40,40,.18)}
+.gridLineV{top:0;bottom:0;width:1px}
+.gridLineH{left:0;right:0;height:1px}
+.gridNumX,.gridNumY{position:absolute;font:8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#333;background:rgba(255,253,247,.84);padding:1px 2px}
+.gridNumX{top:-14px;transform:translateX(-50%)}
+.gridNumY{left:-31px;transform:translateY(-50%)}
+#emptyCanvas{
+  position:absolute;inset:0;display:grid;place-items:center;color:#8b867e;
+  font:10px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:none
+}
+
+#experiment{
+  border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;background:#faf8f2
+}
+.expCol{padding:12px 14px;min-width:0}
+.expCol + .expCol{border-left:1px solid var(--line)}
+.expTitle{font:800 8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.1em;color:#777168;margin-bottom:7px}
+#tryRow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+#tryInput{
+  width:84px;height:30px;border:1px solid #aaa49a;border-radius:3px;background:#fff;padding:0 7px;
+  font:12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+#predictionChoices{display:flex;gap:5px;flex-wrap:wrap}
+.pred{
+  height:28px;padding:0 8px;background:#fff;color:#333;border-color:#bbb5aa;font-size:10px
+}
+.pred.chosen{background:#111;color:#fff;border-color:#111}
+#predictionResult{
+  margin-top:8px;min-height:18px;font:10px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#625e57
+}
+#predictionResult.good{color:var(--good)}
+#predictionResult.bad{color:var(--bad)}
+#tryHint{margin-top:7px;color:#777168;font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+#stepBar{
+  min-width:0;display:flex;align-items:center;gap:0;border-top:1px solid var(--line);background:#faf8f2
+}
+#stepPrev,#stepNext{
+  height:100%;border:0;border-radius:0;background:transparent;color:#222;padding:0 13px
+}
+#stepPrev:hover,#stepNext:hover{background:#ece8de}
+#stepCounter{
+  width:64px;text-align:center;font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#777168
+}
+#stepTitle{
+  flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:11px;font-weight:700
+}
+#stepRule{
+  margin-right:12px;color:#777168;font:9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+
+@media(max-width:820px){
+  :root{--header:48px;--stepbar:44px}
+  main{display:block;position:relative}
+  #left,#right{position:absolute;inset:0;border-right:0}
+  body.mobile-result #left{display:none}
+  body:not(.mobile-result) #right{display:none}
+  #mobileToggle{display:inline-block}
+  #left{grid-template-rows:32px minmax(0,1fr) 200px}
+  #right{grid-template-rows:32px minmax(0,1fr) 200px}
+  #semanticCard,#experiment{grid-template-columns:1fr}
+  .cardCol + .cardCol,.expCol + .expCol{border-left:0;border-top:1px solid var(--line)}
+  #runState{display:none}
+}
+@media(min-width:821px){#mobileToggle{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">blockp5</div>
+    <button id="runBtn" class="primary">RUN</button>
+    <button id="resetTryBtn" hidden>RESET VALUE</button>
+    <div class="spacer"></div>
+    <button id="mobileToggle">RESULT</button>
+    <div id="runState">NOT RUN</div>
+  </header>
+
+  <main>
+    <section id="left" class="panel">
+      <div class="panelHead">
+        <strong>SKETCH.JS</strong>
+        <span>exact code for this step</span>
+        <span class="right">click a token</span>
+      </div>
+
+      <div id="sourceWrap">
+        <pre id="fullSketch"></pre>
+      </div>
+
+      <div id="semanticCard">
+        <div class="cardCol">
+          <div class="kicker">DOES</div>
+          <div id="does"></div>
+          <div id="given"></div>
+        </div>
+        <div class="cardCol">
+          <div class="kicker">SELECTED</div>
+          <div id="detailText">Click a word, number, or punctuation mark.</div>
+          <div id="valueTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="right" class="panel">
+      <div class="panelHead">
+        <strong>RESULT</strong>
+        <span id="resultLabel">what this code makes</span>
+        <span class="right" id="runtimeShort"></span>
+      </div>
+
+      <div id="stage">
+        <iframe id="runner" sandbox="allow-scripts"></iframe>
+        <div id="runtimeOverlay"></div>
+        <div id="axisOverlay"></div>
+        <div id="emptyCanvas">RUN THIS STEP</div>
+      </div>
+
+      <div id="experiment">
+        <div class="expCol">
+          <div class="expTitle">TRY</div>
+          <div id="tryRow">
+            <span id="tryLabel"></span>
+            <input id="tryInput" type="number">
+            <button id="applyTry">APPLY</button>
+          </div>
+          <div id="tryHint"></div>
+        </div>
+
+        <div class="expCol">
+          <div class="expTitle">PREDICT</div>
+          <div id="predictionChoices"></div>
+          <div id="predictionResult"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="stepBar">
+    <button id="stepPrev">←</button>
+    <div id="stepCounter"></div>
+    <div id="stepTitle"></div>
+    <div id="stepRule"></div>
+    <button id="stepNext">→</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const P5 = "https://cdn.jsdelivr.net/npm/p5@2.0.4/lib/p5.min.js";
+
+  const steps = [
+    {
+      title:"RUN — what starts moving?",
+      code:"",
+      current:0,
+      does:"RUN creates a fresh browser world for the sketch.",
+      given:"GIVEN · a browser, JavaScript, and the p5.js library.",
+      rule:"ONE UNKNOWN · execution",
+      result:"nothing is drawn yet",
+      runtimeOnly:true,
+      runtimeHtml:true,
+      try:null,
+      tokens:[
+        {text:"RUN",kind:"operation",owner:"YOU",detail:"Starts a fresh sketch runtime.",rows:[
+          ["WHO PRESSES IT","you"],
+          ["WHAT IT DOES","loads p5.js, then the sketch"],
+          ["WHAT IT DOES NOT DO","draw by itself"]
+        ]}
+      ]
+    },
+    {
+      title:"setup() — one startup callback",
+      code:`function setup() {
+}`,
+      current:1,
+      does:"Installs one operation named setup(). p5 calls it once.",
+      given:"GIVEN · p5.js is already loaded and looking for this exact name. If you do not call createCanvas(), p5 supplies a small default canvas.",
+      rule:"ONE UNKNOWN · callback",
+      result:"setup runs once; p5 supplies its default canvas",
+      runtimeOnly:true,
+      tokens:[
+        {match:"function",owner:"JAVASCRIPT",detail:"A JavaScript keyword that begins a function declaration.",rows:[
+          ["KIND","language keyword"],["USE","group operations under a callable name"]
+        ]},
+        {match:"setup",owner:"YOU / p5",detail:"You write this name. p5 recognizes this exact name and calls it once.",rows:[
+          ["CALLED BY","p5"],["WHEN","once, when the sketch starts"],["YOU CALL IT?","no"]
+        ]},
+        {match:"()",owner:"JAVASCRIPT",detail:"The input slot for this function. It is empty here.",rows:[
+          ["INPUTS","none declared"]
+        ]},
+        {match:"{",owner:"JAVASCRIPT",detail:"Operations belonging to setup begin here.",rows:[
+          ["ROLE","begin function body"]
+        ]}
+      ]
+    },
+    {
+      title:"createCanvas() — make a drawing surface",
+      code:`function setup() {
+  createCanvas(400, 400);
+}`,
+      current:2,
+      does:"Makes one drawing surface 400 logical pixels wide and 400 high.",
+      given:"GIVEN · setup() is running and p5 provides createCanvas().",
+      rule:"ONE UNKNOWN · drawing surface",
+      result:"a 400 × 400 canvas",
+      canvas:true,
+      try:{which:"width",base:400,value:800,label:"width 400 →",correct:"wider",choices:["wider","taller","darker","moves right"],hint:"Only the first 400 changes."},
+      tokens:[
+        {match:"createCanvas",owner:"p5",detail:"A p5 operation that creates the sketch's drawing surface.",rows:[
+          ["PROVIDED BY","p5"],["CHANGES","canvas"],["DEFAULT RENDERER","P2D"]
+        ]},
+        {occurrence:1,match:"400",owner:"YOU",detail:"This 400 controls canvas width.",rows:[
+          ["TYPE","number"],["ROLE","width"],["UNIT","logical pixels"],["DIRECTION","across"],["CHANGE IT","canvas gets wider or narrower"],["DOES NOT CHANGE","height"]
+        ]},
+        {occurrence:2,match:"400",owner:"YOU",detail:"This 400 controls canvas height.",rows:[
+          ["TYPE","number"],["ROLE","height"],["UNIT","logical pixels"],["DIRECTION","down"],["CHANGE IT","canvas gets taller or shorter"],["DOES NOT CHANGE","width"]
+        ]},
+        {match:",",owner:"JAVASCRIPT",detail:"Ends one input and begins the next.",rows:[
+          ["ROLE","separate arguments"]
+        ]},
+        {match:";",owner:"JAVASCRIPT",detail:"Marks the end of this operation.",rows:[
+          ["ROLE","statement end"]
+        ]}
+      ]
+    },
+    {
+      title:"coordinates — where is a place?",
+      code:`function setup() {
+  createCanvas(400, 400);
+}`,
+      current:2,
+      does:"The canvas now has an address system: x means across; y means down.",
+      given:"GIVEN · a 400 × 400 canvas already exists.",
+      rule:"ONE UNKNOWN · coordinate space",
+      result:"the same canvas, now with its coordinate rules exposed",
+      canvas:true,
+      axes:true,
+      try:null,
+      tokens:[
+        {match:"400",occurrence:1,owner:"YOU",detail:"The far horizontal extent is 400 logical pixels.",rows:[
+          ["AXIS","x"],["QUESTION","how far across?"],["START","0"],["END","400"]
+        ]},
+        {match:"400",occurrence:2,owner:"YOU",detail:"The far vertical extent is 400 logical pixels.",rows:[
+          ["AXIS","y"],["QUESTION","how far down?"],["START","0"],["END","400"]
+        ]}
+      ]
+    },
+    {
+      title:"point() — make one position visible",
+      code:`function setup() {
+  createCanvas(400, 400);
+  strokeWeight(8);
+  point(200, 200);
+}`,
+      current:4,
+      does:"Draws one point at x = 200 across and y = 200 down.",
+      given:"GIVEN · the canvas coordinate system already exists.",
+      rule:"ONE UNKNOWN · position",
+      result:"one point at the center",
+      canvas:true,
+      axes:true,
+      try:{which:"pointX",base:200,value:300,label:"x 200 →",correct:"right",choices:["left","right","up","down"],hint:"Change only x. Predict the direction."},
+      tokens:[
+        {match:"point",owner:"p5",detail:"Draw one visible location.",rows:[
+          ["PROVIDED BY","p5"],["INPUT 1","x"],["INPUT 2","y"]
+        ]},
+        {match:"200",occurrence:1,owner:"YOU",detail:"This 200 is the point's x position.",rows:[
+          ["ROLE","x"],["QUESTION","how far across?"],["UNIT","logical pixels"],["CHANGE +100","moves right"]
+        ]},
+        {match:"200",occurrence:2,owner:"YOU",detail:"This 200 is the point's y position.",rows:[
+          ["ROLE","y"],["QUESTION","how far down?"],["UNIT","logical pixels"],["CHANGE +100","moves down"]
+        ]}
+      ]
+    },
+    {
+      title:"background() — numbers can encode brightness",
+      code:`function setup() {
+  createCanvas(400, 400);
+  background(220);
+}`,
+      current:3,
+      does:"Sets every canvas pixel to a light gray.",
+      given:"GIVEN · grayscale values run from 0 dark to 255 light.",
+      rule:"ONE UNKNOWN · grayscale",
+      result:"a light gray 400 × 400 canvas",
+      canvas:true,
+      try:{which:"gray",base:220,value:0,label:"brightness 220 →",correct:"darker",choices:["darker","lighter","wider","moves down"],hint:"0 is black. 255 is white."},
+      tokens:[
+        {match:"background",owner:"p5",detail:"Changes all pixels in the current canvas.",rows:[
+          ["PROVIDED BY","p5"],["CHANGES","every canvas pixel"]
+        ]},
+        {match:"220",owner:"YOU",detail:"This number controls grayscale brightness.",rows:[
+          ["TYPE","number"],["ROLE","brightness"],["RANGE","0–255"],["0","black"],["255","white"],["CHANGE LOWER","darker"]
+        ]}
+      ]
+    },
+    {
+      title:"draw() — p5 calls you again",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+}`,
+      current:5,
+      does:"Installs draw(). p5 calls it again and again after setup().",
+      given:"GIVEN · the browser supplies frame timing; p5 uses it to schedule draw().",
+      rule:"ONE UNKNOWN · repeated callback",
+      result:"the canvas is repainted light gray each frame",
+      canvas:true,
+      runtimeOverlay:true,
+      try:null,
+      tokens:[
+        {match:"draw",owner:"YOU / p5",detail:"You provide draw(). p5 provides the repeated calls.",rows:[
+          ["CALLED BY","p5"],["WHEN","after setup"],["HOW OFTEN","roughly once per frame"],["IS draw A LOOP?","no"]
+        ]},
+        {match:"background",owner:"p5",detail:"Because this call is inside draw(), it runs every frame.",rows:[
+          ["RUNS","every frame"],["CONSEQUENCE","previous frame is painted over"]
+        ]}
+      ]
+    },
+    {
+      title:"frame — repeated calls create time",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+}`,
+      current:5,
+      does:"Each completed call to draw() produces another frame.",
+      given:"GIVEN · p5 keeps scheduling draw() while the sketch is running.",
+      rule:"ONE UNKNOWN · frame",
+      result:"frameCount increases while the picture is redrawn",
+      canvas:true,
+      runtimeOverlay:true,
+      try:null,
+      tokens:[
+        {match:"draw",owner:"YOU / p5",detail:"One call to draw() is one opportunity to produce the current picture.",rows:[
+          ["CALL 1","frame 1"],["CALL 2","frame 2"],["CALL 3","frame 3"]
+        ]}
+      ]
+    },
+    {
+      title:"mouseX / mouseY — outside events become values",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+  point(mouseX, mouseY);
+}`,
+      current:6,
+      does:"Reads the current pointer position and draws a point there.",
+      given:"GIVEN · the browser reports pointer movement; p5 updates mouseX and mouseY.",
+      rule:"ONE UNKNOWN · changing runtime value",
+      result:"move the pointer over the canvas",
+      canvas:true,
+      axes:true,
+      runtimeOverlay:true,
+      try:null,
+      tokens:[
+        {match:"mouseX",owner:"p5 / BROWSER",detail:"A number p5 keeps updating from pointer movement.",rows:[
+          ["ROLE","current x"],["QUESTION","how far across?"],["WRITTEN BY","p5 from browser input"],["READ BY","draw()"]
+        ]},
+        {match:"mouseY",owner:"p5 / BROWSER",detail:"A number p5 keeps updating from pointer movement.",rows:[
+          ["ROLE","current y"],["QUESTION","how far down?"],["WRITTEN BY","p5 from browser input"],["READ BY","draw()"]
+        ]}
+      ]
+    },
+    {
+      title:"circle() — position plus size",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+  circle(200, 200, 50);
+}`,
+      current:6,
+      does:"Draws a circle centered at (200,200) with diameter 50.",
+      given:"GIVEN · x and y already name a position.",
+      rule:"ONE UNKNOWN · size",
+      result:"one centered circle",
+      canvas:true,
+      try:{which:"diameter",base:50,value:100,label:"diameter 50 →",correct:"larger",choices:["larger","smaller","moves right","darker"],hint:"Change only diameter."},
+      tokens:[
+        {match:"circle",owner:"p5",detail:"Draw a circle from center x, center y, and diameter.",rows:[
+          ["ANCHOR","center"],["INPUT 1","center x"],["INPUT 2","center y"],["INPUT 3","diameter"]
+        ]},
+        {match:"200",occurrence:1,owner:"YOU",detail:"Circle center x.",rows:[["ROLE","center x"],["QUESTION","how far across?"]]},
+        {match:"200",occurrence:2,owner:"YOU",detail:"Circle center y.",rows:[["ROLE","center y"],["QUESTION","how far down?"]]},
+        {match:"50",owner:"YOU",detail:"Full distance across the circle.",rows:[
+          ["ROLE","diameter"],["UNIT","logical pixels"],["RADIUS","25"],["CHANGE IT","circle grows or shrinks"]
+        ]}
+      ]
+    },
+    {
+      title:"rect() — the anchor convention can change",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+  rect(100, 100, 200, 150);
+}`,
+      current:6,
+      does:"Draws a rectangle from a top-left corner, width, and height.",
+      given:"GIVEN · not every shape uses x,y the same way.",
+      rule:"ONE UNKNOWN · anchor convention",
+      result:"one rectangle",
+      canvas:true,
+      try:null,
+      tokens:[
+        {match:"rect",owner:"p5",detail:"By default, rect() uses x,y as its top-left corner.",rows:[
+          ["ANCHOR","top-left"],["INPUT 1","x"],["INPUT 2","y"],["INPUT 3","width"],["INPUT 4","height"]
+        ]},
+        {match:"100",occurrence:1,owner:"YOU",detail:"Rectangle's left edge.",rows:[["ROLE","x"],["ANCHOR PART","top-left"]]},
+        {match:"100",occurrence:2,owner:"YOU",detail:"Rectangle's top edge.",rows:[["ROLE","y"],["ANCHOR PART","top-left"]]},
+        {match:"200",owner:"YOU",detail:"Rectangle width.",rows:[["ROLE","width"],["DIRECTION","across"]]},
+        {match:"150",owner:"YOU",detail:"Rectangle height.",rows:[["ROLE","height"],["DIRECTION","down"]]}
+      ]
+    },
+    {
+      title:"fill() — an operation can change state without drawing",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+  fill(255, 0, 0);
+  circle(200, 200, 80);
+}`,
+      current:6,
+      does:"Changes the current fill to red. The later circle uses that state.",
+      given:"GIVEN · some operations change drawing state instead of making pixels immediately.",
+      rule:"ONE UNKNOWN · drawing state",
+      result:"one red circle",
+      canvas:true,
+      try:null,
+      tokens:[
+        {match:"fill",owner:"p5",detail:"Changes the fill color used by shapes that come after it.",rows:[
+          ["DRAWS NOW?","no"],["CHANGES","current fill state"],["USED BY","later shapes"]
+        ]},
+        {match:"255",owner:"YOU",detail:"Maximum red channel.",rows:[["ROLE","red"],["RANGE","0–255"]]},
+        {match:"0",occurrence:1,owner:"YOU",detail:"No green.",rows:[["ROLE","green"],["RANGE","0–255"]]},
+        {match:"0",occurrence:2,owner:"YOU",detail:"No blue.",rows:[["ROLE","blue"],["RANGE","0–255"]]}
+      ]
+    },
+    {
+      title:"order — earlier and later operations make different worlds",
+      code:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+
+  fill(255, 0, 0);
+  circle(180, 200, 120);
+
+  fill(0, 0, 255);
+  circle(230, 200, 120);
+}`,
+      current:7,
+      does:"Later drawing operations cover earlier pixels where shapes overlap.",
+      given:"GIVEN · statements execute in sequence.",
+      rule:"ONE UNKNOWN · order",
+      result:"the blue circle appears over the red circle",
+      canvas:true,
+      try:null,
+      tokens:[
+        {match:"fill",occurrence:1,owner:"p5",detail:"Sets red before the first circle.",rows:[["ORDER","before red circle"]]},
+        {match:"fill",occurrence:2,owner:"p5",detail:"Sets blue before the second circle.",rows:[["ORDER","after red circle"],["CONSEQUENCE","blue is drawn later"]]}
+      ]
+    },
+    {
+      title:"background placement — same operation, different time",
+      code:`function setup() {
+  createCanvas(400, 400);
+  background(220);
+}
+
+function draw() {
+  circle(mouseX, mouseY, 20);
+}`,
+      current:3,
+      does:"background() runs once, so new circles accumulate instead of being erased each frame.",
+      given:"GIVEN · setup runs once; draw runs repeatedly.",
+      rule:"ONE UNKNOWN · lifecycle placement",
+      result:"move the pointer: the trail remains",
+      canvas:true,
+      runtimeOverlay:true,
+      try:null,
+      tokens:[
+        {match:"background",owner:"p5",detail:"This call lives in setup(), so it runs once.",rows:[
+          ["LOCATION","setup()"],["RUNS","once"],["CONSEQUENCE","later frames are not cleared"]
+        ]}
+      ]
+    }
+  ];
+
+  const runner = document.querySelector("#runner");
+  const fullSketch = document.querySelector("#fullSketch");
+  const does = document.querySelector("#does");
+  const given = document.querySelector("#given");
+  const detailText = document.querySelector("#detailText");
+  const valueTable = document.querySelector("#valueTable");
+  const tryRow = document.querySelector("#tryRow");
+  const tryLabel = document.querySelector("#tryLabel");
+  const tryInput = document.querySelector("#tryInput");
+  const tryHint = document.querySelector("#tryHint");
+  const applyTry = document.querySelector("#applyTry");
+  const predictionChoices = document.querySelector("#predictionChoices");
+  const predictionResult = document.querySelector("#predictionResult");
+  const runBtn = document.querySelector("#runBtn");
+  const resetTryBtn = document.querySelector("#resetTryBtn");
+  const runState = document.querySelector("#runState");
+  const emptyCanvas = document.querySelector("#emptyCanvas");
+  const axisOverlay = document.querySelector("#axisOverlay");
+  const runtimeOverlay = document.querySelector("#runtimeOverlay");
+  const runtimeShort = document.querySelector("#runtimeShort");
+  const resultLabel = document.querySelector("#resultLabel");
+  const stepPrev = document.querySelector("#stepPrev");
+  const stepNext = document.querySelector("#stepNext");
+  const stepCounter = document.querySelector("#stepCounter");
+  const stepTitle = document.querySelector("#stepTitle");
+  const stepRule = document.querySelector("#stepRule");
+  const mobileToggle = document.querySelector("#mobileToggle");
+
+  let stepIndex = 0;
+  let selectedTokenIndex = null;
+  let chosenPrediction = null;
+  let tryValue = null;
+  let runId = 0;
+  let liveState = {};
+
+  function escapeHtml(s){
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  }
+
+  function findOccurrence(line, needle, occurrence){
+    let from=0, found=-1;
+    const wanted=occurrence||1;
+    for(let n=0;n<wanted;n++){
+      found=line.indexOf(needle,from);
+      if(found<0)return null;
+      from=found+needle.length;
+    }
+    return {start:found,end:found+needle.length};
+  }
+
+  function renderCode(){
+    const step=steps[stepIndex];
+    if(!step.code){
+      fullSketch.innerHTML=`<span class="codeLine current"><span class="token selected owner-you" data-owner="YOU">RUN</span></span>`;
+      return;
+    }
+
+    const lines=step.code.split("\n");
+    const tokenRanges=[];
+
+    step.tokens.forEach((tok,idx)=>{
+      for(let li=0;li<lines.length;li++){
+        const r=findOccurrence(lines[li],tok.match,tok.occurrence||1);
+        if(r){
+          // avoid matching the same token descriptor on every line unless occurrence is line-specific.
+          if(tok.match==="draw" && !/function draw/.test(lines[li])) continue;
+          if(tok.match==="setup" && !/function setup/.test(lines[li])) continue;
+          tokenRanges.push({...r,line:li,idx,tok});
+          break;
+        }
+      }
+    });
+
+    fullSketch.innerHTML=lines.map((line,li)=>{
+      let status=li===step.current?"current":li<step.current?"past":"future";
+      const ranges=tokenRanges.filter(r=>r.line===li).sort((a,b)=>a.start-b.start);
+      let out="",cursor=0;
+      for(const r of ranges){
+        if(r.start<cursor)continue;
+        out+=escapeHtml(line.slice(cursor,r.start));
+        const ownerClass=(r.tok.owner||"").includes("p5")?"owner-p5":
+          (r.tok.owner||"").includes("JAVASCRIPT")?"owner-js":
+          (r.tok.owner||"").includes("BROWSER")?"owner-browser":"owner-you";
+        const literal=/^-?\d/.test(r.tok.match||"")?" literal":"";
+        const sel=r.idx===selectedTokenIndex?" selected":"";
+        out+=`<span class="token ${ownerClass}${literal}${sel}" data-token="${r.idx}" data-owner="${escapeHtml(r.tok.owner||"")}">${escapeHtml(line.slice(r.start,r.end))}</span>`;
+        cursor=r.end;
+      }
+      out+=escapeHtml(line.slice(cursor));
+      return `<span class="codeLine ${status}">${out || " "}</span>`;
+    }).join("");
+
+    fullSketch.querySelectorAll(".token").forEach(el=>{
+      el.addEventListener("click",()=>selectToken(Number(el.dataset.token)));
+    });
+  }
+
+  function selectToken(idx){
+    selectedTokenIndex=idx;
+    const tok=steps[stepIndex].tokens[idx];
+    detailText.textContent=tok.detail || "";
+    valueTable.innerHTML=(tok.rows||[]).map(([a,b])=>`<div>${escapeHtml(a)}</div><div>${escapeHtml(b)}</div>`).join("");
+    renderCode();
+  }
+
+  function renderExperiment(){
+    const exp=steps[stepIndex].try;
+    chosenPrediction=null;
+    predictionResult.textContent="";
+    predictionResult.className="";
+    resetTryBtn.hidden=true;
+
+    if(!exp){
+      tryLabel.textContent="No change test on this step.";
+      tryInput.style.display="none";
+      applyTry.style.display="none";
+      tryHint.textContent="";
+      predictionChoices.innerHTML="";
+      return;
+    }
+
+    tryValue=exp.value;
+    tryLabel.textContent=exp.label;
+    tryInput.style.display="";
+    applyTry.style.display="";
+    tryInput.value=exp.value;
+    tryHint.textContent=exp.hint||"";
+    predictionChoices.innerHTML=exp.choices.map(c=>`<button class="pred" data-choice="${escapeHtml(c)}">${escapeHtml(c.toUpperCase())}</button>`).join("");
+    predictionChoices.querySelectorAll(".pred").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        chosenPrediction=btn.dataset.choice;
+        predictionChoices.querySelectorAll(".pred").forEach(x=>x.classList.toggle("chosen",x===btn));
+        predictionResult.textContent="Prediction recorded. Apply the value, then run.";
+        predictionResult.className="";
+      });
+    });
+  }
+
+  function transformedCode(){
+    const step=steps[stepIndex];
+    if(!step.try || tryValue==null)return step.code;
+
+    let code=step.code;
+    const v=Number(tryValue);
+
+    switch(step.try.which){
+      case "width":
+        code=code.replace("createCanvas(400, 400)",`createCanvas(${v}, 400)`);
+        break;
+      case "pointX":
+        code=code.replace("point(200, 200)",`point(${v}, 200)`);
+        break;
+      case "gray":
+        code=code.replace("background(220)",`background(${v})`);
+        break;
+      case "diameter":
+        code=code.replace("circle(200, 200, 50)",`circle(200, 200, ${v})`);
+        break;
+    }
+    return code;
+  }
+
+  function runtimeDoc(code,id){
+    const safe=code.replace(/<\/script/gi,"<\\/script");
+    return `<!doctype html>
+<html>
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:auto;background:#ddd9d0}
+body{display:grid;place-items:center}
+canvas{display:block;max-width:100%;max-height:100%;box-shadow:0 0 0 1px #777}
+</style>
+<script>
+(()=>{
+ const RID=${id};
+ function send(type,payload){parent.postMessage({source:"blockp5-lesson",id:RID,type,payload},"*")}
+ window.addEventListener("error",e=>send("error",{message:e.message,line:e.lineno||1}));
+ window.__bpSend=send;
+})();
+<\/script>
+<script src="${P5}" onerror="window.__bpSend('error',{message:'p5.js did not load',line:1})"><\/script>
+<script>
+${safe}
+<\/script>
+<script>
+(()=>{
+ let last=0;
+ function pump(t){
+   if(t-last>140){
+     let state={};
+     try{
+       state={
+         p5:typeof window.p5==="function",
+         setup:typeof window.setup==="function",
+         draw:typeof window.draw==="function",
+         width:typeof window.width==="number"?window.width:null,
+         height:typeof window.height==="number"?window.height:null,
+         frame:typeof window.frameCount==="number"?window.frameCount:null,
+         mouseX:typeof window.mouseX==="number"?Math.round(window.mouseX):null,
+         mouseY:typeof window.mouseY==="number"?Math.round(window.mouseY):null,
+         fps:typeof window.frameRate==="function"?Math.round(window.frameRate()):null,
+         canvas:!!document.querySelector("canvas"),
+         canvasRect:(()=>{
+           const c=document.querySelector("canvas");
+           if(!c)return null;
+           const r=c.getBoundingClientRect();
+           return {left:r.left,top:r.top,width:r.width,height:r.height};
+         })()
+       };
+     }catch(_){}
+     parent.postMessage({source:"blockp5-lesson",id:${id},type:"state",payload:state},"*");
+     last=t;
+   }
+   requestAnimationFrame(pump);
+ }
+ requestAnimationFrame(pump);
+})();
+<\/script>
+</head>
+<body></body>
+</html>`;
+  }
+
+  function run(){
+    const step=steps[stepIndex];
+    runId++;
+    runState.textContent="STARTING";
+    emptyCanvas.style.display="none";
+
+    if(step.runtimeOnly && !step.code){
+      runner.srcdoc=`<!doctype html><html><body style="margin:0;display:grid;place-items:center;height:100vh;background:#f4f1e8;font-family:monospace;color:#555">browser ✓<br>JavaScript ✓<br>p5.js loads when a sketch needs it</body></html>`;
+      runState.textContent="READY";
+      return;
+    }
+
+    runner.srcdoc=runtimeDoc(transformedCode(),runId);
+    resetTryBtn.hidden=!step.try;
+  }
+
+  function renderRuntime(){
+    const step=steps[stepIndex];
+    const s=liveState;
+    const showAxes=!!step.axes && !!s.canvasRect;
+    axisOverlay.classList.toggle("show",showAxes);
+
+    if(showAxes){
+      const r=s.canvasRect;
+      Object.assign(axisOverlay.style,{
+        left:r.left+"px",
+        top:r.top+"px",
+        width:r.width+"px",
+        height:r.height+"px",
+        right:"auto",
+        bottom:"auto"
+      });
+
+      const w=Number(s.width)||400;
+      const h=Number(s.height)||400;
+      const marks=[0,.25,.5,.75,1];
+
+      axisOverlay.innerHTML=
+        `<div class="origin">(0,0)</div>`+
+        `<div class="axisLabel x">+x → across</div>`+
+        `<div class="axisLabel y">+y ↓ down</div>`+
+        marks.map((p,i)=>{
+          const x=Math.round(w*p);
+          return `<div class="gridLineV" style="left:${p*100}%"></div>`+
+                 `<div class="gridNumX" style="left:${p*100}%">${x}</div>`;
+        }).join("")+
+        marks.map((p,i)=>{
+          const y=Math.round(h*p);
+          return `<div class="gridLineH" style="top:${p*100}%"></div>`+
+                 `<div class="gridNumY" style="top:${p*100}%">${y}</div>`;
+        }).join("");
+    }else{
+      axisOverlay.innerHTML="";
+    }
+
+    if(step.runtimeOverlay){
+      runtimeOverlay.classList.add("show");
+      runtimeOverlay.innerHTML=[
+        `p5.js <b>${s.p5?"LOADED":"..."}</b>`,
+        `setup() <b>${s.setup?"FOUND":"—"}</b>`,
+        `draw() <b>${s.draw?"FOUND":"—"}</b>`,
+        `canvas <b>${s.canvas?`${s.width} × ${s.height}`:"—"}</b>`,
+        `frame <b>${s.frame ?? "—"}</b>`,
+        `mouse <b>${s.mouseX ?? "—"}, ${s.mouseY ?? "—"}</b>`
+      ].join("<br>");
+    }else{
+      runtimeOverlay.classList.remove("show");
+      runtimeOverlay.innerHTML="";
+    }
+
+    runtimeShort.textContent=s.canvas ? `${s.width}×${s.height}` : "";
+  }
+
+  function renderStep(){
+    selectedTokenIndex=null;
+    liveState={};
+    runner.srcdoc="";
+    emptyCanvas.style.display="grid";
+    runState.textContent="NOT RUN";
+    runtimeOverlay.classList.remove("show");
+    axisOverlay.classList.remove("show");
+
+    const step=steps[stepIndex];
+    does.textContent=step.does;
+    given.textContent=step.given;
+    detailText.textContent="Click a word, number, or punctuation mark.";
+    valueTable.innerHTML="";
+    resultLabel.textContent=step.result;
+    stepCounter.textContent=`${String(stepIndex).padStart(2,"0")} / ${String(steps.length-1).padStart(2,"0")}`;
+    stepTitle.textContent=step.title;
+    stepRule.textContent=step.rule;
+    stepPrev.disabled=stepIndex===0;
+    stepNext.disabled=stepIndex===steps.length-1;
+
+    renderCode();
+    renderExperiment();
+    renderRuntime();
+
+    // Auto-select first token to avoid an empty explanation after step 0.
+    if(step.tokens && step.tokens.length) selectToken(0);
+  }
+
+  applyTry.addEventListener("click",()=>{
+    const exp=steps[stepIndex].try;
+    if(!exp)return;
+    tryValue=Number(tryInput.value);
+    run();
+
+    if(chosenPrediction){
+      const ok=chosenPrediction===exp.correct;
+      predictionResult.textContent=ok
+        ? `YES — ${exp.correct.toUpperCase()}. Compare the result.`
+        : `COMPARE — the expected change is ${exp.correct.toUpperCase()}.`;
+      predictionResult.className=ok?"good":"bad";
+    }else{
+      predictionResult.textContent="Run completed. Make a prediction before the next change.";
+      predictionResult.className="";
+    }
+  });
+
+  resetTryBtn.addEventListener("click",()=>{
+    const exp=steps[stepIndex].try;
+    if(!exp)return;
+    tryValue=exp.base;
+    tryInput.value=exp.base;
+    run();
+  });
+
+  runBtn.addEventListener("click",run);
+
+  stepPrev.addEventListener("click",()=>{
+    if(stepIndex>0){stepIndex--;renderStep()}
+  });
+
+  stepNext.addEventListener("click",()=>{
+    if(stepIndex<steps.length-1){stepIndex++;renderStep()}
+  });
+
+  window.addEventListener("keydown",e=>{
+    if((e.metaKey||e.ctrlKey)&&e.key==="Enter"){e.preventDefault();run()}
+    if(e.key==="ArrowLeft"&&document.activeElement!==tryInput&&stepIndex>0){stepIndex--;renderStep()}
+    if(e.key==="ArrowRight"&&document.activeElement!==tryInput&&stepIndex<steps.length-1){stepIndex++;renderStep()}
+  });
+
+  window.addEventListener("message",e=>{
+    const d=e.data;
+    if(!d||d.source!=="blockp5-lesson"||d.id!==runId)return;
+
+    if(d.type==="error"){
+      runState.textContent="STOPPED";
+      runtimeShort.textContent=`LINE ${d.payload?.line||"?"}`;
+      return;
+    }
+
+    if(d.type==="state"){
+      liveState=d.payload||{};
+      runState.textContent=liveState.canvas || steps[stepIndex].runtimeOnly ? "RUNNING" : "READY";
+      renderRuntime();
+    }
+  });
+
+  mobileToggle.addEventListener("click",()=>{
+    document.body.classList.toggle("mobile-result");
+    mobileToggle.textContent=document.body.classList.contains("mobile-result")?"WRITE":"RESULT";
+  });
+
+  renderStep();
+})();
+</script>
+</body>
+</html>

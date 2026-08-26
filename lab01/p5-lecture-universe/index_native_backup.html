@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Invent the p5 Universe — Lecture</title>
+<style>
+:root{
+  --ink:#111;
+  --paper:#f4f2ea;
+  --white:#fff;
+  --soft:#e9e6dc;
+  --muted:#747168;
+  --red:#d92d20;
+  --blue:#1659a7;
+  --yellow:#efc326;
+  --green:#1d7a42;
+  --line:#bbb7ac;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+button,input{font:inherit;color:inherit}
+button{border:1.5px solid var(--ink);background:var(--paper);padding:7px 9px;cursor:pointer;min-height:32px}
+button:hover,button:focus-visible{background:var(--white);outline:2px solid var(--yellow);outline-offset:1px}
+button.primary{background:var(--ink);color:var(--paper)}
+button:disabled{opacity:.35;cursor:not-allowed}
+#app{height:100%;display:grid;grid-template-rows:54px 1fr 62px}
+header{border-bottom:2px solid var(--ink);display:grid;grid-template-columns:165px 1fr auto;align-items:stretch;min-width:0}
+.brand{display:flex;align-items:center;padding:0 12px;font-weight:900;font-size:12px;letter-spacing:.05em;border-right:1px solid var(--ink)}
+.phasebar{display:flex;align-items:center;gap:4px;padding:0 10px;overflow:hidden;white-space:nowrap}
+.phase{font-size:9px;padding:4px 6px;border:1px solid transparent;color:var(--muted)}
+.phase.active{border-color:var(--ink);color:var(--ink);background:var(--white)}
+.phase.done{color:var(--ink)}
+.header-actions{display:flex;gap:5px;align-items:center;padding:0 7px;border-left:1px solid var(--ink)}
+main{min-height:0;display:grid;grid-template-columns:minmax(330px,34%) minmax(420px,42%) minmax(285px,24%)}
+.panel{min-width:0;min-height:0;position:relative}
+.panel + .panel{border-left:2px solid var(--ink)}
+.panel-head{height:38px;border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:9px;font-weight:900;letter-spacing:.08em}
+.source{display:grid;grid-template-rows:38px 1fr 112px}
+.code-wrap{background:#faf9f5;overflow:auto;padding:10px 0}
+.code-line{display:grid;grid-template-columns:36px 1fr;min-height:30px;align-items:center;border-left:5px solid transparent;padding-right:9px;cursor:pointer}
+.code-line:hover{background:#fff}.code-line.active{background:#fff;border-left-color:var(--red)}
+.ln{text-align:right;padding-right:9px;color:#999;user-select:none}.src{white-space:pre;line-height:1.5;font-size:13px}
+.tok{border-bottom:2px solid transparent}.tok.active{background:var(--yellow);border-bottom-color:var(--ink)}.tok.num{font-weight:900}
+.given{border-top:1px solid var(--ink);padding:9px 11px;background:var(--soft);overflow:auto;font-size:9px;line-height:1.5}
+.given b{font-size:10px}.given-row{display:grid;grid-template-columns:80px 1fr;gap:7px;margin-top:4px}.given-row strong{font-size:8px;color:var(--muted)}
+.play{display:grid;grid-template-rows:38px 1fr 58px}
+.arena{position:relative;overflow:hidden;background:#dcd8ce;padding:16px}
+.stage-card{height:100%;border:2px solid var(--ink);background:var(--paper);position:relative;display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+.slide-head{padding:12px 14px 10px;border-bottom:1px solid var(--ink);display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:start}
+.slide-num{font-family:system-ui,sans-serif;font-size:42px;line-height:.9;font-weight:900;letter-spacing:-.06em}
+.slide-num small{font:700 9px/1 ui-monospace,monospace;display:block;letter-spacing:.03em;color:var(--muted);margin-top:7px}
+.slide-title{font-family:system-ui,sans-serif;font-size:22px;line-height:1.02;font-weight:800;letter-spacing:-.03em;margin:0}.prompt{font-size:10px;line-height:1.45;color:#4c4a43;margin-top:7px;max-width:52ch}
+.challenge{position:relative;min-height:0;display:grid;place-items:center;padding:18px;overflow:auto}
+.challenge-inner{width:min(100%,620px);display:grid;gap:12px;align-content:center}
+.micro-rule{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.choice{min-height:54px;font-weight:800;background:#fff}.choice.selected{background:var(--yellow)}.choice.correct{background:#dcebd9}.choice.wrong{background:#f3d8d4}
+.order-list{display:grid;gap:7px}.order-item{border:1.5px solid var(--ink);background:#fff;padding:10px 12px;cursor:grab;display:flex;justify-content:space-between;align-items:center;font-weight:800;user-select:none}.order-item.dragging{opacity:.35}.order-item::after{content:'↕';font-weight:400;color:var(--muted)}
+.two-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.bucket{border:1.5px solid var(--ink);background:#fff;min-height:130px;padding:9px}.bucket h3{font-size:9px;letter-spacing:.08em;margin:0 0 8px}.token-pool{display:flex;flex-wrap:wrap;gap:7px}.token-card{border:1.5px solid var(--ink);background:#fff;padding:8px 10px;font-weight:800;cursor:pointer}.token-card.active{background:var(--yellow)}
+.slot-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:15px}.slot{min-width:100px;min-height:42px;border:2px dashed var(--ink);display:grid;place-items:center;background:#fff}.slot.filled{border-style:solid;background:#dcebd9}.slot-token{border:1.5px solid var(--ink);background:#fff;padding:9px 12px;cursor:pointer;font-weight:800}.slot-token.active{background:var(--yellow)}
+.axis-box{width:min(94%,500px);aspect-ratio:1/1;border:2px solid var(--ink);background:#fff;position:relative;margin:auto;touch-action:none}.axis-box.grid{background-image:linear-gradient(to right,rgba(0,0,0,.18) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.18) 1px,transparent 1px);background-size:25% 25%}.axis-label{position:absolute;font-size:9px;font-weight:800;background:var(--paper);padding:2px 4px;border:1px solid var(--ink)}.axis-label.x{right:3px;top:3px}.axis-label.y{left:3px;bottom:3px}.axis-label.o{left:3px;top:3px}.axis-dot{width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid var(--ink);position:absolute;transform:translate(-50%,-50%);touch-action:none;cursor:grab}.origin-choice{position:absolute;width:28px;height:28px;border:2px solid var(--ink);background:#fff;cursor:pointer}.origin-choice.tl{left:-1px;top:-1px}.origin-choice.tr{right:-1px;top:-1px}.origin-choice.bl{left:-1px;bottom:-1px}.origin-choice.br{right:-1px;bottom:-1px}.origin-choice.correct{background:var(--yellow)}
+.dimension-demo{width:min(94%,560px);height:330px;margin:auto;position:relative;display:grid;place-items:center}.dim-canvas{background:#fff;border:2px solid var(--ink);position:relative;transition:width .06s,height .06s;min-width:20px;min-height:20px}.dim-label{position:absolute;font-size:10px;font-weight:900;background:var(--paper);padding:2px 4px}.dim-label.w{top:-22px;left:50%;transform:translateX(-50%)}.dim-label.h{left:-44px;top:50%;transform:rotate(-90deg) translateX(-50%);transform-origin:left top}
+.slider-wrap{display:grid;grid-template-columns:84px 1fr 54px;gap:8px;align-items:center}.slider-wrap b{font-size:9px}.slider-wrap output{text-align:right;font-weight:900}.slider-wrap input{width:100%}
+.scale{height:44px;border:2px solid var(--ink);background:linear-gradient(to right,#000,#fff);position:relative}.scale-pin{position:absolute;top:-7px;width:3px;height:56px;background:var(--red);transform:translateX(-50%)}.scale-pin::after{content:attr(data-v);position:absolute;top:57px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;background:var(--paper);padding:2px 4px;border:1px solid var(--ink)}
+.rgb-box{height:130px;border:2px solid var(--ink);display:grid;place-items:center;font-size:12px;font-weight:900}.state-indicator{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--ink)}.state-indicator div{padding:8px;border-right:1px solid var(--ink);font-size:9px}.state-indicator div:last-child{border-right:0}.state-indicator b{display:block;margin-bottom:3px}
+.frame-box{display:grid;grid-template-columns:1fr 84px;gap:12px;align-items:center}.frame-stage{height:180px;border:2px solid var(--ink);background:#fff;position:relative;overflow:hidden}.frame-ball{width:28px;height:28px;background:var(--blue);border:2px solid var(--ink);position:absolute;top:50%;transform:translateY(-50%);transition:left .12s}.frame-count{font-size:36px;font-family:system-ui,sans-serif;font-weight:900;text-align:center}
+.rect-stage{width:min(94%,500px);aspect-ratio:1/1;border:2px solid var(--ink);background:#ddd;position:relative;margin:auto;background-image:linear-gradient(to right,rgba(0,0,0,.15) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.15) 1px,transparent 1px);background-size:25% 25%}.demo-rect{position:absolute;background:rgb(255,0,0);border:2px solid var(--ink)}
+.runtime-chain{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap}.runtime-node{border:1.5px solid var(--ink);background:#fff;padding:8px 9px;font-weight:800;font-size:10px}.runtime-node.now{background:var(--yellow)}.runtime-arrow{font-weight:900}
+.play-footer{border-top:1px solid var(--ink);display:grid;grid-template-columns:1fr auto;align-items:center;padding:7px 9px;background:var(--soft);gap:10px}.play-feedback{font-size:9px;line-height:1.4}.play-feedback strong{display:block;font-size:10px}.success{color:var(--green)}.failure{color:var(--red)}
+.inspect{display:grid;grid-template-rows:38px 226px 1fr}.preview{border-bottom:2px solid var(--ink);display:grid;grid-template-rows:32px 1fr;background:#ddd}.preview-head{display:flex;align-items:center;justify-content:space-between;padding:0 8px;border-bottom:1px solid var(--ink);font-size:9px}.preview-frame{position:relative;display:grid;place-items:center;overflow:hidden}.preview-shell{width:min(180px,78%);aspect-ratio:1/1;border:2px solid var(--ink);background:#fff;position:relative;overflow:hidden}.preview-shell iframe{width:100%;height:100%;border:0;background:#ddd}.fallback{position:absolute;inset:0;background:rgb(220,220,220)}.fallback-rect{position:absolute;background:red}.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#888}.status-dot.ok{background:var(--green)}.status-dot.bad{background:var(--red)}
+.inspector-body{overflow:auto;padding:11px;background:var(--paper)}.reveal{border:2px solid var(--ink);background:#fff;margin-bottom:11px}.reveal-head{background:var(--ink);color:#fff;padding:6px 8px;font-size:9px;font-weight:900;letter-spacing:.08em}.reveal-body{padding:9px;font-size:10px;line-height:1.45}.reveal.locked .reveal-body{color:var(--muted)}
+.passport{border:2px solid var(--ink);background:#fff}.passport-head{padding:6px 8px;background:var(--blue);color:#fff;font-size:9px;font-weight:900;letter-spacing:.08em}.passport-grid{display:grid;grid-template-columns:1fr 1fr}.passport-cell{padding:7px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);min-height:50px;font-size:9px;line-height:1.3}.passport-cell:nth-child(even){border-right:0}.passport-cell b{display:block;font-size:8px;color:var(--muted);margin-bottom:3px}.runtime-log{border:2px solid var(--ink);background:#fff;margin-top:11px}.runtime-log .log-head{padding:6px 8px;border-bottom:1px solid var(--ink);font-size:9px;font-weight:900}.runtime-log pre{margin:0;padding:8px;font:9px/1.5 ui-monospace,monospace;white-space:pre-wrap}
+footer{border-top:2px solid var(--ink);display:grid;grid-template-columns:52px 1fr 52px;min-width:0}.nav{border:0;background:var(--paper);font-size:20px}.nav.prev{border-right:1px solid var(--ink)}.nav.next{border-left:1px solid var(--ink)}.slide-ribbon{display:grid;grid-template-columns:repeat(39,minmax(18px,1fr));align-items:stretch;min-width:0}.slide-chip{border:0;border-right:1px solid #c9c5bb;min-width:0;padding:0;font-size:8px;background:transparent}.slide-chip.current{background:var(--ink);color:var(--paper)}.slide-chip.done{box-shadow:inset 0 3px 0 var(--green)}
+@media(max-width:980px){
+  #app{grid-template-rows:48px 1fr 54px}
+  header{grid-template-columns:126px 1fr}.header-actions{display:none}.phasebar{overflow:auto}.brand{font-size:9px}
+  main{grid-template-columns:44% 56%}.inspect{position:absolute;right:0;top:48px;bottom:54px;width:min(370px,94vw);background:var(--paper);z-index:10;transform:translateX(100%);transition:.15s;border-left:2px solid var(--ink)}.inspect.open{transform:translateX(0)}
+  .source{border-right:0}.panel + .panel{border-left:2px solid var(--ink)}.slide-title{font-size:19px}.slide-num{font-size:36px}.slide-ribbon{grid-template-columns:repeat(39,24px);overflow-x:auto}.slide-chip{min-width:24px}
+}
+</style>
+
+<style id="lecture-mode">
+:root{--lecture-pad:clamp(28px,4vw,72px)}
+html,body{background:#f4f2ea}
+body{overflow:hidden}
+#app{height:100%;display:block;position:relative}
+header{position:fixed;inset:0 0 auto 0;height:72px;border:0;display:flex;align-items:center;justify-content:space-between;padding:18px var(--lecture-pad);z-index:80;pointer-events:none;background:linear-gradient(to bottom,rgba(244,242,234,.96),rgba(244,242,234,0))}
+.lecture-meta{display:flex;gap:18px;align-items:center;font:900 clamp(16px,1.2vw,22px)/1 ui-monospace,monospace;letter-spacing:.08em;pointer-events:auto}
+#lecturePhase{border:2px solid #111;padding:8px 10px;background:#f4f2ea}
+#lectureCounter{color:#555}
+.header-actions{border:0;padding:0;display:flex;gap:8px;pointer-events:auto}
+.header-actions button,.overlay-actions button,.output-head button{font-size:clamp(14px,1.05vw,20px);font-weight:900;padding:10px 14px;min-height:0;background:#f4f2ea}
+main{display:block;height:100%;min-height:0}
+.panel + .panel{border-left:0}
+.play{position:absolute;inset:0;display:block;background:#f4f2ea}
+.play>.panel-head{display:none}
+.arena{position:absolute;inset:0;background:#f4f2ea;padding:clamp(86px,9vh,120px) var(--lecture-pad) clamp(140px,15vh,190px);overflow:hidden}
+.stage-card{height:100%;border:0;background:transparent;display:grid;grid-template-rows:auto 1fr;overflow:visible}
+.slide-head{border:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:0;max-width:92vw}
+.slide-num{display:none}
+.slide-title{font-size:clamp(46px,5vw,92px);line-height:.95;max-width:16ch;letter-spacing:-.05em;margin:0;font-weight:900}
+.prompt{font-size:clamp(22px,2vw,36px);line-height:1.15;max-width:34ch;margin-top:16px;color:#2e2c28;font-family:system-ui,sans-serif;font-weight:500}
+.challenge{padding:3vh 0 0;overflow:hidden;display:grid;place-items:center}
+.challenge-inner{width:min(92vw,1400px);max-height:54vh;display:grid;gap:clamp(14px,2vh,24px);align-content:center}
+.micro-rule{font-size:clamp(14px,1.2vw,22px);font-weight:900;letter-spacing:.09em;color:#666;text-align:center}
+.choice-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.choice,.slot-token,.token-card{font-size:clamp(22px,2vw,36px);min-height:82px;padding:16px 20px;font-weight:900}
+.order-list{gap:12px;max-width:1000px;margin:auto;width:100%}
+.order-item{font-size:clamp(20px,1.7vw,32px);padding:16px 20px;min-height:68px}
+.order-item button{font-size:20px;padding:5px 9px}
+.two-cols{gap:18px;max-width:1100px;margin:auto;width:100%}
+.bucket{min-height:180px;padding:16px}.bucket h3{font-size:clamp(14px,1.1vw,20px);margin-bottom:14px}
+.token-pool{justify-content:center}.token-card{min-height:64px}
+.slot-row{font-size:clamp(24px,2vw,38px);gap:14px}.slot{min-width:180px;min-height:74px;font-size:clamp(20px,1.6vw,30px)}
+.axis-box{width:min(54vh,58vw,680px);max-height:54vh}
+.axis-label{font-size:clamp(14px,1.1vw,20px);padding:5px 7px}.axis-dot{width:28px;height:28px}
+.origin-choice{width:46px;height:46px}
+.dimension-demo{width:min(80vw,900px);height:46vh}.dim-label{font-size:clamp(18px,1.4vw,28px)}
+.slider-wrap{grid-template-columns:180px 1fr 110px;gap:20px;max-width:1100px;margin:auto;width:100%;font-size:clamp(22px,1.8vw,34px)}.slider-wrap b{font-size:inherit}.slider-wrap output{font-size:inherit}.slider-wrap input{height:34px}
+.scale{height:80px;max-width:1100px;margin:auto;width:100%}.scale-pin{height:94px}.scale-pin::after{top:92px;font-size:18px}
+.rgb-box{height:200px;font-size:clamp(28px,2.6vw,48px)}
+.state-indicator{max-width:1100px;margin:auto;width:100%}.state-indicator div{padding:18px;font-size:clamp(16px,1.2vw,22px)}
+.frame-box{max-width:1100px;margin:auto;width:100%;grid-template-columns:1fr 180px}.frame-stage{height:280px}.frame-count{font-size:76px}.frame-box button{font-size:28px;padding:16px}
+.rect-stage{width:min(54vh,58vw,680px);max-height:54vh}
+.runtime-chain{gap:10px}.runtime-node{font-size:clamp(18px,1.5vw,28px);padding:14px 16px}.runtime-arrow{font-size:26px}
+.play-footer{position:fixed;left:var(--lecture-pad);right:var(--lecture-pad);bottom:78px;height:auto;min-height:54px;border:0;background:transparent;padding:0;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;z-index:50;pointer-events:none}
+.play-footer button{pointer-events:auto;font-size:16px;background:#f4f2ea}
+.play-feedback{font-family:system-ui,sans-serif;font-size:clamp(18px,1.35vw,26px);line-height:1.12;max-width:58ch;background:#f4f2ea;padding:8px 10px;border-left:5px solid #111;pointer-events:auto}
+.play-feedback:empty{display:none}.play-feedback strong{font-size:inherit;display:inline;margin-right:10px;color:#111}
+.lecture-code{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:52;max-width:72vw;white-space:pre;overflow:hidden;text-overflow:ellipsis;background:#111;color:#f4f2ea;padding:12px 18px;font:900 clamp(18px,1.5vw,30px)/1.15 ui-monospace,monospace;display:none}
+.lecture-code.show{display:block}
+footer{position:fixed;inset:0;pointer-events:none;border:0;height:auto;background:transparent;display:block;z-index:55}
+.nav{position:fixed;top:50%;transform:translateY(-50%);width:62px;height:84px;border:0;background:rgba(244,242,234,.86);font-size:48px;padding:0;pointer-events:auto}.nav.prev{left:0}.nav.next{right:0}.nav:disabled{opacity:.12}.slide-ribbon{display:none}
+.source,.inspect{display:none;position:fixed;inset:0;z-index:120;background:#f4f2ea;min-width:0;min-height:0}
+body.source-open .source{display:grid;grid-template-rows:72px 1fr auto}
+body.inspect-open .inspect{display:grid;grid-template-rows:72px minmax(0,1fr)}
+body.source-open header,body.inspect-open header{display:none}
+.source .panel-head,.inspect .panel-head{height:72px;border-bottom:2px solid #111;padding:0 var(--lecture-pad);font-size:clamp(18px,1.4vw,28px);letter-spacing:.04em}
+.overlay-actions{display:flex;gap:8px}
+.source .code-wrap{padding:5vh 8vw;overflow:auto;background:#faf9f5}
+.source .code-line{grid-template-columns:64px 1fr;min-height:72px;border-left-width:8px}.source .ln{font-size:24px;padding-right:18px}.source .src{font-size:clamp(28px,2.3vw,46px);line-height:1.45}.source .tok.active{background:#efc326}
+.source .given{display:none}
+.inspect .preview{border:0;display:grid;grid-template-rows:64px 1fr;background:#ddd;min-height:0}
+.inspect .preview-head{font-size:20px;padding:0 var(--lecture-pad)}
+.inspect .preview-frame{padding:3vh 8vw;min-height:0;display:grid;place-items:center}.inspect .preview-shell{width:min(72vh,72vw);max-height:72vh}
+.inspect .inspector-body{display:none}
+#feedback .failure{display:none}
+@media (max-width:900px){.slide-title{font-size:46px}.prompt{font-size:22px}.challenge-inner{max-height:58vh}.header-actions button{font-size:14px}.lecture-code{max-width:82vw;font-size:16px}}
+</style>
+
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="lecture-meta"><span id="lecturePhase">WORLD</span><span id="lectureCounter">01 / 39</span></div>
+  <div class="header-actions">
+    <button id="sourceModeBtn">CODE</button>
+    <button id="outputModeBtn">OUTPUT</button>
+  </div>
+</header>
+<main>
+  <section class="panel source">
+    <div class="panel-head source-head"><span>ACTUAL p5.js SOURCE</span><span class="overlay-actions"><button id="copyBtn">COPY</button><button id="sourceClose">×</button></span></div>
+    <div class="code-wrap" id="code"></div>
+    <div class="given">
+      <b>WHAT THE SOURCE DOES NOT SHOW</b>
+      <div class="given-row"><strong>HOST</strong><span>browser provides document, canvas, events, timing</span></div>
+      <div class="given-row"><strong>ENGINE</strong><span>JavaScript parses and executes <code>sketch.js</code></span></div>
+      <div class="given-row"><strong>LIBRARY</strong><span>p5.js provides <code>createCanvas</code>, <code>background</code>, <code>fill</code>, <code>rect</code>, lifecycle</span></div>
+    </div>
+  </section>
+
+  <section class="panel play">
+    <div class="panel-head"><span>PLAYGROUND</span><span id="kindLabel"></span></div>
+    <div class="arena">
+      <div class="stage-card">
+        <div class="slide-head">
+          <div class="slide-num" id="slideNum">01<small>/ 39</small></div>
+          <div><h1 class="slide-title" id="slideTitle"></h1><div class="prompt" id="slidePrompt"></div></div>
+        </div>
+        <div class="challenge" id="challenge"></div>
+      </div>
+    </div>
+    <div class="play-footer"><div class="play-feedback" id="feedback"></div><button id="resetSlide">RESET SLIDE</button></div>
+  </section>
+
+  <section class="panel inspect" id="inspect">
+    <div class="panel-head output-head"><span>ACTUAL p5.js OUTPUT</span><button id="inspectClose">×</button></div>
+    <div class="preview">
+      <div class="preview-head"><span><span id="p5dot" class="status-dot"></span> <span id="p5status">source ready</span></span><span><button id="copyOutputSource" style="display:none">COPY</button><button id="stepRun">RUN SOURCE</button><button id="runBtn" style="display:none">RUN SOURCE</button></span></div>
+      <div class="preview-frame">
+        <div class="preview-shell" id="previewShell">
+          <iframe id="runner" title="Actual p5.js output"></iframe>
+          <div class="fallback" id="fallback"><div class="fallback-rect" id="fallbackRect"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="inspector-body" id="inspectorBody"></div>
+  </section>
+</main>
+<div id="lectureCode" class="lecture-code" aria-live="polite"></div>
+<footer>
+  <button class="nav prev" id="prev" aria-label="Previous slide">←</button>
+  <div class="slide-ribbon" id="ribbon"></div>
+  <button class="nav next" id="next" aria-label="Next slide">→</button>
+</footer>
+</div>
+<script>
+const initial = { w:400,h:400,gray:220,r:255,g:0,b:0,x:100,y:100,rw:200,rh:200 };
+const state = {...initial};
+const phases = ['WORLD','LANGUAGE','RUNTIME','SPACE','COLOR','SHAPE','TIME','PROGRAM'];
+const completed = new Set();
+let slideIndex = 0;
+let challengeState = {};
+let runtimeTimer = null;
+let p5RunId = 0;
+const $ = s => document.querySelector(s);
+
+const slides = [
+{n:1,phase:'WORLD',line:null,token:null,title:'Before code: name the result',prompt:'Build the minimum world for a gray field with one red rectangle.',kind:'multiChoice',options:['place','color','action','score','avatar','sound'],correct:['place','color','action'],reveal:'A visible result needs somewhere to appear, values to describe it, and operations that change it.'},
+{n:2,phase:'WORLD',line:null,title:'The browser is the host',prompt:'Choose the container that can give JavaScript a document, canvas, events, and a display.',kind:'choice',options:['text file','browser','printed page','folder'],correct:'browser',reveal:'The browser is the host environment. JavaScript alone does not provide a visible canvas.'},
+{n:3,phase:'LANGUAGE',line:null,title:'Source must become execution',prompt:'Put the three operations in the order that turns text into behavior.',kind:'order',items:['EXECUTE','SOURCE','PARSE'],correct:['SOURCE','PARSE','EXECUTE'],reveal:'Source is text. A JavaScript engine parses that text, then executes the resulting program.'},
+{n:4,phase:'LANGUAGE',line:null,title:'p5.js adds a vocabulary',prompt:'Sort each name by who provides it.',kind:'sortProviders',items:[['function','JavaScript'],['if','JavaScript'],['rect','p5.js'],['fill','p5.js'],['createCanvas','p5.js']],reveal:'JavaScript supplies language forms. p5.js supplies creative-coding names and behaviors.'},
+{n:5,phase:'LANGUAGE',line:1,token:'function',title:'Processing and p5.js are related, not identical',prompt:'Pair the two startup forms.',kind:'pair',pairs:[['void setup()','function setup()'],['size(400,400)','createCanvas(400,400)']],reveal:'Processing Java declares void functions; p5.js uses JavaScript function syntax. The lifecycle idea survives the translation.'},
+{n:6,phase:'RUNTIME',line:null,title:'Play starts a chain',prompt:'Order the runtime chain. Only then can PLAY produce pixels.',kind:'order',items:['PIXELS','P5.JS','BROWSER','SKETCH.JS','SETUP','DRAW'],correct:['BROWSER','P5.JS','SKETCH.JS','SETUP','DRAW','PIXELS'],reveal:'PLAY is not magic: host → library → source → setup → draw → pixels.',runtime:true},
+{n:7,phase:'LANGUAGE',line:1,token:'function',title:'A function names an operation',prompt:'Select the thing that lets a group of instructions be called by one name.',kind:'choice',options:['function','number','pixel','color'],correct:'function',reveal:'A function definition gives a name to a body of instructions.'},
+{n:8,phase:'LANGUAGE',line:1,token:'function',title:'function is a JavaScript keyword',prompt:'Choose the token that tells the parser a function definition begins.',kind:'choice',options:['setup','function','draw','400'],correct:'function',reveal:'function belongs to JavaScript syntax. p5.js does not invent this keyword.'},
+{n:9,phase:'RUNTIME',line:1,token:'setup',title:'setup is a name p5 looks for',prompt:'Rename the startup function. Which name receives p5’s one-time startup call?',kind:'nameTest',reveal:'p5 looks specifically for setup. You write it; p5 calls it once.'},
+{n:10,phase:'LANGUAGE',line:1,token:'parens',title:'() bounds the parameter list',prompt:'Leave setup’s parameter boundary empty.',kind:'emptyParens',reveal:'The parentheses mark where declared inputs would go. setup declares none here.'},
+{n:11,phase:'LANGUAGE',line:1,token:'brace',title:'{ } bounds the function body',prompt:'Put createCanvas inside setup’s body.',kind:'insideBraces',reveal:'The braces mark which instructions belong to setup.'},
+{n:12,phase:'SPACE',line:2,token:'createCanvas',title:'createCanvas creates a drawing surface',prompt:'There is no canvas yet. Create one.',kind:'action',action:'CREATE CANVAS',reveal:'createCanvas is provided by p5.js. It asks the host browser for a drawing surface.'},
+{n:13,phase:'SPACE',line:2,token:'createCanvas',title:'Slots come before values',prompt:'Put width first and height second.',kind:'slots',tokens:['height','width'],correct:['width','height'],signature:'createCanvas( ① , ② )',reveal:'Argument order gives identical numbers different jobs: first width, second height.'},
+{n:14,phase:'SPACE',line:2,token:'w',title:'The first 400 is width',prompt:'Stretch the canvas horizontally until WIDTH = 400.',kind:'dimension',axis:'w',start:160,target:400,reveal:'400 now means horizontal extent, measured in canvas coordinate units.',passport:{literal:'400',parameter:'width',kind:'dimension',unit:'canvas units',range:'> 0',reference:'horizontal canvas extent',relative:'100% of this canvas',consequence:'right boundary reaches x = 400'}},
+{n:15,phase:'SPACE',line:2,token:'h',title:'The second 400 is height',prompt:'Stretch the canvas vertically until HEIGHT = 400.',kind:'dimension',axis:'h',start:150,target:400,reveal:'The same literal 400 now occupies a different parameter: vertical extent.',passport:{literal:'400',parameter:'height',kind:'dimension',unit:'canvas units',range:'> 0',reference:'vertical canvas extent',relative:'100% of this canvas',consequence:'bottom boundary reaches y = 400'}},
+{n:16,phase:'SPACE',line:2,title:'400 × 400 makes a square',prompt:'Make width equal height.',kind:'equalDims',reveal:'A square is not a special canvas type. It is the condition width = height.'},
+{n:17,phase:'SPACE',line:null,title:'Every coordinate system needs an origin',prompt:'Choose where p5 places (0,0) by default.',kind:'origin',reveal:'In p5’s default 2D canvas, (0,0) is the top-left corner.'},
+{n:18,phase:'SPACE',line:8,token:'x',title:'x is horizontal position',prompt:'Drag the point left and right. Do not change its vertical position.',kind:'axisDrag',axis:'x',reveal:'x names horizontal position. Larger x values move right.',passport:{literal:'x',parameter:'horizontal position',kind:'coordinate',unit:'canvas units',range:'visible roughly 0…width',reference:'origin at left edge',relative:'x / width = fraction across',consequence:'changes left/right position'}},
+{n:19,phase:'SPACE',line:8,token:'y',title:'y is vertical position',prompt:'Drag the point up and down. Watch the numbers increase downward.',kind:'axisDrag',axis:'y',reveal:'y names vertical position. In the default p5 canvas, larger y values move down.',passport:{literal:'y',parameter:'vertical position',kind:'coordinate',unit:'canvas units',range:'visible roughly 0…height',reference:'origin at top edge',relative:'y / height = fraction down',consequence:'changes up/down position'}},
+{n:20,phase:'SPACE',line:null,title:'Build the 100-unit grid',prompt:'Add the three interior landmarks: 100, 200, 300.',kind:'gridBuild',reveal:'A 400-unit axis can be addressed with landmarks at 0, 100, 200, 300, 400.'},
+{n:21,phase:'SPACE',line:null,title:'Center is derived, not memorized',prompt:'Click the point where width/2 meets height/2.',kind:'centerClick',reveal:'For a 400 × 400 canvas, center = (200,200) because 400/2 = 200.'},
+{n:22,phase:'TIME',line:5,token:'draw',title:'draw names repeated work',prompt:'Put draw inside the repeating runtime loop.',kind:'loopInsert',reveal:'You define draw. p5 schedules and calls it repeatedly while the sketch loops.'},
+{n:23,phase:'TIME',line:5,token:'draw',title:'One draw call produces one frame’s work',prompt:'Step three frames manually.',kind:'frames',target:3,reveal:'A frame is one pass through draw plus the image produced by that pass.'},
+{n:24,phase:'COLOR',line:6,token:'background',title:'background replaces the visible field',prompt:'Clear the trails with one background operation.',kind:'backgroundClear',reveal:'background changes pixels immediately across the canvas.'},
+{n:25,phase:'COLOR',line:6,token:'gray',title:'Grayscale has a number world',prompt:'Touch both ends of the grayscale range.',kind:'rangeExplore',reveal:'In default p5 color ranges, grayscale 0 is black and 255 is white.',passport:{literal:'0…255',parameter:'gray',kind:'color value',unit:'none',range:'0…255',reference:'default RGB channel range',relative:'0 = black; 255 = white',consequence:'sets brightness of background'}},
+{n:26,phase:'COLOR',line:6,token:'gray',title:'220 is light gray',prompt:'Place the grayscale value at exactly 220.',kind:'slider',key:'gray',start:128,target:220,min:0,max:255,step:1,reveal:'220 is about 86% of the way from black to white.',passport:{literal:'220',parameter:'gray',kind:'color channel value',unit:'none',range:'0…255',reference:'default p5 grayscale range',relative:'220 / 255 ≈ 86%',consequence:'background becomes light gray'}},
+{n:27,phase:'COLOR',line:7,token:'fill',title:'fill changes drawing state, not pixels',prompt:'Set fill to red, then draw a shape.',kind:'fillThenDraw',reveal:'fill stores a drawing-state value. A later shape reads that state and changes pixels.'},
+{n:28,phase:'COLOR',line:7,token:'fill',title:'RGB channels have an order',prompt:'Arrange the three channel names in fill’s argument order.',kind:'order',items:['BLUE','RED','GREEN'],correct:['RED','GREEN','BLUE'],reveal:'fill(red, green, blue) assigns meaning by argument position.'},
+{n:29,phase:'COLOR',line:7,token:'r',title:'255 makes red maximum',prompt:'Raise only the red channel to 255.',kind:'slider',key:'r',start:80,target:255,min:0,max:255,step:1,reveal:'R = 255 means maximum red contribution in the default channel range.',passport:{literal:'255',parameter:'red',kind:'color channel',unit:'none',range:'0…255',reference:'RGB red channel',relative:'255 / 255 = 100%',consequence:'maximizes red contribution'}},
+{n:30,phase:'COLOR',line:7,token:'g',title:'0 removes green',prompt:'Lower only the green channel to 0.',kind:'slider',key:'g',start:160,target:0,min:0,max:255,step:1,reveal:'G = 0 contributes no green to the fill color.',passport:{literal:'0',parameter:'green',kind:'color channel',unit:'none',range:'0…255',reference:'RGB green channel',relative:'0 / 255 = 0%',consequence:'removes green contribution'}},
+{n:31,phase:'COLOR',line:7,token:'b',title:'0 removes blue',prompt:'Lower only the blue channel to 0.',kind:'slider',key:'b',start:140,target:0,min:0,max:255,step:1,reveal:'B = 0 contributes no blue. (255,0,0) is pure red in this model.',passport:{literal:'0',parameter:'blue',kind:'color channel',unit:'none',range:'0…255',reference:'RGB blue channel',relative:'0 / 255 = 0%',consequence:'removes blue contribution'}},
+{n:32,phase:'SHAPE',line:8,token:'rect',title:'rect combines position and extent',prompt:'Place the rectangle, then change its size. Notice the two different jobs.',kind:'rectPlay',reveal:'rect needs both a position (x,y) and an extent (width,height).'},
+{n:33,phase:'SHAPE',line:8,token:'rect',title:'rect slots have a fixed order',prompt:'Arrange x, y, width, height in the call signature.',kind:'order',items:['height','x','width','y'],correct:['x','y','width','height'],reveal:'rect(x, y, width, height) assigns the first two values to position and the next two to size.'},
+{n:34,phase:'SHAPE',line:8,token:'x',title:'The first 100 is x',prompt:'Move the rectangle until its left edge is x = 100.',kind:'slider',key:'x',start:20,target:100,min:0,max:300,step:10,reveal:'100 means one quarter of a 400-unit canvas across.',passport:{literal:'100',parameter:'x',kind:'coordinate',unit:'canvas units',range:'visible roughly 0…width',reference:'left edge origin',relative:'100 / 400 = 25% across',consequence:'rectangle starts at the first quarter line'}},
+{n:35,phase:'SHAPE',line:8,token:'y',title:'The second 100 is y',prompt:'Move the rectangle until its top edge is y = 100.',kind:'slider',key:'y',start:250,target:100,min:0,max:300,step:10,reveal:'100 means one quarter of the canvas down.',passport:{literal:'100',parameter:'y',kind:'coordinate',unit:'canvas units',range:'visible roughly 0…height',reference:'top edge origin',relative:'100 / 400 = 25% down',consequence:'rectangle starts at the first horizontal quarter line'}},
+{n:36,phase:'SHAPE',line:8,token:'rw',title:'The first 200 is rectangle width',prompt:'Stretch only the right edge until width = 200.',kind:'slider',key:'rw',start:80,target:200,min:0,max:300,step:10,reveal:'200 means half the canvas width; from x=100 it reaches x=300.',passport:{literal:'200',parameter:'width',kind:'shape dimension',unit:'canvas units',range:'≥ 0',reference:'rectangle horizontal extent',relative:'200 / 400 = 50%',consequence:'right edge reaches x = 300'}},
+{n:37,phase:'SHAPE',line:8,token:'rh',title:'The second 200 is rectangle height',prompt:'Stretch only the bottom edge until height = 200.',kind:'slider',key:'rh',start:60,target:200,min:0,max:300,step:10,reveal:'200 means half the canvas height; from y=100 it reaches y=300.',passport:{literal:'200',parameter:'height',kind:'shape dimension',unit:'canvas units',range:'≥ 0',reference:'rectangle vertical extent',relative:'200 / 400 = 50%',consequence:'bottom edge reaches y = 300'}},
+{n:38,phase:'PROGRAM',line:null,title:'Execution order makes state visible',prompt:'Order these operations so the frame becomes gray with a red rectangle.',kind:'order',items:['rect','background','fill'],correct:['background','fill','rect'],reveal:'background changes pixels; fill changes state; rect reads that state. Order creates the visible result.'},
+{n:39,phase:'PROGRAM',line:null,title:'Reconstruct the program you earned',prompt:'Put the executable lines in order, then run the source.',kind:'order',items:['rect(100,100,200,200);','function draw() {','background(220);','createCanvas(400,400);','fill(255,0,0);','function setup() {'],correct:['function setup() {','createCanvas(400,400);','function draw() {','background(220);','fill(255,0,0);','rect(100,100,200,200);'],reveal:'The red rectangle is now the residue of a constructed universe: host, language, runtime, space, color, time, state, and geometry.',runtime:true}
+];
+
+function sourceText(){return `function setup() {\n  createCanvas(${state.w}, ${state.h});\n}\n\nfunction draw() {\n  background(${state.gray});\n  fill(${state.r}, ${state.g}, ${state.b});\n  rect(${state.x}, ${state.y}, ${state.rw}, ${state.rh});\n}`}
+function tokenLine(n){
+  const L={
+    1:[['function','function'],[' ','plain'],['setup','setup'],['()','parens'],[' ','plain'],['{','brace']],
+    2:[['  ','plain'],['createCanvas','createCanvas'],['(','plain'],[String(state.w),'w num'],[', ','plain'],[String(state.h),'h num'],[');','plain']],
+    3:[['}','brace']],4:[['','plain']],
+    5:[['function','function'],[' ','plain'],['draw','draw'],['()','parens'],[' ','plain'],['{','brace']],
+    6:[['  ','plain'],['background','background'],['(','plain'],[String(state.gray),'gray num'],[');','plain']],
+    7:[['  ','plain'],['fill','fill'],['(','plain'],[String(state.r),'r num'],[', ','plain'],[String(state.g),'g num'],[', ','plain'],[String(state.b),'b num'],[');','plain']],
+    8:[['  ','plain'],['rect','rect'],['(','plain'],[String(state.x),'x num'],[', ','plain'],[String(state.y),'y num'],[', ','plain'],[String(state.rw),'rw num'],[', ','plain'],[String(state.rh),'rh num'],[');','plain']],
+    9:[['}','brace']]
+  }; return L[n];
+}
+function lineToSlide(line){const i=slides.findIndex(s=>s.line===line);return i>=0?i:null}
+function renderCode(){
+  const s=slides[slideIndex], wrap=$('#code');wrap.innerHTML='';
+  for(let i=1;i<=9;i++){
+    const row=document.createElement('div');row.className='code-line'+(s.line===i?' active':'');
+    const ln=document.createElement('span');ln.className='ln';ln.textContent=i;
+    const src=document.createElement('span');src.className='src';
+    tokenLine(i).forEach(([txt,cls])=>{const sp=document.createElement('span');sp.textContent=txt;sp.className='tok '+cls;if(s.token && cls.split(' ').includes(s.token))sp.classList.add('active');src.appendChild(sp)});
+    row.append(ln,src);row.onclick=()=>{const j=lineToSlide(i);if(j!==null)go(j)};wrap.appendChild(row);
+  }
+}
+function renderPhases(){
+  const el=$('#phasebar'); if(!el) return;
+  const current=slides[slideIndex].phase;const currentIdx=phases.indexOf(current);
+  el.innerHTML=phases.map((p,i)=>`<span class="phase ${p===current?'active':''} ${i<currentIdx?'done':''}">${p}</span>`).join('');
+}
+function renderRibbon(){
+  $('#ribbon').innerHTML=slides.map((s,i)=>`<button class="slide-chip ${i===slideIndex?'current':''} ${completed.has(i)?'done':''}" data-i="${i}" title="${s.n}. ${s.title}">${String(s.n).padStart(2,'0')}</button>`).join('');
+  document.querySelectorAll('.slide-chip').forEach(b=>b.onclick=()=>go(Number(b.dataset.i)));
+}
+function passportHTML(p){if(!p)return'';const cells=[['LITERAL',p.literal],['PARAMETER',p.parameter],['KIND',p.kind],['UNIT',p.unit],['RANGE',p.range],['REFERENCE',p.reference],['RELATIVE',p.relative],['VISIBLE CONSEQUENCE',p.consequence]];return `<div class="passport"><div class="passport-head">VALUE PASSPORT</div><div class="passport-grid">${cells.map(([a,b])=>`<div class="passport-cell"><b>${a}</b>${b}</div>`).join('')}</div></div>`}
+function renderInspector(){
+  const s=slides[slideIndex], done=completed.has(slideIndex);
+  const reveal=`<div class="reveal ${done?'':'locked'}"><div class="reveal-head">${done?'REVEAL':'LOCKED UNTIL ACTION'}</div><div class="reveal-body">${done?s.reveal:'Perform the slide’s operation. The name arrives after the consequence.'}</div></div>`;
+  const caller= s.token && ['setup','draw'].includes(s.token) ? `<div class="runtime-log"><div class="log-head">WHO CALLS IT?</div><pre>${s.token==='setup'?'you write setup()\np5.js calls setup() once':'you write draw()\np5.js calls draw() repeatedly'}</pre></div>` : '';
+  $('#inspectorBody').innerHTML=reveal+passportHTML(s.passport)+caller+`<div class="runtime-log"><div class="log-head">CURRENT SOURCE</div><pre>${escapeHTML(sourceText())}</pre></div>`;
+}
+function currentCodeLine(){
+  const s=slides[slideIndex];
+  if(!s.line) return '';
+  const parts=tokenLine(s.line).map(x=>x[0]).join('');
+  return parts;
+}
+function setFeedback(ok,msg){
+  const box=$('#feedback');
+  if(!ok){ box.innerHTML=''; $('#lectureCode').classList.remove('show'); return; }
+  box.innerHTML=`<strong>${slides[slideIndex].reveal}</strong>`;
+  const line=currentCodeLine();
+  $('#lectureCode').textContent=line;
+  $('#lectureCode').classList.toggle('show',!!line);
+}
+function complete(msg=''){
+  completed.add(slideIndex);setFeedback(true,msg);renderInspector();renderRibbon();
+}
+function escapeHTML(x){return String(x).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+
+function renderChallenge(){
+  const s=slides[slideIndex];challengeState={};$('#kindLabel').textContent=s.kind.toUpperCase();$('#challenge').innerHTML='<div class="challenge-inner" id="challengeInner"></div>';const c=$('#challengeInner');setFeedback(false,'Use the playground.');
+  switch(s.kind){
+    case 'choice': renderChoice(c,s);break;
+    case 'multiChoice': renderMultiChoice(c,s);break;
+    case 'order': renderOrder(c,s);break;
+    case 'sortProviders': renderSortProviders(c,s);break;
+    case 'pair': renderPair(c,s);break;
+    case 'nameTest': renderNameTest(c,s);break;
+    case 'emptyParens': renderEmptyParens(c,s);break;
+    case 'insideBraces': renderInsideBraces(c,s);break;
+    case 'action': renderAction(c,s);break;
+    case 'slots': renderSlots(c,s);break;
+    case 'dimension': renderDimension(c,s);break;
+    case 'equalDims': renderEqualDims(c,s);break;
+    case 'origin': renderOrigin(c,s);break;
+    case 'axisDrag': renderAxisDrag(c,s);break;
+    case 'gridBuild': renderGridBuild(c,s);break;
+    case 'centerClick': renderCenterClick(c,s);break;
+    case 'loopInsert': renderLoopInsert(c,s);break;
+    case 'frames': renderFrames(c,s);break;
+    case 'backgroundClear': renderBackgroundClear(c,s);break;
+    case 'rangeExplore': renderRangeExplore(c,s);break;
+    case 'slider': renderSlider(c,s);break;
+    case 'fillThenDraw': renderFillThenDraw(c,s);break;
+    case 'rectPlay': renderRectPlay(c,s);break;
+  }
+  if(s.runtime)renderRuntimeTrace(c);
+}
+function renderChoice(c,s){c.innerHTML=`<div class="micro-rule">choose one</div><div class="choice-grid">${s.options.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>`;c.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{const ok=b.dataset.v===s.correct;c.querySelectorAll('.choice').forEach(x=>x.classList.remove('correct','wrong'));b.classList.add(ok?'correct':'wrong');if(ok)complete();else setFeedback(false,'That choice does not provide the required operation.')})}
+function renderMultiChoice(c,s){challengeState.sel=new Set();c.innerHTML=`<div class="micro-rule">choose only what must exist</div><div class="choice-grid">${s.options.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>`;c.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{const v=b.dataset.v;challengeState.sel.has(v)?challengeState.sel.delete(v):challengeState.sel.add(v);b.classList.toggle('selected');const a=[...challengeState.sel].sort().join('|'),z=[...s.correct].sort().join('|');if(a===z)complete('Place + color + action are sufficient for this target.');})}
+function makeOrderList(c,items,onCheck){challengeState.order=[...items];const draw=()=>{c.innerHTML=`<div class="micro-rule">drag or use arrows to reorder</div><div class="order-list">${challengeState.order.map((x,i)=>`<div class="order-item" draggable="true" data-i="${i}"><span>${escapeHTML(x)}</span><span><button class="moveUp" data-i="${i}" aria-label="Move up">↑</button><button class="moveDown" data-i="${i}" aria-label="Move down">↓</button></span></div>`).join('')}</div>`;let from=null;c.querySelectorAll('.order-item').forEach(el=>{el.ondragstart=e=>{if(e.target.closest('button')){e.preventDefault();return}from=Number(el.dataset.i);el.classList.add('dragging')};el.ondragend=()=>el.classList.remove('dragging');el.ondragover=e=>e.preventDefault();el.ondrop=e=>{e.preventDefault();if(from===null)return;const to=Number(el.dataset.i);const [m]=challengeState.order.splice(from,1);challengeState.order.splice(to,0,m);draw();onCheck(challengeState.order)}});c.querySelectorAll('.moveUp').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=Number(b.dataset.i);if(i>0){[challengeState.order[i-1],challengeState.order[i]]=[challengeState.order[i],challengeState.order[i-1]];draw();onCheck(challengeState.order)}});c.querySelectorAll('.moveDown').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=Number(b.dataset.i);if(i<challengeState.order.length-1){[challengeState.order[i+1],challengeState.order[i]]=[challengeState.order[i],challengeState.order[i+1]];draw();onCheck(challengeState.order)}})};draw()}
+function renderOrder(c,s){makeOrderList(c,s.items,arr=>{if(arr.join('|')===s.correct.join('|'))complete('Order now produces the intended consequence.')})}
+function renderSortProviders(c,s){challengeState.assign={};challengeState.active=null;c.innerHTML=`<div class="micro-rule">select a token, then assign its provider</div><div class="token-pool">${s.items.map(([t])=>`<button class="token-card" data-token="${t}">${t}</button>`).join('')}</div><div class="two-cols"><button class="bucket" data-provider="JavaScript"><h3>JAVASCRIPT</h3><div class="bucket-items"></div></button><button class="bucket" data-provider="p5.js"><h3>P5.JS</h3><div class="bucket-items"></div></button></div>`;c.querySelectorAll('.token-card').forEach(b=>b.onclick=()=>{challengeState.active=b.dataset.token;c.querySelectorAll('.token-card').forEach(x=>x.classList.toggle('active',x===b))});c.querySelectorAll('.bucket').forEach(b=>b.onclick=()=>{if(!challengeState.active)return;challengeState.assign[challengeState.active]=b.dataset.provider;const btn=c.querySelector(`[data-token="${challengeState.active}"]`);btn.textContent=`${challengeState.active} → ${b.dataset.provider}`;btn.classList.remove('active');challengeState.active=null;const ok=s.items.every(([t,p])=>challengeState.assign[t]===p);if(ok)complete('Every name now has a provider.')})}
+function renderPair(c,s){challengeState.pair=0;const render=()=>{if(challengeState.pair>=s.pairs.length){complete('Both dialect pairs are aligned.');return}const [a,b]=s.pairs[challengeState.pair];c.innerHTML=`<div class="micro-rule">pair equivalent operations</div><div class="two-cols"><div class="bucket"><h3>PROCESSING / JAVA</h3><button class="choice" id="pairA">${escapeHTML(a)}</button></div><div class="bucket"><h3>P5.JS / JAVASCRIPT</h3><div class="choice-grid"><button class="choice" data-p="good">${escapeHTML(b)}</button><button class="choice" data-p="bad">${escapeHTML(challengeState.pair===0?'createCanvas()':'void draw()')}</button></div></div></div>`;c.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>{if(x.dataset.p==='good'){challengeState.pair++;render()}else setFeedback(false,'That pair changes both the language form and the operation.')})};render()}
+function renderNameTest(c,s){c.innerHTML=`<div class="micro-rule">type a function name, then ask p5 to start</div><div class="slot-row"><code>function</code><input id="nameInput" value="start" style="padding:10px;border:2px solid var(--ink);width:150px"><code>() { … }</code><button id="testName">START P5</button></div><div id="nameResult" class="runtime-chain"></div>`;$('#testName').onclick=()=>{const v=$('#nameInput').value.trim();$('#nameResult').innerHTML=v==='setup'?'<span class="runtime-node now">p5 → setup() → called once</span>':`<span class="runtime-node">p5 looked for setup()</span><span class="runtime-arrow">≠</span><span class="runtime-node">${escapeHTML(v)}()</span>`;if(v==='setup')complete('The special name is operational because p5 looks for it.');else setFeedback(false,'p5 did not call that name as its startup hook.')}}
+function renderEmptyParens(c,s){c.innerHTML=`<div class="micro-rule">parameter boundary</div><div class="slot-row"><code>setup(</code><button class="slot-token" data-v="400">400</button><button class="slot-token" data-v="empty">leave empty</button><button class="slot-token" data-v="mouseX">mouseX</button><code>)</code></div>`;c.querySelectorAll('.slot-token').forEach(b=>b.onclick=()=>{if(b.dataset.v==='empty')complete('Empty parentheses still mark the parameter boundary.');else setFeedback(false,'That would declare or imply an input. This setup needs none.')})}
+function renderInsideBraces(c,s){c.innerHTML=`<div class="micro-rule">choose which body owns the instruction</div><div class="two-cols"><button class="bucket" data-v="inside"><h3>function setup() {</h3><div class="token-card">createCanvas(400,400);</div><h3>}</h3></button><button class="bucket" data-v="outside"><h3>OUTSIDE</h3><div class="token-card">createCanvas(400,400);</div></button></div>`;c.querySelectorAll('.bucket').forEach(b=>b.onclick=()=>{if(b.dataset.v==='inside')complete('The instruction now belongs to setup’s body.');else setFeedback(false,'Outside the braces, it is not part of setup.')})}
+function renderAction(c,s){c.innerHTML=`<div class="micro-rule">the world is absent</div><div class="dimension-demo"><div id="absentCanvas" style="font-size:12px;color:var(--muted)">NO CANVAS</div></div><button class="primary" id="actionBtn">${s.action}</button>`;$('#actionBtn').onclick=()=>{$('#absentCanvas').outerHTML='<div class="dim-canvas" style="width:240px;height:240px"><span class="dim-label w">WIDTH</span><span class="dim-label h">HEIGHT</span></div>';complete('A drawing surface now exists.')}}
+function renderSlots(c,s){challengeState.slot=[];challengeState.active=null;c.innerHTML=`<div class="micro-rule">fill the slots</div><div class="slot-row"><code>createCanvas(</code><div class="slot" data-i="0">①</div><code>,</code><div class="slot" data-i="1">②</div><code>)</code></div><div class="token-pool">${s.tokens.map(t=>`<button class="slot-token" data-t="${t}">${t}</button>`).join('')}</div>`;c.querySelectorAll('.slot-token').forEach(b=>b.onclick=()=>{challengeState.active=b.dataset.t;c.querySelectorAll('.slot-token').forEach(x=>x.classList.toggle('active',x===b))});c.querySelectorAll('.slot').forEach(slot=>slot.onclick=()=>{if(!challengeState.active)return;const i=Number(slot.dataset.i);challengeState.slot[i]=challengeState.active;slot.textContent=challengeState.active;slot.classList.add('filled');if(challengeState.slot.join('|')===s.correct.join('|'))complete('The slots now have semantic names before numbers enter them.')})}
+function renderDimension(c,s){const key=s.axis;state[key]=s.start;updatePreview();c.innerHTML=`<div class="micro-rule">stretch one dimension</div><div class="dimension-demo"><div class="dim-canvas" id="dimCanvas"><span class="dim-label w" id="dw"></span><span class="dim-label h" id="dh"></span></div></div><div class="slider-wrap"><b>${key==='w'?'WIDTH':'HEIGHT'}</b><input id="dimSlider" type="range" min="80" max="600" step="10" value="${state[key]}"><output>${state[key]}</output></div>`;const update=()=>{const w=key==='w'?state.w:260,h=key==='h'?state.h:260;$('#dimCanvas').style.width=Math.min(520,Math.max(40,w*.8))+'px';$('#dimCanvas').style.height=Math.min(300,Math.max(40,h*.6))+'px';$('#dw').textContent='WIDTH = '+(key==='w'?state.w:400);$('#dh').textContent='HEIGHT = '+(key==='h'?state.h:400)};update();$('#dimSlider').oninput=e=>{state[key]=Number(e.target.value);e.target.nextElementSibling.value=state[key];update();renderCode();updatePreview();if(state[key]===s.target)complete(`${key==='w'?'Width':'Height'} is now ${s.target}.`)}}
+function renderEqualDims(c,s){challengeState.w=320;challengeState.h=460;c.innerHTML=`<div class="micro-rule">make width = height</div><div class="dimension-demo"><div class="dim-canvas" id="eqCanvas"></div></div><div class="slider-wrap"><b>WIDTH</b><input id="eqW" type="range" min="160" max="520" step="20" value="320"><output>320</output></div><div class="slider-wrap"><b>HEIGHT</b><input id="eqH" type="range" min="160" max="520" step="20" value="460"><output>460</output></div>`;const update=()=>{const w=Number($('#eqW').value),h=Number($('#eqH').value);$('#eqW').nextElementSibling.value=w;$('#eqH').nextElementSibling.value=h;$('#eqCanvas').style.width=Math.min(420,w*.7)+'px';$('#eqCanvas').style.height=Math.min(270,h*.5)+'px';if(w===h)complete(`width = height = ${w}. The surface is square.`)};$('#eqW').oninput=update;$('#eqH').oninput=update;update()}
+function renderOrigin(c,s){c.innerHTML=`<div class="micro-rule">choose (0,0)</div><div class="axis-box"><button class="origin-choice tl" data-v="tl"></button><button class="origin-choice tr" data-v="tr"></button><button class="origin-choice bl" data-v="bl"></button><button class="origin-choice br" data-v="br"></button></div>`;c.querySelectorAll('.origin-choice').forEach(b=>b.onclick=()=>{if(b.dataset.v==='tl'){b.classList.add('correct');complete('(0,0) is anchored to the top-left.')}else setFeedback(false,'That corner is not p5’s default 2D origin.')})}
+function renderAxisDrag(c,s){const axis=s.axis;challengeState.pos={x:120,y:200};challengeState.start={...challengeState.pos};c.innerHTML=`<div class="micro-rule">drag only ${axis}</div><div class="axis-box"><span class="axis-label o">(0,0)</span><span class="axis-label x">+x →</span><span class="axis-label y">+y ↓</span><div class="axis-dot" id="axisDot"></div></div><div class="runtime-chain"><span class="runtime-node" id="axisRead"></span></div>`;const box=c.querySelector('.axis-box'),dot=$('#axisDot'),read=$('#axisRead');const place=()=>{dot.style.left=(challengeState.pos.x/400*100)+'%';dot.style.top=(challengeState.pos.y/400*100)+'%';read.textContent=`x=${Math.round(challengeState.pos.x)}   y=${Math.round(challengeState.pos.y)}`};place();let down=false;dot.onpointerdown=e=>{down=true;dot.setPointerCapture(e.pointerId)};dot.onpointermove=e=>{if(!down)return;const r=box.getBoundingClientRect();if(axis==='x')challengeState.pos.x=Math.max(0,Math.min(400,(e.clientX-r.left)/r.width*400));else challengeState.pos.y=Math.max(0,Math.min(400,(e.clientY-r.top)/r.height*400));place();const delta=Math.abs(challengeState.pos[axis]-challengeState.start[axis]);if(delta>120)complete(`Only ${axis} changed. The orthogonal coordinate stayed fixed.`)};dot.onpointerup=()=>down=false}
+function renderGridBuild(c,s){challengeState.lines=new Set();c.innerHTML=`<div class="micro-rule">add interior landmarks</div><div class="axis-box" id="gridBox"><span class="axis-label o">0</span></div><div class="choice-grid">${[100,200,300].map(v=>`<button class="choice" data-v="${v}">ADD ${v}</button>`).join('')}</div>`;c.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{const v=Number(b.dataset.v);challengeState.lines.add(v);b.classList.add('selected');const box=$('#gridBox');if(!box.querySelector(`[data-line="${v}"]`)){const vline=document.createElement('div');vline.dataset.line=v;vline.style.cssText=`position:absolute;left:${v/4}%;top:0;bottom:0;border-left:1px solid #777`;const hline=document.createElement('div');hline.style.cssText=`position:absolute;top:${v/4}%;left:0;right:0;border-top:1px solid #777`;box.append(vline,hline)}if(challengeState.lines.size===3)complete('The 400-unit surface now has quarter landmarks.')})}
+function renderCenterClick(c,s){c.innerHTML=`<div class="micro-rule">find width/2, height/2</div><div class="axis-box grid" id="centerBox"><span class="axis-label o">(0,0)</span></div><div class="runtime-chain"><span class="runtime-node">width/2 = 200</span><span class="runtime-node">height/2 = 200</span></div>`;$('#centerBox').onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*400,y=(e.clientY-r.top)/r.height*400;if(Math.abs(x-200)<35&&Math.abs(y-200)<35){const d=document.createElement('div');d.className='axis-dot';d.style.left='50%';d.style.top='50%';e.currentTarget.appendChild(d);complete('The two halves intersect at (200,200).')}else setFeedback(false,`You clicked approximately (${Math.round(x)}, ${Math.round(y)}).`)}}
+function renderLoopInsert(c,s){c.innerHTML=`<div class="micro-rule">place the function into the repeating slot</div><div class="runtime-chain"><span class="runtime-node">setup()</span><span class="runtime-arrow">then</span><button class="runtime-node" id="loopSlot">[ repeating slot ]</button></div><div class="token-pool" style="justify-content:center"><button class="slot-token" id="drawToken">draw()</button><button class="slot-token">createCanvas()</button></div>`;$('#loopSlot').onclick=()=>{if(challengeState.pick==='draw'){this.textContent='draw()';complete('draw() now occupies the repeated lifecycle slot.')}else setFeedback(false,'Select draw() first.')};c.querySelectorAll('.slot-token').forEach(b=>b.onclick=()=>{challengeState.pick=b.textContent.startsWith('draw')?'draw':'other';c.querySelectorAll('.slot-token').forEach(x=>x.classList.toggle('active',x===b))});$('#loopSlot').onclick=()=>{if(challengeState.pick==='draw'){ $('#loopSlot').textContent='draw() ↻';complete('p5 can now call draw repeatedly.')}else setFeedback(false,'The repeating slot needs draw().')}}
+function renderFrames(c,s){challengeState.frames=0;c.innerHTML=`<div class="micro-rule">one press = one frame</div><div class="frame-box"><div class="frame-stage"><div class="frame-ball" id="frameBall"></div></div><div><div class="frame-count" id="frameCount">0</div><button class="primary" id="stepFrame">STEP</button></div></div>`;const update=()=>{$('#frameCount').textContent=challengeState.frames;$('#frameBall').style.left=(8+(challengeState.frames%8)*11)+'%'};update();$('#stepFrame').onclick=()=>{challengeState.frames++;update();if(challengeState.frames>=s.target)complete(`${challengeState.frames} explicit draw calls produced ${challengeState.frames} frames.`)}}
+function renderBackgroundClear(c,s){challengeState.cleared=false;c.innerHTML=`<div class="micro-rule">remove the previous marks</div><div class="frame-stage" id="trailStage" style="height:240px">${Array.from({length:14},(_,i)=>`<div style="position:absolute;width:26px;height:26px;background:var(--blue);left:${5+i*6}%;top:${20+(i%4)*16}%"></div>`).join('')}</div><button class="primary" id="clearBg">background(220)</button>`;$('#clearBg').onclick=()=>{$('#trailStage').innerHTML='';$('#trailStage').style.background='rgb(220,220,220)';complete('background replaced the previous visible field.')}}
+function renderRangeExplore(c,s){challengeState.hit0=false;challengeState.hit255=false;c.innerHTML=`<div class="micro-rule">touch both endpoints</div><div class="scale"><div class="scale-pin" id="scalePin" data-v="128" style="left:${128/255*100}%"></div></div><div class="slider-wrap"><b>GRAY</b><input id="rangeSlider" type="range" min="0" max="255" step="1" value="128"><output>128</output></div><div class="rgb-box" id="grayBox" style="background:rgb(128,128,128)">128</div>`;$('#rangeSlider').oninput=e=>{const v=Number(e.target.value);e.target.nextElementSibling.value=v;$('#scalePin').style.left=(v/255*100)+'%';$('#scalePin').dataset.v=v;$('#grayBox').style.background=`rgb(${v},${v},${v})`;$('#grayBox').textContent=v;if(v===0)challengeState.hit0=true;if(v===255)challengeState.hit255=true;if(challengeState.hit0&&challengeState.hit255)complete('You established both boundaries of the default grayscale range.')}}
+function renderSlider(c,s){state[s.key]=s.start;renderCode();updatePreview();c.innerHTML=`<div class="micro-rule">change one value</div><div class="slider-wrap"><b>${s.key.toUpperCase()}</b><input id="oneSlider" type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.start}"><output>${s.start}</output></div>${['gray','r','g','b'].includes(s.key)?`<div class="rgb-box" id="valueBox"></div>`:`<div class="rect-stage"><div class="demo-rect" id="valueRect"></div></div>`}`;const paint=()=>{const v=state[s.key];if($('#valueBox')){$('#valueBox').style.background=`rgb(${s.key==='gray'?v:state.r},${s.key==='gray'?v:state.g},${s.key==='gray'?v:state.b})`;$('#valueBox').textContent=`${s.key} = ${v}`;}if($('#valueRect')){const r=$('#valueRect');r.style.left=(state.x/400*100)+'%';r.style.top=(state.y/400*100)+'%';r.style.width=(state.rw/400*100)+'%';r.style.height=(state.rh/400*100)+'%';}};paint();$('#oneSlider').oninput=e=>{state[s.key]=Number(e.target.value);e.target.nextElementSibling.value=state[s.key];renderCode();paint();updatePreview();if(state[s.key]===s.target)complete(`${s.key} = ${s.target}.`)}}
+function renderFillThenDraw(c,s){challengeState.fill=false;challengeState.draw=false;c.innerHTML=`<div class="micro-rule">state first, pixels second</div><div class="state-indicator"><div><b>CURRENT FILL</b><span id="fillState">white</span></div><div><b>PIXELS CHANGED</b><span id="pixelState">no</span></div><div><b>NEXT SHAPE</b><span>reads fill</span></div></div><div class="choice-grid"><button class="choice" id="setFill">fill(255,0,0)</button><button class="choice" id="drawShape">rect(...)</button></div><div class="frame-stage" id="fillStage" style="height:220px"></div>`;$('#setFill').onclick=()=>{challengeState.fill=true;$('#fillState').textContent='red';$('#setFill').classList.add('selected');setFeedback(false,'Fill state changed. No pixels changed yet.')};$('#drawShape').onclick=()=>{if(!challengeState.fill){setFeedback(false,'The rectangle used the old fill. Set fill first.');return}challengeState.draw=true;$('#pixelState').textContent='yes';$('#fillStage').innerHTML='<div style="position:absolute;left:25%;top:25%;width:50%;height:50%;background:red;border:2px solid #111"></div>';complete('The later rectangle consumed the stored fill state.')}}
+function renderRectPlay(c,s){challengeState.mode=0;c.innerHTML=`<div class="micro-rule">first move, then resize</div><div class="rect-stage"><div class="demo-rect" id="rpRect" style="left:10%;top:15%;width:28%;height:35%"></div></div><div class="choice-grid"><button class="choice" id="moveRect">MOVE POSITION</button><button class="choice" id="sizeRect">CHANGE SIZE</button></div>`;$('#moveRect').onclick=()=>{const r=$('#rpRect');r.style.left='28%';r.style.top='26%';challengeState.mode|=1;$('#moveRect').classList.add('selected');if(challengeState.mode===3)complete('Position and extent are separate responsibilities.')};$('#sizeRect').onclick=()=>{const r=$('#rpRect');r.style.width='50%';r.style.height='46%';challengeState.mode|=2;$('#sizeRect').classList.add('selected');if(challengeState.mode===3)complete('Position and extent are separate responsibilities.')}}
+function renderRuntimeTrace(c){const box=document.createElement('div');box.className='runtime-chain';box.id='runtimeTrace';box.innerHTML=['BROWSER','P5.JS','SKETCH.JS','SETUP','DRAW','PIXELS'].map((x,i)=>`<span class="runtime-node" data-r="${i}">${x}</span>${i<5?'<span class="runtime-arrow">→</span>':''}`).join('');c.appendChild(box)}
+
+function updatePreview(){
+  $('#previewShell').style.aspectRatio=`${Math.max(1,state.w)}/${Math.max(1,state.h)}`;
+  const f=$('#fallback'),r=$('#fallbackRect');f.style.background=`rgb(${state.gray},${state.gray},${state.gray})`;r.style.left=(state.x/state.w*100)+'%';r.style.top=(state.y/state.h*100)+'%';r.style.width=(state.rw/state.w*100)+'%';r.style.height=(state.rh/state.h*100)+'%';r.style.background=`rgb(${state.r},${state.g},${state.b})`;
+}
+function p5Doc(){
+  const src=sourceText();
+  return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;overflow:hidden;background:#ddd}canvas{max-width:100%;max-height:100%;width:auto!important;height:auto!important}</style>
+<style id="lecture-mode">
+:root{--lecture-pad:clamp(28px,4vw,72px)}
+html,body{background:#f4f2ea}
+body{overflow:hidden}
+#app{height:100%;display:block;position:relative}
+header{position:fixed;inset:0 0 auto 0;height:72px;border:0;display:flex;align-items:center;justify-content:space-between;padding:18px var(--lecture-pad);z-index:80;pointer-events:none;background:linear-gradient(to bottom,rgba(244,242,234,.96),rgba(244,242,234,0))}
+.lecture-meta{display:flex;gap:18px;align-items:center;font:900 clamp(16px,1.2vw,22px)/1 ui-monospace,monospace;letter-spacing:.08em;pointer-events:auto}
+#lecturePhase{border:2px solid #111;padding:8px 10px;background:#f4f2ea}
+#lectureCounter{color:#555}
+.header-actions{border:0;padding:0;display:flex;gap:8px;pointer-events:auto}
+.header-actions button,.overlay-actions button,.output-head button{font-size:clamp(14px,1.05vw,20px);font-weight:900;padding:10px 14px;min-height:0;background:#f4f2ea}
+main{display:block;height:100%;min-height:0}
+.panel + .panel{border-left:0}
+.play{position:absolute;inset:0;display:block;background:#f4f2ea}
+.play>.panel-head{display:none}
+.arena{position:absolute;inset:0;background:#f4f2ea;padding:clamp(86px,9vh,120px) var(--lecture-pad) clamp(140px,15vh,190px);overflow:hidden}
+.stage-card{height:100%;border:0;background:transparent;display:grid;grid-template-rows:auto 1fr;overflow:visible}
+.slide-head{border:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:0;max-width:92vw}
+.slide-num{display:none}
+.slide-title{font-size:clamp(46px,5vw,92px);line-height:.95;max-width:16ch;letter-spacing:-.05em;margin:0;font-weight:900}
+.prompt{font-size:clamp(22px,2vw,36px);line-height:1.15;max-width:34ch;margin-top:16px;color:#2e2c28;font-family:system-ui,sans-serif;font-weight:500}
+.challenge{padding:3vh 0 0;overflow:hidden;display:grid;place-items:center}
+.challenge-inner{width:min(92vw,1400px);max-height:54vh;display:grid;gap:clamp(14px,2vh,24px);align-content:center}
+.micro-rule{font-size:clamp(14px,1.2vw,22px);font-weight:900;letter-spacing:.09em;color:#666;text-align:center}
+.choice-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.choice,.slot-token,.token-card{font-size:clamp(22px,2vw,36px);min-height:82px;padding:16px 20px;font-weight:900}
+.order-list{gap:12px;max-width:1000px;margin:auto;width:100%}
+.order-item{font-size:clamp(20px,1.7vw,32px);padding:16px 20px;min-height:68px}
+.order-item button{font-size:20px;padding:5px 9px}
+.two-cols{gap:18px;max-width:1100px;margin:auto;width:100%}
+.bucket{min-height:180px;padding:16px}.bucket h3{font-size:clamp(14px,1.1vw,20px);margin-bottom:14px}
+.token-pool{justify-content:center}.token-card{min-height:64px}
+.slot-row{font-size:clamp(24px,2vw,38px);gap:14px}.slot{min-width:180px;min-height:74px;font-size:clamp(20px,1.6vw,30px)}
+.axis-box{width:min(54vh,58vw,680px);max-height:54vh}
+.axis-label{font-size:clamp(14px,1.1vw,20px);padding:5px 7px}.axis-dot{width:28px;height:28px}
+.origin-choice{width:46px;height:46px}
+.dimension-demo{width:min(80vw,900px);height:46vh}.dim-label{font-size:clamp(18px,1.4vw,28px)}
+.slider-wrap{grid-template-columns:180px 1fr 110px;gap:20px;max-width:1100px;margin:auto;width:100%;font-size:clamp(22px,1.8vw,34px)}.slider-wrap b{font-size:inherit}.slider-wrap output{font-size:inherit}.slider-wrap input{height:34px}
+.scale{height:80px;max-width:1100px;margin:auto;width:100%}.scale-pin{height:94px}.scale-pin::after{top:92px;font-size:18px}
+.rgb-box{height:200px;font-size:clamp(28px,2.6vw,48px)}
+.state-indicator{max-width:1100px;margin:auto;width:100%}.state-indicator div{padding:18px;font-size:clamp(16px,1.2vw,22px)}
+.frame-box{max-width:1100px;margin:auto;width:100%;grid-template-columns:1fr 180px}.frame-stage{height:280px}.frame-count{font-size:76px}.frame-box button{font-size:28px;padding:16px}
+.rect-stage{width:min(54vh,58vw,680px);max-height:54vh}
+.runtime-chain{gap:10px}.runtime-node{font-size:clamp(18px,1.5vw,28px);padding:14px 16px}.runtime-arrow{font-size:26px}
+.play-footer{position:fixed;left:var(--lecture-pad);right:var(--lecture-pad);bottom:78px;height:auto;min-height:54px;border:0;background:transparent;padding:0;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;z-index:50;pointer-events:none}
+.play-footer button{pointer-events:auto;font-size:16px;background:#f4f2ea}
+.play-feedback{font-family:system-ui,sans-serif;font-size:clamp(18px,1.35vw,26px);line-height:1.12;max-width:58ch;background:#f4f2ea;padding:8px 10px;border-left:5px solid #111;pointer-events:auto}
+.play-feedback:empty{display:none}.play-feedback strong{font-size:inherit;display:inline;margin-right:10px;color:#111}
+.lecture-code{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:52;max-width:72vw;white-space:pre;overflow:hidden;text-overflow:ellipsis;background:#111;color:#f4f2ea;padding:12px 18px;font:900 clamp(18px,1.5vw,30px)/1.15 ui-monospace,monospace;display:none}
+.lecture-code.show{display:block}
+footer{position:fixed;inset:0;pointer-events:none;border:0;height:auto;background:transparent;display:block;z-index:55}
+.nav{position:fixed;top:50%;transform:translateY(-50%);width:62px;height:84px;border:0;background:rgba(244,242,234,.86);font-size:48px;padding:0;pointer-events:auto}.nav.prev{left:0}.nav.next{right:0}.nav:disabled{opacity:.12}.slide-ribbon{display:none}
+.source,.inspect{display:none;position:fixed;inset:0;z-index:120;background:#f4f2ea;min-width:0;min-height:0}
+body.source-open .source{display:grid;grid-template-rows:72px 1fr auto}
+body.inspect-open .inspect{display:grid;grid-template-rows:72px minmax(0,1fr)}
+body.source-open header,body.inspect-open header{display:none}
+.source .panel-head,.inspect .panel-head{height:72px;border-bottom:2px solid #111;padding:0 var(--lecture-pad);font-size:clamp(18px,1.4vw,28px);letter-spacing:.04em}
+.overlay-actions{display:flex;gap:8px}
+.source .code-wrap{padding:5vh 8vw;overflow:auto;background:#faf9f5}
+.source .code-line{grid-template-columns:64px 1fr;min-height:72px;border-left-width:8px}.source .ln{font-size:24px;padding-right:18px}.source .src{font-size:clamp(28px,2.3vw,46px);line-height:1.45}.source .tok.active{background:#efc326}
+.source .given{display:none}
+.inspect .preview{border:0;display:grid;grid-template-rows:64px 1fr;background:#ddd;min-height:0}
+.inspect .preview-head{font-size:20px;padding:0 var(--lecture-pad)}
+.inspect .preview-frame{padding:3vh 8vw;min-height:0;display:grid;place-items:center}.inspect .preview-shell{width:min(72vh,72vw);max-height:72vh}
+.inspect .inspector-body{display:none}
+#feedback .failure{display:none}
+@media (max-width:900px){.slide-title{font-size:46px}.prompt{font-size:22px}.challenge-inner{max-height:58vh}.header-actions button{font-size:14px}.lecture-code{max-width:82vw;font-size:16px}}
+</style>
+
+</head><body><script>window.addEventListener('error',e=>parent.postMessage({kind:'runner-error',message:e.message,id:${p5RunId}},'*'));<\/script><script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js" onload="parent.postMessage({kind:'p5-loaded',id:${p5RunId}},'*')" onerror="parent.postMessage({kind:'p5-failed',id:${p5RunId}},'*')"><\/script><script>${src}\nsetTimeout(()=>parent.postMessage({kind:'runner-ready',id:${p5RunId}},'*'),250);<\/script></body></html>`;
+}
+function runP5(){
+  p5RunId++;$('#p5dot').className='status-dot';$('#p5status').textContent='loading p5.js';$('#fallback').style.display='block';$('#runner').style.display='none';updatePreview();$('#runner').srcdoc=p5Doc();clearTimeout(runtimeTimer);runtimeTimer=setTimeout(()=>{if(!$('#p5dot').classList.contains('ok')){$('#p5dot').className='status-dot bad';$('#p5status').textContent='CDN unavailable; p5 source still valid';}},3500);
+  if(slides[slideIndex].runtime){let i=0;const tick=setInterval(()=>{const nodes=document.querySelectorAll('#runtimeTrace .runtime-node');nodes.forEach((n,j)=>n.classList.toggle('now',j===i));i++;if(i>=nodes.length){clearInterval(tick);}},420)}
+}
+window.addEventListener('message',e=>{const d=e.data;if(!d||!d.kind||d.id!==p5RunId)return;if(d.kind==='p5-loaded'){$('#p5dot').className='status-dot ok';$('#p5status').textContent='p5.js loaded'}if(d.kind==='runner-ready'){clearTimeout(runtimeTimer);$('#p5dot').className='status-dot ok';$('#p5status').textContent='actual p5.js running';$('#fallback').style.display='none';$('#runner').style.display='block'}if(d.kind==='p5-failed'){$('#p5dot').className='status-dot bad';$('#p5status').textContent='p5 CDN unavailable'}if(d.kind==='runner-error'){$('#p5dot').className='status-dot bad';$('#p5status').textContent='runtime: '+d.message}});
+
+function render(){
+  const s=slides[slideIndex];
+  renderPhases();renderCode();renderRibbon();
+  $('#slideNum').innerHTML=`${String(s.n).padStart(2,'0')}<small>/ 39</small>`;
+  $('#slideTitle').textContent=s.title;
+  $('#slidePrompt').textContent=s.prompt;
+  $('#lecturePhase').textContent=s.phase;
+  $('#lectureCounter').textContent=`${String(s.n).padStart(2,'0')} / ${slides.length}`;
+  $('#lectureCode').classList.remove('show');
+  renderChallenge();renderInspector();updatePreview();
+  $('#prev').disabled=slideIndex===0;$('#next').disabled=slideIndex===slides.length-1;
+}
+function resetSlideValues(){Object.assign(state,initial);renderCode();updatePreview()}
+function go(i){slideIndex=Math.max(0,Math.min(slides.length-1,i));resetSlideValues();render()}
+$('#prev').onclick=()=>go(slideIndex-1);$('#next').onclick=()=>go(slideIndex+1);$('#resetSlide').onclick=()=>{resetSlideValues();render()};
+$('#runBtn').onclick=runP5;$('#stepRun').onclick=runP5;
+$('#sourceModeBtn').onclick=()=>document.body.classList.add('source-open');
+$('#sourceClose').onclick=()=>document.body.classList.remove('source-open');
+$('#outputModeBtn').onclick=()=>{document.body.classList.add('inspect-open');runP5();};
+$('#inspectClose').onclick=()=>document.body.classList.remove('inspect-open');
+$('#copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText(sourceText());$('#copyBtn').textContent='COPIED';setTimeout(()=>$('#copyBtn').textContent='COPY',900)}catch{alert(sourceText())}};
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){document.body.classList.remove('source-open','inspect-open');return}if(e.key==='c'||e.key==='C')document.body.classList.add('source-open');if(e.key==='o'||e.key==='O'){document.body.classList.add('inspect-open');runP5();}if(e.key==='ArrowRight'&&!document.body.classList.contains('source-open')&&!document.body.classList.contains('inspect-open'))go(slideIndex+1);if(e.key==='ArrowLeft'&&!document.body.classList.contains('source-open')&&!document.body.classList.contains('inspect-open'))go(slideIndex-1);if(e.key==='Enter'&&e.metaKey)runP5()});
+render();updatePreview();
+</script>
+</body>
+</html>

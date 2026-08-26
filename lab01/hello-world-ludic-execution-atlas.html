@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Hello World Execution Atlas</title>
+<style>
+:root{
+  --bg:#f4efe3; --paper:#fffdf7; --ink:#111; --muted:#736f66;
+  --red:#d83a2f; --blue:#1c4fa4; --yellow:#f0cf38; --green:#2f7b48;
+  --orange:#d98628; --purple:#7351a8; --line:4px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+button{font:inherit;cursor:pointer}
+button:focus-visible,.tok:focus-visible{outline:3px solid #6f9fdf;outline-offset:2px}
+.deck{height:100%;display:grid;grid-template-rows:48px minmax(0,1fr) 52px}
+.top,.bottom{background:var(--paper);border-bottom:var(--line) solid var(--ink);display:flex;align-items:center;gap:8px;padding:7px 10px}
+.bottom{border-bottom:0;border-top:var(--line) solid var(--ink);justify-content:space-between}
+.brand{font-weight:950;font-size:12px;letter-spacing:.12em;white-space:nowrap}
+.status{font:11px var(--mono);color:var(--muted)}
+.spacer{flex:1}
+.navbtn{border:2px solid var(--ink);background:var(--paper);padding:7px 10px;font-size:11px;font-weight:900}
+.navbtn:hover{background:var(--ink);color:white}
+.progress{height:8px;flex:1;background:#ded7c7;border:2px solid var(--ink);max-width:420px}
+.bar{height:100%;width:0;background:var(--ink);transition:width .18s ease}
+.slides{min-height:0;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;padding:24px;overflow:auto;display:none}
+.slide.active{display:grid;grid-template-rows:auto minmax(0,1fr);gap:18px}
+h1,h2,p{margin:0}
+h1{font-size:clamp(34px,6vw,72px);line-height:.95;letter-spacing:-.055em;max-width:1100px}
+h2{font-size:clamp(28px,4vw,48px);line-height:1;letter-spacing:-.035em}
+.kicker{font:900 12px var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{background:var(--paper);border:var(--line) solid var(--ink);padding:16px;min-width:0}
+.card h3{margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.bigclaim{font-size:clamp(24px,3.8vw,48px);line-height:1.05;letter-spacing:-.04em}
+.mono{font-family:var(--mono)}
+pre{margin:0;background:#111;color:#f8f2e8;border:var(--line) solid #111;padding:16px;overflow:auto;font:clamp(14px,1.6vw,22px)/1.45 var(--mono);white-space:pre}
+.codeLine{display:block}
+.tok{display:inline-block;border:1px solid transparent;border-radius:0;padding:0 2px;color:#fff}
+.tok:hover,.tok.on{background:var(--yellow);color:#111;border-color:#111}
+.sidepanel{background:var(--paper);border:var(--line) solid var(--ink);padding:16px;display:grid;gap:10px;align-content:start}
+.labelTitle{font:950 18px var(--mono)}
+.labelGrid{display:grid;grid-template-columns:90px 1fr;gap:5px;font:13px var(--mono)}
+.labelGrid b{color:var(--muted);font-weight:900;text-transform:uppercase;font-size:10px}
+.tag{display:inline-block;border:2px solid var(--ink);padding:5px 7px;margin:3px;background:#fff;font:900 11px var(--mono)}
+.tag.p5{background:#e8edf6}.tag.you{background:#fff7ca}.tag.runtime{background:#e8f1e8}.tag.warn{background:#fff1ef}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stepList{display:grid;gap:6px}
+.step{border:3px solid var(--ink);background:#fff;padding:9px 10px;font:13px var(--mono);opacity:.35}
+.step.done{opacity:1;background:#eef6ee}
+.step.now{opacity:1;background:#fff5c9;box-shadow:inset 0 0 0 3px var(--yellow)}
+.stepNum{display:inline-grid;place-items:center;width:24px;height:24px;border:2px solid var(--ink);margin-right:8px;background:#fff;font-weight:950}
+.canvasDemo{aspect-ratio:1/1;max-height:520px;background:#fff;border:var(--line) solid var(--ink);position:relative;overflow:hidden}
+.canvasDemo.gray{background:rgb(220,220,220)}
+.axis{position:absolute;left:0;top:0;right:0;bottom:0;background:
+  linear-gradient(to right, rgba(0,0,0,.16) 1px, transparent 1px) 0 0/10% 100%,
+  linear-gradient(to bottom, rgba(0,0,0,.16) 1px, transparent 1px) 0 0/100% 10%}
+.axis::before{content:"(0,0)";position:absolute;left:6px;top:6px;font:900 13px var(--mono);background:#fff;padding:3px}
+.axis::after{content:"x →     y ↓";position:absolute;right:8px;bottom:8px;font:900 13px var(--mono);background:#fff;padding:3px}
+.marker{position:absolute;width:16px;height:16px;border:3px solid var(--red);border-radius:50%;transform:translate(-50%,-50%);background:#fff}
+.numberCard{display:grid;gap:8px;font:14px var(--mono)}
+.numberCard .num{font-size:64px;font-weight:950;line-height:.85}
+.strip{height:30px;border:3px solid var(--ink);background:linear-gradient(to right,#000,#fff);position:relative}
+.strip i{position:absolute;top:-8px;width:4px;height:42px;background:var(--red);left:86.27%}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tab{border:2px solid var(--ink);background:#fff;padding:7px 9px;font:900 11px var(--mono)}
+.tab.active{background:#111;color:#fff}
+.compareArea pre{min-height:330px}
+.answer{display:none;margin-top:10px;border-top:3px solid var(--ink);padding-top:10px;font:14px/1.45 var(--mono)}
+.choice{border:4px solid var(--ink);background:#fff;padding:12px;text-align:left;display:grid;gap:8px}
+.choice:hover{background:#f1eee6}
+.choice.bad{border-color:var(--red);background:#fff1ef}
+.choice.good{border-color:var(--green);background:#eef7ee}
+.choiceTitle{font-weight:950;font-size:16px}
+.sequence{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.seqBox{border:3px solid var(--ink);background:#fff;padding:10px;min-height:84px;font:12px var(--mono)}
+.seqBox strong{display:block;margin-bottom:6px;font-family:var(--sans);font-size:12px;letter-spacing:.08em}
+.doDont{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.doDont .dont{border-color:var(--red);background:#fff4ef}
+.doDont .do{border-color:var(--green);background:#f0f8f0}
+.small{font-size:12px;color:var(--muted);line-height:1.35}
+
+.playDrawer{position:absolute;right:12px;top:60px;bottom:64px;z-index:40;width:min(430px,calc(100% - 24px));background:var(--paper);border:var(--line) solid var(--ink);box-shadow:8px 8px 0 rgba(0,0,0,.16);display:none;grid-template-rows:auto minmax(0,1fr)}
+.playDrawer.open{display:grid}
+.playDrawerHead{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:3px solid var(--ink);background:#111;color:#fff}
+.playDrawerHead strong{font-size:11px;letter-spacing:.1em}
+.playDrawerHead button{margin-left:auto;border:2px solid #fff;background:#111;color:#fff;padding:5px 7px;font:900 10px var(--sans)}
+.playDrawerBody{overflow:auto;padding:12px;display:grid;gap:9px;align-content:start}
+.playField{border:2px solid var(--ink);background:#fff}
+.playField b{display:block;padding:5px 7px;border-bottom:2px solid var(--ink);background:#eee9df;font:950 9px var(--mono);letter-spacing:.08em}
+.playField div{padding:7px 8px;font:12px/1.4 var(--mono);white-space:pre-wrap}
+.playPrompt{border:4px solid var(--ink);background:#fff7ca;padding:10px;font:12px/1.45 var(--mono);white-space:pre-wrap}
+
+@media(max-width:860px){
+  .slide{padding:14px}
+  .grid2,.grid3,.doDont{grid-template-columns:1fr}
+  .sequence{grid-template-columns:1fr}
+  .top{gap:6px}.brand{font-size:10px}.status{display:none}
+  .canvasDemo{max-height:none}
+}
+</style>
+</head>
+<body>
+<div class="deck">
+  <header class="top">
+    <div class="brand">HELLO WORLD EXECUTION ATLAS</div>
+    <div class="status" id="status">slide 1</div>
+    <div class="spacer"></div>
+    <button class="navbtn" id="playTheoryBtn">PLAY THEORY</button>
+    <button class="navbtn" id="resetBtn">RESET SLIDE</button>
+  </header>
+
+  <main class="slides" id="slides">
+
+    <section class="slide active">
+      <div>
+        <div class="kicker">Zero-assumption presentation</div>
+        <h1>Hello World starts before the code.</h1>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <p class="bigclaim">Do not teach <span class="mono">function setup()</span> as the first thing.</p>
+          <p class="small" style="margin-top:14px">First show the world that makes it runnable: browser, JavaScript, p5, runtime, callbacks, canvas, frame, pixels.</p>
+        </div>
+        <div class="card">
+          <h3>Rule</h3>
+          <p class="bigclaim">No naked numbers. No unexplained names. No magic PLAY button.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Slide grammar</div>
+        <h2>Every new mark answers five questions.</h2>
+      </div>
+      <div class="sequence">
+        <div class="seqBox"><strong>GIVEN</strong>Who supplies this?</div>
+        <div class="seqBox"><strong>WRITTEN</strong>What characters did I add?</div>
+        <div class="seqBox"><strong>USE</strong>What operation does this permit?</div>
+        <div class="seqBox"><strong>HAPPENS</strong>What changes when it runs?</div>
+        <div class="seqBox"><strong>SEEN</strong>What can I observe?</div>
+      </div>
+    </section>
+
+    <section class="slide tokenSlide">
+      <div>
+        <div class="kicker">Clickable code</div>
+        <h2>Click each token. Every mark earns a job.</h2>
+      </div>
+      <div class="grid2">
+        <pre id="tokenCode"><span class="codeLine"><span class="tok" tabindex="0" data-id="function">function</span> <span class="tok" tabindex="0" data-id="setup">setup</span><span class="tok" tabindex="0" data-id="setupParen">()</span> <span class="tok" tabindex="0" data-id="setupBrace">{</span></span>
+<span class="codeLine">  <span class="tok" tabindex="0" data-id="createCanvas">createCanvas</span><span class="tok" tabindex="0" data-id="openParen">(</span><span class="tok" tabindex="0" data-id="width400">400</span><span class="tok" tabindex="0" data-id="comma">,</span> <span class="tok" tabindex="0" data-id="height400">400</span><span class="tok" tabindex="0" data-id="closeParen">)</span><span class="tok" tabindex="0" data-id="semi">;</span></span>
+<span class="codeLine"><span class="tok" tabindex="0" data-id="closeSetup">}</span></span>
+
+<span class="codeLine"><span class="tok" tabindex="0" data-id="function2">function</span> <span class="tok" tabindex="0" data-id="draw">draw</span><span class="tok" tabindex="0" data-id="drawParen">()</span> <span class="tok" tabindex="0" data-id="drawBrace">{</span></span>
+<span class="codeLine">  <span class="tok" tabindex="0" data-id="background">background</span><span class="tok" tabindex="0" data-id="bgOpen">(</span><span class="tok" tabindex="0" data-id="gray220">220</span><span class="tok" tabindex="0" data-id="bgClose">)</span><span class="tok" tabindex="0" data-id="bgSemi">;</span></span>
+<span class="codeLine"><span class="tok" tabindex="0" data-id="closeDraw">}</span></span></pre>
+        <aside class="sidepanel" id="tokenPanel">
+          <div class="labelTitle">Click a token</div>
+          <div class="labelGrid">
+            <b>Provider</b><span>—</span>
+            <b>Kind</b><span>—</span>
+            <b>Role</b><span>—</span>
+            <b>Before</b><span>—</span>
+            <b>After</b><span>—</span>
+            <b>Fails if</b><span>—</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Press Play is not magic</div>
+        <h2>Step through what PLAY actually does.</h2>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="row">
+            <button class="navbtn" id="stepRuntime">NEXT RUNTIME STEP</button>
+            <button class="navbtn" id="resetRuntime">RESET</button>
+          </div>
+          <div class="stepList" id="runtimeSteps" style="margin-top:12px"></div>
+        </div>
+        <div class="card">
+          <h3>Operational definition</h3>
+          <p class="bigclaim">The runtime is the thing that keeps calling your code.</p>
+          <p class="small" style="margin-top:14px">You define <span class="mono">setup</span> and <span class="mono">draw</span>. p5 calls them.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Canvas and grid</div>
+        <h2>400 and 400 are not “just numbers.”</h2>
+      </div>
+      <div class="grid2">
+        <div class="canvasDemo">
+          <div class="axis"></div>
+          <div class="marker" id="marker" style="left:0%;top:0%"></div>
+        </div>
+        <div class="sidepanel">
+          <div class="row">
+            <button class="navbtn pointBtn" data-x="0" data-y="0">(0,0)</button>
+            <button class="navbtn pointBtn" data-x="40" data-y="0">(40,0)</button>
+            <button class="navbtn pointBtn" data-x="40" data-y="40">(40,40)</button>
+            <button class="navbtn pointBtn" data-x="200" data-y="200">(200,200)</button>
+          </div>
+          <div class="numberCard">
+            <div class="num" id="coordLabel">(0,0)</div>
+            <div><b>x</b> = horizontal position, rightward</div>
+            <div><b>y</b> = vertical position, downward</div>
+            <div><b>grid unit</b> = 40 logical units</div>
+            <div><b>400 ÷ 40</b> = 10 columns and 10 rows</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Number cards</div>
+        <h2>Same datatype. Different role.</h2>
+      </div>
+      <div class="grid3">
+        <div class="card numberCard">
+          <div class="num">400</div>
+          <div><b>Type:</b> number</div>
+          <div><b>Role:</b> canvas width</div>
+          <div><b>Axis:</b> x</div>
+          <div><b>Extent:</b> 0 → 400</div>
+          <div><b>Half:</b> 200</div>
+        </div>
+        <div class="card numberCard">
+          <div class="num">400</div>
+          <div><b>Type:</b> number</div>
+          <div><b>Role:</b> canvas height</div>
+          <div><b>Axis:</b> y</div>
+          <div><b>Extent:</b> 0 → 400</div>
+          <div><b>Half:</b> 200</div>
+        </div>
+        <div class="card numberCard">
+          <div class="num">220</div>
+          <div><b>Type:</b> number</div>
+          <div><b>Role:</b> grayscale level</div>
+          <div><b>Range:</b> 0 → 255</div>
+          <div class="strip"><i></i></div>
+          <div><b>Use:</b> light gray</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Equivalent surface forms</div>
+        <h2>Many ways can express the same sketch.</h2>
+      </div>
+      <div class="card compareArea">
+        <div class="tabs" id="codeTabs">
+          <button class="tab active" data-form="p5">p5.js</button>
+          <button class="tab" data-form="processing">Processing / Java</button>
+          <button class="tab" data-form="blocks">Block reading</button>
+          <button class="tab" data-form="runtime">Runtime contract</button>
+          <button class="tab" data-form="plain">Plain English</button>
+        </div>
+        <pre id="compareCode"></pre>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Line-by-line as slide claims</div>
+        <h2>One line may contain many slides.</h2>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Line</h3>
+          <pre>createCanvas(400, 400);</pre>
+        </div>
+        <div class="card">
+          <h3>Claims inside the line</h3>
+          <div class="tag p5">p5 supplies createCanvas</div>
+          <div class="tag">this is a function call</div>
+          <div class="tag">first 400 = width</div>
+          <div class="tag">comma separates arguments</div>
+          <div class="tag">second 400 = height</div>
+          <div class="tag runtime">after call: canvas exists</div>
+          <div class="tag warn">if p5 absent: createCanvas undefined</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Imposter challenge</div>
+        <h2>Which one looks fine but is broken underneath?</h2>
+      </div>
+      <div class="grid3">
+        <button class="choice" data-answer="maintain">
+          <div class="choiceTitle">A. Works, but harder to maintain</div>
+          <pre>function setup() {
+  createCanvas(400, 400);
+  background(220);
+}</pre>
+          <div class="small">Looks gray. But clearing only happens once.</div>
+        </button>
+        <button class="choice" data-answer="good">
+          <div class="choiceTitle">B. Strong default</div>
+          <pre>function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+}</pre>
+          <div class="small">Canvas once. Background every frame.</div>
+        </button>
+        <button class="choice" data-answer="broken">
+          <div class="choiceTitle">C. Broken underneath</div>
+          <pre>function setup() {
+  createCanvas(400);
+}
+
+function draw() {
+  background(220);
+}</pre>
+          <div class="small">Missing required height argument.</div>
+        </button>
+      </div>
+      <div class="answer card" id="imposterAnswer">
+        <h3>Answer</h3>
+        <p><b>C is broken</b>: the call does not supply the full width/height contract. <b>A is the subtle imposter</b>: it may look correct for a static gray canvas, but the clearing operation lives in the wrong lifecycle if the sketch later animates. B preserves the architecture.</p>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Good code includes negative space</div>
+        <h2>Every operation says what it refuses.</h2>
+      </div>
+      <div class="doDont">
+        <div class="card do">
+          <h3>createCanvas</h3>
+          <pre>does:
+  creates drawing surface
+
+requires:
+  p5 runtime
+  width number
+  height number
+
+preserves:
+  source text
+
+signals:
+  missing argument
+  missing p5</pre>
+        </div>
+        <div class="card dont">
+          <h3>Does not</h3>
+          <pre>does not:
+  start draw by itself
+  set the background color
+  create animation
+  explain coordinates
+  guarantee physical pixel count</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div>
+        <div class="kicker">Final rule</div>
+        <h2>Do not advance until the current mark can be used.</h2>
+      </div>
+      <div class="card">
+        <p class="bigclaim">Every token needs a provider, type, role, place in execution, before-state, after-state, failure condition, and visible consequence.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bottom">
+    <button class="navbtn" id="prevBtn">← PREV</button>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <button class="navbtn" id="nextBtn">NEXT →</button>
+  </footer>
+</div>
+
+
+<aside class="playDrawer" id="playDrawer" aria-live="polite">
+  <div class="playDrawerHead"><strong id="playDrawerTitle">LUDIC ENGINE</strong><button id="closePlayTheory">CLOSE</button></div>
+  <div class="playDrawerBody" id="playDrawerBody"></div>
+</aside>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let current=0;
+
+
+const ludicPrompts=[{"title": "01 · Invent the Universe", "ordinary": "Blank editor. No granted meaning for setup, draw, PLAY, canvas, or p5.", "play": "<browser> <JavaScript> <p5> <runtime> <sketch> <canvas>", "action": "[predict what must already exist] → [reveal one supplying layer]", "boundary": "Stop before syntax instruction. The round concerns only what makes code runnable.", "invariant": "Nothing becomes 'obvious' merely because experts have stopped noticing it.", "tension": "What must exist before source text can act?", "spoilsport": "Explaining setup before showing who calls it.", "prompt": "Present the empty editor as ordinary reality. Ask the participant to predict what must already exist before the first line can run. Reveal browser → JavaScript → p5 → runtime → sketch one step at a time. Win condition: distinguish GIVEN infrastructure from WRITTEN source."}, {"title": "02 · Five Questions", "ordinary": "A mark can be read passively without accounting for its use.", "play": "<mark> <provider> <written form> <operation> <change> <consequence>", "action": "[classify] GIVEN / WRITTEN / USE / HAPPENS / SEEN", "boundary": "Only one mark or line at a time.", "invariant": "Every answer terminates in an operation or observable consequence.", "tension": "Can the participant classify before reveal?", "spoilsport": "Showing all five answers first.", "prompt": "Hide the five labels for one mark. Require predictions for provider, written form, use, runtime change, and visible result. Reveal only after commitment. Change the mark and repeat."}, {"title": "03 · Token Forensics", "ordinary": "The six-line sketch appears as one wall of syntax.", "play": "<keyword> <name> <brace> <parenthesis> <number> <comma> <semicolon>", "action": "[click token] → [guess provider/kind/role] → [reveal contract]", "boundary": "The selected token is the entire play-ground.", "invariant": "No token may be explained with another unexplained token.", "tension": "What job does this exact mark perform here?", "spoilsport": "Calling punctuation 'just syntax.'", "prompt": "Let the participant click a token. Before revealing its card, ask for provider, kind, role, before-state, after-state, and failure condition. Use the two identical 400 tokens to show that meaning follows use, not appearance."}, {"title": "04 · PLAY as Ritual", "ordinary": "PLAY looks like a magic triangle.", "play": "<button> <parser> <p5 loader> <callback discovery> <setup> <scheduler> <draw> <frame>", "action": "[predict next runtime event] → [advance one step]", "boundary": "Exactly one runtime transition per move.", "invariant": "Future events cannot leak before the current prediction.", "tension": "What happens next?", "spoilsport": "Jumping directly from PLAY to canvas.", "prompt": "Advance the runtime one event at a time. Before NEXT, require a prediction. Reveal browser, JavaScript, p5, parse, setup discovery, setup call, canvas creation, draw scheduling, draw call, and display in causal order."}, {"title": "05 · Coordinate Hunt", "ordinary": "A 400 × 400 field exists without a usable spatial rule.", "play": "<canvas> <origin> <x> <y> <grid> <point>", "action": "[predict point] → [place marker] → [translate to grid]", "boundary": "400 × 400 logical drawing space; grid unit = 40.", "invariant": "x increases right; y increases down.", "tension": "Where will the point land?", "spoilsport": "Reading coordinates without placing anything.", "prompt": "Show a coordinate such as (80,120). Require the participant to point to its location before moving the marker. Then translate it to grid column 2, row 3. Repeat with center and edges."}, {"title": "06 · Number Masks", "ordinary": "400, 400, and 220 look like equivalent numbers.", "play": "<number> <role> <unit> <axis> <range>", "action": "[inspect numeral] → [assign role] → [change value and predict]", "boundary": "One numeral per round.", "invariant": "Every number has a use; units or ranges appear where applicable.", "tension": "What changes if this number changes?", "spoilsport": "Saying 'it is just 400.'", "prompt": "Present a numeral without its role. Ask what it measures, its domain, range, and consequence of larger/smaller/zero values. Contrast width 400, height 400, and grayscale 220."}, {"title": "07 · Same Program, Different Masks", "ordinary": "One syntax is mistaken for the program itself.", "play": "<p5.js> <Processing> <blocks> <runtime contract> <plain English>", "action": "[switch mask] → [name invariant] → [name surface change]", "boundary": "All masks must preserve the same intended behavior.", "invariant": "Canvas once; background every frame.", "tension": "What survives notation change?", "spoilsport": "Equating syntax with behavior.", "prompt": "Cycle the same sketch through every representation. After each switch, require the participant to name what remained invariant and what changed only in notation. Introduce one subtle lifecycle mismatch as a later challenge."}, {"title": "08 · One Line, Many Claims", "ordinary": "createCanvas(400,400); appears to be one obvious instruction.", "play": "<provider> <call> <argument> <separator> <completion> <state transition>", "action": "[estimate hidden claims] → [unpack] → [reassemble]", "boundary": "One source line only.", "invariant": "Every subclaim reconnects to the complete operation.", "tension": "How many assumptions hide inside one line?", "spoilsport": "Turning the round into vocabulary memorization.", "prompt": "Ask the participant to count independent claims in one line. Reveal provider, call syntax, argument roles, punctuation, prerequisites, and before/after state one at a time. Reassemble the line at the end."}, {"title": "09 · Imposter", "ordinary": "Similar immediate visuals make weak code look correct.", "play": "<candidate A> <candidate B> <candidate C> <future change> <hidden defect>", "action": "[predict modification] → [choose imposter] → [reveal consequence]", "boundary": "Judge runtime and maintenance consequences, not aesthetics.", "invariant": "Every verdict cites a concrete operational consequence.", "tension": "Which one only looks right?", "spoilsport": "Choosing by formatting preference.", "prompt": "Present three snippets. Require a future-change prediction before choosing: add animation, resize, or another operation. One is broken, one is fragile, one preserves the lifecycle contract. Reveal only after the participant commits."}, {"title": "10 · Negative-Space Contract", "ordinary": "An operation is known only by successful behavior.", "play": "<does> <does not> <requires> <preserves> <signals> <recovers>", "action": "[name positive effect] → [draw forbidden space] → [test failure]", "boundary": "Only consequential absences belong in the round.", "invariant": "Every negative claim must be testable or observable.", "tension": "What must not happen, and what must survive?", "spoilsport": "Inventing irrelevant edge cases.", "prompt": "Give one operation such as createCanvas. Ask for does, does-not, requires, preserves, signals, and recovers. Convert one negative claim into an explicit failure test. Repeat with background or draw."}, {"title": "11 · Advancement Gate", "ordinary": "A deck advances because another slide exists.", "play": "<current mark> <provider> <type> <role> <execution place> <before> <after> <failure> <consequence>", "action": "[audit] → [prove readiness] → [advance]", "boundary": "No new concept until the current one passes the audit.", "invariant": "Advancement follows demonstrated use, not exposure time.", "tension": "Has this mark earned the right to become fluent?", "spoilsport": "Advancing because the learner has seen the term once.", "prompt": "Randomly select any mark from the six-line sketch. Require provider, type, role, execution place, before-state, after-state, failure condition, and visible consequence. If one field cannot be grounded, remain on that mark."}];
+let playTheoryOpen=false;
+function renderPlayTheory(){
+  const d=ludicPrompts[current]||ludicPrompts[0];
+  document.getElementById('playDrawerTitle').textContent=`LUDIC ENGINE · ${d.title}`;
+  document.getElementById('playDrawerBody').innerHTML=`
+    <div class="playField"><b>ORDINARY REALITY</b><div>${d.ordinary}</div></div>
+    <div class="playField"><b>PLAY ELEMENTS</b><div>${d.play}</div></div>
+    <div class="playField"><b>LUDIC MORPHISM</b><div>${d.action}</div></div>
+    <div class="playField"><b>BOUNDARY</b><div>${d.boundary}</div></div>
+    <div class="playField"><b>INVARIANT</b><div>${d.invariant}</div></div>
+    <div class="playField"><b>TENSION</b><div>${d.tension}</div></div>
+    <div class="playField"><b>SPOIL-SPORT</b><div>${d.spoilsport}</div></div>
+    <div class="playPrompt">${d.prompt}</div>`;
+}
+function setPlayTheory(v){
+  playTheoryOpen=v;
+  document.getElementById('playDrawer').classList.toggle('open',v);
+  document.getElementById('playTheoryBtn').textContent=v?'CLOSE PLAY THEORY':'PLAY THEORY';
+  if(v)renderPlayTheory();
+}
+document.getElementById('playTheoryBtn').onclick=()=>setPlayTheory(!playTheoryOpen);
+document.getElementById('closePlayTheory').onclick=()=>setPlayTheory(false);
+
+function show(i){
+  current=Math.max(0,Math.min(slides.length-1,i));
+  slides.forEach((s,idx)=>s.classList.toggle('active',idx===current));
+  document.getElementById('status').textContent=`slide ${current+1} / ${slides.length}`;
+  document.getElementById('bar').style.width=`${((current+1)/slides.length)*100}%`;
+  if(playTheoryOpen)renderPlayTheory();
+}
+document.getElementById('prevBtn').onclick=()=>show(current-1);
+document.getElementById('nextBtn').onclick=()=>show(current+1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ') show(current+1);
+  if(e.key==='ArrowLeft') show(current-1);
+});
+document.getElementById('resetBtn').onclick=()=>resetSlide();
+
+const tokenInfo={
+  function:{title:'function',provider:'JavaScript',kind:'keyword',role:'begin a function definition',before:'no executable region declared',after:'runtime can later call the named region',fails:'spelled incorrectly or used outside grammar'},
+  function2:{title:'function',provider:'JavaScript',kind:'keyword',role:'begin another function definition',before:'draw callback not declared',after:'draw callback can be discovered by p5',fails:'p5 cannot find draw if name/grammar wrong'},
+  setup:{title:'setup',provider:'you choose name; p5 recognizes it',kind:'special callback name',role:'operations p5 calls once at start',before:'no setup callback found',after:'p5 can call setup during initialization',fails:'misspelled name is ignored by p5'},
+  draw:{title:'draw',provider:'you choose name; p5 recognizes it',kind:'special callback name',role:'operations p5 calls every frame',before:'no frame callback found',after:'p5 can call draw repeatedly',fails:'misspelled name is ignored by p5'},
+  setupParen:{title:'()',provider:'JavaScript syntax',kind:'parameter list',role:'setup currently receives no arguments',before:'name alone',after:'complete function header shape',fails:'missing parentheses break declaration'},
+  drawParen:{title:'()',provider:'JavaScript syntax',kind:'parameter list',role:'draw currently receives no arguments',before:'name alone',after:'complete function header shape',fails:'missing parentheses break declaration'},
+  setupBrace:{title:'{',provider:'JavaScript syntax',kind:'boundary',role:'opens the setup body',before:'header only',after:'operations can belong to setup',fails:'missing matching }'},
+  drawBrace:{title:'{',provider:'JavaScript syntax',kind:'boundary',role:'opens the draw body',before:'header only',after:'operations can belong to draw',fails:'missing matching }'},
+  closeSetup:{title:'}',provider:'JavaScript syntax',kind:'boundary',role:'closes setup body',before:'inside setup',after:'outside setup',fails:'scope remains unclosed'},
+  closeDraw:{title:'}',provider:'JavaScript syntax',kind:'boundary',role:'closes draw body',before:'inside draw',after:'outside draw',fails:'scope remains unclosed'},
+  createCanvas:{title:'createCanvas',provider:'p5.js',kind:'function / operation',role:'create a drawing surface',before:'canvas absent',after:'canvas present; width and height set',fails:'p5 absent or arguments invalid'},
+  openParen:{title:'(',provider:'JavaScript syntax',kind:'call boundary',role:'begin supplied values',before:'operation name only',after:'arguments may enter',fails:'call incomplete'},
+  width400:{title:'400',provider:'you write it',kind:'number literal',role:'canvas width, x extent',before:'width unknown',after:'width = 400 logical units',fails:'missing or not a number'},
+  comma:{title:',',provider:'JavaScript syntax',kind:'separator',role:'end first argument; begin next argument',before:'one value supplied',after:'ready for second value',fails:'arguments run together'},
+  height400:{title:'400',provider:'you write it',kind:'number literal',role:'canvas height, y extent',before:'height unknown',after:'height = 400 logical units',fails:'missing or not a number'},
+  closeParen:{title:')',provider:'JavaScript syntax',kind:'call boundary',role:'end supplied values',before:'open argument list',after:'call expression complete',fails:'call remains open'},
+  semi:{title:';',provider:'JavaScript convention',kind:'statement marker',role:'explicitly mark operation end',before:'call expression',after:'statement boundary visible',fails:'not usually fatal here, but ambiguity can grow'},
+  background:{title:'background',provider:'p5.js',kind:'drawing operation',role:'fill whole canvas',before:'previous canvas contents',after:'canvas pixels become chosen color',fails:'no p5 or no drawing context'},
+  bgOpen:{title:'(',provider:'JavaScript syntax',kind:'call boundary',role:'begin supplied color value',before:'operation name only',after:'argument may enter',fails:'call incomplete'},
+  gray220:{title:'220',provider:'you write it',kind:'number literal',role:'grayscale color value',before:'color unspecified',after:'gray level 220 is supplied',fails:'outside useful range or wrong color mode'},
+  bgClose:{title:')',provider:'JavaScript syntax',kind:'call boundary',role:'end background argument list',before:'open argument list',after:'call expression complete',fails:'call remains open'},
+  bgSemi:{title:';',provider:'JavaScript convention',kind:'statement marker',role:'explicitly mark operation end',before:'background call',after:'draw statement complete',fails:'not usually fatal here, but ambiguity can grow'}
+};
+
+function setToken(id){
+  document.querySelectorAll('.tok').forEach(t=>t.classList.toggle('on',t.dataset.id===id));
+  const d=tokenInfo[id]||{};
+  document.getElementById('tokenPanel').innerHTML=`
+    <div class="labelTitle">${d.title||'Unknown token'}</div>
+    <div class="labelGrid">
+      <b>Provider</b><span>${d.provider||'—'}</span>
+      <b>Kind</b><span>${d.kind||'—'}</span>
+      <b>Role</b><span>${d.role||'—'}</span>
+      <b>Before</b><span>${d.before||'—'}</span>
+      <b>After</b><span>${d.after||'—'}</span>
+      <b>Fails if</b><span>${d.fails||'—'}</span>
+    </div>`;
+}
+document.querySelectorAll('.tok').forEach(t=>{
+  t.onclick=()=>setToken(t.dataset.id);
+  t.onkeydown=e=>{if(e.key==='Enter'||e.key===' ') setToken(t.dataset.id)};
+});
+
+const runtimeSteps=[
+  'Browser already running',
+  'JavaScript engine available',
+  'p5.js library loaded',
+  'Your sketch source parsed',
+  'p5 looks for setup',
+  'setup found',
+  'setup called once',
+  'createCanvas creates 400 × 400 canvas',
+  'p5 looks for draw',
+  'frame scheduler starts',
+  'draw called',
+  'background(220) fills canvas',
+  'frame displayed',
+  'draw called again'
+];
+let runtimeIndex=0;
+function renderSteps(){
+  const box=document.getElementById('runtimeSteps');
+  box.innerHTML=runtimeSteps.map((s,i)=>`<div class="step ${i<runtimeIndex?'done':''} ${i===runtimeIndex?'now':''}"><span class="stepNum">${i+1}</span>${s}</div>`).join('');
+}
+document.getElementById('stepRuntime').onclick=()=>{runtimeIndex=Math.min(runtimeSteps.length,runtimeIndex+1);renderSteps()};
+document.getElementById('resetRuntime').onclick=()=>{runtimeIndex=0;renderSteps()};
+renderSteps();
+
+document.querySelectorAll('.pointBtn').forEach(b=>{
+  b.onclick=()=>{
+    const x=Number(b.dataset.x),y=Number(b.dataset.y);
+    document.getElementById('marker').style.left=`${x/400*100}%`;
+    document.getElementById('marker').style.top=`${y/400*100}%`;
+    document.getElementById('coordLabel').textContent=`(${x},${y})`;
+  };
+});
+
+const forms={
+p5:`function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+}`,
+processing:`void setup() {
+  size(400, 400);
+}
+
+void draw() {
+  background(220);
+}`,
+blocks:`SETUP · ONCE
+  create canvas
+    width  = 400
+    height = 400
+
+DRAW · EVERY FRAME
+  fill canvas
+    gray = 220`,
+runtime:`GIVEN
+  browser
+  JavaScript engine
+  p5.js
+  animation scheduler
+
+YOU WRITE
+  setup callback
+  draw callback
+  400 width
+  400 height
+  220 gray
+
+P5 DOES
+  call setup once
+  call draw every frame`,
+plain:`When the program starts, create a 400 by 400 drawing surface.
+
+For every frame after that, fill the entire surface with light gray.`
+};
+function setForm(f){
+  document.querySelectorAll('#codeTabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.form===f));
+  document.getElementById('compareCode').textContent=forms[f];
+}
+document.querySelectorAll('#codeTabs .tab').forEach(t=>t.onclick=()=>setForm(t.dataset.form));
+setForm('p5');
+
+document.querySelectorAll('.choice').forEach(c=>{
+  c.onclick=()=>{
+    document.querySelectorAll('.choice').forEach(x=>x.classList.remove('good','bad'));
+    if(c.dataset.answer==='good') c.classList.add('good'); else c.classList.add('bad');
+    document.getElementById('imposterAnswer').style.display='block';
+  };
+});
+
+function resetSlide(){
+  if(slides[current].classList.contains('tokenSlide')){
+    document.querySelectorAll('.tok').forEach(t=>t.classList.remove('on'));
+    document.getElementById('tokenPanel').innerHTML='<div class="labelTitle">Click a token</div><div class="labelGrid"><b>Provider</b><span>—</span><b>Kind</b><span>—</span><b>Role</b><span>—</span><b>Before</b><span>—</span><b>After</b><span>—</span><b>Fails if</b><span>—</span></div>';
+  }
+  runtimeIndex=0; renderSteps();
+  document.getElementById('marker').style.left='0%';
+  document.getElementById('marker').style.top='0%';
+  document.getElementById('coordLabel').textContent='(0,0)';
+  document.querySelectorAll('.choice').forEach(x=>x.classList.remove('good','bad'));
+  document.getElementById('imposterAnswer').style.display='none';
+}
+show(0);
+</script>
+</body>
+</html>

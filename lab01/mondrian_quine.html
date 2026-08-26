@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-strawberry.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Mondrian Quine</title>
+<style>
+:root{
+  --paper:#f4f1e8;
+  --white:#f8f7f1;
+  --ink:#111;
+  --red:#dc2f26;
+  --yellow:#f2c525;
+  --blue:#1557a5;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper)}
+body{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+canvas{display:block;width:100vw;height:100vh;touch-action:none;outline:none}
+button{font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:var(--ink);border:0;background:transparent;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* One global action at REST / WORKING. */
+#run{
+  position:fixed;
+  z-index:20;
+  top:14px;
+  right:14px;
+  width:36px;
+  height:36px;
+  border:3px solid var(--ink);
+  background:var(--paper);
+  display:grid;
+  place-items:center;
+  font-size:15px;
+}
+#run:hover{background:var(--ink);color:var(--paper)}
+
+/* Recovery exists only after reversible change. */
+#undo{
+  position:fixed;
+  z-index:20;
+  top:14px;
+  left:14px;
+  width:36px;
+  height:36px;
+  border:3px solid var(--ink);
+  background:var(--paper);
+  display:none;
+  place-items:center;
+  font-size:17px;
+}
+#undo:hover{background:var(--ink);color:var(--paper)}
+
+/* The selected object owns its temporary controls. */
+#local{
+  position:fixed;
+  z-index:18;
+  display:none;
+  min-width:205px;
+  max-width:min(330px,calc(100vw - 20px));
+  border:3px solid var(--ink);
+  background:rgba(244,241,232,.98);
+  box-shadow:none;
+}
+#localCode{
+  min-height:34px;
+  padding:8px 10px 7px;
+  border-bottom:3px solid var(--ink);
+  white-space:pre-line;
+  font:700 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+#localActions{display:flex;align-items:stretch;height:32px}
+#localActions > button,
+#swatches{border-right:2px solid var(--ink)}
+#localActions > button:last-child{border-right:0}
+#localActions > button{min-width:34px;padding:0 8px}
+#localActions > button:hover{background:var(--ink);color:var(--paper)}
+#op{min-width:60px;text-align:left}
+#swatches{display:flex;align-items:center;gap:4px;padding:0 6px}
+.swatch{width:15px;height:15px;min-width:15px;padding:0;border:2px solid var(--ink)}
+.swatch[data-c="#dc2f26"]{background:var(--red)}
+.swatch[data-c="#f2c525"]{background:var(--yellow)}
+.swatch[data-c="#1557a5"]{background:var(--blue)}
+.swatch[data-c="#f8f7f1"]{background:var(--white)}
+.swatch[data-c="#111111"]{background:var(--ink)}
+.swatch[aria-pressed="true"]{outline:2px solid var(--paper);box-shadow:0 0 0 3px var(--ink)}
+
+/* A changing seam reports only the changed condition. */
+#ratio{
+  position:fixed;
+  z-index:19;
+  display:none;
+  padding:5px 7px;
+  background:var(--ink);
+  color:var(--paper);
+  pointer-events:none;
+  font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+
+/* Fault preserves the object and offers only recovery. */
+#fault{
+  position:fixed;
+  z-index:30;
+  display:none;
+  width:min(310px,calc(100vw - 24px));
+  border:3px solid var(--ink);
+  background:var(--paper);
+  padding:11px;
+}
+#faultMsg{font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0 0 10px}
+#faultBtns{display:flex;gap:6px}
+#faultBtns button{border:2px solid var(--ink);height:30px;padding:0 9px}
+#faultBtns button:hover{background:var(--ink);color:var(--paper)}
+
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+</style>
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-describedby="keys" aria-label="Mondrian visual program"></canvas>
+<button id="run" aria-label="Run program" title="Run">▶</button>
+<button id="undo" aria-label="Undo last change" title="Undo">↶</button>
+
+<div id="local" role="toolbar" aria-label="Selected block">
+  <div id="localCode"></div>
+  <div id="localActions">
+    <button id="op" aria-label="Next operation" title="Next operation">paint</button>
+    <div id="swatches" aria-label="Color">
+      <button class="swatch" data-c="#dc2f26" aria-label="Red"></button>
+      <button class="swatch" data-c="#f2c525" aria-label="Yellow"></button>
+      <button class="swatch" data-c="#1557a5" aria-label="Blue"></button>
+      <button class="swatch" data-c="#f8f7f1" aria-label="White"></button>
+      <button class="swatch" data-c="#111111" aria-label="Black"></button>
+    </div>
+    <button id="splitV" aria-label="Split vertically" title="Split vertically">│+</button>
+    <button id="splitH" aria-label="Split horizontally" title="Split horizontally">─+</button>
+    <button id="remove" aria-label="Delete and merge" title="Delete and merge">×</button>
+  </div>
+</div>
+
+<div id="ratio" aria-hidden="true"></div>
+<div id="fault" role="alertdialog" aria-live="assertive">
+  <p id="faultMsg"></p>
+  <div id="faultBtns">
+    <button id="retry">RETRY</button>
+    <button id="restore">RESTORE</button>
+  </div>
+</div>
+<div id="keys" class="sr-only">Click a region to edit. Drag a black seam to change its split. Space runs or stops. Escape closes selection. Command or Control Z undoes.</div>
+
+<script>
+(() => {
+'use strict';
+
+const $ = id => document.getElementById(id);
+const canvas = $('c');
+const ctx = canvas.getContext('2d');
+const runBtn = $('run');
+const undoBtn = $('undo');
+const local = $('local');
+const localCode = $('localCode');
+const opBtn = $('op');
+const ratioEl = $('ratio');
+const faultEl = $('fault');
+const faultMsg = $('faultMsg');
+const DPR = Math.max(1, Math.min(2, devicePixelRatio || 1));
+
+const PAPER='#f4f1e8', WHITE='#f8f7f1', INK='#111111', RED='#dc2f26', YELLOW='#f2c525', BLUE='#1557a5';
+const OPS=['paint','line','ellipse','mouse','repeat','pulse'];
+
+let W=0,H=0,mouseX=0,mouseY=0,frame=0;
+let nextId=1, program, selectedId=null, running=false;
+let layout={leaves:[],dividers:[]};
+let drag=null, dragBefore=null;
+let history=[];
+let lastRunnable=null;
+let fault=null;
+
+const leaf=(op='paint',color=WHITE)=>({type:'leaf',id:nextId++,op,color});
+const split=(dir,ratio,a,b)=>({type:'split',dir,ratio,a,b});
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+function makeProgram(){
+  nextId=1;
+  return split('v',.61,
+    split('h',.56,
+      leaf('paint',RED),
+      split('v',.36,
+        leaf('paint',INK),
+        split('h',.47,leaf('paint',WHITE),leaf('line',WHITE))
+      )
+    ),
+    split('h',.29,
+      leaf('paint',YELLOW),
+      split('h',.52,
+        leaf('mouse',WHITE),
+        split('v',.50,leaf('ellipse',WHITE),leaf('paint',BLUE))
+      )
+    )
+  );
+}
+
+function resize(){
+  W=Math.max(1,innerWidth); H=Math.max(1,innerHeight);
+  canvas.width=Math.floor(W*DPR); canvas.height=Math.floor(H*DPR);
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+function rootRect(){
+  const p=Math.max(18,Math.min(W,H)*.045);
+  return {x:p,y:p,w:W-p*2,h:H-p*2};
+}
+
+function compute(node,r,out={leaves:[],dividers:[]}){
+  if(node.type==='leaf'){out.leaves.push({node,rect:r});return out;}
+  if(node.dir==='v'){
+    const x=r.x+r.w*node.ratio;
+    out.dividers.push({node,rect:r,x,y1:r.y,y2:r.y+r.h});
+    compute(node.a,{x:r.x,y:r.y,w:x-r.x,h:r.h},out);
+    compute(node.b,{x,y:r.y,w:r.x+r.w-x,h:r.h},out);
+  }else{
+    const y=r.y+r.h*node.ratio;
+    out.dividers.push({node,rect:r,y,x1:r.x,x2:r.x+r.w});
+    compute(node.a,{x:r.x,y:r.y,w:r.w,h:y-r.y},out);
+    compute(node.b,{x:r.x,y,w:r.w,h:r.y+r.h-y},out);
+  }
+  return out;
+}
+
+function boxFill(r,c){ctx.fillStyle=c;ctx.fillRect(r.x,r.y,r.w,r.h)}
+function seamRect(r){ctx.strokeStyle=INK;ctx.lineWidth=Math.max(8,Math.min(W,H)*.012);ctx.lineJoin='miter';ctx.strokeRect(r.x,r.y,r.w,r.h)}
+function pointIn(x,y,r){return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h}
+
+function lerpHex(a,b,t){
+  const A=a.slice(1),B=b.slice(1); let s='#';
+  for(let i=0;i<6;i+=2){const x=parseInt(A.slice(i,i+2),16),y=parseInt(B.slice(i,i+2),16);s+=Math.round(x+(y-x)*t).toString(16).padStart(2,'0')}
+  return s;
+}
+
+function executeBlock(b,r){
+  if(!Number.isFinite(r.x+r.y+r.w+r.h)||r.w<1||r.h<1) throw new Error('INVALID BLOCK GEOMETRY');
+  boxFill(r,b.color);
+  const weight=Math.max(3,Math.min(r.w,r.h)*.04);
+  ctx.strokeStyle=INK;ctx.fillStyle=WHITE;ctx.lineWidth=weight;
+  if(b.op==='line'){
+    ctx.beginPath();ctx.moveTo(r.x+r.w*.16,r.y+r.h*.18);ctx.lineTo(r.x+r.w*.84,r.y+r.h*.82);ctx.stroke();
+  } else if(b.op==='ellipse'){
+    ctx.beginPath();ctx.arc(r.x+r.w/2,r.y+r.h/2,Math.min(r.w,r.h)*.18,0,Math.PI*2);ctx.fill();ctx.stroke();
+  } else if(b.op==='mouse'){
+    if(pointIn(mouseX,mouseY,r)) boxFill(r,BLUE);
+  } else if(b.op==='repeat'){
+    ctx.lineWidth=Math.max(2,weight*.45);
+    for(let i=1;i<8;i++){const x=r.x+r.w*(i/8);ctx.beginPath();ctx.moveTo(x,r.y);ctx.lineTo(x,r.y+r.h);ctx.stroke()}
+  } else if(b.op==='pulse'){
+    const t=running?(Math.sin(frame*.05)+1)/2:.5;boxFill(r,lerpHex(b.color,WHITE,.16+t*.48));
+  } else if(b.op!=='paint') throw new Error('UNKNOWN OPERATION: '+b.op);
+}
+
+function inscription(b){
+  const n=b.color===RED?'red':b.color===YELLOW?'yellow':b.color===BLUE?'blue':b.color===INK?'black':'white';
+  if(b.op==='paint') return `fill(${n})\nrect(self)`;
+  if(b.op==='line') return 'line(self)';
+  if(b.op==='ellipse') return 'ellipse(self)';
+  if(b.op==='mouse') return 'if mouseIn(self)';
+  if(b.op==='repeat') return 'repeat(8)';
+  return 'sin(frameCount)';
+}
+
+function drawSelection(item){
+  if(!item||running)return;
+  const r=item.rect,s=10,l=Math.min(18,r.w*.12,r.h*.12);
+  ctx.strokeStyle=INK;ctx.lineWidth=3;
+  const corners=[
+    [r.x+s,r.y+s,1,1],[r.x+r.w-s,r.y+s,-1,1],
+    [r.x+s,r.y+r.h-s,1,-1],[r.x+r.w-s,r.y+r.h-s,-1,-1]
+  ];
+  for(const [x,y,dx,dy] of corners){ctx.beginPath();ctx.moveTo(x+dx*l,y);ctx.lineTo(x,y);ctx.lineTo(x,y+dy*l);ctx.stroke()}
+}
+
+function render(){
+  frame++;
+  ctx.clearRect(0,0,W,H); ctx.fillStyle=PAPER;ctx.fillRect(0,0,W,H);
+  layout=compute(program,rootRect());
+  let failed=null;
+  for(const item of layout.leaves){
+    try{executeBlock(item.node,item.rect)}catch(e){failed={item,error:e};boxFill(item.rect,WHITE);break;}
+  }
+  for(const item of layout.leaves) seamRect(item.rect);
+  const selected=layout.leaves.find(x=>x.node.id===selectedId)||null;
+  drawSelection(selected);
+  if(failed&&!fault) showFault(failed.item,failed.error);
+  placeLocal(selected);
+  requestAnimationFrame(render);
+}
+
+function placeLocal(item){
+  if(running||fault||!item){local.style.display='none';return;}
+  localCode.textContent=inscription(item.node); opBtn.textContent=item.node.op;
+  for(const s of document.querySelectorAll('.swatch')) s.setAttribute('aria-pressed',String(s.dataset.c===item.node.color));
+  local.style.display='block';
+  const width=Math.min(330,Math.max(205,local.offsetWidth));
+  const r=item.rect, gap=7;
+  let x=Math.min(W-width-8,Math.max(8,r.x+8));
+  let y=r.y+8;
+  if(r.h<local.offsetHeight+18) y=Math.min(H-local.offsetHeight-8,r.y+r.h+gap);
+  if(y+local.offsetHeight>H-8) y=Math.max(8,r.y-local.offsetHeight-gap);
+  local.style.left=x+'px';local.style.top=y+'px';
+  $('remove').style.display=canRemove(selectedId)?'block':'none';
+}
+
+function hitLeaf(x,y){for(let i=layout.leaves.length-1;i>=0;i--){if(pointIn(x,y,layout.leaves[i].rect))return layout.leaves[i]}return null}
+function hitDivider(x,y){
+  const h=11;
+  for(let i=layout.dividers.length-1;i>=0;i--){const d=layout.dividers[i];
+    if(d.node.dir==='v'&&Math.abs(x-d.x)<=h&&y>=d.y1&&y<=d.y2)return d;
+    if(d.node.dir==='h'&&Math.abs(y-d.y)<=h&&x>=d.x1&&x<=d.x2)return d;
+  }
+  return null;
+}
+
+function pushHistory(){history.push({program:clone(program),selectedId});if(history.length>50)history.shift();syncState()}
+function undo(){const s=history.pop();if(!s)return;program=s.program;selectedId=s.selectedId;fault=null;syncState()}
+function syncState(){
+  undoBtn.style.display=(!running&&history.length)?'grid':'none';
+  runBtn.textContent=running?'■':'▶';
+  runBtn.setAttribute('aria-label',running?'Stop program':'Run program');
+}
+
+function findLeaf(n,id){if(n.type==='leaf')return n.id===id?n:null;return findLeaf(n.a,id)||findLeaf(n.b,id)}
+function replaceLeaf(n,id,repl){if(n.type==='leaf')return n.id===id?repl:n;n.a=replaceLeaf(n.a,id,repl);n.b=replaceLeaf(n.b,id,repl);return n}
+function parentInfo(n,id,parent=null,side=null){if(n.type==='leaf')return n.id===id?{node:n,parent,side}:null;return parentInfo(n.a,id,n,'a')||parentInfo(n.b,id,n,'b')}
+function canRemove(id){const info=parentInfo(program,id);return !!(info&&info.parent)}
+function removeLeaf(n,id){
+  if(n.type==='leaf')return n;
+  if(n.a.type==='leaf'&&n.a.id===id)return n.b;
+  if(n.b.type==='leaf'&&n.b.id===id)return n.a;
+  n.a=removeLeaf(n.a,id);n.b=removeLeaf(n.b,id);return n;
+}
+function firstLeaf(n){return n.type==='leaf'?n:firstLeaf(n.a)}
+
+function select(id){selectedId=id;syncState()}
+function splitSelected(dir){
+  if(running||fault||!selectedId)return;const b=findLeaf(program,selectedId);if(!b)return;
+  pushHistory();const keep=clone(b);const fresh=leaf('paint',WHITE);program=replaceLeaf(program,selectedId,split(dir,.5,keep,fresh));selectedId=fresh.id;syncState();
+}
+function cycleOp(){if(running||fault||!selectedId)return;const b=findLeaf(program,selectedId);if(!b)return;pushHistory();b.op=OPS[(OPS.indexOf(b.op)+1)%OPS.length];syncState()}
+function setColor(c){if(running||fault||!selectedId)return;const b=findLeaf(program,selectedId);if(!b||b.color===c)return;pushHistory();b.color=c;syncState()}
+function removeSelected(){if(running||fault||!canRemove(selectedId))return;pushHistory();program=removeLeaf(program,selectedId);selectedId=firstLeaf(program)?.id||null;syncState()}
+
+function toggleRun(){
+  if(fault)return;
+  running=!running;
+  if(running){selectedId=null;lastRunnable=clone(program);local.style.display='none';undoBtn.style.display='none'}
+  syncState(); canvas.focus();
+}
+
+function showFault(item,error){
+  running=false;fault={id:item.node.id,error};selectedId=item.node.id;
+  faultMsg.textContent=String(error.message||error);
+  faultEl.style.display='block';
+  const r=item.rect;
+  faultEl.style.left=Math.min(W-faultEl.offsetWidth-10,Math.max(10,r.x+10))+'px';
+  faultEl.style.top=Math.min(H-faultEl.offsetHeight-10,Math.max(10,r.y+10))+'px';
+  syncState();
+}
+function clearFault(){fault=null;faultEl.style.display='none'}
+function retry(){clearFault();running=true;selectedId=null;syncState()}
+function restore(){if(lastRunnable)program=clone(lastRunnable);clearFault();selectedId=null;running=false;syncState()}
+
+canvas.addEventListener('pointermove',e=>{
+  mouseX=e.clientX;mouseY=e.clientY;
+  if(!drag)return;
+  const n=drag.node,r=drag.rect;
+  n.ratio=n.dir==='v'?Math.max(.12,Math.min(.88,(mouseX-r.x)/r.w)):Math.max(.12,Math.min(.88,(mouseY-r.y)/r.h));
+  ratioEl.textContent=Math.round(n.ratio*100)+'%';ratioEl.style.display='block';ratioEl.style.left=Math.min(W-50,mouseX+12)+'px';ratioEl.style.top=Math.min(H-28,mouseY+12)+'px';
+});
+canvas.addEventListener('pointerdown',e=>{
+  if(running||fault)return;mouseX=e.clientX;mouseY=e.clientY;
+  const d=hitDivider(mouseX,mouseY);
+  if(d){drag=d;dragBefore={program:clone(program),selectedId};canvas.setPointerCapture(e.pointerId);return}
+  const item=hitLeaf(mouseX,mouseY);selectedId=item?item.node.id:null;syncState();
+});
+canvas.addEventListener('pointerup',e=>{
+  if(!drag)return;
+  if(dragBefore){history.push(dragBefore);if(history.length>50)history.shift()}
+  drag=null;dragBefore=null;ratioEl.style.display='none';syncState();
+  try{canvas.releasePointerCapture(e.pointerId)}catch(_){ }
+});
+canvas.addEventListener('pointercancel',()=>{drag=null;dragBefore=null;ratioEl.style.display='none'});
+
+runBtn.onclick=toggleRun;undoBtn.onclick=undo;opBtn.onclick=cycleOp;
+$('splitV').onclick=()=>splitSelected('v');$('splitH').onclick=()=>splitSelected('h');$('remove').onclick=removeSelected;
+$('retry').onclick=retry;$('restore').onclick=restore;
+for(const s of document.querySelectorAll('.swatch')) s.onclick=()=>setColor(s.dataset.c);
+
+addEventListener('keydown',e=>{
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return}
+  if(e.key===' '){e.preventDefault();toggleRun();return}
+  if(e.key==='Escape'){selectedId=null;clearFault();syncState();return}
+  if(running||fault||!selectedId)return;
+  if(e.key.toLowerCase()==='v')splitSelected('v');
+  else if(e.key.toLowerCase()==='h')splitSelected('h');
+  else if(e.key.toLowerCase()==='c'||e.key==='Enter')cycleOp();
+  else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removeSelected()}
+  else if(['1','2','3','4','5'].includes(e.key))setColor([RED,YELLOW,BLUE,WHITE,INK][Number(e.key)-1]);
+});
+
+addEventListener('resize',resize);
+program=makeProgram();lastRunnable=clone(program);resize();syncState();canvas.focus();requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

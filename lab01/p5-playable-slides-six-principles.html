@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="frog-blue.svg" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>p5 From Zero — Playable Slides v2</title>
+<style>
+:root{
+  --paper:#f3efe6;--panel:#fbf8f1;--ink:#11110f;--muted:#746f66;
+  --red:#d33b2d;--blue:#1e5aa8;--yellow:#efc52f;--green:#2f6d46;
+  --soft:rgba(17,17,15,.13)
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:var(--paper);color:var(--ink);
+  font:13px/1.32 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  touch-action:none
+}
+button{font:inherit}
+button{
+  border:1px solid var(--ink);background:var(--panel);color:var(--ink);
+  min-height:42px;padding:8px 11px;cursor:pointer
+}
+button:hover,button:focus-visible,button.on{background:var(--ink);color:var(--panel);outline:none}
+#app{height:100%;display:grid;grid-template-rows:48px minmax(0,1fr) 58px}
+header{
+  display:flex;align-items:center;gap:6px;padding:5px 7px;border-bottom:5px solid var(--ink)
+}
+.brand{font-weight:900;letter-spacing:.08em;white-space:nowrap}
+#progress{display:flex;gap:4px;flex:1;justify-content:center;overflow:hidden}
+.dot{width:8px;height:8px;border:1px solid var(--ink);border-radius:50%;background:transparent;cursor:pointer}
+.dot.done{background:var(--ink)}
+.dot.now{background:var(--yellow)}
+#count{white-space:nowrap;color:var(--muted)}
+main{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 270px}
+#field{position:relative;display:grid;place-items:center;background:var(--paper);overflow:hidden}
+#board{
+  position:relative;width:min(860px,94%);height:min(570px,91%);
+  border:5px solid var(--ink);background:var(--panel)
+}
+#scene{display:block;width:100%;height:100%}
+#instruction{
+  position:absolute;z-index:8;left:12px;top:12px;max-width:72%;
+  background:rgba(251,248,241,.96);border:2px solid var(--ink);
+  padding:7px 9px;font-weight:900;letter-spacing:.03em
+}
+#live{
+  position:absolute;z-index:8;right:12px;top:12px;max-width:44%;
+  background:rgba(251,248,241,.96);border:1px solid var(--ink);
+  padding:5px 7px;color:var(--muted);text-align:right
+}
+#right{
+  min-width:0;border-left:5px solid var(--ink);background:var(--panel);
+  display:grid;grid-template-rows:auto auto minmax(0,1fr) auto
+}
+#lenses{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--ink)}
+#lenses button{border:0;border-right:1px solid var(--ink);min-height:39px;padding:6px}
+#lenses button:last-child{border-right:0}
+#sideTitle{padding:9px 10px;border-bottom:1px solid var(--ink);font-weight:900;letter-spacing:.05em}
+#controls{padding:9px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+#controls .row{display:flex;gap:6px;flex-wrap:wrap}
+#controls button{flex:1}
+#controls .choice{text-align:left;min-height:48px}
+#detail{
+  padding:8px 10px;border-top:2px solid var(--ink);background:var(--paper);
+  min-height:92px;overflow:auto
+}
+#detail pre{margin:0;white-space:pre-wrap;font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#detail .mini{display:grid;gap:4px}
+#detail .mini div{border-top:1px solid var(--soft);padding-top:4px}
+#detail b{display:block;margin-bottom:2px}
+footer{display:flex;align-items:center;gap:6px;padding:6px 7px;border-top:5px solid var(--ink)}
+#message{flex:1;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#continue{min-width:114px;background:var(--ink);color:var(--panel)}
+#continue:hover{background:var(--yellow);color:var(--ink)}
+.slider{display:grid;grid-template-columns:54px 1fr 42px;gap:6px;align-items:center}
+.slider input{width:100%}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card{border:2px solid var(--ink);padding:7px;cursor:pointer;background:var(--paper)}
+.card.on{background:var(--yellow)}
+.card pre{margin:4px 0 0;white-space:pre-wrap;font-size:10px}
+.tokenRow{display:flex;flex-wrap:wrap;gap:5px}
+.token{
+  border:2px solid var(--ink);background:var(--panel);
+  min-width:42px;min-height:42px;padding:7px;cursor:pointer;display:grid;place-items:center
+}
+.token.used{opacity:.28}
+.principles{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px
+}
+.principles span{
+  height:4px;background:var(--soft)
+}
+.principles span.on{background:var(--ink)}
+#mobileTools{display:none}
+@media(max-width:760px){
+  #app{grid-template-rows:48px minmax(0,1fr) 58px}
+  main{grid-template-columns:1fr}
+  #right{
+    position:absolute;z-index:30;right:7px;top:55px;bottom:65px;width:min(88vw,330px);
+    display:none;border:5px solid var(--ink)
+  }
+  body.tools #right{display:grid}
+  #mobileTools{display:block}
+  #board{width:95%;height:88%}
+  #progress{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="brand">p5 PLAYABLE</div>
+  <button id="mobileTools" type="button">TOOLS</button>
+  <div id="progress"></div>
+  <div id="count">1 / 16</div>
+</header>
+
+<main>
+  <section id="field">
+    <div id="board">
+      <canvas id="scene" width="820" height="540" aria-label="Playable p5.js learning slide"></canvas>
+      <div id="instruction">Do one thing.</div>
+      <div id="live"></div>
+    </div>
+  </section>
+
+  <aside id="right">
+    <div id="lenses">
+      <button type="button" data-lens="play" class="on">PLAY</button>
+      <button type="button" data-lens="xray">X‑RAY</button>
+      <button type="button" data-lens="code">CODE</button>
+    </div>
+    <div id="sideTitle">ONE MOVE</div>
+    <div id="controls"></div>
+    <div id="detail"></div>
+  </aside>
+</main>
+
+<footer>
+  <button id="back" type="button">←</button>
+  <button id="reset" type="button">RESET</button>
+  <button id="hint" type="button">HINT</button>
+  <div id="message">Try it. You can always continue.</div>
+  <button id="continue" type="button">CONTINUE →</button>
+</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const canvas=$("#scene"),ctx=canvas.getContext("2d"),controls=$("#controls"),detail=$("#detail");
+const instruction=$("#instruction"),live=$("#live"),message=$("#message");
+const W=820,H=540,ink="#11110f",paper="#f3efe6",panel="#fbf8f1",red="#d33b2d",blue="#1e5aa8",yellow="#efc52f",green="#2f6d46";
+let level=0,lens="play",solved=new Set(),cleanup=()=>{},autoTimer=0;
+
+const lessons=[
+ {name:"PLAY",goal:"Press PLAY. Watch what appears.",hint:"PLAY creates the runtime; it is not part of sketch.js.",code:`<script src="p5.min.js"></script>\nfunction setup() { ... }\nfunction draw() { ... }`,xray:"browser → p5.js → p5 instance → setup → canvas → draw",game:gRuntime},
+ {name:"ONCE / AGAIN",goal:"Make setup happen once and draw happen three times.",hint:"setup initializes. draw repeats.",code:`function setup() { ... } // once\nfunction draw() { ... }  // repeats`,xray:"setupCount must stay 1; drawCount can keep growing",game:gLifecycle},
+ {name:"CANVAS",goal:"Make the world exactly 400 × 400.",hint:"The two 400s are just chosen numbers.",code:`createCanvas(400, 400);`,xray:"first argument = width; second argument = height",game:gCanvas},
+ {name:"X / Y",goal:"Put the point on (200,160).",hint:"x goes right. y goes down.",code:`point(200, 160);`,xray:"origin = top-left; +x → ; +y ↓",game:gXY},
+ {name:"ARGUMENT",goal:"Which 120 means width?",hint:"Same number can have different roles.",code:`rect(140, 120, 120, 80);`,xray:"rect(x, y, width, height)",game:gArgument},
+ {name:"COLOR",goal:"Find another way to write the same red.",hint:"A color is a value; hex is only one representation.",code:`fill("#d33b2d");`,xray:"hex #d33b2d = rgb(211,59,45) = red-like CSS value",game:gColor},
+ {name:"CALL",goal:"Build rect(x, y, w, h);",hint:"The order of arguments matters.",code:`rect(x, y, w, h);`,xray:"name + ( ordered arguments ) + ;",game:gCall},
+ {name:"RECT",goal:"Match the ghost rectangle.",hint:"x/y place it. w/h size it.",code:`rect(140, 120, 120, 80);`,xray:"default rectMode is CORNER",game:gRect},
+ {name:"STATE",goal:"Make rectangle red and text dark.",hint:"fill() changes later drawing, not earlier pixels.",code:`fill(red);\nrect(...);\nfill(20);\ntext(...);`,xray:"drawing state persists forward until changed",game:gState},
+ {name:"FRAME",goal:"Choose the version that leaves a trail.",hint:"If background runs every frame, old pixels disappear.",code:`background() in setup\nvs\nbackground() in draw`,xray:"program state can persist even when pixel state is repainted",game:gFrame},
+ {name:"TEXT",goal:"Put Hello on the target anchor.",hint:"The x/y pair names an anchor point.",code:`text("Hello", 200, 160);`,xray:"string + x + y",game:gText},
+ {name:"VARIABLE",goal:"Move both marks with one x.",hint:"A name lets one value be reused.",code:`let x = 200;`,xray:"literal → named value → reused reference",game:gVariable},
+ {name:"INPUT",goal:"Use your pointer to enter the target.",hint:"mouseX/mouseY are runtime values from the world.",code:`x = mouseX;\ny = mouseY;`,xray:"input is another source of values",game:gInput},
+ {name:"IMPOSTER",goal:"Pick the code that looks fine now but breaks when the world changes.",hint:"Do not judge only the first picture. Change the conditions.",code:`A: hard-coded positions\nB: positions derived from width`,xray:"same initial output can conceal different maintenance theories",game:gImposter},
+ {name:"BREAKDOWN",goal:"Pick the missing event, not just the visible error.",hint:"Ask what should have happened but did not.",code:`refresh();`,xray:"positive body = what ran; negative body = what never ran",game:gBreakdown},
+ {name:"MONDRIAN",goal:"Move the wall. Change the program.",hint:"Geometry is the parameter.",code:`split("v", 0.58, A, B);`,xray:"picture ⇄ parameter ⇄ next picture",game:gMondrian}
+];
+
+function principleBar(){
+  return `<div class="principles" title="surface invisible · cognitive load · modes · direct manipulation · semantic zoom · constrained play">
+  ${Array.from({length:6},()=>'<span class="on"></span>').join("")}</div>`;
+}
+function setDetail(){
+  const L=lessons[level];
+  if(lens==="play") detail.innerHTML=`<div class="mini"><div><b>ONE MOVE</b>${esc(L.goal)}</div><div><b>RECOVERY</b>RESET · HINT · CONTINUE always work</div></div>${principleBar()}`;
+  if(lens==="xray") detail.innerHTML=`<div class="mini"><div><b>WHAT WAS HIDDEN</b>${esc(L.xray)}</div><div><b>LIVE STATE</b>${esc(live.textContent||"act to reveal state")}</div></div>${principleBar()}`;
+  if(lens==="code") detail.innerHTML=`<pre>${esc(L.code)}</pre>${principleBar()}`;
+}
+function render(){
+  clearTimeout(autoTimer); cleanup(); cleanup=()=>{};
+  clear(); controls.innerHTML="";
+  instruction.textContent=lessons[level].goal;
+  live.textContent="";
+  $("#sideTitle").textContent=lessons[level].name;
+  $("#count").textContent=`${level+1} / ${lessons.length}`;
+  message.textContent=solved.has(level)?"Solved once. Explore or continue.":"Try it. You can always continue.";
+  progress();
+  lessons[level].game();
+  setDetail();
+}
+function progress(){
+  $("#progress").innerHTML=lessons.map((_,i)=>`<span class="dot ${solved.has(i)?"done":""} ${i===level?"now":""}" data-i="${i}"></span>`).join("");
+}
+function win(text){
+  solved.add(level); live.textContent=text; message.textContent=text+" · continue when ready"; progress(); setDetail();
+}
+function state(text){live.textContent=text; if(lens==="xray")setDetail()}
+function say(text){message.textContent=text}
+function clear(){ctx.clearRect(0,0,W,H);ctx.fillStyle=paper;ctx.fillRect(0,0,W,H)}
+function label(t,x,y,s=18,c=ink){ctx.fillStyle=c;ctx.font=`${s}px monospace`;ctx.fillText(t,x,y)}
+function line(x1,y1,x2,y2,c=ink,w=2){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function circle(x,y,r,c=red){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.stroke()}
+function rect(x,y,w,h,c=red){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);ctx.strokeStyle=ink;ctx.lineWidth=3;ctx.strokeRect(x,y,w,h)}
+function button(txt,fn){const b=document.createElement("button");b.type="button";b.textContent=txt;b.onclick=fn;controls.appendChild(b);return b}
+function choice(txt,fn){const b=button(txt,fn);b.classList.add("choice");return b}
+function slider(name,min,max,val,fn){
+  const r=document.createElement("div");r.className="slider";r.innerHTML=`<span>${name}</span><input type="range" min="${min}" max="${max}" value="${val}"><b>${val}</b>`;
+  const i=r.querySelector("input"),o=r.querySelector("b");i.oninput=()=>{o.textContent=i.value;fn(+i.value)};controls.appendChild(r);return i
+}
+function pointer(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H}}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function drawGrid(){
+  ctx.strokeStyle="rgba(17,17,15,.13)";ctx.lineWidth=1;ctx.font="10px monospace";ctx.fillStyle=ink;
+  for(let v=0;v<=400;v+=50){let x=205+v,y=70+v;line(x,70,x,470,"rgba(17,17,15,.13)",1);line(205,y,605,y,"rgba(17,17,15,.13)",1);if(v<400){label(String(v),x+3,82,9);label(String(v),208,y-3,9)}}
+}
+
+/* Games: all easy, reversible, skippable. */
+function gRuntime(){
+ let n=0; draw();
+ button("▶ PLAY",()=>{n=Math.min(6,n+1);draw();state(["browser","p5.js","instance","setup()","canvas","draw()"][Math.max(0,n-1)]+" now exists");if(n===6)win("runtime assembled")});
+ function draw(){clear();let a=["BROWSER","p5.js","INSTANCE","setup()","CANVAS","draw()"];a.forEach((t,i)=>{ctx.fillStyle=i<n?yellow:panel;ctx.strokeStyle=ink;ctx.lineWidth=3;ctx.fillRect(290,45+i*72,240,46);ctx.strokeRect(290,45+i*72,240,46);label(t,330,74+i*72,15);if(i<5)line(410,91+i*72,410,113+i*72)})}
+}
+function gLifecycle(){
+ let s=0,d=0; draw();
+ button("SETUP",()=>{if(s<1)s++; else say("setup is already done");draw();check()});
+ button("DRAW",()=>{d++;draw();check()});
+ function check(){state(`setup ${s} · draw ${d}`);if(s===1&&d>=3)win("once / again")}
+ function draw(){clear();label("setup",160,120,18);circle(205,220,45,s?yellow:panel);label(String(s),195,228,24);label("draw",520,120,18);for(let i=0;i<3;i++)circle(500+i*70,220,24,i<Math.min(d,3)?blue:panel)}
+}
+function gCanvas(){
+ let w=260,h=300;slider("w",100,500,w,v=>{w=v;draw();check()});slider("h",100,500,h,v=>{h=v;draw();check()});
+ function draw(){clear();let sw=w*.72,sh=h*.72;ctx.fillStyle="#fff";ctx.fillRect(410-sw/2,270-sh/2,sw,sh);ctx.strokeStyle=ink;ctx.lineWidth=4;ctx.strokeRect(410-sw/2,270-sh/2,sw,sh);label(`${w} × ${h}`,350,42,18);state(`width ${w} · height ${h}`)}
+ function check(){if(w===400&&h===400)win("400 × 400 world")}draw()
+}
+function gXY(){
+ draw(); canvas.onpointerdown=e=>{let p=pointer(e),x=Math.round(p.x-205),y=Math.round(p.y-70);if(x<0||x>400||y<0||y>400)return;draw();circle(205+x,70+y,8);state(`x ${x} · y ${y}`);if(Math.abs(x-200)<15&&Math.abs(y-160)<15)win("(200,160)")};
+ cleanup=()=>{canvas.onpointerdown=null};
+ function draw(){clear();drawGrid();circle(405,230,18,panel);label("TARGET",430,235,12)}
+}
+function gArgument(){
+ clear();label("rect(140, 120, 120, 80)",210,230,28);
+ choice("first 120",()=>say("That one is y."));
+ choice("second 120",()=>win("second 120 = width"));
+}
+function gColor(){
+ clear();rect(280,170,260,180,red);label("#d33b2d",335,390,18);
+ choice("rgb(211, 59, 45)",()=>win("same red"));
+ choice("rgb(59, 211, 45)",()=>say("Different channel order."));
+ choice('"blue"',()=>say("Different color."));
+}
+function gCall(){
+ const target=["rect","(","x",",","y",",","w",",","h",")",";"],made=[];
+ const wrap=document.createElement("div");wrap.className="tokenRow";controls.appendChild(wrap);
+ ["rect","(", "x",",","y",",","w",",","h",")",";"].forEach(tok=>{const b=document.createElement("button");b.type="button";b.className="token";b.textContent=tok;b.onclick=()=>{made.push(tok);b.disabled=true;draw();if(made.length===target.length)win("function call assembled")};wrap.appendChild(b)});
+ button("CLEAR",()=>render());
+ function draw(){clear();label(made.join(" "),130,275,27);state(made.join(""))}draw()
+}
+function gRect(){
+ let x=90,y=90,w=160,h=110;slider("x",0,250,x,v=>{x=v;draw();check()});slider("y",0,220,y,v=>{y=v;draw();check()});slider("w",60,180,w,v=>{w=v;draw();check()});slider("h",40,140,h,v=>{h=v;draw();check()});
+ function draw(){clear();ctx.strokeStyle="rgba(17,17,15,.3)";ctx.lineWidth=3;ctx.strokeRect(300,180,120,80);rect(160+x,60+y,w,h,red);state(`x ${x} y ${y} w ${w} h ${h}`)}
+ function check(){if(x===140&&y===120&&w===120&&h===80)win("geometry matches code")}draw()
+}
+function gState(){
+ const seq=[]; ["fill red","rect","fill dark","text"].forEach(op=>button(op,()=>{seq.push(op);draw();if(seq.join("|")==="fill red|rect|fill dark|text")win("state flows forward");else if(seq.length===4)say("Same pieces, wrong order. RESET and try again.")}));
+ function draw(){clear();let f=ink;seq.forEach(op=>{if(op==="fill red")f=red;if(op==="fill dark")f=ink;if(op==="rect")rect(280,170,260,170,f);if(op==="text"){ctx.fillStyle=f;ctx.font="30px monospace";ctx.fillText("Hello",355,265)}});state(seq.join(" → ")||"no drawing state yet")}draw()
+}
+function gFrame(){
+ choice("background() inside draw()",()=>{show(false);say("No trail: old pixels get repainted.")});
+ choice("background() inside setup()",()=>{show(true);win("trail survives")});
+ function show(trail){clear();ctx.fillStyle="rgb(220,220,220)";ctx.fillRect(0,0,W,H);for(let i=0;i<8;i++){if(!trail){ctx.fillStyle="rgb(220,220,220)";ctx.fillRect(0,0,W,H)}circle(170+i*65,270,18,red)}}
+}
+function gText(){
+ let x=280,y=250;slider("x",0,400,x,v=>{x=v;draw();check()});slider("y",0,400,y,v=>{y=v;draw();check()});
+ function draw(){clear();drawGrid();ctx.fillStyle=ink;ctx.font="30px monospace";ctx.fillText("Hello",205+x,70+y);circle(205+x,70+y,5,yellow);state(`anchor (${x},${y})`)}
+ function check(){if(x===200&&y===160)win("text anchor matched")}draw()
+}
+function gVariable(){
+ let x=200;slider("x",0,400,x,v=>{x=v;draw();if(v===300)win("one name moved two marks")});button("SET x=300",()=>{let i=controls.querySelector("input");i.value=300;i.dispatchEvent(new Event("input"))});
+ function draw(){clear();line(210+x,130,210+x,410,red,2);circle(210+x,210,18,red);circle(210+x,330,18,blue);label(`x = ${x}`,65,270,18);state(`both use x = ${x}`)}draw()
+}
+function gInput(){
+ draw();canvas.onpointermove=e=>{let p=pointer(e);draw();circle(p.x,p.y,12,red);state(`mouseX ${Math.round(p.x)} · mouseY ${Math.round(p.y)}`);if(Math.hypot(p.x-560,p.y-270)<45)win("input became a value")};cleanup=()=>{canvas.onpointermove=null};
+ function draw(){clear();circle(560,270,45,panel);label("TARGET",526,275,12)}
+}
+function gImposter(){
+ clear();rect(90,150,270,190,panel);rect(460,150,270,190,panel);ctx.fillStyle=red;ctx.fillRect(160,215,120,70);ctx.fillRect(530,215,120,70);label("A",210,380,22);label("B",585,380,22);
+ const c=document.createElement("div");c.className="compare";controls.appendChild(c);
+ const A=document.createElement("div"),B=document.createElement("div");A.className=B.className="card";
+ A.innerHTML=`<b>A</b><pre>rect(160,215,120,70)</pre>`;B.innerHTML=`<b>B</b><pre>let x=width/2\nrect(x-60,215,120,70)</pre>`;c.append(A,B);
+ A.onclick=()=>{A.classList.add("on");changed();win("A was the imposter")};B.onclick=()=>say("B has a shared rule. Try changing the world mentally.");
+ function changed(){clear();label("WORLD NARROWS",300,55,18);ctx.strokeStyle=ink;ctx.strokeRect(110,100,600,340);ctx.fillStyle=red;ctx.fillRect(160,215,120,70);ctx.fillStyle=blue;ctx.fillRect(350,215,120,70);label("A drifts",175,320,15);label("B adapts",365,320,15)}
+}
+function gBreakdown(){
+ clear();label("CLICK",150,230,30);line(300,220,470,220);label("refresh()",500,230,25);
+ choice("ReferenceError",()=>say("That is what appeared."));
+ choice("surface redraw never happened",()=>{reveal();win("negative space found")});
+ function reveal(){clear();label("RAN",90,130,15);label("click handler",280,130,15);label("DID NOT RUN",90,215,15);label("surface redraw",280,215,15);label("PRESERVED",90,300,15);label("AST + last frame",280,300,15);label("RECOVERY",90,385,15);label("restore / install capability",280,385,15)}
+}
+function gMondrian(){
+ let r=.58,down=false;slider("ratio",20,80,58,v=>{r=v/100;draw();if(v!==58)win(`ratio ${r.toFixed(2)}`)});
+ draw();
+ canvas.onpointerdown=e=>{let p=pointer(e);if(Math.abs(p.x-W*r)<20)down=true};
+ canvas.onpointermove=e=>{if(!down)return;let p=pointer(e);r=Math.max(.2,Math.min(.8,p.x/W));draw();state(`split ratio ${r.toFixed(2)}`)};
+ canvas.onpointerup=()=>{if(down){down=false;win(`geometry → ratio ${r.toFixed(2)}`)}};
+ cleanup=()=>{canvas.onpointerdown=canvas.onpointermove=canvas.onpointerup=null};
+ function draw(){clear();let x=W*r;ctx.fillStyle=yellow;ctx.fillRect(0,0,x,H);ctx.fillStyle=blue;ctx.fillRect(x,0,W-x,H);line(x,0,x,H,ink,12);label(r.toFixed(2),x+14,70,18)}
+}
+
+$("#continue").onclick=()=>{if(level<lessons.length-1){level++;render()}else{message.textContent="Complete. Replay any dot."}};
+$("#back").onclick=()=>{if(level>0){level--;render()}};
+$("#reset").onclick=render;
+$("#hint").onclick=()=>{message.textContent=lessons[level].hint};
+$("#mobileTools").onclick=()=>document.body.classList.toggle("tools");
+$("#progress").onclick=e=>{let d=e.target.closest(".dot");if(d){level=+d.dataset.i;render()}};
+$$('#lenses button').forEach(b=>b.onclick=()=>{lens=b.dataset.lens;$$('#lenses button').forEach(x=>x.classList.toggle("on",x===b));setDetail()});
+window.addEventListener("keydown",e=>{if(e.key==="ArrowRight")$("#continue").click();if(e.key==="ArrowLeft")$("#back").click()});
+render();
+})();
+</script>
+</body>
+</html>
