@@ -1,6 +1,21 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>
+(function() {
+  if (sessionStorage.getItem("mondrian_unlocked") !== "true") {
+    var pass = prompt("Enter passphrase to access Mondrian:");
+    if (pass && pass.toLowerCase().trim() === "mondrian") {
+      sessionStorage.setItem("mondrian_unlocked", "true");
+    } else {
+      window.stop && window.stop();
+      document.addEventListener("DOMContentLoaded", function() {
+        document.body.innerHTML = "<div style='background:#11110f;color:#f4f2ea;font-family:monospace;height:100vh;display:grid;place-items:center;padding:20px;text-align:center;'><div><h1 style='font-size:20px;letter-spacing:.1em;margin-bottom:8px;color:#e63946;'>[ ACCESS RESTRICTED ]</h1><p style='font-size:13px;color:#8c897f;margin-bottom:16px;'>Passphrase required for Mondrian Quines & Debuggers.</p><button onclick='location.reload()' style='padding:10px 20px;background:#e63946;color:#fff;border:none;font:bold 12px monospace;cursor:pointer;'>Enter Passphrase</button></div></div>";
+      });
+    }
+  }
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
 
 <meta charset="utf-8"/>
@@ -1009,6 +1024,21 @@ ${funcs}`.trim();
 function runtimeHTML(code){
   const clean=code.replace(/<\/script/gi,"<\\/script");
   return`<!doctype html><html><head>
+<script>
+(function() {
+  if (sessionStorage.getItem("mondrian_unlocked") !== "true") {
+    var pass = prompt("Enter passphrase to access Mondrian:");
+    if (pass && pass.toLowerCase().trim() === "mondrian") {
+      sessionStorage.setItem("mondrian_unlocked", "true");
+    } else {
+      window.stop && window.stop();
+      document.addEventListener("DOMContentLoaded", function() {
+        document.body.innerHTML = "<div style='background:#11110f;color:#f4f2ea;font-family:monospace;height:100vh;display:grid;place-items:center;padding:20px;text-align:center;'><div><h1 style='font-size:20px;letter-spacing:.1em;margin-bottom:8px;color:#e63946;'>[ ACCESS RESTRICTED ]</h1><p style='font-size:13px;color:#8c897f;margin-bottom:16px;'>Passphrase required for Mondrian Quines & Debuggers.</p><button onclick='location.reload()' style='padding:10px 20px;background:#e63946;color:#fff;border:none;font:bold 12px monospace;cursor:pointer;'>Enter Passphrase</button></div></div>";
+      });
+    }
+  }
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="frog-orange.svg" />
 <meta charset="utf-8"><style>
 html,body{margin:0;height:100%;background:#ddd8cb;display:grid;place-items:center;overflow:hidden}

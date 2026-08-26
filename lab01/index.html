@@ -258,6 +258,14 @@ header {
   border-radius: 2px;
   color: #fff;
 }
+.folder-lock-badge {
+  font: 800 8.5px/1 var(--mono);
+  text-transform: uppercase;
+  background: var(--lvl5-red);
+  color: #fff;
+  padding: 3px 6px;
+  letter-spacing: .06em;
+}
 
 .folder-body {
   padding: 16px 18px;
@@ -370,9 +378,75 @@ header {
 .ctrl-nav button { width: 44px; height: 44px; border: 1px solid var(--hair-strong); background: var(--surface); font: 800 14px var(--mono); }
 .trace-text { font: 700 11px/1.3 var(--mono); letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
 
-/* ========================================================================= */
-/* MOBILE SPECIFIC OPTIMIZATIONS (Fitts's Law & Touch Ergonomics)            */
-/* ========================================================================= */
+/* Passphrase Modal */
+.pass-modal-scrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: none;
+  place-items: center;
+  padding: 16px;
+}
+.pass-modal-scrim.open { display: grid; }
+.pass-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--paper);
+  border: 2px solid var(--hair-strong);
+  box-shadow: 0 10px 0 var(--ink);
+  padding: 24px 20px 20px;
+  animation: modalPop .15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pass-header {
+  font: 800 12px/1 var(--mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--lvl5-red);
+  margin-bottom: 8px;
+}
+.pass-card h2 {
+  font-size: 20px;
+  letter-spacing: -.02em;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.pass-card p {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+.pass-input {
+  width: 100%;
+  height: 48px;
+  border: 2px solid var(--hair-strong);
+  background: var(--surface);
+  padding: 0 14px;
+  font: 800 15px var(--mono);
+  color: var(--ink);
+  letter-spacing: .08em;
+  outline: none;
+  margin-bottom: 12px;
+  text-transform: lowercase;
+}
+.pass-input:focus { border-color: var(--lvl5-red); }
+.pass-input.error { border-color: var(--lvl5-red); animation: shake .2s ease 2; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+.pass-actions { display: flex; gap: 8px; }
+
+/* Mobile Specific Optimizations */
 @media (max-width: 860px) {
   html, body {
     height: auto !important;
@@ -386,16 +460,11 @@ header {
   main {
     display: block !important;
   }
-  
-  header {
-    height: 52px;
-    padding: 0 12px;
-  }
+  header { height: 52px; padding: 0 12px; }
   .brand span { display: none; }
   .header-status { display: none; }
   .guide-btn { min-height: 36px; padding: 0 10px; font-size: 10px; }
 
-  /* Mobile Week Touch Bar (Fitts's Law Target) */
   .mobile-week-bar {
     display: flex;
     align-items: center;
@@ -418,13 +487,10 @@ header {
     justify-content: center;
     color: var(--ink);
   }
-  .mob-week-info {
-    text-align: center;
-  }
+  .mob-week-info { text-align: center; }
   .mob-week-code { font: 800 11px/1 var(--mono); color: var(--accent); text-transform: uppercase; margin-bottom: 3px; }
   .mob-week-title { font: 800 15px/1.1 var(--sans); color: var(--ink); letter-spacing: -.02em; }
 
-  /* Collapsible Wheel View on Mobile */
   .field {
     border-right: 0;
     border-bottom: 1px solid var(--hair-strong);
@@ -436,14 +502,8 @@ header {
     aspect-ratio: 1;
     margin: 0 auto;
   }
-
-  .object-banner {
-    padding: 16px 14px 12px;
-  }
-  .object-banner h1 {
-    font-size: 22px;
-  }
-
+  .object-banner { padding: 16px 14px 12px; }
+  .object-banner h1 { font-size: 22px; }
   .spectrum-strip {
     padding: 10px 14px;
     position: sticky;
@@ -451,58 +511,20 @@ header {
     z-index: 80;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
   }
-  .spec-pill {
-    min-height: 42px;
-    padding: 0 14px;
-    font-size: 11px;
-  }
-
-  .dossier-scroll {
-    padding: 14px 12px 60px;
-    overflow: visible;
-  }
-
-  /* Full Vertical Card Layout on Mobile */
-  .folder-card {
-    margin-bottom: 20px;
-  }
-  .folder-body {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 14px;
-  }
-  .folder-preview-box {
-    width: 100%;
-    height: 140px;
-  }
-  .folder-title {
-    font-size: 17px;
-  }
-  .folder-desc {
-    font-size: 13.5px;
-    line-height: 1.45;
-  }
-
-  /* 48px Thumb Target Actions on Mobile */
-  .folder-actions {
-    padding: 10px 14px;
-    gap: 8px;
-  }
-  .dossier-btn {
-    min-height: 48px;
-    font-size: 13px;
-  }
-  .dossier-btn.icon-btn {
-    flex: 0 0 48px;
-    min-height: 48px;
-  }
-
-  .control-footer {
-    display: none; /* Replaced by sticky mobile week bar */
-  }
+  .spec-pill { min-height: 42px; padding: 0 14px; font-size: 11px; }
+  .dossier-scroll { padding: 14px 12px 60px; overflow: visible; }
+  .folder-card { margin-bottom: 20px; }
+  .folder-body { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
+  .folder-preview-box { width: 100%; height: 140px; }
+  .folder-title { font-size: 17px; }
+  .folder-desc { font-size: 13.5px; line-height: 1.45; }
+  .folder-actions { padding: 10px 14px; gap: 8px; }
+  .dossier-btn { min-height: 48px; font-size: 13px; }
+  .dossier-btn.icon-btn { flex: 0 0 48px; min-height: 48px; }
+  .control-footer { display: none; }
 }
 
-/* Runner Sheet & Teaching Guide Drawer */
+/* Runner Sheet & Guide Drawer */
 .runner-sheet {
   position: fixed;
   top: 0;
@@ -545,7 +567,6 @@ header {
 .runner-cmds { display: flex; gap: 6px; align-items: center; }
 .runner-frame { flex: 1; width: 100%; height: 100%; border: none; background: #fff; }
 
-/* Guide Drawer */
 .guide-drawer {
   position: fixed;
   top: 0;
@@ -575,7 +596,6 @@ header {
 .guide-table th, .guide-table td { border: 1px solid var(--hair-strong); padding: 8px 10px; text-align: left; }
 .guide-table th { background: var(--panel); }
 
-/* Notification */
 .toast-msg {
   position: fixed;
   bottom: 24px;
@@ -613,7 +633,7 @@ header {
     </div>
   </header>
 
-  <!-- Mobile Week Touch Bar (Fitts's Law Ergonomics) -->
+  <!-- Mobile Week Touch Bar -->
   <div class="mobile-week-bar">
     <button class="mob-nav-btn" id="mobPrevBtn" type="button" aria-label="Previous Week">[<]</button>
     <div class="mob-week-info">
@@ -678,6 +698,20 @@ header {
   </main>
 </div>
 
+<!-- Mondrian Passphrase Modal Gate -->
+<div class="pass-modal-scrim" id="passModal">
+  <div class="pass-card">
+    <div class="pass-header">[ RESTRICTED ARCHIVE · MONDRIAN GATE ]</div>
+    <h2>Passphrase Required</h2>
+    <p>Mondrian quines and coordinate debuggers are protected. Enter the passphrase to unlock:</p>
+    <input type="password" id="passInput" class="pass-input" placeholder="ENTER PASSPHRASE" autocomplete="off" spellcheck="false" />
+    <div class="pass-actions">
+      <button class="dossier-btn primary" id="passSubmitBtn" style="flex:2;">Unlock Mondrian</button>
+      <button class="dossier-btn" id="passCancelBtn" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Teaching Notes & Lesson Plan Slide-Over Drawer -->
 <div class="runner-scrim" id="guideScrim"></div>
 <aside class="guide-drawer" id="guideDrawer">
@@ -696,7 +730,7 @@ header {
       <tr><td><b>L2 · Guided</b></td><td><span style="color:var(--lvl2-mint);">Mint Green</span></td><td>Step-by-step token state inspection & first contact web IDEs.</td></tr>
       <tr><td><b>L3 · Core</b></td><td><span style="color:var(--lvl3-gold);">Toxic Gold</span></td><td>The Collective Wager (Impostor Test), Magic Circle Game, and Zero-Assumption Editor.</td></tr>
       <tr><td><b>L4 · Forensics</b></td><td><span style="color:var(--lvl4-orange);">Fire Orange</span></td><td>Coordinate bounding math, negative-space visualizers, and state quizzes.</td></tr>
-      <tr><td><b>L5 · Fire Red</b></td><td><span style="color:var(--lvl5-red);">Strawberry Fire Red</span></td><td>Pure Quines & dynamic mouse asymmetry extensions for fast finishers ("Too Easy").</td></tr>
+      <tr><td><b>L5 · Fire Red</b></td><td><span style="color:var(--lvl5-red);">Strawberry Fire Red</span></td><td>Pure Quines & dynamic mouse asymmetry extensions for fast finishers ("Too Easy"). [PASSWORD: mondrian]</td></tr>
       <tr><td><b>L6 · Theory</b></td><td><span style="color:var(--lvl6-violet);">Fluorescent Violet</span></td><td>Foundational lecture essays and Negative-Space Patent references.</td></tr>
     </table>
 
@@ -705,9 +739,9 @@ header {
       <tr><th>Time</th><th>Act</th><th>Active Tool</th><th>Action</th></tr>
       <tr><td>00–15m</td><td>Act 1: The Wager</td><td>CY.01 · Impostor Test (v3)</td><td>Project 2 sketches. Spot the bug. Bet before clicking run.</td></tr>
       <tr><td>15–30m</td><td>Act 2: The Core Loop</td><td>ZA.06 · Magic Circle Game</td><td>setup() (once) vs draw() (60 frames/sec loop).</td></tr>
-      <tr><td>30–45m</td><td>Act 3: Forensics</td><td>MN.01 · Negative-Space Debugger</td><td>(x, y, w, h) bounding & spatial rhythm.</td></tr>
+      <tr><td>30–45m</td><td>Act 3: Forensics</td><td>MN.01 · Negative-Space Debugger</td><td>(x, y, w, h) bounding & spatial rhythm. [LOCKED]</td></tr>
       <tr><td>45–80m</td><td>Act 4: Studio Work</td><td>ZA.02 · Zero-Assumption Editor</td><td>Dual-track studio production (Spec deliverables).</td></tr>
-      <tr><td>80–90m</td><td>Act 5: Closer</td><td>MN.05 · Mondrian Quine</td><td>Philosophical punchline: Code IS the Canvas.</td></tr>
+      <tr><td>80–90m</td><td>Act 5: Closer</td><td>MN.05 · Mondrian Quine</td><td>Philosophical punchline: Code IS the Canvas. [LOCKED]</td></tr>
     </table>
 
     <h2>3. Solving the Bifurcation</h2>
@@ -870,15 +904,15 @@ header {
 
     // Level 4: Fire Orange (Forensic Diagnostics & Negative Space)
     { handle: "CY.04", lvl: 4, file: "call-your-shot-pinball-quiz.html", url: "call-your-shot-pinball-quiz.html", title: "Call Your Shot: Pinball Quiz", ext: "html", type: "Interactive Quiz", sizeStr: "1.46 MB", purpose: "Gamified pinball quiz: tests setup vs draw execution flow and state variables." },
-    { handle: "MN.01", lvl: 4, isCore: true, tier: "Act 3 · Coordinate Forensics", file: "mondrian-negative-space-debug.html", url: "mondrian-negative-space-debug.html", title: "Mondrian Negative-Space Debugger", ext: "html", type: "Debugger", sizeStr: "51.3 KB", purpose: "Calculates and visualizes empty negative rectangular spaces across the Mondrian grid." },
-    { handle: "MN.02", lvl: 4, file: "mondrian-negative-space-debug (1).html", url: "mondrian-negative-space-debug-v2.html", title: "Mondrian Negative-Space Debugger (Copy)", ext: "html", type: "Debugger", sizeStr: "51.3 KB", purpose: "Exact duplicate copy of negative-space debugger." },
-    { handle: "MN.03", lvl: 4, file: "mondrian-p5-ide-0.5.html", url: "mondrian-p5-ide-0.5.html", title: "Mondrian IDE (v0.5)", ext: "html", type: "Web App", sizeStr: "55.2 KB", purpose: "Integrated Mondrian IDE with real-time coordinate bounding and bounds checking." },
-    { handle: "MN.04", lvl: 4, file: "mondrian-p5-ide-0.5 (1).html", url: "mondrian-p5-ide-0.5-v2.html", title: "Mondrian IDE (v0.5 Copy)", ext: "html", type: "Web App", sizeStr: "55.2 KB", purpose: "Exact duplicate copy of Mondrian IDE 0.5." },
+    { handle: "MN.01", lvl: 4, isCore: true, isMondrian: true, tier: "Act 3 · Coordinate Forensics", file: "mondrian-negative-space-debug.html", url: "mondrian-negative-space-debug.html", title: "Mondrian Negative-Space Debugger", ext: "html", type: "Debugger", sizeStr: "51.3 KB", purpose: "Calculates and visualizes empty negative rectangular spaces across the Mondrian grid." },
+    { handle: "MN.02", lvl: 4, isMondrian: true, file: "mondrian-negative-space-debug (1).html", url: "mondrian-negative-space-debug-v2.html", title: "Mondrian Negative-Space Debugger (Copy)", ext: "html", type: "Debugger", sizeStr: "51.3 KB", purpose: "Exact duplicate copy of negative-space debugger." },
+    { handle: "MN.03", lvl: 4, isMondrian: true, file: "mondrian-p5-ide-0.5.html", url: "mondrian-p5-ide-0.5.html", title: "Mondrian IDE (v0.5)", ext: "html", type: "Web App", sizeStr: "55.2 KB", purpose: "Integrated Mondrian IDE with real-time coordinate bounding and bounds checking." },
+    { handle: "MN.04", lvl: 4, isMondrian: true, file: "mondrian-p5-ide-0.5 (1).html", url: "mondrian-p5-ide-0.5-v2.html", title: "Mondrian IDE (v0.5 Copy)", ext: "html", type: "Web App", sizeStr: "55.2 KB", purpose: "Exact duplicate copy of Mondrian IDE 0.5." },
     { handle: "BP.03", lvl: 4, file: "blockp5-negative-space-debugger.html", url: "blockp5-negative-space-debugger.html", title: "blockp5 Surface (v2 Negative Space)", ext: "html", type: "Visual Blocks", sizeStr: "64.0 KB", purpose: "Negative-space detection integrated directly into visual block nodes." },
 
     // Level 5: Strawberry Fire Red (Maximum Intensity & Quines)
-    { handle: "MN.05", lvl: 5, isCore: true, tier: "Act 5 · Mind-Bender Closer", file: "mondrian_quine.html", url: "mondrian_quine.html", title: "Mondrian Quine", ext: "html", type: "Web App", sizeStr: "16.9 KB", purpose: "Renders a Piet Mondrian composition while generating its own exact source code." },
-    { handle: "MN.06", lvl: 5, file: "mondrian-quine-void.html", url: "mondrian-quine-void.html", title: "Mondrian Quine: Void Surface", ext: "html", type: "Web App", sizeStr: "21.6 KB", purpose: "Quine variation exploring dark void surfaces and inverted coordinate typography." },
+    { handle: "MN.05", lvl: 5, isCore: true, isMondrian: true, tier: "Act 5 · Mind-Bender Closer", file: "mondrian_quine.html", url: "mondrian_quine.html", title: "Mondrian Quine", ext: "html", type: "Web App", sizeStr: "16.9 KB", purpose: "Renders a Piet Mondrian composition while generating its own exact source code." },
+    { handle: "MN.06", lvl: 5, isMondrian: true, file: "mondrian-quine-void.html", url: "mondrian-quine-void.html", title: "Mondrian Quine: Void Surface", ext: "html", type: "Web App", sizeStr: "21.6 KB", purpose: "Quine variation exploring dark void surfaces and inverted coordinate typography." },
 
     // Level 6: Fluorescent Violet (Theory & Patents)
     { handle: "TH.01", lvl: 6, file: "HELLO_WORLD_THEORY_TEXT_IMAGE.pdf", url: "HELLO_WORLD_THEORY_TEXT_IMAGE.pdf", title: "Theory: Text & Image", ext: "pdf", type: "PDF", sizeStr: "409.6 KB", purpose: "Foundational theory notes: code as text specification vs sensory visual output." },
@@ -889,6 +923,7 @@ header {
   // State
   let selectedWeek = 2; // Week 3 (Lab 01)
   let activeSpectrumLvl = "arc";
+  let pendingAction = null;
 
   // DOM
   const svg = document.getElementById("wheel");
@@ -910,6 +945,12 @@ header {
   const trace = document.getElementById("trace");
   const prevBtn = document.getElementById("prevBtn");
   const nextBtn = document.getElementById("nextBtn");
+
+  // Passphrase Modal DOM
+  const passModal = document.getElementById("passModal");
+  const passInput = document.getElementById("passInput");
+  const passSubmitBtn = document.getElementById("passSubmitBtn");
+  const passCancelBtn = document.getElementById("passCancelBtn");
 
   // Guide Drawer DOM
   const openGuideBtn = document.getElementById("openGuideBtn");
@@ -1084,6 +1125,7 @@ header {
       const isHtml = item.ext === "html";
       const lvlMeta = LEVEL_META[item.lvl] || LEVEL_META[1];
       const previewSvg = getPreviewSvg(item.type, item.handle);
+      const isLocked = item.isMondrian && sessionStorage.getItem("mondrian_unlocked") !== "true";
 
       return `
         <article class="folder-card">
@@ -1092,10 +1134,11 @@ header {
             <span class="folder-type">${item.type}</span>
             <span class="folder-lvl-pill" style="background:${lvlMeta.color};">${lvlMeta.name}</span>
             ${item.tier ? `<span class="folder-tier-badge">${item.tier}</span>` : ""}
+            ${isLocked ? `<span class="folder-lock-badge">PASSWORD LOCKED</span>` : ""}
           </div>
 
           <div class="folder-body">
-            <div class="folder-preview-box" onclick="launchRunner('${path}', '${item.title.replace(/'/g, "\\'")}')" title="Tap to preview">
+            <div class="folder-preview-box" onclick="handleCardClick('${path}', '${item.title.replace(/'/g, "\\'")}', ${item.isMondrian ? 'true' : 'false'})" title="Tap to preview">
               ${previewSvg}
             </div>
 
@@ -1117,8 +1160,8 @@ header {
 
           <div class="folder-actions">
             ${isHtml ? `
-              <button class="dossier-btn primary" onclick="launchRunner('${path}', '${item.title.replace(/'/g, "\\'")}')">Preview</button>
-              <a href="${path}" target="_blank" class="dossier-btn">Open</a>
+              <button class="dossier-btn primary" onclick="handleCardClick('${path}', '${item.title.replace(/'/g, "\\'")}', ${item.isMondrian ? 'true' : 'false'})">Preview</button>
+              <button class="dossier-btn" onclick="handleOpenClick('${path}', ${item.isMondrian ? 'true' : 'false'})">Open</button>
             ` : `
               <a href="${path}" target="_blank" class="dossier-btn primary">Open File</a>
             `}
@@ -1146,6 +1189,63 @@ header {
     activeSpectrumLvl = btn.dataset.lvl;
     renderWheel();
     renderDetail();
+  });
+
+  // Password Gating Logic
+  function handleCardClick(url, title, isMondrian) {
+    if (isMondrian && sessionStorage.getItem("mondrian_unlocked") !== "true") {
+      pendingAction = () => launchRunner(url, title);
+      openPassModal();
+      return;
+    }
+    launchRunner(url, title);
+  }
+  window.handleCardClick = handleCardClick;
+
+  function handleOpenClick(url, isMondrian) {
+    if (isMondrian && sessionStorage.getItem("mondrian_unlocked") !== "true") {
+      pendingAction = () => window.open(url, "_blank");
+      openPassModal();
+      return;
+    }
+    window.open(url, "_blank");
+  }
+  window.handleOpenClick = handleOpenClick;
+
+  function openPassModal() {
+    passInput.value = "";
+    passInput.classList.remove("error");
+    passModal.classList.add("open");
+    setTimeout(() => passInput.focus(), 50);
+  }
+
+  function closePassModal() {
+    passModal.classList.remove("open");
+    pendingAction = null;
+  }
+  passCancelBtn.addEventListener("click", closePassModal);
+
+  function verifyPass() {
+    const val = passInput.value.toLowerCase().trim();
+    if (val === "mondrian") {
+      sessionStorage.setItem("mondrian_unlocked", "true");
+      closePassModal();
+      showNotice("MONDRIAN ARCHIVE UNLOCKED");
+      renderDossierCards();
+      if (pendingAction) {
+        const act = pendingAction;
+        pendingAction = null;
+        act();
+      }
+    } else {
+      passInput.classList.add("error");
+      setTimeout(() => passInput.classList.remove("error"), 500);
+    }
+  }
+  passSubmitBtn.addEventListener("click", verifyPass);
+  passInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") verifyPass();
+    if (e.key === "Escape") closePassModal();
   });
 
   // Guide Drawer Controls
@@ -1187,9 +1287,7 @@ header {
     const path = "LAB 1 - HELLO MONDRIAN/" + filename;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(path).then(() => {
-        toast.textContent = "Path Copied: " + path;
-        toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 1800);
+        showNotice("Path Copied: " + path);
       });
     } else {
       prompt("Copy relative path:", path);
@@ -1197,16 +1295,22 @@ header {
   }
   window.copyPath = copyPath;
 
+  function showNotice(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+
   // Desktop Controls
   prevBtn.addEventListener("click", () => selectWeek(selectedWeek - 1));
   nextBtn.addEventListener("click", () => selectWeek(selectedWeek + 1));
 
-  // Mobile Controls (Fitts's Law 48px Target Buttons)
+  // Mobile Controls
   mobPrevBtn.addEventListener("click", () => selectWeek(selectedWeek - 1));
   mobNextBtn.addEventListener("click", () => selectWeek(selectedWeek + 1));
 
   window.addEventListener("keydown", e => {
-    if (e.key === "Escape") { closeRunner(); closeGuide(); }
+    if (e.key === "Escape") { closeRunner(); closeGuide(); closePassModal(); }
     if (e.key === "ArrowLeft") selectWeek(selectedWeek - 1);
     if (e.key === "ArrowRight") selectWeek(selectedWeek + 1);
   });
