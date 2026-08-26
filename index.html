@@ -173,8 +173,8 @@ header {
 .bauhaus-ring { fill: none; stroke: var(--hair-strong); stroke-width: 2.5; }
 .bauhaus-ring.thick { stroke-width: 4.2; }
 
-/* Outer Ring Typography: Much Bigger (17px Bold) */
-.phase-band-text { font: 900 17px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; fill: var(--ink); }
+/* Outer Ring Typography (16px Bold) */
+.phase-band-text { font: 900 16px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; fill: var(--ink); }
 
 .week-sector {
   fill: var(--paper);
@@ -190,33 +190,43 @@ header {
   stroke-width: 3.5;
 }
 
-/* Extra Bold Large Numbers (25px) */
+/* Auto-Oriented High-Contrast Numbers (24px) */
 .week-num-text {
-  font: 900 25px/1 var(--mono);
+  font: 900 24px/1 var(--mono);
   letter-spacing: .02em;
   fill: var(--ink);
   pointer-events: none;
 }
 .week-num-text.selected { fill: var(--accent); font-weight: 900; }
 
-/* Staggered, Clean, Shortened Sector Labels */
-.week-stagger-title {
-  font: 900 14px/1.1 var(--sans);
+/* Clear Fall 2026 Date Badges */
+.week-date-text {
+  font: 800 10px/1 var(--mono);
   letter-spacing: .06em;
+  text-transform: uppercase;
+  fill: var(--muted);
+  pointer-events: none;
+}
+.week-date-text.selected { fill: var(--accent); font-weight: 900; }
+
+/* Auto-Oriented Staggered Concept Titles */
+.week-stagger-title {
+  font: 900 12.5px/1.1 var(--sans);
+  letter-spacing: .05em;
   text-transform: uppercase;
   fill: var(--ink);
   pointer-events: none;
 }
 .week-stagger-title.selected { fill: var(--accent); }
 
-/* Center Bullseye: Much Bigger & Minimalist ("Less is More") */
+/* Center Bullseye: Big & Minimalist */
 .bullseye-outer { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 3; }
 .bullseye-mid { fill: none; stroke: var(--hair-strong); stroke-width: 1.5; }
 .bullseye-center { fill: var(--paper); stroke: var(--hair-strong); stroke-width: 3.8; }
-.bullseye-super { font: 800 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; fill: var(--muted); }
-.bullseye-hero { font: 900 30px/1 var(--sans); letter-spacing: -.03em; text-transform: uppercase; fill: var(--ink); }
-.bullseye-sub { font: 800 14.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--accent); }
-.bullseye-state { font: 800 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
+.bullseye-super { font: 800 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; fill: var(--muted); }
+.bullseye-hero { font: 900 28px/1 var(--sans); letter-spacing: -.03em; text-transform: uppercase; fill: var(--ink); }
+.bullseye-sub { font: 800 14px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; fill: var(--accent); }
+.bullseye-state { font: 800 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
 
 /* Spin Prompt Hint */
 .spin-hint {
@@ -562,7 +572,7 @@ header {
   display: grid;
   place-items: center;
 }
-.qr-container svg { width: 100%; height: 100%; display: block; }
+.qr-container img { width: 100%; height: 100%; display: block; }
 .qr-url-box {
   background: var(--surface);
   border: 1px solid var(--hair);
@@ -827,10 +837,10 @@ header {
           <title>Interactive Bauhaus Semester Wheel</title>
         </svg>
       </div>
-      <div class="spin-hint"><span>[DRAG TO SPIN]</span> Haptic & Click Feedback</div>
+      <div class="spin-hint"><span>[DRAG TO SPIN]</span> Always-Upright Orientation & Dates</div>
     </section>
 
-    <!-- Right Field: Dossier Folder Workspace (Full 4-Row Clean Layout) -->
+    <!-- Right Field: Dossier Folder Workspace -->
     <aside class="detail" aria-live="polite">
       <!-- 1. Clean Detail Topbar -->
       <section class="clean-topbar">
@@ -859,7 +869,6 @@ header {
       <!-- 4. Discreet Footer with Secret Bug Dot -->
       <footer class="control-footer">
         <div class="footer-left">
-          <!-- Inconspicuous Secret Teaching Bug -->
           <button class="secret-bug-btn" id="openGuideBtn" title="Secret Teaching Blueprint">·</button>
           <div class="trace-text" id="trace">Select any week sector.</div>
         </div>
@@ -991,7 +1000,6 @@ header {
 
   // Pure SVG QR Code Generator
   function generateQrSvg(text) {
-    // Generates a clean, scannable QR Code SVG matrix
     const encoded = encodeURIComponent(text);
     return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=${encoded}" alt="QR Code" width="200" height="200" style="display:block; width:100%; height:100%;" onerror="this.outerHTML='<div style=\\\'font-family:monospace;font-size:10px;padding:20px;\\\'>Scan URL:<br>${text}</div>'" />`;
   }
@@ -1075,24 +1083,24 @@ header {
     }
   }
 
-  // 16-Week Curriculum with Staggered, Shortened, Punchy Titles
+  // 16-Week Fall 2026 Curriculum with Exact Dates
   const weeks = [
-    { short: ["PRIMITIVE"], phase: "FOUNDATION", name: "Primitive", title: "Primitive first.", claim: "Begin with operations small enough to understand end-to-end." },
-    { short: ["VISIBLE", "CAUSE"], phase: "FOUNDATION", name: "Visible Cause", title: "Make causality visible.", claim: "Show the visible consequence first; open the mechanism second." },
-    { short: ["HELLO", "MONDRIAN"], phase: "FOUNDATION", name: "Lab 01", title: "Lab 01 · Hello Mondrian", claim: "Run the lab first. Know the exercise from the inside. 30 prototypes, quizzes, and debuggers cataloged." },
-    { short: ["STRUCTURE"], phase: "FOUNDATION", name: "Lab 02", title: "Give structure consequence.", claim: "A computational operation should become perceptible, not remain a definition." },
-    { short: ["AGENCY"], phase: "FOUNDATION", name: "Lab 03", title: "Agency over features.", claim: "The unit of instruction is agency gained, not software features completed." },
-    { short: ["BOUNDED", "LABS"], phase: "FOUNDATION", name: "Lab 04-06", title: "Finish the foundation.", claim: "Six bounded labs establish enough friction with code to make delegation legible." },
-    { short: ["LLM", "DELEGATE"], phase: "DELEGATION", name: "LLM Enters", title: "Delegate after contact.", claim: "The LLM becomes an instrument only after students have something of their own to delegate." },
-    { short: ["MILESTONE", "01"], phase: "DELEGATION", name: "Milestone 01", title: "Change the course form.", claim: "Move from tightly bounded labs toward increasingly self-directed milestones." },
-    { short: ["AUTONOMY"], phase: "AGENCY", name: "Autonomy", title: "What can I cause to happen?", claim: "Syntax becomes subordinate to computational agency." },
-    { short: ["MILESTONE", "02"], phase: "AGENCY", name: "Milestone 02", title: "Make something authored.", claim: "The artifact should bear enough choices that a student can say: I made this." },
-    { short: ["GAME", "SYSTEMS"], phase: "AGENCY", name: "Games", title: "Converge on a game.", claim: "A game forces representation, input, state, feedback, timing, rules, and audiovisual form into one artifact." },
-    { short: ["PUBLIC", "WORK"], phase: "PUBLIC", name: "Public Work", title: "Audience enters specification.", claim: "Public work changes what counts as finished." },
-    { short: ["CRITIQUE"], phase: "PUBLIC", name: "Critique", title: "Discussion is coursework.", claim: "Reading should terminate in an act of interpretation." },
-    { short: ["GUEST"], phase: "PUBLIC", name: "Guest", title: "Make guests causal.", claim: "A speaker should enter the curriculum's causal structure." },
-    { short: ["ASSESS"], phase: "ASSESS", name: "Assess", title: "Make competence legible.", claim: "Students should know most requirements in advance." },
-    { short: ["CLOSE"], phase: "ASSESS", name: "Final Close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
+    { date: "AUG 26", short: ["PRIMITIVE"], phase: "FOUNDATION", name: "Primitive", title: "Primitive first.", claim: "Begin with operations small enough to understand end-to-end." },
+    { date: "SEP 02", short: ["VISIBLE", "CAUSE"], phase: "FOUNDATION", name: "Visible Cause", title: "Make causality visible.", claim: "Show the visible consequence first; open the mechanism second." },
+    { date: "SEP 09", short: ["HELLO", "MONDRIAN"], phase: "FOUNDATION", name: "Lab 01", title: "Lab 01 · Hello Mondrian", claim: "Run the lab first. Know the exercise from the inside. 30 prototypes, quizzes, and debuggers cataloged." },
+    { date: "SEP 16", short: ["STRUCTURE"], phase: "FOUNDATION", name: "Lab 02", title: "Give structure consequence.", claim: "A computational operation should become perceptible, not remain a definition." },
+    { date: "SEP 23", short: ["AGENCY"], phase: "FOUNDATION", name: "Lab 03", title: "Agency over features.", claim: "The unit of instruction is agency gained, not software features completed." },
+    { date: "SEP 30", short: ["BOUNDED", "LABS"], phase: "FOUNDATION", name: "Lab 04-06", title: "Finish the foundation.", claim: "Six bounded labs establish enough friction with code to make delegation legible." },
+    { date: "OCT 07", short: ["LLM", "DELEGATE"], phase: "DELEGATION", name: "LLM Enters", title: "Delegate after contact.", claim: "The LLM becomes an instrument only after students have something of their own to delegate." },
+    { date: "OCT 14", short: ["MILESTONE", "01"], phase: "DELEGATION", name: "Milestone 01", title: "Change the course form.", claim: "Move from tightly bounded labs toward increasingly self-directed milestones." },
+    { date: "OCT 21", short: ["AUTONOMY"], phase: "AGENCY", name: "Autonomy", title: "What can I cause to happen?", claim: "Syntax becomes subordinate to computational agency." },
+    { date: "OCT 28", short: ["MILESTONE", "02"], phase: "AGENCY", name: "Milestone 02", title: "Make something authored.", claim: "The artifact should bear enough choices that a student can say: I made this." },
+    { date: "NOV 04", short: ["GAME", "SYSTEMS"], phase: "AGENCY", name: "Games", title: "Converge on a game.", claim: "A game forces representation, input, state, feedback, timing, rules, and audiovisual form into one artifact." },
+    { date: "NOV 11", short: ["PUBLIC", "WORK"], phase: "PUBLIC", name: "Public Work", title: "Audience enters specification.", claim: "Public work changes what counts as finished." },
+    { date: "NOV 18", short: ["CRITIQUE"], phase: "PUBLIC", name: "Critique", title: "Discussion is coursework.", claim: "Reading should terminate in an act of interpretation." },
+    { date: "DEC 02", short: ["GUEST"], phase: "PUBLIC", name: "Guest", title: "Make guests causal.", claim: "A speaker should enter the curriculum's causal structure." },
+    { date: "DEC 09", short: ["ASSESS"], phase: "ASSESS", name: "Assess", title: "Make competence legible.", claim: "Students should know most requirements in advance." },
+    { date: "DEC 16", short: ["CLOSE"], phase: "ASSESS", name: "Final Close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
   ];
 
   const phaseBands = [
@@ -1201,7 +1209,6 @@ header {
   const NS = "http://www.w3.org/2000/svg";
   const cx = 500, cy = 500;
   
-  // Enlarged concentric radii: outer ring bigger, inner bullseye significantly bigger
   const rOuterPhase = 478;
   const rPhaseInner = 416;
   const rWeekOuter = 414;
@@ -1242,10 +1249,13 @@ header {
     return new URL(relativePath, window.location.href).href;
   }
 
-  // Draw Interactive Bauhaus Wheel with Large Outer Ring & Big Clean Bullseye Hub
+  // Draw Interactive Bauhaus Wheel
   let spinGroup = null;
+  let sectorTextElements = [];
+
   function renderWheel() {
     svg.replaceChildren();
+    sectorTextElements = [];
 
     const defs = el("defs");
     svg.appendChild(defs);
@@ -1253,11 +1263,11 @@ header {
     spinGroup = el("g", { class: "spin-group", id: "spinGroup" });
     svg.appendChild(spinGroup);
 
-    // 1. Outer Concentric Boundary Rings (Extra Wide & Bold)
+    // 1. Outer Rings
     spinGroup.appendChild(el("circle", { cx, cy, r: rOuterPhase, class: "bauhaus-ring thick" }));
     spinGroup.appendChild(el("circle", { cx, cy, r: rPhaseInner, class: "bauhaus-ring thick" }));
 
-    // 2. Outer Phase Arcs & Huge 17px Typography
+    // 2. Outer Phase Arcs
     phaseBands.forEach((p, idx) => {
       const a1 = p.start * slice + 1.2, a2 = (p.end + 1) * slice - 1.2;
       const mid = (a1 + a2) / 2;
@@ -1279,7 +1289,7 @@ header {
       spinGroup.appendChild(el("line", { x1: pOuter[0], y1: pOuter[1], x2: pInner[0], y2: pInner[1], class: "bauhaus-ring thick" }));
     });
 
-    // 3. Middle 16 Sectors with 25px Week Numbers & Staggered 2-Line Titles
+    // 3. Middle 16 Sectors with Auto-Orienting Numbers, Dates, and Titles
     weeks.forEach((w, i) => {
       const a1 = i * slice + 0.8, a2 = (i + 1) * slice - 0.8, mid = (i + 0.5) * slice;
       const isSelected = i === selectedWeek;
@@ -1292,43 +1302,55 @@ header {
       path.addEventListener("click", () => selectWeek(i));
       spinGroup.appendChild(path);
 
-      // Staggered & Shortened Concept Title Lines
-      const isAlt = i % 2 === 1;
-      const titleRadius = isAlt ? 275 : 265;
-      const radialPos = point(titleRadius, mid);
-      let textRot = mid;
-      if (mid > 90 && mid < 270) textRot += 180;
+      // Wrapper group for all text elements inside this sector
+      const secGroup = el("g", { id: `sec-text-${i}` });
+      spinGroup.appendChild(secGroup);
 
-      const titleGroup = el("g", {
-        transform: `rotate(${textRot}, ${radialPos[0]}, ${radialPos[1]})`
-      });
-
-      w.short.forEach((line, lineIdx) => {
-        const lineOffset = (lineIdx - (w.short.length - 1) / 2) * 14;
-        const textNode = el("text", {
-          x: radialPos[0],
-          y: radialPos[1] + lineOffset + 4,
-          "text-anchor": "middle",
-          class: `week-stagger-title${isSelected ? " selected" : ""}`
-        }, line);
-        titleGroup.appendChild(textNode);
-      });
-      spinGroup.appendChild(titleGroup);
-
-      // Large 25px Week Number
-      const np = point(368, mid);
-      const num = el("text", {
-        x: np[0],
-        y: np[1] + 9,
+      // 1. Week Number (Radius 374)
+      const np = point(374, mid);
+      const numNode = el("text", {
+        x: np[0], y: np[1] + 8,
         "text-anchor": "middle",
         class: `week-num-text${isSelected ? " selected" : ""}`
       }, String(i + 1).padStart(2, "0"));
-      spinGroup.appendChild(num);
+      secGroup.appendChild(numNode);
+
+      // 2. Clear Date Badge (Radius 334)
+      const dp = point(334, mid);
+      const dateNode = el("text", {
+        x: dp[0], y: dp[1] + 4,
+        "text-anchor": "middle",
+        class: `week-date-text${isSelected ? " selected" : ""}`
+      }, w.date);
+      secGroup.appendChild(dateNode);
+
+      // 3. Concept Title (Radius 268)
+      const tp = point(268, mid);
+      const titleGroup = el("g");
+      w.short.forEach((line, lineIdx) => {
+        const lineOffset = (lineIdx - (w.short.length - 1) / 2) * 14;
+        const textLine = el("text", {
+          x: tp[0],
+          y: tp[1] + lineOffset + 4,
+          "text-anchor": "middle",
+          class: `week-stagger-title${isSelected ? " selected" : ""}`
+        }, line);
+        titleGroup.appendChild(textLine);
+      });
+      secGroup.appendChild(titleGroup);
+
+      sectorTextElements.push({
+        index: i,
+        midAngle: mid,
+        numNode, np,
+        dateNode, dp,
+        titleGroup, tp
+      });
     });
 
     spinGroup.appendChild(el("circle", { cx, cy, r: rWeekInner, class: "bauhaus-ring thick" }));
 
-    // 4. Center Bullseye: Much Bigger & Minimalist ("Less is More")
+    // 4. Center Bullseye: Big & Minimalist ("Less is More")
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye + 20, class: "bullseye-outer" }));
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye, class: "bullseye-center" }));
     svg.appendChild(el("circle", { cx, cy, r: rCenterBullseye - 16, class: "bullseye-mid" }));
@@ -1340,12 +1362,13 @@ header {
     heroTitle.textContent = activeW.name;
     svg.appendChild(heroTitle);
 
-    svg.appendChild(el("text", { x: cx, y: cy + 44, "text-anchor": "middle", class: "bullseye-sub" }, `WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${activeW.phase}`));
+    svg.appendChild(el("text", { x: cx, y: cy + 44, "text-anchor": "middle", class: "bullseye-sub" }, `WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${activeW.date}`));
     svg.appendChild(el("text", { x: cx, y: cy + 86, "text-anchor": "middle", class: "bullseye-state" }, selectedWeek === 2 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "30 PROTOTYPES") : "CURRICULUM"));
 
     updateWheelRotation();
   }
 
+  // Dynamic Always-Upright Orientation Engine
   function updateWheelRotation(anim = false) {
     if (!spinGroup) return;
     if (anim) {
@@ -1353,6 +1376,19 @@ header {
       setTimeout(() => spinGroup && spinGroup.classList.remove("animating"), 350);
     }
     spinGroup.style.transform = `rotate(${currentRotation}deg)`;
+
+    // Auto-Orient each text node so it stays readable and never inverted
+    sectorTextElements.forEach(item => {
+      const worldAngle = ((item.midAngle + currentRotation) % 360 + 360) % 360;
+      let rot = item.midAngle;
+      if (worldAngle > 90 && worldAngle < 270) {
+        rot += 180; // Flip upright!
+      }
+      
+      item.numNode.setAttribute("transform", `rotate(${rot}, ${item.np[0]}, ${item.np[1]})`);
+      item.dateNode.setAttribute("transform", `rotate(${rot}, ${item.dp[0]}, ${item.dp[1]})`);
+      item.titleGroup.setAttribute("transform", `rotate(${rot}, ${item.tp[0]}, ${item.tp[1]})`);
+    });
   }
 
   // Rotation Drag Physics
@@ -1413,10 +1449,10 @@ header {
     const w = weeks[selectedWeek];
     headWeek.textContent = String(selectedWeek + 1).padStart(2, "0");
     headPhase.textContent = w.phase;
-    mobWeekCode.textContent = `WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${w.phase}`;
+    mobWeekCode.textContent = `WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${w.date}`;
     mobWeekTitle.textContent = w.name;
 
-    objectCode.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} · ${w.phase}`;
+    objectCode.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} · ${w.date}`;
     detailTitle.textContent = w.title;
 
     if (selectedWeek === 2) {
@@ -1428,7 +1464,7 @@ header {
       spectrumStrip.style.display = "none";
       dossierContainer.innerHTML = `
         <div style="padding: 30px 16px; text-align: center; border: 1px solid var(--hair-strong); background: var(--surface);">
-          <div style="font: 800 12px/1.2 var(--mono); text-transform: uppercase; color: var(--accent); margin-bottom: 6px;">[WEEK ${String(selectedWeek + 1).padStart(2, "0")} CURRICULUM]</div>
+          <div style="font: 800 12px/1.2 var(--mono); text-transform: uppercase; color: var(--accent); margin-bottom: 6px;">[WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${w.date}]</div>
           <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">${w.title}</div>
           <p style="font-size: 12.5px; color: var(--muted); max-width: 44ch; margin: 0 auto 14px;">${w.claim}</p>
           <button class="dossier-btn primary" onclick="selectWeek(2)" style="max-width: 220px; margin: 0 auto;">Return to Lab 01 Dossier</button>
@@ -1518,7 +1554,7 @@ header {
       renderWheel();
     }
     renderDetail();
-    trace.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} selected · ${weeks[selectedWeek].name}`;
+    trace.textContent = `W${String(selectedWeek + 1).padStart(2, "0")} · ${weeks[selectedWeek].date} · ${weeks[selectedWeek].name}`;
   }
   window.selectWeek = selectWeek;
 
