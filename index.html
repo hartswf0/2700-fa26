@@ -1179,6 +1179,14 @@ header {
         <circle cx="60" cy="45" r="4" fill="#ffffff"/>
         <text x="60" y="85" font-family="monospace" font-size="7.5" fill="#f2f0e6" text-anchor="middle">ZERO-ASSUMPTION</text>
       </svg>`;
+    } else if (handle.startsWith("L3") || handle.startsWith("AN")) {
+      return `<svg class="folder-preview-svg" viewBox="0 0 120 90">
+        <rect width="120" height="90" fill="#ffffff" stroke="#111111" stroke-width="1.5"/>
+        <circle cx="60" cy="45" r="22" fill="#ffd400" stroke="#111111" stroke-width="2"/>
+        <line x1="20" y1="45" x2="35" y2="45" stroke="#111111" stroke-width="2"/>
+        <polygon points="35,42 41,45 35,48" fill="#111111"/>
+        <text x="60" y="82" font-family="monospace" font-size="7" font-weight="900" fill="#111111" text-anchor="middle">STATE TRANSITION</text>
+      </svg>`;
     } else {
       return `<svg class="folder-preview-svg" viewBox="0 0 120 90">
         <rect width="120" height="90" fill="#f5f3ec"/>
@@ -1256,6 +1264,19 @@ header {
     { handle: "TH.01", lvl: 6, file: "HELLO_WORLD_THEORY_TEXT_IMAGE.pdf", url: "HELLO_WORLD_THEORY_TEXT_IMAGE.pdf", title: "Theory: Text & Image", ext: "pdf", type: "PDF", sizeStr: "409.6 KB", purpose: "Foundational theory notes: code as text specification vs sensory visual output." },
     { handle: "TH.02", lvl: 6, file: "HELLO_WORLD_P5_THEORY_TEXT_IMAGE_ERROR_PROMPT_REBUILT.pdf", url: "HELLO_WORLD_P5_THEORY_TEXT_IMAGE_ERROR_PROMPT_REBUILT.pdf", title: "Theory: Error & Prompt Rebuilt", ext: "pdf", type: "PDF", sizeStr: "167.0 KB", purpose: "Extended lecture addressing error handling and AI prompting boundaries." },
     { handle: "TH.03", lvl: 6, file: "20110024177 (2).pdf", url: "20110024177_2.pdf", title: "Patent Reference (20110024177) · Negative Space Programming", ext: "pdf", type: "Patent PDF", sizeStr: "326.3 KB", purpose: "Technical patent documentation on negative-space program surfaces, spatial coordinate bounding, and compiler representations." }
+  ];
+
+  // 9 Lab 3 Artifacts (Interactivity as State Transition)
+  const LAB3_ARTIFACTS = [
+    { handle: "L3.01", lab: 3, lvl: 3, isCore: true, tier: "Primary 01 · Main Studio System", file: "LAB 3 - INTERACTIVITY/lab3_interactivity_base.html", url: "LAB 3 - INTERACTIVITY/lab3_interactivity_base.html", title: "Lab 3: What Can One Input Mean? (Main Studio)", ext: "html", type: "Main Studio", sizeStr: "36.0 KB", purpose: "The primary interactive studio foundation: 16 live sketches, code inspector, live p5 console, and breakout notes." },
+    { handle: "L3.02", lab: 3, lvl: 2, isCore: true, tier: "Primary 02 · Anscombe Game 2+2", file: "LAB 3 - INTERACTIVITY/shopper_programmer_detective.html", url: "LAB 3 - INTERACTIVITY/shopper_programmer_detective.html", title: "The Anscombe Game: The List, Coder & Detective", ext: "html", type: "Workshop App", sizeStr: "24.5 KB", purpose: "Classroom 2+2 game with G.E.M. Anscombe thought experiment, animated Tiny Movie, laptop swap, and reveal matrix." },
+    { handle: "L3.03", lab: 3, lvl: 1, isCore: true, tier: "Lab 03 Master Index Portal", file: "LAB 3 - INTERACTIVITY/index.html", url: "LAB 3 - INTERACTIVITY/index.html", title: "Lab 03 Master Hub: Interactivity as State Transition", ext: "html", type: "Master Portal", sizeStr: "16.3 KB", purpose: "Comprehensive launchpad connecting all Lab 3 software, decks, and specifications with live embed preview drawer." },
+    { handle: "L3.04", lab: 3, lvl: 3, isCore: true, tier: "Studio Lecture Slides", file: "LAB 3 - INTERACTIVITY/lab3_fixed_lecture_slides.html", url: "LAB 3 - INTERACTIVITY/lab3_fixed_lecture_slides.html", title: "Lab 3 Studio Lecture (16 Interactive Slides)", ext: "html", type: "Interactive Slides", sizeStr: "29.5 KB", purpose: "16 live sandboxed p5 sketches from mouse coordinates to continuous vs discrete events and the Anscombe reflection." },
+    { handle: "L3.05", lab: 3, lvl: 3, tier: "Theoretical Lineage", file: "LAB 3 - INTERACTIVITY/LAB3_CLOUD_CLOCK_QUOTED_PRESENTATION.html", url: "LAB 3 - INTERACTIVITY/LAB3_CLOUD_CLOCK_QUOTED_PRESENTATION.html", title: "Clouds & Clocks: Philosophical Presentation", ext: "html", type: "Presentation", sizeStr: "26.4 KB", purpose: "Karl Popper, Richard Bolt, Ben Shneiderman, John Dewey, and C. Thi Nguyen on consequential interactivity." },
+    { handle: "L3.06", lab: 3, lvl: 2, isCore: true, tier: "Hands-on Studio Editor", file: "LAB3_YELLOW_CIRCLE_ACTUALLY_WORKS.html", url: "LAB3_YELLOW_CIRCLE_ACTUALLY_WORKS.html", title: "Yellow Circle Studio Editor", ext: "html", type: "Studio IDE", sizeStr: "22.2 KB", purpose: "Integrated web workbench with real-time compiler, state watcher, and 16 progressive challenges." },
+    { handle: "L3.07", lab: 3, lvl: 1, isCore: true, tier: "Assignment Spec", file: "LAB 3 - INTERACTIVITY/l3-spec.md", url: "LAB 3 - INTERACTIVITY/l3-spec.md", title: "Lab 3 Spec: The Temporal Grammar", ext: "md", type: "Specification", sizeStr: "9.2 KB", purpose: "6 Temporal Clauses (WHERE, WHEN, WHILE, BETWEEN, CHANGE, REMEMBER) and State Transition Trace requirements." },
+    { handle: "L3.08", lab: 3, lvl: 4, tier: "Faculty Manual", file: "LAB 3 - INTERACTIVITY/TEACHING_GUIDE_LAB3.md", url: "LAB 3 - INTERACTIVITY/TEACHING_GUIDE_LAB3.md", title: "Master Teaching Blueprint (5 Acts)", ext: "md", type: "Faculty Blueprint", sizeStr: "10.8 KB", purpose: "90-minute faculty lesson architecture, time allocations, student failure modes, and whiteboard scripts." },
+    { handle: "L3.09", lab: 3, lvl: 4, tier: "Classroom Runbook", file: "LAB 3 - INTERACTIVITY/ANSCOMBE_GAME_FACILITATOR_GUIDE.md", url: "LAB 3 - INTERACTIVITY/ANSCOMBE_GAME_FACILITATOR_GUIDE.md", title: "Anscombe Game Facilitator Runbook", ext: "md", type: "Runbook", sizeStr: "8.9 KB", purpose: "Field manual for running the 2+2 laptop swap game with timer choreography and discussion prompts." }
   ];
 
   // State
@@ -1352,6 +1373,9 @@ header {
   }
 
   function getDirectPath(item) {
+    if (item.lab === 3) {
+      return "./" + (item.url || item.file);
+    }
     const fileRef = item.url || item.file;
     const currentPath = decodeURIComponent(window.location.pathname || "");
     if (currentPath.includes("LAB 1 - HELLO MONDRIAN") || currentPath.includes("lab01")) {
@@ -1619,6 +1643,10 @@ header {
       objectCount.textContent = activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "30 PROTOTYPES";
       spectrumStrip.style.display = "flex";
       renderDossierCards();
+    } else if (selectedWeek === 4) {
+      objectCount.textContent = activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "9 LAB 03 MODULES";
+      spectrumStrip.style.display = "flex";
+      renderDossierCards();
     } else {
       objectCount.textContent = "CURRICULUM OUTLINE";
       spectrumStrip.style.display = "none";
@@ -1627,14 +1655,18 @@ header {
           <div style="font: 800 12px/1.2 var(--mono); text-transform: uppercase; color: var(--accent); margin-bottom: 6px;">[WEEK ${String(selectedWeek + 1).padStart(2, "0")} · ${w.date}]</div>
           <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">${w.title}</div>
           <p style="font-size: 12.5px; color: var(--muted); max-width: 44ch; margin: 0 auto 14px;">${w.claim}</p>
-          <button class="dossier-btn primary" onclick="selectWeek(2)" style="max-width: 220px; margin: 0 auto;">Return to Lab 01 Dossier</button>
+          <div style="display:flex;gap:10px;justify-content:center;max-width:320px;margin:0 auto;">
+            <button class="dossier-btn" onclick="selectWeek(2)" style="flex:1;">Lab 01 Dossier</button>
+            <button class="dossier-btn primary" onclick="selectWeek(4)" style="flex:1;">Lab 03 Dossier</button>
+          </div>
         </div>
       `;
     }
   }
 
   function renderDossierCards() {
-    const filtered = LAB_ARTIFACTS.filter(item => {
+    const activeArtifacts = selectedWeek === 4 ? LAB3_ARTIFACTS : LAB_ARTIFACTS;
+    const filtered = activeArtifacts.filter(item => {
       if (activeSpectrumLvl === "arc") return item.isCore;
       if (activeSpectrumLvl === "all") return true;
       return item.lvl === Number(activeSpectrumLvl);

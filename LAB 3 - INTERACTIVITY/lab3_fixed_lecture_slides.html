@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lab 3 — Fixed Lecture Slides</title>
+<style>
+:root{
+ --bg:#070807;--ink:#f7f3e8;--muted:#bdc6bf;--line:#303a34;
+ --yellow:#ffe33d;--green:#143b35;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+body{display:grid;grid-template-rows:56px 1fr}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 14px;background:#101210;border-bottom:1px solid var(--line)}
+.brand{font:800 18px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.03em}
+.brand span{color:var(--yellow)}
+#count{justify-self:center;font:17px ui-monospace,monospace;color:var(--muted)}
+.controls{display:flex;gap:7px;justify-self:end}
+button{font:800 15px system-ui,-apple-system,sans-serif;background:#181d19;color:var(--ink);border:1px solid #566158;padding:8px 12px;cursor:pointer}
+button:hover,button:focus-visible{outline:none;border-color:var(--yellow)}
+button.primary{background:var(--yellow);border-color:var(--yellow);color:#111}
+main{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--green)}
+.top{
+  display:grid;grid-template-columns:1.1fr .9fr;gap:28px;
+  padding:24px 32px 10px;align-items:start
+}
+h1{margin:0;font:900 clamp(48px,6vw,96px)/.9 system-ui,-apple-system,sans-serif;letter-spacing:-.065em}
+h1 b{color:var(--yellow)}
+#question{font:650 clamp(28px,3vw,48px)/1.06 system-ui,-apple-system,sans-serif;color:#f2f2ed;margin-top:10px}
+.sayask{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.box{background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.18);padding:16px 18px;min-height:130px}
+.k{font:900 13px ui-monospace,monospace;color:var(--yellow);letter-spacing:.14em;margin-bottom:9px}
+.v{font:650 clamp(21px,2vw,34px)/1.08 system-ui,-apple-system,sans-serif}
+.stage{min-height:0;display:grid;grid-template-columns:1.1fr .9fr;gap:28px;padding:14px 32px 20px}
+.preview{position:relative;min-height:0;background:#102c27;border:2px solid rgba(255,255,255,.22);display:grid;place-items:center}
+iframe{border:0;width:100%;height:100%;display:block;background:#143b35}
+.codeFocus{min-height:0;background:rgba(0,0,0,.72);border:2px solid rgba(255,255,255,.18);display:grid;grid-template-rows:auto 1fr}
+.codeHead{padding:13px 18px;border-bottom:1px solid var(--line);font:900 16px ui-monospace,monospace;color:var(--yellow);letter-spacing:.1em}
+pre{margin:0;overflow:auto;padding:22px;color:#fff0a8;font:clamp(28px,2.45vw,46px)/1.18 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap}
+.bottom{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 32px 20px}
+.action{background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.18);padding:12px 16px;font:900 clamp(24px,2.3vw,40px)/1 ui-monospace,monospace}
+.action span{color:var(--yellow)}
+#focus{font:800 18px ui-monospace,monospace;color:var(--muted)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);display:none;z-index:20;padding:4vh 4vw}
+.overlay.on{display:grid;grid-template-rows:auto 1fr}
+.overlayTop{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px}
+.overlayTop h2{font:900 56px/.95 system-ui;margin:0;letter-spacing:-.04em}
+.overlay pre{background:#070807;border:1px solid var(--line);font-size:26px;line-height:1.35}
+@media(max-width:1000px){
+ body{height:auto;min-height:100dvh;overflow:auto;display:block}
+ header{min-height:56px;position:sticky;top:0;z-index:10;grid-template-columns:1fr;gap:8px;padding:10px}
+ #count{justify-self:start}
+ .controls{justify-self:start;flex-wrap:wrap}
+ main{display:block;min-height:calc(100dvh - 56px)}
+ .top,.stage{display:block;padding:18px}
+ .sayask{margin-top:14px}
+ .preview{height:42dvh;margin-bottom:14px}
+ .codeFocus{height:auto;min-height:220px}
+ h1{font-size:42px}
+ #question{font-size:26px}
+ pre{font-size:22px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">LAB 3 / <span>PUT THAT THERE</span></div>
+  <div id="count"></div>
+  <div class="controls">
+    <button id="prev">←</button>
+    <button id="rerun">rerun</button>
+    <button id="script">open script</button>
+    <button id="anscombeGame" style="border-color: #06b6d4; color: #06b6d4;">anscombe game</button>
+    <button id="full">full code</button>
+    <button id="copy">copy</button>
+    <button id="next" class="primary">next →</button>
+  </div>
+</header>
+
+<main>
+  <section class="top">
+    <div>
+      <h1 id="title"></h1>
+      <div id="question"></div>
+    </div>
+    <div class="sayask">
+      <div class="box"><div class="k">SAY</div><div class="v" id="say"></div></div>
+      <div class="box"><div class="k">ASK</div><div class="v" id="ask"></div></div>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div class="preview"><iframe id="frame" sandbox="allow-scripts"></iframe></div>
+    <div class="codeFocus">
+      <div class="codeHead">POINT AT THIS CODE</div>
+      <pre id="keycode"></pre>
+    </div>
+  </section>
+
+  <section class="bottom">
+    <div class="action">DO: <span id="action"></span></div>
+    <div id="focus"></div>
+  </section>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="overlayTop">
+    <h2>Full standalone sketch</h2>
+    <button id="closeFull" class="primary">close</button>
+  </div>
+  <pre id="fullCode"></pre>
+</div>
+
+<script>
+const slides = [{"title": "A picture that listens.", "question": "What makes a drawing interactive instead of a movie?", "action": "Look at the yellow circle.", "keycode": "function draw() {\n  // p5 calls this ~60 times a second\n  circle(300, 200, 60);\n}", "say": "Today we are not making a prettier picture. We are making a picture that listens. An animation plays on its own clock. An interactive sketch waits for a human action to change its world. In p5, setup() fires once; draw() repeats 60 times a second. You don't run draw; draw runs you.", "ask": "If you click a button and nothing on the canvas changes, was that an interaction?", "watch": "Students mistake putting code inside mousePressed() for interactivity. If the user action doesn't produce a perceptible difference in the world, the interaction is an illusion.", "focus": "Inversion of control: p5 calls draw() ~60 times a second.", "code": "function setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  fill(\"yellow\");\n  noStroke();\n  circle(300, 200, 60);\n}"}, {"title": "Start with one thing.", "question": "Why start with expressive poverty?", "action": "Change 60 to 120, then run.", "keycode": "circle(300, 200, 60); // x, y, diameter", "say": "Decoration hides weak interaction. When there is only one yellow circle, every movement, delay, and click becomes nakedly visible.", "ask": "Which line makes the world? Which line makes the object?", "watch": "Only drawing commands make pixels. Everything else sets state or establishes rules.", "focus": "circle(x, y, diameter) takes three numbers.", "code": "function setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  fill(\"yellow\");\n  noStroke();\n\n  // x, y, diameter\n  circle(300, 200, 60);\n}"}, {"title": "The canvas has places.", "question": "What do 300 and 200 mean?", "action": "Change 300. Run. Then change 200.", "keycode": "circle(300, 200, 60); // (0,0) is top-left", "say": "The screen is not an open void; it is a Cartesian coordinate system. But in computer graphics, y increases downward toward the floor.", "ask": "If I change 200 to 350, does the circle climb or fall?", "watch": "Students confuse Cartesian math (y goes up) with screen coordinates (y goes down).", "focus": "x = distance from left edge; y = distance from top edge.", "code": "function setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n  fill(\"yellow\");\n  noStroke();\n\n  circle(300, 200, 60);\n}"}, {"title": "A variable is a handle.", "question": "Why move the numbers into x and y?", "action": "Change x. Run. Change y. Run.", "keycode": "let x = 300;\nlet y = 200;\n\ncircle(x, y, 60);", "say": "Once a value has a name in memory, other parts of the program can inspect it, alter it, and remember it.", "ask": "What is easier to change: a literal number buried inside circle(), or a variable at the top?", "watch": "A variable is not a magic word; it is an addressable storage box with a current value.", "focus": "Naming a value decouples the object from fixed coordinates.", "code": "let x = 300;\nlet y = 200;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n  fill(\"yellow\");\n  noStroke();\n\n  circle(x, y, 60);\n}"}, {"title": "Moving background() changes time.", "question": "What is the difference between animation and a drawing surface?", "action": "Move mouse in the sketch. Watch the permanent trail accumulate!", "keycode": "// background() in setup() = memory\n// background() in draw() = forgetting", "say": "Moving background() one line changes the ontology of time. In draw(), the world is wiped clean sixty times a second (forgetting/animation). In setup(), past frames accumulate (memory/trace).", "ask": "When you draw on paper, does the paper erase itself before your next stroke?", "watch": "Students don't realize animation is an illusion created by repainting the entire background every 16ms.", "focus": "setup() background = accumulation of history; draw() background = instantaneous present.", "code": "function setup() {\n  createCanvas(600, 400);\n  background(20, 59, 53); // Repainted once: memory enabled!\n}\n\nfunction draw() {\n  // No background() here = history accumulates\n  fill(255, 227, 61, 140);\n  noStroke();\n  circle(mouseX, mouseY, 32);\n}"}, {"title": "mouseX and mouseY are live.", "question": "What changes without typing new numbers?", "action": "Move the mouse across the canvas.", "keycode": "circle(mouseX, mouseY, 60);", "say": "p5 gives us two live variables: mouseX and mouseY. Every frame, they are overwritten with the pointer's physical coordinates.", "ask": "What happens when we plug live variables into circle()?", "watch": "mouseX is a variable holding a number, not a function call. Do not write mouseX().", "focus": "mouseX and mouseY turn bodily movement into continuously rewritten numbers.", "code": "function setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n  fill(\"yellow\");\n  noStroke();\n\n  circle(mouseX, mouseY, 60);\n}"}, {"title": "pmouseX gives input a past tense.", "question": "How does the machine know how fast you are moving?", "action": "Move slow, then whip the mouse fast. Watch the velocity vector.", "keycode": "let speed = dist(mouseX, mouseY, pmouseX, pmouseY);\nline(pmouseX, pmouseY, mouseX, mouseY);", "say": "p5 gives us pmouseX and pmouseY\u2014the pointer position from the previous frame. With a past tense, position becomes velocity, direction, and physical kinetic force.", "ask": "If mouseX equals pmouseX, what is your speed?", "watch": "Without history, interaction has no momentum. With past tense, a circle can be flung or stretched.", "focus": "dist(mouseX, mouseY, pmouseX, pmouseY) turns two frames into velocity.", "code": "function setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  let speed = dist(mouseX, mouseY, pmouseX, pmouseY);\n  let dynamicSize = 40 + speed * 1.8;\n\n  stroke(255, 227, 61, 160);\n  strokeWeight(3);\n  line(pmouseX, pmouseY, mouseX, mouseY);\n\n  fill(\"yellow\");\n  noStroke();\n  circle(mouseX, mouseY, dynamicSize);\n}"}, {"title": "Input is a number, not a destiny.", "question": "Why should mouseX only control x?", "action": "Move left and right. Watch diameter respond instead of position.", "keycode": "let size = constrain(mouseX * 0.5, 10, 300);\ncircle(width / 2, height / 2, size);", "say": "Mouse input is just a number. It doesn't have to control position. It can control size, speed, volume, or angle. You choose the mapping.", "ask": "What else in the world changes when a single dial turns?", "watch": "Beginners assume mouseX must plug into x. Any variable can take any number.", "focus": "Decouple input source from graphical attribute.", "code": "function setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  let size = constrain(mouseX * 0.5, 10, 300);\n\n  fill(\"yellow\");\n  noStroke();\n  circle(width / 2, height / 2, size);\n}"}, {"title": "A click is a polite interruption.", "question": "Why is following not the same as choosing?", "action": "Click anywhere. The circle teleports only on the click.", "keycode": "function mousePressed() {\n  x = mouseX;\n  y = mouseY;\n}", "say": "draw() runs sixty times a second. mousePressed() is an event callback\u2014a polite interruption. It runs once per click, establishing a commitment.", "ask": "What is the difference between a continuous dial and a discrete shutter?", "watch": "Students try to put mousePressed() inside draw(). Event handlers live outside the draw loop.", "focus": "Event callbacks run once when the hardware event occurs.", "code": "let x = 300;\nlet y = 200;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n  fill(\"yellow\");\n  noStroke();\n\n  circle(x, y, 60);\n}\n\nfunction mousePressed() {\n  x = mouseX;\n  y = mouseY;\n}"}, {"title": "Reference needs a test: dist().", "question": "How does the computer know you clicked the circle?", "action": "Click inside the circle (high tone). Click outside (low thud).", "keycode": "let d = dist(mouseX, mouseY, x, y);\nif (d < 30) {\n  playTone(660); // hit\n} else {\n  playTone(140); // miss\n}", "say": "Direct manipulation requires knowing which object was targeted. The canvas has no built-in knowledge of objects; dist() measures the geometric relation.", "ask": "If the circle's diameter is 60, what radius counts as inside?", "watch": "Students test < 60 instead of radius < 30. Diameter is twice the radius.", "focus": "Hit-testing turns a raw pointer event into object reference.", "code": "let x = 300;\nlet y = 200;\nlet audioContext;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n  fill(\"yellow\");\n  noStroke();\n  circle(x, y, 60);\n}\n\nfunction mousePressed() {\n  let d = dist(mouseX, mouseY, x, y);\n\n  if (d < 30) {\n    playTone(660); // Hit\n  } else {\n    playTone(140); // Miss\n  }\n}\n\nfunction playTone(freq) {\n  if (!audioContext) audioContext = new AudioContext();\n  let osc = audioContext.createOscillator();\n  let gain = audioContext.createGain();\n  osc.frequency.value = freq;\n  gain.gain.value = 0.06;\n  osc.connect(gain);\n  gain.connect(audioContext.destination);\n  osc.start();\n  osc.stop(audioContext.currentTime + 0.1);\n}"}, {"title": "The drag lives between press and release.", "question": "What happens while the button is held down?", "action": "Click and drag the circle. Release to drop.", "keycode": "function mouseDragged() {\n  if (dragging) {\n    x = mouseX;\n    y = mouseY;\n  }\n}", "say": "A drag is not a longer click. It is an extended expressive phase between press and release. Direct manipulation feels alive when you maintain continuous control.", "ask": "Why do we need a boolean flag like dragging?", "watch": "If you don't check whether the mouse started on the circle, dragging anywhere moves it.", "focus": "mouseDragged() and mouseReleased() define continuous manipulation.", "code": "let x = 300;\nlet y = 200;\nlet dragging = false;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  if (dragging) {\n    fill(255, 240, 100);\n    stroke(\"white\");\n    strokeWeight(4);\n  } else {\n    fill(\"yellow\");\n    noStroke();\n  }\n\n  circle(x, y, 70);\n}\n\nfunction mousePressed() {\n  if (dist(mouseX, mouseY, x, y) < 35) {\n    dragging = true;\n  }\n}\n\nfunction mouseDragged() {\n  if (dragging) {\n    x = mouseX;\n    y = mouseY;\n  }\n}\n\nfunction mouseReleased() {\n  dragging = false;\n}"}, {"title": "THAT is stored state.", "question": "How does the program remember a past action after the click ends?", "action": "Click the circle. Move away. Notice the selection ring stays.", "keycode": "let selected = false;\n// Click sets selected = true;\nif (selected) circle(x, y, 82);", "say": "The physical click is over in a millisecond. But a variable like selected = true survives in memory. State is what allows an interface to remember what you committed to and change what future actions mean.", "ask": "How do we show the user that the computer remembered?", "watch": "The ring is not the selection; the boolean variable is the selection. The ring merely renders it.", "focus": "A boolean variable preserves the memory of an event.", "code": "let x = 300;\nlet y = 200;\nlet selected = false;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  fill(\"yellow\");\n  noStroke();\n  circle(x, y, 60);\n\n  if (selected) {\n    noFill();\n    stroke(\"white\");\n    strokeWeight(3);\n    circle(x, y, 82);\n  }\n}\n\nfunction mousePressed() {\n  let d = dist(mouseX, mouseY, x, y);\n  if (d < 30) {\n    selected = true; // Stored state\n  }\n}"}, {"title": "State changes grammar: PUT THAT THERE.", "question": "Why does the exact same hardware click do two completely different jobs?", "action": "Click the circle (THAT). Move to a new spot. Click again (THERE).", "keycode": "if (!selected && d < 30) {\n  selected = true;  // THAT\n} else if (selected) {\n  x = mouseX;       // THERE\n  y = mouseY;\n  selected = false; // PUT\n}", "say": "In Richard Bolt's 1980 Put-That-There, 'There' is not a location word; it is a temporal binding operator. The first click selects THAT; the second click places THERE. State changes what the next input means.", "ask": "What state is the program in after the first click?", "watch": "State machines feel tricky because the same hardware button now performs two distinct semantic acts.", "focus": "State transforms the grammar of subsequent events.", "code": "let x = 300;\nlet y = 200;\nlet selected = false;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  fill(\"yellow\");\n  noStroke();\n  circle(x, y, 60);\n\n  if (selected) {\n    noFill();\n    stroke(\"white\");\n    strokeWeight(3);\n    circle(x, y, 82);\n\n    // Visual tether: temporal binding between THAT and THERE\n    stroke(255, 255, 255, 140);\n    strokeWeight(1);\n    line(x, y, mouseX, mouseY);\n  }\n}\n\nfunction mousePressed() {\n  let d = dist(mouseX, mouseY, x, y);\n\n  if (!selected && d < 30) {\n    selected = true;  // THAT\n  } else if (selected) {\n    x = mouseX;       // THERE\n    y = mouseY;\n    selected = false; // PUT\n  }\n}"}, {"title": "\u2018Make that like that\u2019: Executable Analogy.", "question": "How can one object become an operand to transform another?", "action": "Click the yellow prototype circle (source), then click the grey circle (target).", "keycode": "if (copied && dTarget < targetSize/2 + 20) {\n  targetColor = [255, 227, 61];\n  targetSize = sourceSize;\n}", "say": "In Bolt's system, 'Make that like that' replaces explicit parameter typing with visible analogy. You point to a source exemplar, then point to a target object to transfer its traits.", "ask": "What is more expressive: typing RGB numbers, or pointing at something that already has the color you want?", "watch": "Students realize an object on screen can be data, not just a picture.", "focus": "Objects can act as operands in visual sentences.", "code": "let sourceX = 180, sourceY = 200, sourceSize = 90;\nlet targetX = 420, targetY = 200, targetSize = 40;\nlet targetColor = [120, 140, 135];\nlet copied = false;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  // Source object (exemplar)\n  fill(255, 227, 61);\n  noStroke();\n  circle(sourceX, sourceY, sourceSize);\n\n  // Target object (receiver)\n  fill(targetColor);\n  circle(targetX, targetY, targetSize);\n\n  // Instruction tether\n  if (copied) {\n    stroke(255, 227, 61, 160);\n    strokeWeight(2);\n    line(sourceX, sourceY, mouseX, mouseY);\n  }\n}\n\nfunction mousePressed() {\n  let dSource = dist(mouseX, mouseY, sourceX, sourceY);\n  let dTarget = dist(mouseX, mouseY, targetX, targetY);\n\n  if (dSource < sourceSize / 2) {\n    copied = true; // Sample THAT\n  } else if (copied && dTarget < targetSize / 2 + 20) {\n    targetColor = [255, 227, 61]; // Make LIKE THAT\n    targetSize = sourceSize;\n    copied = false;\n  }\n}"}, {"title": "Not-clicking is an action: Flappy dynamics.", "question": "What happens when the computer has its own autonomous laws?", "action": "Let the circle drop with gravity. Click to give an upward impulse.", "keycode": "velocity += gravity; // Autonomous law\ny += velocity;\n\nfunction mousePressed() {\n  velocity = -9;     // Human impulse\n}", "say": "In Dong Nguyen's Flappy Bird, not-clicking is as causally decisive as clicking. The world has autonomous continuous dynamics (gravity). Human action is an impulse that briefly resists it.", "ask": "Who is in charge when the user stops touching the mouse?", "watch": "Students think code waits passively for input. Autonomous state means the machine acts on its own clock.", "focus": "Autonomous computational dynamics oppose discrete human intervention.", "code": "let y = 150;\nlet velocity = 0;\nlet gravity = 0.35;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  velocity += gravity;\n  y += velocity;\n\n  if (y > height - 40) {\n    y = height - 40;\n    velocity = 0;\n  }\n\n  fill(\"yellow\");\n  noStroke();\n  circle(300, y, 60);\n}\n\nfunction mousePressed() {\n  velocity = -9;\n}"}, {"title": "CAN YOUR INTENTION SURVIVE THE TRIP?", "question": "WHERE DID THE MEANING CHANGE?", "action": "Play the 2+2 Anscombe Game. Swap laptops. Guess the secret list!", "keycode": "// THE ANSCOMBE CAUSAL CHAIN:\n// 1. WHAT WE MEANT    (The Secret List)\n// 2. WHAT WE CODED    (p5.js)\n// 3. WHAT IT DID      (Canvas Behavior)\n// 4. WHAT THEY GUESSED (Detective Inferrence)", "say": "In the Anscombe Game, you wrote a list for your partner to code. Then you swapped laptops with another pair. They probed your world with no code visible, trying to guess your secret list. Now look at their guess beside your list: Did your intention survive the trip? Where did the meaning change?", "ask": "Did the other team guess your sentence? If not, did they misunderstand your world, or did your code actually build something you didn't realize you built?", "watch": "Students often blame the user for not guessing the rule. Push them: an interface can only be understood through its perceptible feedback, not the author's secret intention.", "focus": "WHAT WE SAID \u2192 WHAT WE BUILT \u2192 WHAT IT DID \u2192 WHAT THEY THOUGHT IT DID", "code": "// Keep the yellow circle.\n// Add one new verb.\n\nlet x = 300;\nlet y = 200;\nlet size = 60;\n\nfunction setup() {\n  createCanvas(600, 400);\n}\n\nfunction draw() {\n  background(20, 59, 53);\n\n  fill(\"yellow\");\n  noStroke();\n  circle(x, y, size);\n}\n\nfunction mousePressed() {\n  // Put your mouse rule here.\n}\n\nfunction keyPressed() {\n  // Put your keyboard rule here.\n}\n\n// Sentence:\n// MAKE THAT __________"}];
+let i = 0;
+let channel = null;
+try { channel = new BroadcastChannel("lab3-fixed-lecture"); } catch(e) {}
+
+function sketchDoc(code){
+return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#143b35}
+body{display:grid;place-items:center}
+canvas{display:block;max-width:100vw;max-height:100vh;width:auto!important;height:auto!important}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.min.js"><\/script>
+</head>
+<body>
+<script>
+${code}
+<\/script>
+</body>
+</html>`;
+}
+
+function scriptDoc(){
+return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lab 3 Script</title>
+<style>
+:root{--bg:#070807;--ink:#f7f3e8;--muted:#c6cec8;--line:#354039;--yellow:#ffe33d}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+body{display:grid;grid-template-rows:66px 1fr}
+header{display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);background:#101210}
+button{font:800 18px system-ui;background:#181d19;color:var(--ink);border:1px solid #566158;padding:9px 13px}
+button.primary{background:var(--yellow);color:#111;border-color:var(--yellow)}
+#count{margin-left:auto;color:var(--muted);font:18px ui-monospace,monospace}
+main{display:grid;grid-template-columns:1fr 1fr;min-height:0}
+section{padding:22px 26px;border-right:1px solid var(--line);overflow:auto}
+section:last-child{border-right:0}
+h1{font:900 50px/.95 system-ui;margin:0 0 20px;letter-spacing:-.05em}
+.k{font:900 15px ui-monospace,monospace;color:var(--yellow);letter-spacing:.14em;margin:0 0 10px}
+.block{margin:0 0 24px}
+.v{font:600 29px/1.15 system-ui}
+pre{white-space:pre-wrap;color:#fff0a8;font:22px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<header>
+<button id="prev">←</button><button id="next" class="primary">next →</button><div id="count"></div>
+</header>
+<main>
+<section>
+<h1 id="title"></h1>
+<div class="block"><div class="k">SAY</div><div class="v" id="say"></div></div>
+<div class="block"><div class="k">ASK</div><div class="v" id="ask"></div></div>
+<div class="block"><div class="k">STUDENT ACTION</div><div class="v" id="action"></div></div>
+<div class="block"><div class="k">WATCH FOR</div><div class="v" id="watch"></div></div>
+</section>
+<section>
+<div class="block"><div class="k">POINT AT</div><div class="v" id="focus"></div></div>
+<div class="block"><div class="k">FULL SKETCH</div><pre id="code"></pre></div>
+</section>
+</main>
+<script>
+const slides = ${JSON.stringify(slides)};
+let i = 0;
+let channel = null;
+try { channel = new BroadcastChannel("lab3-fixed-lecture"); } catch(e) {}
+function render(send=false){
+ const s = slides[i];
+ document.getElementById("title").textContent = s.title;
+ document.getElementById("say").textContent = s.say;
+ document.getElementById("ask").textContent = s.ask;
+ document.getElementById("action").textContent = s.action;
+ document.getElementById("watch").textContent = s.watch;
+ document.getElementById("focus").textContent = s.focus;
+ document.getElementById("code").textContent = s.code;
+ document.getElementById("count").textContent = (i+1)+" / "+slides.length;
+ if(channel && send) channel.postMessage({type:"go", index:i});
+}
+document.getElementById("next").onclick=()=>{i=(i+1)%slides.length;render(true);};
+document.getElementById("prev").onclick=()=>{i=Math.max(0,i-1);render(true);};
+if(channel){ channel.onmessage = e => { if(e.data && e.data.type==="go"){ i=e.data.index; render(false); } }; }
+render();
+<\/script>
+</body>
+</html>`;
+}
+
+function render(send=true){
+ const s = slides[i];
+ document.getElementById("title").innerHTML = s.title.replaceAll("THAT","<b>THAT</b>").replaceAll("THERE","<b>THERE</b>");
+ document.getElementById("question").textContent = s.question;
+ document.getElementById("action").textContent = s.action;
+ document.getElementById("say").textContent = s.say;
+ document.getElementById("ask").textContent = s.ask;
+ document.getElementById("focus").textContent = s.focus;
+ document.getElementById("keycode").textContent = s.keycode;
+ document.getElementById("fullCode").textContent = s.code;
+ document.getElementById("count").textContent = (i+1)+" / "+slides.length;
+ document.getElementById("frame").srcdoc = sketchDoc(s.code);
+ if(channel && send) channel.postMessage({type:"go", index:i});
+}
+function next(){ i=(i+1)%slides.length; render(); }
+function prev(){ i=Math.max(0,i-1); render(); }
+document.getElementById("next").onclick=next;
+document.getElementById("prev").onclick=prev;
+document.getElementById("rerun").onclick=()=>render(false);
+document.getElementById("copy").onclick=async()=>{
+ await navigator.clipboard.writeText(slides[i].code);
+ const b=document.getElementById("copy"); b.textContent="copied"; setTimeout(()=>b.textContent="copy",800);
+};
+document.getElementById("full").onclick=()=>document.getElementById("overlay").classList.add("on");
+document.getElementById("closeFull").onclick=()=>document.getElementById("overlay").classList.remove("on");
+document.getElementById("anscombeGame").onclick=()=>{
+  window.open("shopper_programmer_detective.html", "_blank");
+};
+document.getElementById("script").onclick=()=>{
+ const w = window.open("", "lab3_script_fixed", "width=1100,height=850");
+ if(w){
+   w.document.open();
+   w.document.write(scriptDoc());
+   w.document.close();
+ }
+};
+window.addEventListener("keydown",e=>{
+ if(e.key==="ArrowRight"||e.key===" "){e.preventDefault();next();}
+ if(e.key==="ArrowLeft"){e.preventDefault();prev();}
+ if(e.key==="f"){document.getElementById("overlay").classList.toggle("on");}
+ if(e.key==="s"){document.getElementById("script").click();}
+});
+if(channel){ channel.onmessage = e => { if(e.data && e.data.type==="go" && e.data.index !== i){ i=e.data.index; render(false); } }; }
+render(false);
+</script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LAB 3 — Yellow Circle Working</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:white;color:#111;font-family:Arial,Helvetica,sans-serif}
+button,textarea{font:inherit;color:inherit}
+.app{width:100vw;height:100dvh;display:grid;grid-template-rows:86px minmax(0,1fr) 58px;overflow:hidden}
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;padding:14px 18px;border-bottom:3px solid #111}
+h1{margin:0;font-size:clamp(38px,5vw,74px);line-height:.86;letter-spacing:-.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{font:700 20px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#333}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(560px,.96fr);min-width:0;min-height:0}
+.stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:#f4f4f4;border-right:3px solid #111;touch-action:none}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.card{position:absolute;left:20px;top:20px;z-index:4;max-width:min(760px,calc(100% - 40px));background:white;border:3px solid #111;padding:15px 18px;pointer-events:none}
+.card b{display:block;font-size:clamp(30px,3.3vw,58px);line-height:.9;letter-spacing:-.05em}
+.card span{display:block;margin-top:12px;font:700 22px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;color:#111}
+.side{display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;overflow:hidden;background:white}
+.explain{padding:16px 18px;border-bottom:3px solid #111}
+.explain b{display:block;margin-bottom:10px;font:700 15px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em}
+.focus{background:#fff08a;border-left:12px solid #ffd400;padding:14px 18px;margin-bottom:12px;white-space:pre-wrap;font:700 30px/1.08 ui-monospace,SFMono-Regular,Menlo,monospace}
+.why{font:700 22px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;color:#111}
+.editorWrap{position:relative;min-height:0;overflow:hidden}
+textarea{position:absolute;inset:0;width:100%;height:100%;resize:none;overflow:hidden;border:0;outline:0;background:white;color:#111;padding:18px 18px 56px;font:22px/1.14 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;tab-size:2}
+.error{position:absolute;left:12px;right:12px;bottom:12px;z-index:7;display:none;background:#fff0ee;border:3px solid #b73424;padding:12px 14px;font:16px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace}
+footer{display:grid;grid-template-columns:1fr repeat(3,auto) 1fr;gap:10px;align-items:center;padding:8px 12px;border-top:3px solid #111;background:white}
+button{min-width:104px;min-height:40px;border:3px solid #111;background:white;border-radius:7px;cursor:pointer;font:700 15px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+button:active{background:#eee}
+#prev{justify-self:start}
+#run,#reset,#copy{justify-self:center}
+#next{justify-self:end}
+@media(max-width:900px) and (orientation:portrait){
+  .app{grid-template-rows:58px minmax(0,1fr) 48px}
+  header{padding:8px 9px;border-bottom:1px solid #111}
+  h1{font-size:24px}.count{font-size:11px}
+  main{grid-template-columns:1fr;grid-template-rows:minmax(0,40fr) minmax(0,60fr)}
+  .stage{border-right:0;border-bottom:1px solid #111}
+  .card{left:8px;top:8px;max-width:calc(100% - 16px);border-width:1px;padding:7px 8px}
+  .card b{font-size:17px}.card span{font-size:9px;margin-top:5px}
+  .explain{padding:6px 7px;border-bottom:1px solid #111}
+  .explain b{font-size:6px;margin-bottom:3px}
+  .focus{border-left-width:4px;padding:5px 6px;margin-bottom:4px;font-size:11px;line-height:1.08}
+  .why{font-size:8px}
+  textarea{padding:6px 6px 30px;font-size:6.5px;line-height:1.03}
+  footer{padding:6px 7px;border-top:1px solid #111;gap:5px;grid-template-columns:1fr repeat(3,auto) 1fr}
+  button{min-width:46px;min-height:32px;border-width:1px;font-size:6px}
+}
+@media(max-height:620px) and (orientation:landscape){
+  .app{grid-template-rows:50px minmax(0,1fr) 38px}
+  header{padding:6px 8px;border-bottom:1px solid #111}
+  h1{font-size:24px}.count{font-size:11px}
+  main{grid-template-columns:minmax(0,1fr) minmax(420px,.95fr)}
+  .stage{border-right:1px solid #111}
+  .card{left:8px;top:8px;max-width:55%;border-width:1px;padding:6px 7px}
+  .card b{font-size:16px}.card span{font-size:7.5px;margin-top:4px}
+  .explain{padding:6px 7px;border-bottom:1px solid #111}
+  .explain b{font-size:6px;margin-bottom:3px}
+  .focus{border-left-width:4px;padding:5px 6px;margin-bottom:4px;font-size:11px;line-height:1.06}
+  .why{font-size:7.5px}
+  textarea{padding:5px 5px 24px;font-size:7px;line-height:1}
+  footer{padding:5px 6px;border-top:1px solid #111;gap:5px}
+  button{min-width:44px;min-height:28px;border-width:1px;font-size:5.5px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header><h1>LAB 3: MAKE THE YELLOW CIRCLE</h1><div id="count" class="count"></div></header>
+<main>
+<section id="stage" class="stage">
+<canvas id="canvas"></canvas>
+<div class="card"><b id="title"></b><span id="task"></span></div>
+</section>
+<section class="side">
+<div class="explain"><b>ONE NEW LINE</b><div id="focus" class="focus"></div><div id="why" class="why"></div></div>
+<div class="editorWrap"><textarea id="editor" spellcheck="false"></textarea><div id="error" class="error"></div></div>
+</section>
+</main>
+<footer>
+<button id="prev">← PREV</button>
+<button id="run">RUN</button>
+<button id="reset">RESET</button>
+<button id="copy">COPY</button>
+<button id="next">NEXT →</button>
+</footer>
+</div>
+<script>
+const SLIDES = [{"title": "1 / MAKE A CANVAS", "task": "Press RUN. Change 500 or 300.", "focus": "createCanvas(windowWidth, windowHeight);", "why": "A sketch needs a drawing surface before it can show anything.", "code": "// STANDALONE p5.js SKETCH 1\n// A drawing surface with width and height.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}"}, {"title": "2 / DRAW REPEATS", "task": "Change 245 to 180. Press RUN.", "focus": "background(245);", "why": "draw() runs 60 times a second. background() repaints the surface.", "code": "// STANDALONE p5.js SKETCH 2\n// Inversion of control: draw() repeats continuously.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n}"}, {"title": "3 / TIME HAS MEMORY: TRACE VS FRAME", "task": "Move the pointer. See how moving background() changes time.", "focus": "background(245); // in setup: memory!", "why": "In setup(), frames accumulate as traces. In draw(), history is erased.", "code": "// STANDALONE p5.js SKETCH 3\n// background() in setup leaves a permanent drawing trace.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n  background(245); // Painted once\n}\n\nfunction draw() {\n  // No background() here: history accumulates!\n  fill(255, 220, 0, 100);\n  noStroke();\n  circle(mouseX, mouseY, 32);\n}"}, {"title": "4 / DRAW A YELLOW CIRCLE", "task": "Change 220 or 70. Press RUN.", "focus": "fill(255, 220, 0);\ncircle(250, 150, 70);", "why": "fill() sets the interior color. circle(x, y, diameter) makes the mark.", "code": "// STANDALONE p5.js SKETCH 4\n// One yellow circle: expressive poverty makes interaction visible.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 220, 0);\n  noStroke();\n  circle(250, 150, 70);\n}"}, {"title": "5 / NAME A NUMBER", "task": "Change x. Press RUN.", "focus": "let x = 250;", "why": "A variable stores a named value in memory so the program can reuse it.", "code": "// STANDALONE p5.js SKETCH 5\n// Naming a number gives later code a handle to change.\n\nlet x = 250;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 220, 0);\n  circle(x, 150, 70);\n}"}, {"title": "6 / NAME THE POSITION", "task": "Change x. Then change y.", "focus": "let x = 250;\nlet y = 150;", "why": "x controls left-right. y controls top-to-bottom.", "code": "// STANDALONE p5.js SKETCH 6\n// The circle becomes an object with addressable spatial state.\n\nlet x = 250;\nlet y = 150;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 220, 0);\n  circle(x, y, 70);\n}"}, {"title": "7 / USE MOUSE X", "task": "Move the pointer inside the sketch.", "focus": "circle(mouseX, y, 70);", "why": "mouseX is live continuous input written by the browser each frame.", "code": "// STANDALONE p5.js SKETCH 7\n// Continuous 1D tracking along the x-axis.\n\nlet y = 150;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 220, 0);\n  circle(mouseX, y, 70);\n}"}, {"title": "8 / USE MOUSE Y", "task": "Move the pointer. The circle follows.", "focus": "circle(mouseX, mouseY, 70);", "why": "mouseX and mouseY give 2D pointer coordinates on every tick.", "code": "// STANDALONE p5.js SKETCH 8\n// Full 2D direct tracking.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  fill(255, 220, 0);\n  circle(mouseX, mouseY, 70);\n}"}, {"title": "9 / THE PAST TENSE: pmouseX", "task": "Move slowly, then whip the mouse fast.", "focus": "let speed = dist(mouseX, mouseY, pmouseX, pmouseY);", "why": "pmouseX and pmouseY supply past tense, turning position into velocity.", "code": "// STANDALONE p5.js SKETCH 9\n// Speed and velocity vectors from frame history.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  let speed = dist(mouseX, mouseY, pmouseX, pmouseY);\n\n  stroke(0);\n  strokeWeight(3);\n  line(pmouseX, pmouseY, mouseX, mouseY);\n\n  fill(255, 220, 0);\n  noStroke();\n  circle(mouseX, mouseY, 40 + speed * 2);\n}"}, {"title": "10 / USE INPUT AS SIZE", "task": "Move left and right. The same input controls size.", "focus": "let size = mouseX * 0.4;", "why": "Input is an arbitrary number. You choose the mapping.", "code": "// STANDALONE p5.js SKETCH 10\n// Mapping pointer quantity to geometry.\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  let size = mouseX * 0.4;\n\n  fill(255, 220, 0);\n  circle(width / 2, height / 2, size);\n}"}, {"title": "11 / MEASURE NEAR: dist()", "task": "Move toward the circle. The line shows distance.", "focus": "let d = dist(mouseX, mouseY, x, y);", "why": "dist() turns spatial relation into a computable scalar.", "code": "// STANDALONE p5.js SKETCH 11\n// Computing nearness before taking action.\n\nlet x = 300;\nlet y = 180;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  let d = dist(mouseX, mouseY, x, y);\n\n  stroke(180);\n  strokeWeight(1);\n  line(mouseX, mouseY, x, y);\n\n  fill(255, 220, 0);\n  noStroke();\n  circle(x, y, 70);\n\n  fill(0);\n  circle(mouseX, mouseY, 8);\n}"}, {"title": "12 / TEST NEAR: CONDITIONALS", "task": "Move close. The circle acquires a border.", "focus": "if (d < 70) { stroke(0); strokeWeight(5); }", "why": "if statements translate continuous metric into qualitative rule.", "code": "// STANDALONE p5.js SKETCH 12\n// Proximity threshold test.\n\nlet x = 300;\nlet y = 180;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  let d = dist(mouseX, mouseY, x, y);\n\n  if (d < 70) {\n    stroke(0);\n    strokeWeight(6);\n  } else {\n    noStroke();\n  }\n\n  fill(255, 220, 0);\n  circle(x, y, 70);\n}"}, {"title": "13 / THE DRAG: PRESS TO RELEASE", "task": "Click inside the circle and drag it around.", "focus": "function mouseDragged() { x = mouseX; y = mouseY; }", "why": "The drag is continuous manipulation sustained between press and release.", "code": "// STANDALONE p5.js SKETCH 13\n// Direct manipulation: drag and drop.\n\nlet x = 280;\nlet y = 180;\nlet dragging = false;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  if (dragging) {\n    stroke(0);\n    strokeWeight(5);\n    fill(255, 240, 80);\n  } else {\n    noStroke();\n    fill(255, 220, 0);\n  }\n\n  circle(x, y, 70);\n}\n\nfunction mousePressed() {\n  if (dist(mouseX, mouseY, x, y) < 35) {\n    dragging = true;\n  }\n}\n\nfunction mouseDragged() {\n  if (dragging) {\n    x = mouseX;\n    y = mouseY;\n  }\n}\n\nfunction mouseReleased() {\n  dragging = false;\n}"}, {"title": "14 / REMEMBER A CLICK: STATE", "task": "Click the yellow circle. It toggles into orange.", "focus": "let selected = false;", "why": "A boolean stores memory of commitment after the click has finished.", "code": "// STANDALONE p5.js SKETCH 14\n// Stored state preserves the memory of an event.\n\nlet x = 300;\nlet y = 180;\nlet selected = false;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  if (selected) {\n    fill(255, 120, 0);\n  } else {\n    fill(255, 220, 0);\n  }\n\n  circle(x, y, 70);\n}\n\nfunction mousePressed() {\n  let d = dist(mouseX, mouseY, x, y);\n  if (d < 35) {\n    selected = !selected;\n  }\n}"}, {"title": "15 / PUT THAT THERE", "task": "Click circle (THAT). Click destination (THERE).", "focus": "if (!selected) ... else ...", "why": "State alters grammar: the first click binds THAT, the second places THERE.", "code": "// STANDALONE p5.js SKETCH 15\n// Bolt (1980): deictic binding across state.\n\nlet x = 260;\nlet y = 170;\nlet selected = false;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  if (selected) {\n    stroke(0);\n    strokeWeight(5);\n    line(x, y, mouseX, mouseY);\n  } else {\n    noStroke();\n  }\n\n  fill(255, 220, 0);\n  circle(x, y, 70);\n}\n\nfunction mousePressed() {\n  let d = dist(mouseX, mouseY, x, y);\n\n  // First click: THAT.\n  if (!selected && d < 35) {\n    selected = true;\n  }\n  // Second click: THERE.\n  else if (selected) {\n    x = mouseX;\n    y = mouseY;\n    selected = false;\n  }\n}"}, {"title": "16 / GLIDE THERE: LERP", "task": "Click anywhere. Change 0.08. Press RUN.", "focus": "x = lerp(x, targetX, 0.08);", "why": "lerp() creates easing and physical arrival toward a target position.", "code": "// STANDALONE p5.js SKETCH 16\n// Easing decouples instant teleportation into smooth motion.\n\nlet x = 260;\nlet y = 170;\nlet targetX = x;\nlet targetY = y;\n\nfunction setup() {\n  createCanvas(windowWidth, windowHeight);\n}\n\nfunction draw() {\n  background(245);\n\n  x = lerp(x, targetX, 0.08);\n  y = lerp(y, targetY, 0.08);\n\n  fill(255, 220, 0);\n  circle(x, y, 70);\n}\n\nfunction mousePressed() {\n  targetX = mouseX;\n  targetY = mouseY;\n}"}];
+const $ = id => document.getElementById(id);
+const stage = $('stage');
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+const editor = $('editor');
+const errorBox = $('error');
+
+let index = 0;
+let program = null;
+let inputTimer = null;
+
+let fillValue = [0,0,0,255];
+let strokeValue = null;
+let strokeWidthValue = 1;
+
+const api = {
+  width:1,height:1,windowWidth:1,windowHeight:1,
+  mouseX:0,mouseY:0,pmouseX:0,pmouseY:0,mouseIsPressed:false,
+
+  createCanvas(w,h){ setCanvas(w,h); return canvas; },
+
+  background(...args){
+    const c = makeColor(args);
+    ctx.save();
+    ctx.fillStyle = cssColor(c);
+    ctx.fillRect(0,0,api.width,api.height);
+    ctx.restore();
+  },
+
+  fill(...args){ fillValue = makeColor(args); },
+  noFill(){ fillValue = null; },
+  stroke(...args){ strokeValue = makeColor(args); },
+  noStroke(){ strokeValue = null; },
+  strokeWeight(w){ strokeWidthValue = Number(w) || 1; },
+
+  circle(x,y,d){
+    ctx.beginPath();
+    ctx.ellipse(x,y,d/2,d/2,0,0,Math.PI*2);
+    paint();
+  },
+
+  ellipse(x,y,w,h){
+    ctx.beginPath();
+    ctx.ellipse(x,y,w/2,h/2,0,0,Math.PI*2);
+    paint();
+  },
+
+  rect(x,y,w,h){
+    ctx.beginPath();
+    ctx.rect(x,y,w,h);
+    paint();
+  },
+
+  line(x1,y1,x2,y2){
+    if(!strokeValue) return;
+    ctx.save();
+    ctx.strokeStyle = cssColor(strokeValue);
+    ctx.lineWidth = strokeWidthValue;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.restore();
+  },
+
+  dist(x1,y1,x2,y2){ return Math.hypot(x2-x1,y2-y1); },
+  lerp(a,b,t){ return a + (b-a)*t; },
+  constrain(v,lo,hi){ return Math.min(hi,Math.max(lo,v)); },
+  map(v,a1,a2,b1,b2){ return b1 + ((v-a1)/(a2-a1))*(b2-b1); }
+};
+
+function makeColor(args){
+  if(args.length === 0) return [0,0,0,255];
+  if(typeof args[0] === 'string') return args[0];
+  const a = args.map(Number);
+  if(a.length === 1) return [a[0],a[0],a[0],255];
+  if(a.length === 2) return [a[0],a[0],a[0],a[1]];
+  if(a.length === 3) return [a[0],a[1],a[2],255];
+  return [a[0],a[1],a[2],a[3] ?? 255];
+}
+
+function cssColor(c){
+  if(typeof c === 'string') return c;
+  return `rgba(${c[0]},${c[1]},${c[2]},${(c[3] ?? 255)/255})`;
+}
+
+function paint(){
+  ctx.save();
+  if(fillValue){
+    ctx.fillStyle = cssColor(fillValue);
+    ctx.fill();
+  }
+  if(strokeValue){
+    ctx.strokeStyle = cssColor(strokeValue);
+    ctx.lineWidth = strokeWidthValue;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function measureStage(){
+  const r = stage.getBoundingClientRect();
+  api.windowWidth = Math.max(1, Math.floor(r.width));
+  api.windowHeight = Math.max(1, Math.floor(r.height));
+}
+
+function setCanvas(w,h){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  api.width = Math.max(1, Math.floor(w));
+  api.height = Math.max(1, Math.floor(h));
+  canvas.width = api.width * dpr;
+  canvas.height = api.height * dpr;
+  canvas.style.width = api.width + 'px';
+  canvas.style.height = api.height + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function compile(code){
+  const body = `
+    with(this){
+      ${code}
+      return {
+        setup: typeof setup === 'function' ? setup : null,
+        draw: typeof draw === 'function' ? draw : null,
+        mousePressed: typeof mousePressed === 'function' ? mousePressed : null,
+        mouseDragged: typeof mouseDragged === 'function' ? mouseDragged : null,
+        mouseReleased: typeof mouseReleased === 'function' ? mouseReleased : null
+      };
+    }
+  `;
+  return new Function(body).call(api);
+}
+
+function runSketch(){
+  try{
+    measureStage();
+    api.mouseX = api.mouseX || api.windowWidth/2;
+    api.mouseY = api.mouseY || api.windowHeight/2;
+    fillValue = [0,0,0,255];
+    strokeValue = null;
+    strokeWidthValue = 1;
+    program = compile(editor.value);
+    if(program.setup) program.setup();
+    errorBox.style.display = 'none';
+  }catch(err){
+    program = null;
+    errorBox.textContent = err.message || String(err);
+    errorBox.style.display = 'block';
+  }
+}
+
+function fitEditor(){
+  const lines = editor.value.split('\n').length;
+  const portrait = matchMedia('(max-width:900px) and (orientation:portrait)').matches;
+  const land = matchMedia('(max-height:620px) and (orientation:landscape)').matches;
+  let px = 22, lh = 1.14;
+
+  if(portrait){
+    if(lines > 30){ px = 6.2; lh = 1.0; }
+    else if(lines > 22){ px = 6.8; lh = 1.04; }
+    else { px = 7.4; lh = 1.08; }
+  }else if(land){
+    if(lines > 30){ px = 6.7; lh = 1.0; }
+    else { px = 7.4; lh = 1.03; }
+  }else{
+    if(lines > 30){ px = 16.5; lh = 1.06; }
+    else if(lines > 22){ px = 19; lh = 1.1; }
+  }
+
+  editor.style.fontSize = px + 'px';
+  editor.style.lineHeight = String(lh);
+}
+
+function showSlide(i){
+  index = Math.max(0, Math.min(SLIDES.length - 1, i));
+  const s = SLIDES[index];
+  $('title').textContent = s.title;
+  $('task').textContent = s.task;
+  $('focus').textContent = s.focus;
+  $('why').textContent = s.why;
+  $('count').textContent = `${index + 1}/${SLIDES.length}`;
+  editor.value = s.code;
+  fitEditor();
+  runSketch();
+}
+
+function updatePointer(e){
+  const r = canvas.getBoundingClientRect();
+  api.pmouseX = api.mouseX;
+  api.pmouseY = api.mouseY;
+  api.mouseX = (e.clientX - r.left) * (api.width / r.width);
+  api.mouseY = (e.clientY - r.top) * (api.height / r.height);
+}
+
+canvas.addEventListener('pointermove', e => {
+  updatePointer(e);
+  if(e.buttons && program && program.mouseDragged) program.mouseDragged();
+});
+
+canvas.addEventListener('pointerdown', e => {
+  updatePointer(e);
+  api.mouseIsPressed = true;
+  canvas.setPointerCapture?.(e.pointerId);
+  if(program && program.mousePressed) program.mousePressed();
+});
+
+canvas.addEventListener('pointerup', e => {
+  updatePointer(e);
+  api.mouseIsPressed = false;
+  if(program && program.mouseReleased) program.mouseReleased();
+});
+
+editor.addEventListener('input', () => {
+  fitEditor();
+  clearTimeout(inputTimer);
+  inputTimer = setTimeout(runSketch, 240);
+});
+
+editor.addEventListener('keydown', e => {
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    const a = editor.selectionStart;
+    const b = editor.selectionEnd;
+    editor.setRangeText('  ', a, b, 'end');
+    editor.dispatchEvent(new Event('input'));
+  }
+});
+
+$('run').onclick = runSketch;
+$('reset').onclick = () => showSlide(index);
+$('prev').onclick = () => showSlide(index - 1);
+$('next').onclick = () => showSlide(index + 1);
+$('copy').onclick = async () => {
+  try{
+    await navigator.clipboard.writeText(editor.value);
+    $('copy').textContent = 'COPIED';
+    setTimeout(() => $('copy').textContent = 'COPY', 800);
+  }catch(e){}
+};
+
+window.addEventListener('keydown', e => {
+  if(e.target === editor) return;
+  if(e.key === 'ArrowLeft') showSlide(index - 1);
+  if(e.key === 'ArrowRight') showSlide(index + 1);
+  if(e.key === 'Enter') runSketch();
+});
+
+window.addEventListener('resize', () => {
+  fitEditor();
+  runSketch();
+});
+
+function frame(){
+  if(program && program.draw){
+    try{
+      program.draw();
+    }catch(err){
+      errorBox.textContent = err.message || String(err);
+      errorBox.style.display = 'block';
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+document.addEventListener('wheel', e => e.preventDefault(), {passive:false});
+document.addEventListener('touchmove', e => {
+  if(e.target === editor) return;
+  e.preventDefault();
+}, {passive:false});
+
+showSlide(0);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

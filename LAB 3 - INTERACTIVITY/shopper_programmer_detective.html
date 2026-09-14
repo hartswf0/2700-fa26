@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>THE ANSCOMBE GAME // Lab 3 Interactivity</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+
+/* SHELL */
+.app{width:100vw;height:100dvh;display:grid;grid-template-rows:68px minmax(0,1fr) 56px;overflow:hidden}
+
+/* HEADER - CLEAN, PROFESSIONAL, NO BULLSHIT */
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:0 24px;border-bottom:3px solid #111;background:#fff}
+.brand-title{font-size:clamp(22px,2.5vw,32px);font-weight:900;line-height:1;letter-spacing:-.04em}
+.tabs{display:flex;gap:6px;justify-content:center}
+.tab{border:3px solid #111;background:#fff;padding:8px 13px;border-radius:6px;cursor:pointer;font:900 12px/1 ui-monospace,monospace;letter-spacing:.02em;transition:all .1s}
+.tab:hover{background:#f0f0f0}
+.tab.active{background:#ffd400;color:#111}
+.header-right{display:flex;align-items:center;gap:10px}
+select.preset{border:3px solid #111;background:#fff;padding:7px 12px;border-radius:6px;font:700 12px/1 ui-monospace,monospace;cursor:pointer;outline:none}
+
+/* MAIN CONTAINER (ZERO SCROLL) */
+main{min-width:0;min-height:0;position:relative;overflow:hidden}
+.stage-panel{position:absolute;inset:0;display:none;width:100%;height:100%;overflow:hidden}
+.stage-panel.active{display:grid}
+
+/* STAGE 0: THOUGHT EXPERIMENT & TINY MOVIE */
+#stage0{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);background:#fff}
+.story-side{display:flex;flex-direction:column;justify-content:space-between;padding:28px 32px;border-right:3px solid #111;overflow-y:auto}
+.story-kicker{font:900 12px/1 ui-monospace,monospace;letter-spacing:.1em;color:#111;margin-bottom:8px}
+.story-heading{font-size:clamp(30px,3.4vw,46px);font-weight:900;line-height:.95;letter-spacing:-.04em;margin:0 0 16px}
+.anscombe-cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.anscombe-card{border:3px solid #111;padding:16px;border-radius:8px;background:#fff}
+.anscombe-card.left-card{background:#fff08a}
+.anscombe-card.right-card{background:#fff}
+.card-fit-tag{font:900 11px/1 ui-monospace,monospace;letter-spacing:.06em;margin-bottom:6px}
+.card-role-title{font-size:18px;font-weight:900;margin:0 0 8px;letter-spacing:-.02em}
+.card-desc-text{font:700 13px/1.35 Arial,sans-serif;color:#111}
+.punchline-banner{background:#111;color:#fff;border-radius:8px;padding:14px 18px;margin-bottom:14px}
+.punchline-banner b{color:#ffd400;font:900 14px/1 ui-monospace,monospace;letter-spacing:.06em;display:block;margin-bottom:4px}
+.punchline-banner p{margin:0;font:700 13.5px/1.3 Arial,sans-serif}
+.story-start-btn{width:100%;padding:14px;background:#ffd400;color:#111;border:3px solid #111;border-radius:8px;font:900 18px/1 ui-monospace,monospace;cursor:pointer}
+.story-start-btn:hover{background:#ffe359}
+
+/* MOVIE SIDE */
+.movie-side{display:grid;grid-template-rows:minmax(0,1fr) auto;background:#fff;padding:20px;overflow:hidden}
+.movie-canvas-frame{position:relative;width:100%;height:100%;border:3px solid #111;border-radius:8px;background:#fff;overflow:hidden}
+#movieCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.movie-controls{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.movie-scrub-bar{display:flex;align-items:center;gap:10px}
+.scrub-track{flex:1;height:12px;border:2px solid #111;background:#eee;border-radius:6px;position:relative;cursor:pointer}
+.scrub-fill{position:absolute;left:0;top:0;height:100%;background:#ffd400;border-radius:4px;width:0%}
+.movie-time{font:900 12px/1 ui-monospace,monospace;width:64px;text-align:right}
+.movie-btn-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.movie-scene-tags{display:flex;gap:4px}
+.scene-pill{border:2px solid #111;background:#fff;padding:5px 9px;border-radius:5px;font:900 10.5px/1 ui-monospace,monospace;cursor:pointer}
+.scene-pill.active{background:#111;color:#ffd400}
+.movie-action-btns{display:flex;gap:6px}
+.movie-btn{border:2px solid #111;background:#fff;padding:6px 14px;border-radius:6px;font:900 12px/1 ui-monospace,monospace;cursor:pointer}
+.movie-btn:hover{background:#eee}
+.movie-btn.play-btn{background:#ffd400}
+
+/* STAGE 1: WRITE & CODE */
+#stage1{grid-template-columns:minmax(0,1.05fr) minmax(520px,.95fr)}
+.canvas-side{position:relative;width:100%;height:100%;background:#fbfbfb;border-right:3px solid #111;overflow:hidden}
+canvas.runtime-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.code-side{display:grid;grid-template-rows:auto minmax(0,1fr);background:#fff;overflow:hidden}
+.card-input-box{padding:16px 20px;border-bottom:3px solid #111;background:#fff08a}
+.card-label{font:900 12px/1 ui-monospace,monospace;letter-spacing:.08em;margin-bottom:8px}
+.row-field{display:grid;grid-template-columns:190px 1fr;align-items:center;gap:10px;margin-bottom:8px}
+.row-field:last-child{margin-bottom:0}
+.row-field b{font:900 14px/1 ui-monospace,monospace}
+input.line-input{width:100%;background:#fff;border:3px solid #111;border-radius:6px;padding:8px 12px;font:700 15px Arial,sans-serif;outline:none}
+input.line-input:focus{background:#fffbe6}
+.editor-wrap{position:relative;width:100%;height:100%;min-height:0;overflow:hidden}
+textarea.code-area{position:absolute;inset:0;width:100%;height:100%;resize:none;border:0;outline:0;padding:16px 20px;background:#fff;color:#111;font:15px/1.28 ui-monospace,SFMono-Regular,Menlo,monospace;tab-size:2}
+
+/* STAGE 2: SWAP */
+#stage2{place-items:center;padding:40px;background:#fff}
+.swap-card{max-width:940px;width:100%;border:4px solid #111;background:#fff;padding:44px 52px;box-shadow:10px 10px 0 #111}
+.swap-card h2{font-size:clamp(40px,5vw,76px);font-weight:900;line-height:.9;letter-spacing:-.05em;margin:0 0 20px}
+.swap-steps{display:grid;gap:16px;margin:28px 0}
+.swap-step{display:grid;grid-template-columns:50px 1fr;gap:16px;align-items:start}
+.swap-step-num{width:50px;height:50px;background:#111;color:#fff;font:900 22px/50px ui-monospace,monospace;text-align:center;border-radius:6px}
+.swap-step-text{font:800 clamp(19px,2.1vw,30px)/1.1 Arial,sans-serif;color:#111}
+.swap-step-text small{display:block;margin-top:4px;font:700 15px/1.2 ui-monospace,monospace;color:#444}
+.swap-action-btn{margin-top:24px;display:inline-block;padding:16px 32px;border:3px solid #111;background:#ffd400;font:900 20px/1 ui-monospace,monospace;border-radius:8px;cursor:pointer}
+.swap-action-btn:hover{background:#ffe359}
+
+/* STAGE 3: DETECTIVE GUESS */
+#stage3{grid-template-columns:minmax(0,1.05fr) minmax(520px,.95fr)}
+.guess-side{display:flex;flex-direction:column;justify-content:space-between;padding:26px;background:#fff;overflow:hidden}
+.detective-banner{background:#111;color:#fff;padding:12px 16px;border-radius:6px;font:900 14px/1 ui-monospace,monospace;letter-spacing:.08em;margin-bottom:16px}
+.guess-heading{font-size:clamp(28px,3vw,42px);font-weight:900;line-height:.95;letter-spacing:-.04em;margin:0 0 14px}
+.guess-box{background:#fff08a;border:3px solid #111;padding:18px;border-radius:8px;margin-bottom:16px}
+.guess-box .row-field{grid-template-columns:180px 1fr;margin-bottom:10px}
+.evidence-box{border:3px solid #111;padding:14px 16px;border-radius:8px;margin-bottom:16px}
+.evidence-box b{display:block;font:900 12px/1 ui-monospace,monospace;margin-bottom:6px}
+.evidence-box input{width:100%;border:2px solid #111;padding:8px 10px;font:700 14px Arial,sans-serif;border-radius:4px}
+.reveal-btn{width:100%;padding:16px;background:#111;color:#fff;border:3px solid #111;border-radius:8px;font:900 18px/1 ui-monospace,monospace;cursor:pointer}
+.reveal-btn:hover{background:#333}
+
+/* STAGE 4: THE REVEAL & REFLECTION */
+#stage4{display:none;grid-template-rows:1fr auto;background:#fff;padding:24px 28px;gap:18px;overflow:hidden}
+#stage4.active{display:grid}
+.reveal-cards-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:0}
+.reveal-card{border:4px solid #111;padding:28px;display:flex;flex-direction:column;justify-content:space-between;border-radius:8px;background:#fff}
+.reveal-card.left-card{background:#fff}
+.reveal-card.right-card{background:#fff08a}
+.card-top-tag{font:900 12px/1 ui-monospace,monospace;letter-spacing:.1em;margin-bottom:10px}
+.card-giant-title{font-size:clamp(26px,2.6vw,38px);font-weight:900;line-height:1;margin:0 0 16px;letter-spacing:-.04em}
+.card-content-block{font:800 clamp(20px,2vw,32px)/1.2 Arial,sans-serif;background:#fff;border:3px solid #111;padding:20px;border-radius:6px}
+.card-foot-fit{font:900 13px/1 ui-monospace,monospace;margin-top:14px;color:#333}
+.reflection-bar{background:#111;color:#fff;padding:18px 22px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.reflection-text b{display:block;font-size:clamp(20px,2.2vw,30px);font-weight:900;letter-spacing:-.03em;color:#ffd400;margin-bottom:4px}
+.reflection-text span{font:700 15px Arial,sans-serif;color:#eee}
+.reflection-action{display:flex;gap:10px}
+.reflection-btn{border:3px solid #ffd400;background:#ffd400;color:#111;padding:12px 18px;border-radius:6px;font:900 14px/1 ui-monospace,monospace;cursor:pointer}
+.reflection-btn:hover{background:#fff;border-color:#fff}
+
+/* FOOTER */
+footer{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:0 24px;border-top:3px solid #111;background:#fff}
+.footer-left{display:flex;gap:10px}
+.footer-center{display:flex;justify-content:center;gap:10px}
+.footer-right{display:flex;gap:10px}
+button.ctrl-btn{min-width:110px;min-height:38px;border:3px solid #111;background:#fff;border-radius:6px;cursor:pointer;font:900 13px/1 ui-monospace,monospace}
+button.ctrl-btn:hover{background:#eee}
+button.ctrl-btn.primary{background:#ffd400;border-color:#111}
+button.ctrl-btn.primary:hover{background:#ffe359}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <header>
+    <div class="brand-title">THE ANSCOMBE GAME</div>
+    <div class="tabs">
+      <button class="tab active" data-step="0">0 · STORY & MOVIE</button>
+      <button class="tab" data-step="1">1 · WRITE & CODE</button>
+      <button class="tab" data-step="2">2 · SWAP LAPTOPS</button>
+      <button class="tab" data-step="3">3 · GUESS THE LIST</button>
+      <button class="tab" data-step="4">4 · THE REVEAL</button>
+    </div>
+    <div class="header-right">
+      <select id="presetSelect" class="preset">
+        <option value="">⚡ Load Dilemma Preset...</option>
+        <option value="shy">Dilemma 1: The Shy Circle</option>
+        <option value="memory">Dilemma 2: The Memory Vault</option>
+        <option value="energy">Dilemma 3: Energy Gathering</option>
+        <option value="refuse">Dilemma 4: The Refusal</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- MAIN STAGES -->
+  <main>
+    <!-- STAGE 0: THOUGHT EXPERIMENT & TINY MOVIE -->
+    <section class="stage-panel active" id="stage0">
+      <div class="story-side">
+        <div>
+          <div class="story-kicker">G.E.M. ANSCOMBE (1957) · INTENTION §32</div>
+          <h2 class="story-heading">The Shopping List vs. The Detective</h2>
+          
+          <div class="anscombe-cards-grid">
+            <div class="anscombe-card left-card">
+              <div class="card-fit-tag">WORDS → WORLD (INTENTION)</div>
+              <h3 class="card-role-title">The Shopping List</h3>
+              <div class="card-desc-text">
+                A man goes to the supermarket with a shopping list. If he puts margarine in the trolley instead of butter, <b>the mistake is in his action (the world)</b>.<br><br>
+                He cannot fix the error by crossing out <i>butter</i> on the list and writing <i>margarine</i>. The world must be made to conform to the words.
+              </div>
+            </div>
+
+            <div class="anscombe-card right-card">
+              <div class="card-fit-tag">WORLD → WORDS (INFERENCE)</div>
+              <h3 class="card-role-title">The Detective's Notebook</h3>
+              <div class="card-desc-text">
+                A detective follows the man, writing down every item he selects. If the detective writes <i>margarine</i> when the cart holds butter, <b>the mistake is in the notebook (the words)</b>.<br><br>
+                The detective fixes the error by erasing the word and writing <i>butter</i>. The words must be made to conform to the world.
+              </div>
+            </div>
+          </div>
+
+          <div class="punchline-banner">
+            <b>WHAT THIS HAS TO DO WITH CODE:</b>
+            <p>The Programmer is the Shopper: writing code to force the world to satisfy a human intention.<br>
+            The Visitor is the Detective: observing the running screen to deduce what rule was authored.</p>
+          </div>
+        </div>
+
+        <button id="stage0ProceedBtn" class="story-start-btn">STAGE 1: TEAM UP & WRITE THE LIST →</button>
+      </div>
+
+      <div class="movie-side">
+        <div class="movie-canvas-frame">
+          <canvas id="movieCanvas"></canvas>
+        </div>
+        <div class="movie-controls">
+          <div class="movie-scrub-bar">
+            <div class="scrub-track" id="movieTrack">
+              <div class="scrub-fill" id="movieFill"></div>
+            </div>
+            <div class="movie-time" id="movieTime">00:00 / 00:16</div>
+          </div>
+          <div class="movie-btn-row">
+            <div class="movie-scene-tags">
+              <button class="scene-pill active" data-scene="0">1 · THE LIST</button>
+              <button class="scene-pill" data-scene="1">2 · THE SHOPPER</button>
+              <button class="scene-pill" data-scene="2">3 · THE DETECTIVE</button>
+              <button class="scene-pill" data-scene="3">4 · DIRECTION OF FIT</button>
+            </div>
+            <div class="movie-action-btns">
+              <button class="movie-btn play-btn" id="moviePlayBtn">⏸ PAUSE</button>
+              <button class="movie-btn" id="movieResetBtn">↺ RESET</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STAGE 1: WRITE & CODE -->
+    <section class="stage-panel" id="stage1">
+      <div class="canvas-side">
+        <canvas class="runtime-canvas" id="stage1Canvas"></canvas>
+      </div>
+      <div class="code-side">
+        <div class="card-input-box">
+          <div class="card-label">PARTNER 1: WRITE THE SECRET BEHAVIORAL LIST (DO NOT WRITE CODE!)</div>
+          <div class="row-field">
+            <b>WHEN THE PERSON...</b>
+            <input id="p1When" class="line-input" value="approaches the circle">
+          </div>
+          <div class="row-field">
+            <b>THE WORLD...</b>
+            <input id="p1World" class="line-input" value="becomes anxious and retreats">
+          </div>
+        </div>
+        <div class="editor-wrap">
+          <textarea id="stage1Code" class="code-area" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- STAGE 2: SWAP -->
+    <section class="stage-panel" id="stage2">
+      <div class="swap-card">
+        <h2>SWAP LAPTOPS</h2>
+        <div class="swap-steps">
+          <div class="swap-step">
+            <div class="swap-step-num">1</div>
+            <div class="swap-step-text">
+              PAIR A MEETS PAIR B
+              <small>Sit across from each other. Exchange laptops completely.</small>
+            </div>
+          </div>
+          <div class="swap-step">
+            <div class="swap-step-num">2</div>
+            <div class="swap-step-text">
+              THE CODE IS STRICTLY HIDDEN
+              <small>On the next screen, you will only see the running canvas. No code, no hints.</small>
+            </div>
+          </div>
+          <div class="swap-step">
+            <div class="swap-step-num">3</div>
+            <div class="swap-step-text">
+              GUESS THE SECRET LIST, NOT THE CODE!
+              <small>Do not guess variables or functions. Figure out what sentence they wrote!</small>
+            </div>
+          </div>
+        </div>
+        <button id="beginProbeBtn" class="swap-action-btn">START INVESTIGATION →</button>
+      </div>
+    </section>
+
+    <!-- STAGE 3: DETECTIVE GUESS -->
+    <section class="stage-panel" id="stage3">
+      <div class="canvas-side">
+        <canvas class="runtime-canvas" id="stage3Canvas"></canvas>
+      </div>
+      <div class="guess-side">
+        <div>
+          <div class="detective-banner">DETECTIVES: PROBE THE CANVAS · CODE IS HIDDEN</div>
+          <h2 class="guess-heading">What was their secret list?</h2>
+          <div class="guess-box">
+            <div class="row-field">
+              <b>WHEN THE PERSON...</b>
+              <input id="guessWhen" class="line-input" placeholder="What action triggers the world?">
+            </div>
+            <div class="row-field">
+              <b>THE WORLD...</b>
+              <input id="guessWorld" class="line-input" placeholder="What does the world do?">
+            </div>
+          </div>
+          <div class="evidence-box">
+            <b>WHAT DOES IT SEEM TO DETECT?</b>
+            <input id="guessClue" placeholder="e.g. proximity distance, mouse velocity, click duration...">
+          </div>
+        </div>
+        <button id="toRevealBtn" class="reveal-btn">TURN SCREENS AROUND & REVEAL →</button>
+      </div>
+    </section>
+
+    <!-- STAGE 4: THE REVEAL -->
+    <section class="stage-panel" id="stage4">
+      <div class="reveal-cards-row">
+        <!-- WHAT THEY WROTE -->
+        <div class="reveal-card left-card">
+          <div>
+            <div class="card-top-tag">WHAT THE CREATORS WROTE</div>
+            <h3 class="card-giant-title">The Secret List</h3>
+            <div class="card-content-block" id="revealSecretList">
+              WHEN THE PERSON approaches...<br>THE WORLD becomes anxious.
+            </div>
+          </div>
+          <div class="card-foot-fit">Direction of Fit: Words → World (Intention)</div>
+        </div>
+
+        <!-- WHAT YOU GUESSED -->
+        <div class="reveal-card right-card">
+          <div>
+            <div class="card-top-tag">WHAT THE DETECTIVES INFERRED</div>
+            <h3 class="card-giant-title">The Detectives' Guess</h3>
+            <div class="card-content-block" id="revealDetectiveGuess">
+              WHEN THE PERSON moves close...<br>THE WORLD runs away.
+            </div>
+          </div>
+          <div class="card-foot-fit">Direction of Fit: World → Words (Inference)</div>
+        </div>
+      </div>
+
+      <div class="reflection-bar">
+        <div class="reflection-text">
+          <b>WHERE DID THE MEANING CHANGE?</b>
+          <span>Did the coder interpret the word differently? Was the clue invisible? Did you invent a rule that wasn't there?</span>
+        </div>
+        <div class="reflection-action">
+          <button id="repairLoopBtn" class="reflection-btn">Next Round (New Roles) ↺</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-left">
+      <button id="prevBtn" class="ctrl-btn">← PREV</button>
+    </div>
+    <div class="footer-center">
+      <button id="runBtn" class="ctrl-btn primary">RUN CODE</button>
+      <button id="resetCodeBtn" class="ctrl-btn">RESET CODE</button>
+    </div>
+    <div class="footer-right">
+      <button id="nextBtn" class="ctrl-btn primary">NEXT →</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// PRESETS
+const PRESETS = {
+  shy: {
+    when: "approaches the circle",
+    world: "becomes anxious and retreats",
+    guessWhen: "moves cursor close to the circle",
+    guessWorld: "it trembles and flees from the pointer",
+    code: `// THE SHY CIRCLE
+let x = 320, y = 220;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  background(245);
+
+  let d = dist(mouseX, mouseY, x, y);
+
+  if (d < 160) {
+    x += (x - mouseX) * 0.05;
+    y += (y - mouseY) * 0.05;
+  }
+
+  x = constrain(x, 60, width - 60);
+  y = constrain(y, 60, height - 60);
+
+  let jitter = (d < 160) ? random(-3, 3) : 0;
+
+  fill(255, 220, 0);
+  noStroke();
+  circle(x + jitter, y + jitter, 80);
+}`
+  },
+  memory: {
+    when: "clicks the circle",
+    world: "remembers the visit and arms a target tether",
+    guessWhen: "clicks on the circle",
+    guessWorld: "it locks on with a tether line, then drops on next click",
+    code: `// THE MEMORY VAULT
+let x = 300, y = 200;
+let stage = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  background(245);
+
+  if (stage === 1) {
+    stroke(0);
+    strokeWeight(3);
+    line(x, y, mouseX, mouseY);
+  }
+
+  fill(255, 220, 0);
+  noStroke();
+  circle(x, y, 80);
+}
+
+function mousePressed() {
+  let d = dist(mouseX, mouseY, x, y);
+  if (d < 45 && stage === 0) {
+    stage = 1;
+  } else if (stage === 1) {
+    x = mouseX;
+    y = mouseY;
+    stage = 0;
+  }
+}`
+  },
+  energy: {
+    when: "holds down the mouse button",
+    world: "gathers energy and releases on let-go",
+    guessWhen: "presses and holds the mouse",
+    guessWorld: "the circle inflates with power and bursts",
+    code: `// ENERGY GATHERING
+let charge = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  background(245);
+
+  if (mouseIsPressed) {
+    charge = min(charge + 2, 140);
+  } else {
+    charge = max(0, charge - 3);
+  }
+
+  fill(255, 220, 0);
+  noStroke();
+  circle(width / 2, height / 2, 70 + charge);
+}`
+  },
+  refuse: {
+    when: "clicks the circle",
+    world: "refuses the human command",
+    guessWhen: "clicks on it",
+    guessWorld: "it teleports away instantly to deny the click",
+    code: `// THE REFUSAL
+let x = 320, y = 220;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  background(245);
+  fill(255, 220, 0);
+  noStroke();
+  circle(x, y, 80);
+}
+
+function mousePressed() {
+  let d = dist(mouseX, mouseY, x, y);
+  if (d < 45) {
+    x = random(100, width - 100);
+    y = random(100, height - 100);
+  }
+}`
+  }
+};
+
+let currentCode = PRESETS.shy.code;
+let currentStage = 0;
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.stage-panel');
+
+function setStage(n) {
+  currentStage = Math.max(0, Math.min(4, n));
+  tabs.forEach((t, i) => t.classList.toggle('active', i === currentStage));
+  panels.forEach((p, i) => p.classList.toggle('active', i === currentStage));
+
+  // Footer buttons visibility
+  $('runBtn').style.display = (currentStage === 1) ? 'block' : 'none';
+  $('resetCodeBtn').style.display = (currentStage === 1) ? 'block' : 'none';
+
+  if (currentStage === 0) movieActive = true;
+  if (currentStage === 1) runStage1();
+  if (currentStage === 3) runStage3();
+  if (currentStage === 4) populateReveal();
+}
+
+tabs.forEach((t, i) => t.onclick = () => setStage(i));
+$('stage0ProceedBtn').onclick = () => setStage(1);
+$('beginProbeBtn').onclick = () => setStage(3);
+$('toRevealBtn').onclick = () => setStage(4);
+$('repairLoopBtn').onclick = () => setStage(1);
+
+$('nextBtn').onclick = () => setStage(currentStage + 1);
+$('prevBtn').onclick = () => setStage(currentStage - 1);
+
+// PRESETS
+$('presetSelect').onchange = e => {
+  const p = PRESETS[e.target.value];
+  if (!p) return;
+  $('p1When').value = p.when;
+  $('p1World').value = p.world;
+  $('stage1Code').value = p.code;
+  currentCode = p.code;
+  $('guessWhen').value = p.guessWhen;
+  $('guessWorld').value = p.guessWorld;
+  setStage(1);
+};
+
+// ==========================================
+// DOPE YELLOW TINY MOVIE ENGINE
+// ==========================================
+const movieCanvas = $('movieCanvas');
+const mCtx = movieCanvas.getContext('2d');
+let movieTimeSec = 0;
+const movieDurationSec = 16;
+let moviePlaying = true;
+let movieActive = true;
+let lastMovieTimestamp = performance.now();
+
+const SCENES = [
+  { name: "THE LIST", start: 0, end: 4 },
+  { name: "THE SHOPPER & CODE", start: 4, end: 8 },
+  { name: "THE DETECTIVE", start: 8, end: 12 },
+  { name: "DIRECTION OF FIT", start: 12, end: 16 }
+];
+
+function resizeMovie() {
+  const rect = movieCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  movieCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  movieCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  mCtx.resetTransform?.();
+  mCtx.scale(dpr, dpr);
+}
+
+function updateMovieUI() {
+  const pct = (movieTimeSec / movieDurationSec) * 100;
+  $('movieFill').style.width = pct + '%';
+  const curS = Math.floor(movieTimeSec);
+  const curM = Math.floor(curS / 60);
+  const remS = curS % 60;
+  $('movieTime').textContent = `00:${String(remS).padStart(2,'0')} / 00:16`;
+
+  // Scene Pills
+  const activeSceneIdx = SCENES.findIndex(s => movieTimeSec >= s.start && movieTimeSec < s.end);
+  document.querySelectorAll('.scene-pill').forEach((pill, idx) => {
+    pill.classList.toggle('active', idx === (activeSceneIdx === -1 ? 3 : activeSceneIdx));
+  });
+}
+
+document.querySelectorAll('.scene-pill').forEach((pill, idx) => {
+  pill.onclick = () => {
+    movieTimeSec = SCENES[idx].start;
+    updateMovieUI();
+  };
+});
+
+$('movieTrack').onclick = e => {
+  const rect = $('movieTrack').getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  movieTimeSec = ratio * movieDurationSec;
+  updateMovieUI();
+};
+
+$('moviePlayBtn').onclick = () => {
+  moviePlaying = !moviePlaying;
+  $('moviePlayBtn').textContent = moviePlaying ? "⏸ PAUSE" : "▶ PLAY";
+};
+
+$('movieResetBtn').onclick = () => {
+  movieTimeSec = 0;
+  moviePlaying = true;
+  $('moviePlayBtn').textContent = "⏸ PAUSE";
+  updateMovieUI();
+};
+
+function drawTinyMovie(dt) {
+  if (moviePlaying && currentStage === 0) {
+    movieTimeSec += dt;
+    if (movieTimeSec >= movieDurationSec) {
+      movieTimeSec = 0; // loop
+    }
+    updateMovieUI();
+  }
+
+  const w = movieCanvas.getBoundingClientRect().width;
+  const h = movieCanvas.getBoundingClientRect().height;
+  if (!w || !h) return;
+
+  mCtx.clearRect(0, 0, w, h);
+
+  // Background grid
+  mCtx.fillStyle = "#ffffff";
+  mCtx.fillRect(0, 0, w, h);
+  mCtx.strokeStyle = "#f0f0f0";
+  mCtx.lineWidth = 1;
+  const step = 28;
+  for (let x = 0; x < w; x += step) {
+    mCtx.beginPath(); mCtx.moveTo(x, 0); mCtx.lineTo(x, h); mCtx.stroke();
+  }
+  for (let y = 0; y < h; y += step) {
+    mCtx.beginPath(); mCtx.moveTo(0, y); mCtx.lineTo(w, y); mCtx.stroke();
+  }
+
+  const t = movieTimeSec;
+
+  if (t < 4.0) {
+    // ----------------------------------------
+    // SCENE 1: THE LIST (WORDS -> WORLD)
+    // ----------------------------------------
+    const prog = t / 4.0;
+    mCtx.save();
+    
+    // Scene badge
+    drawBadge(24, 24, "SCENE 1 // G.E.M. ANSCOMBE 1957", "#111", "#ffd400");
+    
+    // Title
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 24px Arial,sans-serif";
+    mCtx.fillText("1. The Wife's Shopping List", 24, 76);
+
+    // Notepad sliding in
+    const cardY = 100 + Math.sin(prog * Math.PI) * 4;
+    const cardW = Math.min(380, w - 48);
+    const cardH = 200;
+    
+    mCtx.fillStyle = "#ffd400";
+    mCtx.fillRect(24, cardY, cardW, cardH);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(24, cardY, cardW, cardH);
+
+    // Clip & lines on notepad
+    mCtx.fillStyle = "#111";
+    mCtx.fillRect(40, cardY - 8, 50, 16);
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 14px ui-monospace,monospace";
+    mCtx.fillText("OFFICIAL SHOPPING LIST:", 42, cardY + 36);
+
+    mCtx.font = "700 15px Arial,sans-serif";
+    mCtx.fillText("• Butter", 42, cardY + 70);
+    mCtx.fillText("• Sausages", 42, cardY + 100);
+    mCtx.fillText("• Milk", 42, cardY + 130);
+
+    // Direction stamp
+    mCtx.fillStyle = "#111";
+    mCtx.fillRect(24, cardY + cardH - 36, cardW, 36);
+    mCtx.fillStyle = "#fff";
+    mCtx.font = "900 12px ui-monospace,monospace";
+    mCtx.fillText("DIRECTION OF FIT: WORDS ──> WORLD", 38, cardY + cardH - 14);
+
+    // Explanation side
+    if (w > 560) {
+      mCtx.fillStyle = "#111";
+      mCtx.font = "800 17px Arial,sans-serif";
+      mCtx.fillText("If the shopper buys margarine,", 430, 130);
+      mCtx.fillText("who made the mistake?", 430, 155);
+      
+      mCtx.fillStyle = "#e00";
+      mCtx.font = "900 14px ui-monospace,monospace";
+      mCtx.fillText("THE MISTAKE IS IN THE CART!", 430, 195);
+
+      mCtx.fillStyle = "#333";
+      mCtx.font = "700 13px Arial,sans-serif";
+      mCtx.fillText("You don't cross off butter and write", 430, 225);
+      mCtx.fillText("margarine. The world must change!", 430, 245);
+    }
+    mCtx.restore();
+
+  } else if (t < 8.0) {
+    // ----------------------------------------
+    // SCENE 2: THE SHOPPER & CODE
+    // ----------------------------------------
+    const prog = (t - 4.0) / 4.0;
+    mCtx.save();
+    
+    drawBadge(24, 24, "SCENE 2 // THE PROGRAMMER AS SHOPPER", "#111", "#ffd400");
+    
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 24px Arial,sans-serif";
+    mCtx.fillText("2. Writing Code to Force the World", 24, 76);
+
+    // Left: Code window
+    const codeW = Math.min(320, w * 0.45);
+    mCtx.fillStyle = "#fff";
+    mCtx.fillRect(24, 100, codeW, 200);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(24, 100, codeW, 200);
+
+    mCtx.fillStyle = "#111";
+    mCtx.fillRect(24, 100, codeW, 28);
+    mCtx.fillStyle = "#ffd400";
+    mCtx.font = "900 11px ui-monospace,monospace";
+    mCtx.fillText("p5.js // OPERATIONALIZING INTENTION", 34, 118);
+
+    mCtx.fillStyle = "#111";
+    mCtx.font = "700 12px ui-monospace,monospace";
+    mCtx.fillText("let d = dist(mouseX, mouseY, x, y);", 34, 152);
+    mCtx.fillText("if (d < 160) {", 34, 178);
+    mCtx.fillStyle = "#0066cc";
+    mCtx.fillText("  x += (x - mouseX) * 0.05;", 34, 202);
+    mCtx.fillText("  y += (y - mouseY) * 0.05;", 34, 226);
+    mCtx.fillStyle = "#111";
+    mCtx.fillText("}", 34, 250);
+
+    // Right: The World (Canvas Simulation)
+    const simX = 24 + codeW + 20;
+    const simW = Math.max(160, w - simX - 24);
+    mCtx.fillStyle = "#f5f5f5";
+    mCtx.fillRect(simX, 100, simW, 200);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(simX, 100, simW, 200);
+
+    // Simulated mouse cursor moving
+    const curX = simX + simW * 0.3 + Math.sin(prog * Math.PI * 4) * 40;
+    const curY = 100 + 100 + Math.cos(prog * Math.PI * 4) * 30;
+
+    // Yellow Circle evading!
+    const targetX = simX + simW * 0.75 + Math.sin(prog * Math.PI * 2) * 20;
+    const targetY = 100 + 100;
+
+    // Yellow circle
+    mCtx.fillStyle = "#ffd400";
+    mCtx.beginPath();
+    mCtx.arc(targetX, targetY, 36, 0, Math.PI * 2);
+    mCtx.fill();
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.stroke();
+
+    // Mouse pointer
+    drawPointer(curX, curY);
+
+    // Caption
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 13px ui-monospace,monospace";
+    mCtx.fillText("WORDS ──> CODE ──> BEHAVIOR IN WORLD", simX, 324);
+
+    mCtx.restore();
+
+  } else if (t < 12.0) {
+    // ----------------------------------------
+    // SCENE 3: THE DETECTIVE
+    // ----------------------------------------
+    const prog = (t - 8.0) / 4.0;
+    mCtx.save();
+    
+    drawBadge(24, 24, "SCENE 3 // THE DETECTIVE'S NOTEBOOK", "#111", "#ffd400");
+    
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 24px Arial,sans-serif";
+    mCtx.fillText("3. The Detective Observes the World", 24, 76);
+
+    // Left: The screen world with CODE BLINDED
+    const screenW = Math.min(320, w * 0.45);
+    mCtx.fillStyle = "#f5f5f5";
+    mCtx.fillRect(24, 100, screenW, 200);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(24, 100, screenW, 200);
+
+    // Blindfold tape
+    mCtx.fillStyle = "#111";
+    mCtx.fillRect(24, 100, screenW, 30);
+    mCtx.fillStyle = "#fff";
+    mCtx.font = "900 11px ui-monospace,monospace";
+    mCtx.fillText("⚠ CODE STRICTLY HIDDEN FROM DETECTIVE", 34, 120);
+
+    // Interactive circle fleeing
+    const cX = 24 + screenW * 0.7;
+    const cY = 100 + 100;
+    mCtx.fillStyle = "#ffd400";
+    mCtx.beginPath();
+    mCtx.arc(cX, cY, 34, 0, Math.PI * 2);
+    mCtx.fill();
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.stroke();
+
+    // Detective cursor poking it
+    const detX = 24 + screenW * 0.35 + Math.sin(prog * Math.PI * 3) * 30;
+    const detY = 100 + 100;
+    drawPointer(detX, detY);
+
+    // Magnifying glass over interaction
+    drawMagnifier(detX + 15, detY - 15);
+
+    // Right: Detective's notebook
+    const noteX = 24 + screenW + 20;
+    const noteW = Math.max(180, w - noteX - 24);
+    mCtx.fillStyle = "#fff08a";
+    mCtx.fillRect(noteX, 100, noteW, 200);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(noteX, 100, noteW, 200);
+
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 12px ui-monospace,monospace";
+    mCtx.fillText("DETECTIVE'S LOGBOOK:", noteX + 16, 128);
+
+    mCtx.font = "700 13px Arial,sans-serif";
+    mCtx.fillText("Observation:", noteX + 16, 155);
+    mCtx.font = "800 14px Arial,sans-serif";
+    mCtx.fillText('"Whenever cursor enters', noteX + 16, 178);
+    mCtx.fillText('radius, circle trembles', noteX + 16, 200);
+    mCtx.fillText('and flees!"', noteX + 16, 222);
+
+    mCtx.fillStyle = "#111";
+    mCtx.fillRect(noteX, 260, noteW, 40);
+    mCtx.fillStyle = "#ffd400";
+    mCtx.font = "900 11px ui-monospace,monospace";
+    mCtx.fillText("DIRECTION OF FIT: WORLD ──> WORDS", noteX + 12, 284);
+
+    mCtx.restore();
+
+  } else {
+    // ----------------------------------------
+    // SCENE 4: DIRECTION OF FIT COMPARISON
+    // ----------------------------------------
+    mCtx.save();
+    
+    drawBadge(24, 24, "SCENE 4 // THE CLASSROOM CHALLENGE", "#111", "#ffd400");
+    
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 24px Arial,sans-serif";
+    mCtx.fillText("4. Can Intention Survive the Transmission?", 24, 76);
+
+    const boxW = (w - 48 - 20) / 2;
+    
+    // Left Box: Intention
+    mCtx.fillStyle = "#ffd400";
+    mCtx.fillRect(24, 100, boxW, 140);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(24, 100, boxW, 140);
+
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 12px ui-monospace,monospace";
+    mCtx.fillText("CREATORS (WORDS ──> WORLD)", 38, 126);
+    mCtx.font = "800 18px Arial,sans-serif";
+    mCtx.fillText('"WHEN human approaches,', 38, 160);
+    mCtx.fillText('THE WORLD retreats anxiously."', 38, 185);
+
+    // Right Box: Inference
+    mCtx.fillStyle = "#fff";
+    mCtx.fillRect(24 + boxW + 20, 100, boxW, 140);
+    mCtx.lineWidth = 3;
+    mCtx.strokeStyle = "#111";
+    mCtx.strokeRect(24 + boxW + 20, 100, boxW, 140);
+
+    mCtx.fillStyle = "#111";
+    mCtx.font = "900 12px ui-monospace,monospace";
+    mCtx.fillText("DETECTIVES (WORLD ──> WORDS)", 24 + boxW + 34, 126);
+    mCtx.font = "800 18px Arial,sans-serif";
+    mCtx.fillText('"WHEN pointer comes close,', 24 + boxW + 34, 160);
+    mCtx.fillText('THE WORLD flees away."', 24 + boxW + 34, 185);
+
+    // Bottom banner
+    mCtx.fillStyle = "#111";
+    mCtx.fillRect(24, 260, w - 48, 50);
+    mCtx.fillStyle = "#ffd400";
+    mCtx.font = "900 16px ui-monospace,monospace";
+    mCtx.fillText("THE TEST: WHERE DID THE MEANING CHANGE?", 40, 292);
+
+    mCtx.restore();
+  }
+}
+
+function drawBadge(x, y, text, bg, fg) {
+  mCtx.save();
+  mCtx.font = "900 11px ui-monospace,monospace";
+  const tw = mCtx.measureText(text).width;
+  mCtx.fillStyle = bg;
+  mCtx.fillRect(x, y, tw + 16, 22);
+  mCtx.fillStyle = fg;
+  mCtx.fillText(text, x + 8, y + 15);
+  mCtx.restore();
+}
+
+function drawPointer(x, y) {
+  mCtx.save();
+  mCtx.fillStyle = "#111";
+  mCtx.strokeStyle = "#fff";
+  mCtx.lineWidth = 2;
+  mCtx.beginPath();
+  mCtx.moveTo(x, y);
+  mCtx.lineTo(x + 12, y + 16);
+  mCtx.lineTo(x + 5, y + 16);
+  mCtx.lineTo(x + 9, y + 26);
+  mCtx.lineTo(x + 4, y + 28);
+  mCtx.lineTo(x, y + 18);
+  mCtx.closePath();
+  mCtx.fill();
+  mCtx.stroke();
+  mCtx.restore();
+}
+
+function drawMagnifier(x, y) {
+  mCtx.save();
+  mCtx.strokeStyle = "#111";
+  mCtx.lineWidth = 3;
+  mCtx.beginPath();
+  mCtx.arc(x, y, 14, 0, Math.PI * 2);
+  mCtx.stroke();
+  mCtx.beginPath();
+  mCtx.moveTo(x + 10, y + 10);
+  mCtx.lineTo(x + 22, y + 22);
+  mCtx.stroke();
+  mCtx.restore();
+}
+
+function movieLoop(ts) {
+  const dt = (ts - lastMovieTimestamp) / 1000;
+  lastMovieTimestamp = ts;
+  drawTinyMovie(Math.min(dt, 0.1));
+  requestAnimationFrame(movieLoop);
+}
+
+// ==========================================
+// P5.JS SANDBOXED RUNTIME
+// ==========================================
+function buildRuntime(canvasEl) {
+  const ctx = canvasEl.getContext('2d');
+  let prog = null;
+  let fillC = [255, 220, 0, 255];
+  let strokeC = null;
+  let strokeW = 1;
+
+  const api = {
+    width: 400, height: 400,
+    windowWidth: 400, windowHeight: 400,
+    mouseX: 0, mouseY: 0, pmouseX: 0, pmouseY: 0,
+    mouseIsPressed: false,
+    random(min, max) {
+      if (min === undefined) return Math.random();
+      if (max === undefined) return Math.random() * min;
+      return min + Math.random() * (max - min);
+    },
+    dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); },
+    constrain(v, min, max) { return Math.max(min, Math.min(max, v)); },
+    min(a, b) { return Math.min(a, b); },
+    max(a, b) { return Math.max(a, b); },
+    createCanvas(w, h) {
+      canvasEl.width = w; canvasEl.height = h;
+      api.width = w; api.height = h;
+    },
+    background(...args) {
+      ctx.save();
+      ctx.fillStyle = toCss(parseColor(args));
+      ctx.fillRect(0, 0, api.width, api.height);
+      ctx.restore();
+    },
+    fill(...args) { fillC = parseColor(args); },
+    noFill() { fillC = null; },
+    stroke(...args) { strokeC = parseColor(args); },
+    noStroke() { strokeC = null; },
+    strokeWeight(w) { strokeW = Number(w) || 1; },
+    circle(x, y, d) {
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(0, d / 2), 0, Math.PI * 2);
+      drawShape();
+    },
+    rect(x, y, w, h) {
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      drawShape();
+    },
+    line(x1, y1, x2, y2) {
+      if (!strokeC) return;
+      ctx.save();
+      ctx.strokeStyle = toCss(strokeC);
+      ctx.lineWidth = strokeW;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  function parseColor(args) {
+    if (args.length === 1) {
+      const v = args[0];
+      if (typeof v === 'number') return [v, v, v, 255];
+      return v;
+    }
+    const n = args.map(Number);
+    if (n.length === 2) return [n[0], n[0], n[0], n[1]];
+    if (n.length === 3) return [n[0], n[1], n[2], 255];
+    return [n[0], n[1], n[2], n[3] ?? 255];
+  }
+  function toCss(c) {
+    if (typeof c === 'string') return c;
+    return `rgba(${c[0]},${c[1]},${c[2]},${(c[3] ?? 255) / 255})`;
+  }
+  function drawShape() {
+    ctx.save();
+    if (fillC) { ctx.fillStyle = toCss(fillC); ctx.fill(); }
+    if (strokeC) { ctx.strokeStyle = toCss(strokeC); ctx.lineWidth = strokeW; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function resize() {
+    const r = canvasEl.getBoundingClientRect();
+    api.windowWidth = Math.max(1, Math.floor(r.width));
+    api.windowHeight = Math.max(1, Math.floor(r.height));
+  }
+
+  function updateMouse(e) {
+    const r = canvasEl.getBoundingClientRect();
+    api.pmouseX = api.mouseX;
+    api.pmouseY = api.mouseY;
+    api.mouseX = e.clientX - r.left;
+    api.mouseY = e.clientY - r.top;
+  }
+
+  canvasEl.addEventListener('pointermove', e => {
+    updateMouse(e);
+    if (api.mouseIsPressed && prog && prog.mouseDragged) prog.mouseDragged();
+  });
+  canvasEl.addEventListener('pointerdown', e => {
+    updateMouse(e);
+    api.mouseIsPressed = true;
+    canvasEl.setPointerCapture?.(e.pointerId);
+    if (prog && prog.mousePressed) prog.mousePressed();
+  });
+  canvasEl.addEventListener('pointerup', e => {
+    updateMouse(e);
+    api.mouseIsPressed = false;
+    if (prog && prog.mouseReleased) prog.mouseReleased();
+  });
+
+  function run(codeStr) {
+    resize();
+    const body = `
+      with(this){
+        ${codeStr}
+        return {
+          setup: typeof setup === "function" ? setup : null,
+          draw: typeof draw === "function" ? draw : null,
+          mousePressed: typeof mousePressed === "function" ? mousePressed : null,
+          mouseDragged: typeof mouseDragged === "function" ? mouseDragged : null,
+          mouseReleased: typeof mouseReleased === "function" ? mouseReleased : null
+        };
+      }
+    `;
+    prog = new Function(body).call(api);
+    if (prog.setup) prog.setup();
+  }
+
+  function frame() {
+    if (prog && prog.draw) {
+      try { prog.draw(); } catch (e) {}
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  return { run, api };
+}
+
+const runtime1 = buildRuntime($('stage1Canvas'));
+const runtime3 = buildRuntime($('stage3Canvas'));
+
+function runStage1() {
+  const code = $('stage1Code').value || currentCode;
+  runtime1.run(code);
+}
+function runStage3() {
+  const code = $('stage1Code').value || currentCode;
+  runtime3.run(code);
+}
+
+function populateReveal() {
+  const w1 = $('p1When').value.trim();
+  const w2 = $('p1World').value.trim();
+  $('revealSecretList').innerHTML = `
+    WHEN THE PERSON ${w1 || "..."}<br>
+    THE WORLD ${w2 || "..."}
+  `;
+
+  const g1 = $('guessWhen').value.trim();
+  const g2 = $('guessWorld').value.trim();
+  $('revealDetectiveGuess').innerHTML = `
+    WHEN THE PERSON ${g1 || "..."}<br>
+    THE WORLD ${g2 || "..."}
+  `;
+}
+
+// BTN ACTIONS
+$('runBtn').onclick = runStage1;
+$('resetCodeBtn').onclick = () => {
+  $('stage1Code').value = currentCode;
+  runStage1();
+};
+
+window.addEventListener('resize', () => {
+  resizeMovie();
+  if (currentStage === 1) runStage1();
+  if (currentStage === 3) runStage3();
+});
+
+// INITIAL BOOT
+resizeMovie();
+requestAnimationFrame(movieLoop);
+$('stage1Code').value = PRESETS.shy.code;
+setStage(0);
+</script>
+</body>
+</html>
