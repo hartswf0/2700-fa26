@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>THE ANSCOMBE GAME // AI Prompt Edition</title>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#111;--paper:#fff;--world:#f5f5f2;--yellow:#ffd400;--pale:#fff08a;--muted:#666}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{width:100vw;height:100dvh;display:grid;grid-template-rows:62px minmax(0,1fr) 54px;overflow:hidden}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:0 18px;border-bottom:3px solid var(--ink);background:#fff}
+.brand{font-size:clamp(19px,2.2vw,30px);font-weight:900;letter-spacing:-.045em;white-space:nowrap}
+.tabs{display:flex;gap:5px;justify-content:center;min-width:0}
+.tab,.small-btn,.ctrl{border:3px solid var(--ink);background:#fff;border-radius:6px;font:900 11px/1 ui-monospace,monospace;padding:8px 11px}
+.tab.active,.primary{background:var(--yellow)!important}
+.ai-badge{border:3px solid var(--ink);background:var(--ink);color:var(--yellow);border-radius:6px;padding:8px 10px;font:900 11px/1 ui-monospace,monospace;white-space:nowrap}
+main{position:relative;min-width:0;min-height:0;overflow:hidden}
+.stage{position:absolute;inset:0;display:none;min-width:0;min-height:0}
+.stage.active{display:grid}
+
+/* STORY */
+#stage0{grid-template-columns:1fr 1fr}
+.story{padding:28px;display:flex;flex-direction:column;justify-content:space-between;border-right:3px solid var(--ink);overflow:auto}
+.kicker{font:900 11px/1 ui-monospace,monospace;letter-spacing:.1em;margin-bottom:10px}
+h1{font-size:clamp(36px,5vw,70px);line-height:.86;letter-spacing:-.06em;margin:0 0 20px}
+.direction{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{border:3px solid var(--ink);border-radius:8px;padding:16px;background:#fff}
+.card.yellow{background:var(--pale)}
+.card b{display:block;font:900 11px/1 ui-monospace,monospace;letter-spacing:.07em;margin-bottom:8px}
+.card h2{font-size:22px;margin:0 0 8px}
+.card p{font-weight:700;line-height:1.35;margin:0;font-size:14px}
+.big-go{width:100%;border:3px solid var(--ink);border-radius:8px;background:var(--yellow);font:900 17px/1 ui-monospace,monospace;padding:15px}
+.story-visual{display:grid;place-items:center;background:var(--world);padding:28px}
+.diagram{width:min(620px,92%);display:grid;gap:14px}
+.diagram-row{border:3px solid var(--ink);background:#fff;padding:18px;font:900 clamp(16px,2vw,26px)/1.15 ui-monospace,monospace}
+.diagram-row strong{background:var(--yellow);padding:2px 5px}
+.arrow{text-align:center;font:900 28px/1 ui-monospace,monospace}
+
+/* PROMPT + WORLD */
+#stage1,#stage3{grid-template-columns:minmax(0,1.1fr) minmax(430px,.9fr)}
+.world-side{position:relative;background:var(--world);border-right:3px solid var(--ink);overflow:hidden}
+.world-frame{position:absolute;inset:0;border:0;width:100%;height:100%;background:var(--world)}
+.world-status{position:absolute;left:12px;top:12px;z-index:4;border:3px solid var(--ink);background:#fff;padding:7px 9px;font:900 11px/1 ui-monospace,monospace;pointer-events:none}
+.world-status.live{background:var(--yellow)}
+.author-side{display:grid;grid-template-rows:auto auto minmax(0,1fr);min-width:0;min-height:0;background:#fff}
+.intent-box{background:var(--pale);border-bottom:3px solid var(--ink);padding:12px 16px}
+.label{font:900 11px/1 ui-monospace,monospace;letter-spacing:.07em;margin-bottom:8px}
+.field{display:grid;grid-template-columns:160px 1fr;align-items:center;gap:8px;margin-top:7px}
+.field b{font:900 12px/1 ui-monospace,monospace}
+.line{width:100%;border:3px solid var(--ink);border-radius:5px;background:#fff;padding:8px 10px;font-weight:750;outline:none}
+.line:focus,.prompt:focus{background:#fffbe8}
+.ai-box{padding:12px 16px;border-bottom:3px solid var(--ink);display:grid;gap:8px;background:#fff}
+.ai-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch}
+.prompt{resize:none;min-height:66px;border:3px solid var(--ink);border-radius:6px;padding:9px 10px;font:700 13px/1.3 Arial,sans-serif;outline:none}
+.make-btn{min-width:150px;border:3px solid var(--ink);border-radius:6px;background:var(--yellow);font:900 12px/1.1 ui-monospace,monospace;padding:9px 12px}
+.make-btn:disabled{background:#ddd;color:#777;cursor:wait}
+.ai-meta{display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:16px;font:800 10px/1.2 ui-monospace,monospace;color:#444}
+.code-wrap{position:relative;min-height:0;overflow:hidden}
+#code{position:absolute;inset:0;width:100%;height:100%;resize:none;border:0;outline:0;padding:14px 16px;font:13px/1.28 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fff;tab-size:2}
+
+/* SWAP */
+#stage2{place-items:center;background:#fff;padding:30px}
+.swap{width:min(900px,94vw);border:4px solid var(--ink);box-shadow:10px 10px 0 var(--ink);padding:34px 40px}
+.swap h2{font-size:clamp(42px,7vw,86px);line-height:.86;letter-spacing:-.06em;margin:0 0 24px}
+.swap-step{display:grid;grid-template-columns:44px 1fr;gap:13px;align-items:start;margin:15px 0}
+.num{width:44px;height:44px;background:var(--ink);color:#fff;display:grid;place-items:center;border-radius:5px;font:900 18px/1 ui-monospace,monospace}
+.swap-step b{font-size:clamp(17px,2vw,25px);line-height:1.05}
+.swap-step small{display:block;margin-top:3px;font:700 13px/1.25 ui-monospace,monospace;color:#555}
+
+/* DETECTIVE */
+.detective-side{padding:20px;display:flex;flex-direction:column;justify-content:space-between;min-height:0;overflow:auto}
+.black-banner{background:var(--ink);color:#fff;padding:10px 12px;border-radius:6px;font:900 12px/1 ui-monospace,monospace;letter-spacing:.05em}
+.detective-side h2{font-size:clamp(30px,4vw,52px);line-height:.9;letter-spacing:-.05em;margin:18px 0}
+.guess{border:3px solid var(--ink);background:var(--pale);border-radius:8px;padding:14px}
+.guess .field{grid-template-columns:155px 1fr}
+.clue{margin-top:10px;border:3px solid var(--ink);border-radius:7px;padding:12px}
+.clue b{display:block;font:900 11px/1 ui-monospace,monospace;margin-bottom:7px}
+.reveal-btn{width:100%;margin-top:16px;border:3px solid var(--ink);border-radius:7px;background:var(--ink);color:#fff;padding:14px;font:900 14px/1 ui-monospace,monospace}
+
+/* REVEAL */
+#stage4{grid-template-rows:1fr auto;gap:16px;padding:20px;background:#fff}
+.reveal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:0}
+.reveal-card{border:4px solid var(--ink);border-radius:8px;padding:22px;display:flex;flex-direction:column;justify-content:space-between}
+.reveal-card.yellow{background:var(--pale)}
+.reveal-card .tag{font:900 11px/1 ui-monospace,monospace;letter-spacing:.08em}
+.reveal-card h2{font-size:clamp(26px,3vw,44px);margin:10px 0 14px;letter-spacing:-.04em}
+.statement{border:3px solid var(--ink);background:#fff;border-radius:6px;padding:18px;font:850 clamp(18px,2.2vw,30px)/1.18 Arial,sans-serif}
+.fit{margin-top:12px;font:900 11px/1 ui-monospace,monospace;color:#444}
+.reflection{background:var(--ink);color:#fff;border-radius:7px;padding:15px 18px;display:flex;justify-content:space-between;gap:14px;align-items:center}
+.reflection b{display:block;color:var(--yellow);font-size:20px;margin-bottom:3px}
+.reflection span{font-size:13px;font-weight:700;color:#ddd}
+
+footer{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 18px;border-top:3px solid var(--ink);background:#fff}
+.controls{display:flex;gap:8px;justify-content:center}
+.ctrl{min-width:100px}
+.hidden{display:none!important}
+
+@media(max-width:850px){
+  .app{grid-template-rows:54px minmax(0,1fr) 50px}
+  header{grid-template-columns:1fr auto;padding:0 10px}
+  .tabs{display:none}
+  .brand{font-size:18px}
+  #stage0{grid-template-columns:1fr}
+  .story-visual{display:none}
+  .story{border-right:0;padding:18px}
+  .direction{grid-template-columns:1fr}
+  #stage1,#stage3{grid-template-columns:1fr;grid-template-rows:minmax(42%,1fr) minmax(0,1.25fr)}
+  .world-side{border-right:0;border-bottom:3px solid var(--ink)}
+  .author-side{grid-template-rows:auto auto minmax(140px,1fr)}
+  .field,.guess .field{grid-template-columns:125px 1fr}
+  .ai-row{grid-template-columns:1fr}
+  .make-btn{min-height:42px}
+  .reveal-grid{grid-template-columns:1fr;overflow:auto}
+  .reflection{align-items:flex-start}
+  footer{padding:0 8px}
+  .ctrl{min-width:74px;padding:7px}
+}
+</style>
+<script src="https://js.puter.com/v2/"></script>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">THE ANSCOMBE GAME</div>
+  <div class="tabs">
+    <button class="tab active" data-step="0">0 · STORY</button>
+    <button class="tab" data-step="1">1 · PROMPT A WORLD</button>
+    <button class="tab" data-step="2">2 · SWAP</button>
+    <button class="tab" data-step="3">3 · DETECT</button>
+    <button class="tab" data-step="4">4 · REVEAL</button>
+  </div>
+  <div class="ai-badge">AI → p5.js</div>
+</header>
+
+<main>
+  <section class="stage active" id="stage0">
+    <div class="story">
+      <div>
+        <div class="kicker">G.E.M. ANSCOMBE · INTENTION §32 · NOW WITH A MODEL IN THE MIDDLE</div>
+        <h1>WORDS<br>MAKE<br>A WORLD.</h1>
+        <div class="direction">
+          <div class="card yellow">
+            <b>WORDS → WORLD</b>
+            <h2>The Shopping List</h2>
+            <p>The list says what the shopper is to make true. If the cart is wrong, change the cart.</p>
+          </div>
+          <div class="card">
+            <b>WORLD → WORDS</b>
+            <h2>The Detective</h2>
+            <p>The notebook records what happened. If the notebook is wrong, change the notebook.</p>
+          </div>
+        </div>
+      </div>
+      <button class="big-go" id="storyGo">WRITE AN INTENTION → PROMPT AI → MAKE A WORLD</button>
+    </div>
+    <div class="story-visual">
+      <div class="diagram">
+        <div class="diagram-row">WHEN THE PERSON <strong>lies down and rolls</strong></div>
+        <div class="arrow">↓</div>
+        <div class="diagram-row">AI TRANSLATES THE PHRASE INTO <strong>OPERATIONS</strong></div>
+        <div class="arrow">↓</div>
+        <div class="diagram-row">THE WORLD GETS <strong>GRAVITY + HILLS + WIND</strong></div>
+        <div class="arrow">↓</div>
+        <div class="diagram-row">A DETECTIVE SEES ONLY THE WORLD AND MUST RECOVER THE WORDS.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="stage1">
+    <div class="world-side">
+      <div class="world-status" id="status">WORLD READY</div>
+      <iframe id="world1" class="world-frame" sandbox="allow-scripts allow-pointer-lock" title="Generated p5 world"></iframe>
+    </div>
+    <div class="author-side">
+      <div class="intent-box">
+        <div class="label">1 · WRITE THE SECRET BEHAVIORAL LIST. DO NOT WRITE CODE.</div>
+        <div class="field"><b>WHEN THE PERSON...</b><input id="when" class="line" value="lies down and rolls"></div>
+        <div class="field"><b>THE WORLD...</b><input id="world" class="line" value="has gravity, hills, wind, and a ball that rolls"></div>
+      </div>
+      <div class="ai-box">
+        <div class="label">2 · PROMPT THE MODEL. DESCRIBE HOW IT SHOULD FEEL OR WHAT ELSE SHOULD BECOME TRUE.</div>
+        <div class="ai-row">
+          <textarea id="prompt" class="prompt">Make it physical rather than decorative. The yellow ball should gain momentum downhill, slow uphill, and be pushed by changing wind. Make the wind visible through grass and particles. Keep it simple enough that another student can discover the rule by playing.</textarea>
+          <button id="makeWorld" class="make-btn">ASK AI<br>TO MAKE WORLD →</button>
+        </div>
+        <div class="ai-meta"><span id="aiState">AI writes editable p5.js below.</span><span>MODEL: GPT-5.6 LUNA</span></div>
+      </div>
+      <div class="code-wrap"><textarea id="code" spellcheck="false"></textarea></div>
+    </div>
+  </section>
+
+  <section class="stage" id="stage2">
+    <div class="swap">
+      <h2>SWAP<br>LAPTOPS.</h2>
+      <div class="swap-step"><div class="num">1</div><div><b>PAIR A MEETS PAIR B.</b><small>Exchange screens. The authored words and generated code are now hidden.</small></div></div>
+      <div class="swap-step"><div class="num">2</div><div><b>THE WORLD IS THE ONLY EVIDENCE.</b><small>Touch it. Drag. Click. Hold. Move. Try to make the behavior disclose its rule.</small></div></div>
+      <div class="swap-step"><div class="num">3</div><div><b>GUESS THE LIST, NOT THE CODE.</b><small>Recover the human sentence that could have produced this world.</small></div></div>
+      <button class="big-go" id="startDetect">START INVESTIGATION →</button>
+    </div>
+  </section>
+
+  <section class="stage" id="stage3">
+    <div class="world-side">
+      <div class="world-status live">CODE HIDDEN · WORLD LIVE</div>
+      <iframe id="world3" class="world-frame" sandbox="allow-scripts allow-pointer-lock" title="Mystery p5 world"></iframe>
+    </div>
+    <div class="detective-side">
+      <div>
+        <div class="black-banner">DETECTIVE MODE · WORLD → WORDS</div>
+        <h2>What was their secret list?</h2>
+        <div class="guess">
+          <div class="field"><b>WHEN THE PERSON...</b><input id="guessWhen" class="line" placeholder="What action seems to matter?"></div>
+          <div class="field"><b>THE WORLD...</b><input id="guessWorld" class="line" placeholder="What does the world do?"></div>
+        </div>
+        <div class="clue"><b>WHAT DOES THE WORLD SEEM TO DETECT?</b><input id="clue" class="line" placeholder="position, speed, distance, click duration, direction..."></div>
+      </div>
+      <button class="reveal-btn" id="reveal">TURN THE SCREEN AROUND & REVEAL →</button>
+    </div>
+  </section>
+
+  <section class="stage" id="stage4">
+    <div class="reveal-grid">
+      <div class="reveal-card">
+        <div><div class="tag">WHAT THE AUTHORS WROTE · WORDS → WORLD</div><h2>The Secret List</h2><div class="statement" id="secretOut"></div></div>
+        <div class="fit">INTENTION: the words set a condition the world was asked to satisfy.</div>
+      </div>
+      <div class="reveal-card yellow">
+        <div><div class="tag">WHAT THE DETECTIVES INFERRED · WORLD → WORDS</div><h2>The Detective's List</h2><div class="statement" id="guessOut"></div></div>
+        <div class="fit">INFERENCE: the words answer to the behavior that actually appeared.</div>
+      </div>
+    </div>
+    <div class="reflection">
+      <div><b>WHERE DID THE MEANING CHANGE?</b><span>Human phrase → AI operationalization → code → behavior → detective's description. Which translation introduced the difference?</span></div>
+      <button id="again" class="small-btn primary">NEW ROUND ↺</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <button id="prev" class="ctrl">← PREV</button>
+  <div class="controls"><button id="run" class="ctrl primary hidden">RUN CODE</button><button id="aiFooter" class="ctrl hidden">PROMPT AI</button></div>
+  <button id="next" class="ctrl primary">NEXT →</button>
+</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let stage=0;
+const tabs=[...document.querySelectorAll('.tab')];
+const stages=[...document.querySelectorAll('.stage')];
+
+const starterCode=`// STARTER WORLD\nlet x, y, vx = 0, vy = 0;\n\nfunction setup(){\n  createCanvas(windowWidth, windowHeight);\n  x = width/2;\n  y = height/2;\n}\n\nfunction draw(){\n  background(245);\n  // Replace this world by prompting the AI.\n  fill(255,212,0);\n  noStroke();\n  circle(x,y,70);\n}`;
+$('code').value=starterCode;
+
+function setStage(n){
+  stage=Math.max(0,Math.min(4,n));
+  tabs.forEach((t,i)=>t.classList.toggle('active',i===stage));
+  stages.forEach((s,i)=>s.classList.toggle('active',i===stage));
+  $('run').classList.toggle('hidden',stage!==1);
+  $('aiFooter').classList.toggle('hidden',stage!==1);
+  if(stage===1) runCode('world1');
+  if(stage===3) runCode('world3');
+  if(stage===4) populateReveal();
+}
+tabs.forEach((t,i)=>t.onclick=()=>setStage(i));
+$('storyGo').onclick=()=>setStage(1);
+$('startDetect').onclick=()=>setStage(3);
+$('reveal').onclick=()=>setStage(4);
+$('again').onclick=()=>setStage(1);
+$('prev').onclick=()=>setStage(stage-1);
+$('next').onclick=()=>setStage(stage+1);
+$('run').onclick=()=>runCode('world1');
+$('aiFooter').onclick=()=>generateWorld();
+
+function safeScriptText(s){return s.replace(/<\\/script/gi,'<\\\\/script');}
+function makeSrcdoc(code){
+  const encoded=btoa(unescape(encodeURIComponent(code)));
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f5f5f2}canvas{display:block}#err{position:fixed;left:8px;right:8px;bottom:8px;background:#111;color:#ffd400;font:700 11px/1.3 ui-monospace,monospace;padding:8px;display:none;z-index:999}</style></head><body><div id="err"></div><script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.min.js"><\\/script><script>window.onerror=(m)=>{const e=document.getElementById('err');e.style.display='block';e.textContent='CODE ERROR: '+m};const src=decodeURIComponent(escape(atob('${encoded}')));try{(0,eval)(src)}catch(err){const e=document.getElementById('err');e.style.display='block';e.textContent='CODE ERROR: '+err.message}<\\/script></body></html>`;
+}
+function runCode(target){
+  const code=$('code').value.trim()||starterCode;
+  $(target).srcdoc=makeSrcdoc(code);
+  if(target==='world1'){
+    $('status').textContent='WORLD LIVE';
+    $('status').classList.add('live');
+  }
+}
+
+function buildPrompt(){
+  const when=$('when').value.trim();
+  const world=$('world').value.trim();
+  const extra=$('prompt').value.trim();
+  return `SECRET INTENTION\nWHEN THE PERSON ${when}\nTHE WORLD ${world}\n\nAUTHOR DIRECTION\n${extra}`;
+}
+
+const systemPrompt=`You are the operational compiler inside THE ANSCOMBE GAME, an introductory computational-media exercise. Translate a short human intention into a small, discoverable p5.js world. The human writes a behavioral description. Your job is to decide what observable input can count as that behavior, then make a world in which that input has visible consequences.\n\nReturn ONLY valid JSON with exactly two string fields: {"code":"...","operationalization":"..."}.\n\nCODE RULES:\n- p5.js GLOBAL mode only. Define setup() and draw().\n- The sketch runs full-screen in an iframe. Use createCanvas(windowWidth, windowHeight).\n- No HTML, markdown, code fences, imports, fetch, network requests, storage, cookies, parent/top access, eval, or external libraries.\n- No camera or microphone. Use mouse, touch, keyboard, time, geometry, simple physics, or device orientation only when clearly relevant.\n- Prefer direct manipulation and continuously visible feedback.\n- If the intention names an unsensed human state or body action, invent a legible interaction proxy from pointer/touch/keyboard rather than pretending the browser can literally detect it. Do NOT display the secret sentence on the canvas.\n- Make the behavior robust on both mouse and touch when possible.\n- Keep the code under 180 lines.\n- Favor one strong yellow object, black/gray world marks, and a pale background so the generated world fits the surrounding interface.\n- Use real dynamics when requested: velocity, acceleration, gravity, friction, slope, wind, momentum. Do not fake physics with decorative animation.\n- Do not explain the rule inside the canvas. The next player must infer it by interacting.\n- Ensure the code is syntactically complete and runnable.\n\nOPERATIONALIZATION FIELD:\nIn one concise sentence, state the concrete browser input you chose to stand in for the human phrase. This is for the author only; detectives will not see it.`;
+
+async function generateWorld(){
+  const btn=$('makeWorld');
+  const state=$('aiState');
+  btn.disabled=true;
+  btn.textContent='MAKING\nWORLD…';
+  state.textContent='Words → model → operations → p5.js…';
+  try{
+    if(!window.puter?.ai?.chat) throw new Error('AI service did not load.');
+    const response=await puter.ai.chat([
+      {role:'system',content:systemPrompt},
+      {role:'user',content:buildPrompt()}
+    ],{
+      model:'gpt-5.6-luna',
+      normalize:true,
+      temperature:0.25,
+      max_tokens:4000
+    });
+    let text=response?.message?.content ?? response?.text ?? response;
+    if(Array.isArray(text)) text=text.map(x=>x.text||'').join('');
+    text=String(text).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+    const data=JSON.parse(text);
+    if(!data.code||typeof data.code!=='string') throw new Error('Model returned no code.');
+    $('code').value=data.code;
+    state.textContent='AI operationalized it as: '+(data.operationalization||'an executable interaction rule');
+    runCode('world1');
+  }catch(err){
+    console.error(err);
+    state.textContent='AI ERROR: '+err.message+' · You can still edit/run the code by hand.';
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='ASK AI<br>TO MAKE WORLD →';
+  }
+}
+$('makeWorld').onclick=generateWorld;
+
+function populateReveal(){
+  $('secretOut').innerHTML=`WHEN THE PERSON ${escapeHtml($('when').value.trim()||'…')}<br>THE WORLD ${escapeHtml($('world').value.trim()||'…')}`;
+  $('guessOut').innerHTML=`WHEN THE PERSON ${escapeHtml($('guessWhen').value.trim()||'…')}<br>THE WORLD ${escapeHtml($('guessWorld').value.trim()||'…')}`;
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+
+setStage(0);
+</script>
+</body>
+</html>
