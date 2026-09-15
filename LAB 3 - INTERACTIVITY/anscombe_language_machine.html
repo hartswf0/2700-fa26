@@ -2,652 +2,241 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="color-scheme" content="light">
 <title>THE ANSCOMBE GAME // LANGUAGE MACHINE</title>
 <style>
-*{box-sizing:border-box}
-:root{
-  --ink:#111;
-  --paper:#f6f6f1;
-  --white:#fff;
-  --yellow:#ffd400;
-  --dim:#d8d8d0;
-  --mid:#8a8a82;
-  --bad:#ff4d2e;
-  --good:#34b76f;
-}
-html,body{margin:0;width:100%;min-height:100%;background:var(--paper);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-body{overscroll-behavior:none}
-button,input,textarea,select{font:inherit;color:inherit}
-button{cursor:pointer}
-.shell{min-height:100dvh;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;background:var(--paper)}
-
-/* HEADER */
-header{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:3px solid var(--ink);background:var(--white);position:sticky;top:0;z-index:20}
-.brand{font-family:Arial,Helvetica,sans-serif;font-weight:950;font-size:clamp(21px,6vw,34px);line-height:.82;letter-spacing:-.055em}
-.brand small{display:block;margin-top:7px;font:800 9px/1.1 ui-monospace,monospace;letter-spacing:.08em}
-.sys-toggle{border:3px solid var(--ink);background:var(--yellow);min-width:76px;padding:10px 8px;font:900 11px/1 ui-monospace,monospace}
-
-/* STATUS STRIP */
-.status-strip{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:3px solid var(--ink);background:var(--white)}
-.status-cell{min-width:0;border-right:1px solid var(--ink);padding:7px 5px;display:grid;grid-template-columns:8px minmax(0,1fr);gap:5px;align-items:center}
-.status-cell:last-child{border-right:0}
-.led{width:8px;height:8px;border:1px solid var(--ink);background:var(--dim)}
-.led.ready,.led.live{background:var(--good)}
-.led.busy{background:var(--yellow)}
-.led.err{background:var(--bad)}
-.status-text{min-width:0;font:900 8px/1.05 ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.status-text span{display:block;color:var(--mid);font-size:7px;margin-top:2px}
-
-/* SYSTEM DRAWER */
-.system-drawer{display:none;border-bottom:3px solid var(--ink);background:#111;color:#fff;padding:12px;gap:10px}
-.system-drawer.open{display:grid}
-.system-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font:900 11px/1 ui-monospace,monospace;letter-spacing:.06em}
-.engine-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.engine-choice{border:2px solid #fff;background:#111;color:#fff;padding:9px 8px;text-align:center;font:900 10px/1 ui-monospace,monospace}
-.engine-choice.active{background:var(--yellow);color:#111;border-color:var(--yellow)}
-.system-grid{display:grid;gap:8px}
-.sys-field{display:grid;gap:5px}
-.sys-field label{font:900 9px/1 ui-monospace,monospace;color:var(--yellow)}
-.sys-field input,.sys-field select{width:100%;border:2px solid #fff;background:#111;color:#fff;padding:9px;outline:none}
-.key-row{display:grid;grid-template-columns:1fr auto;gap:7px}
-.peek{border:2px solid #fff;background:#111;color:#fff;padding:0 12px}
-.security-note{font:700 9px/1.35 ui-monospace,monospace;color:#ddd;border-left:4px solid var(--yellow);padding-left:8px}
-.system-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.system-actions button{border:2px solid #fff;background:#fff;color:#111;padding:9px;font-weight:900}
-.system-actions .yellow{background:var(--yellow);border-color:var(--yellow)}
-
-/* MODE BAR */
-.modebar{display:grid;grid-template-columns:repeat(3,1fr);background:var(--white);border-bottom:3px solid var(--ink)}
-.modebtn{border:0;border-right:1px solid var(--ink);background:#fff;padding:8px 4px;font:900 10px/1 ui-monospace,monospace}
-.modebtn:last-child{border-right:0}
-.modebtn.active{background:var(--yellow)}
-
-main{min-height:0;display:grid;grid-template-rows:auto auto;background:var(--paper)}
-
-/* WORLD */
-.world-panel{background:var(--paper);border-bottom:3px solid var(--ink)}
-.world-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px solid var(--ink);background:#fff;font:900 9px/1 ui-monospace,monospace}
-.world-head .right{color:var(--mid)}
-.canvas-wrap{position:relative;width:100%;aspect-ratio:126/92;max-height:48dvh;background:#efefe8;overflow:hidden;touch-action:none}
-#worldCanvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
-.world-hud{position:absolute;left:8px;right:8px;bottom:7px;display:flex;justify-content:space-between;gap:6px;pointer-events:none}
-.hud-chip{background:#fff;border:1px solid #111;padding:4px 5px;font:900 8px/1 ui-monospace,monospace}
-
-/* AUTHOR */
-.surface{display:none}
-.surface.active{display:block}
-.author{background:#fff}
-.section{border-bottom:3px solid var(--ink)}
-.section-title{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#111;color:#fff;font:900 10px/1 ui-monospace,monospace;letter-spacing:.05em}
-.section-title strong{color:var(--yellow)}
-.command-row{display:grid;grid-template-columns:76px 1fr;border-bottom:1px solid var(--ink)}
-.command-row:last-child{border-bottom:0}
-.command-label{padding:10px 8px;background:#ecece5;border-right:1px solid var(--ink);font:900 10px/1.1 ui-monospace,monospace}
-.command-input{border:0;outline:0;padding:10px 9px;background:#fff;font:800 14px/1.2 Arial,Helvetica,sans-serif;min-width:0}
-.command-input:focus{background:#fff8bf}
-textarea.command-input{resize:vertical;min-height:60px}
-.compile-zone{display:grid;grid-template-columns:1fr auto;border-top:1px solid var(--ink)}
-.compile-note{padding:9px 10px;font:800 9px/1.25 ui-monospace,monospace;color:#555}
-.compile-btn{border:0;border-left:1px solid var(--ink);background:var(--yellow);padding:12px 14px;font:950 11px/1.1 ui-monospace,monospace;min-width:118px}
-
-/* TRACE */
-.trace{background:#fff}
-.trace-line{display:grid;grid-template-columns:72px 1fr;border-bottom:1px solid var(--ink);min-height:31px}
-.trace-line:last-child{border-bottom:0}
-.trace-k{padding:8px;background:#ecece5;border-right:1px solid var(--ink);font:900 9px/1 ui-monospace,monospace}
-.trace-v{padding:8px;font:900 10px/1.25 ui-monospace,monospace;word-break:break-word}
-.ops{display:flex;flex-wrap:wrap;gap:5px;padding:9px;border-top:1px solid var(--ink)}
-.op{border:1px solid var(--ink);padding:5px 6px;background:#fff;font:900 9px/1 ui-monospace,monospace}
-.op.on{background:var(--yellow)}
-
-/* DETECT */
-.detect{background:#fff}
-.blind-banner{padding:10px;background:#111;color:var(--yellow);font:900 11px/1.3 ui-monospace,monospace;border-bottom:3px solid var(--ink)}
-.detect-copy{padding:10px;font:800 12px/1.35 Arial,Helvetica,sans-serif;border-bottom:1px solid var(--ink)}
-.detect-grid{display:grid}
-.detect-field{display:grid;grid-template-columns:112px 1fr;border-bottom:1px solid var(--ink)}
-.detect-field label{background:#ecece5;border-right:1px solid var(--ink);padding:10px 8px;font:900 9px/1.15 ui-monospace,monospace}
-.detect-field input,.detect-field textarea{border:0;outline:0;padding:10px;font:800 13px/1.2 Arial,Helvetica,sans-serif;min-width:0;resize:vertical}
-.big-action{width:100%;border:0;background:var(--yellow);padding:14px;font:950 12px/1 ui-monospace,monospace;border-top:3px solid var(--ink)}
-
-/* REVEAL */
-.reveal{background:#fff}
-.compare-row{border-bottom:3px solid var(--ink)}
-.compare-tag{padding:7px 9px;background:#111;color:#fff;font:900 9px/1 ui-monospace,monospace}
-.compare-body{padding:11px;font:900 15px/1.25 Arial,Helvetica,sans-serif}
-.compare-row.creator .compare-body{background:#fff4a8}
-.delta{padding:10px;background:#ecece5;border-bottom:3px solid var(--ink);font:800 11px/1.4 ui-monospace,monospace}
-.delta b{display:block;margin-bottom:5px}
-
-/* FOOT */
-footer{position:sticky;bottom:0;z-index:18;display:grid;grid-template-columns:1fr auto 1fr;border-top:3px solid var(--ink);background:#fff;min-height:48px}
-.foot-btn{border:0;background:#fff;padding:9px;font:900 10px/1 ui-monospace,monospace}
-.foot-center{display:grid;place-items:center;padding:0 10px;border-left:1px solid var(--ink);border-right:1px solid var(--ink);font:900 8px/1 ui-monospace,monospace;color:var(--mid)}
-
-@media(min-width:850px){
-  .shell{grid-template-columns:minmax(0,1.1fr) minmax(420px,.9fr);grid-template-rows:auto auto 1fr auto}
-  header,.status-strip,.system-drawer,.modebar,footer{grid-column:1/-1}
-  main{grid-column:1/-1;grid-template-columns:minmax(0,1.1fr) minmax(420px,.9fr);grid-template-rows:1fr;min-height:0}
-  .world-panel{border-bottom:0;border-right:3px solid var(--ink);min-height:0}
-  .canvas-wrap{aspect-ratio:auto;height:100%;max-height:none}
-  .surface.active{height:100%;overflow:auto}
-}
+:root{--paper:#fffef7;--wash:#f4f1e8;--ink:#10100e;--muted:#777168;--line:#d3cec3;--yellow:#f2df70;--orange:#d85e25;--mint:#dcefe5;--rail:32px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font:12px/1.25 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}button,input,textarea,select{font:inherit;color:inherit}button{border:0;background:none;cursor:pointer}button:disabled{opacity:.28;cursor:default}input,textarea,select{border:0;outline:0;background:transparent}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}[hidden]{display:none!important}
+.app{height:100dvh;display:grid;grid-template-rows:36px 25px minmax(0,1fr) 34px;background:var(--paper);overflow:hidden}
+.top{display:flex;align-items:center;border-bottom:1px solid var(--ink);background:var(--paper);min-width:0}.brand{height:35px;display:flex;align-items:center;padding:0 10px;border-right:1px solid var(--ink);font-weight:950;font-size:14px;letter-spacing:-.06em;white-space:nowrap}.role{height:35px;display:flex;align-items:center;padding:0 8px;border-right:1px solid var(--line);font-size:7px;color:var(--muted);white-space:nowrap}.api{height:35px;display:flex;align-items:center;gap:6px;padding:0 8px;border-right:1px solid var(--line);font-size:8px;color:var(--muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dot{width:7px;height:7px;border-radius:50%;background:#aaa398;flex:0 0 auto}.dot.ok{background:#0b704f}.dot.bad{background:var(--orange)}.dot.busy{background:var(--yellow)}.grow{flex:1}.cmd{height:35px;min-width:62px;padding:0 10px;border-left:1px solid var(--line);font-size:9px;font-weight:950}.cmd.primary{background:var(--yellow)}.cmd.stop{background:var(--orange);color:#fff}
+.trace{height:25px;display:flex;align-items:center;padding:0 8px;border-bottom:1px solid var(--line);background:var(--wash);font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trace strong{color:var(--ink)}.trace .cause{margin-left:8px;overflow:hidden;text-overflow:ellipsis}
+.workspace{min-height:0;display:flex;overflow:hidden}.pane{min-width:0;min-height:0;display:grid;grid-template-rows:27px minmax(0,1fr);background:var(--paper);flex:1 1 0;border-right:1px solid var(--line)}.pane:last-child{border-right:0}.pane.min{flex:0 0 var(--rail)!important}.pane.min .body{display:none}.pane.min .head{height:100%;writing-mode:vertical-rl;transform:rotate(180deg);border-bottom:0;justify-content:flex-start;padding-top:7px}.pane.min .minBtn{transform:rotate(90deg);margin:0 0 5px}.head{height:27px;display:flex;align-items:center;padding:0 7px;border-bottom:1px solid var(--line);font-size:8px;font-weight:950;letter-spacing:.08em;white-space:nowrap;overflow:hidden}.head .state{margin-left:auto;color:var(--muted);font-size:7px;font-weight:500;letter-spacing:0;overflow:hidden;text-overflow:ellipsis}.minBtn{width:19px;height:19px;margin-left:4px;font-size:11px;font-weight:950}
+.sourceBody{min-height:0;padding:8px;display:grid;grid-template-rows:minmax(0,1fr);background:var(--paper)}.compose{min-height:0;border:1px solid var(--ink);background:#fff;display:grid;grid-template-rows:1fr 1fr 44px}.callLine{display:grid;grid-template-columns:66px minmax(0,1fr);min-height:0;border-bottom:1px solid var(--line)}.callLine label{padding:13px 8px;background:var(--wash);border-right:1px solid var(--line);font-size:8px;font-weight:950}.callLine textarea{width:100%;height:100%;resize:none;padding:12px;font:800 clamp(14px,4vw,18px)/1.25 Arial,Helvetica,sans-serif}.composeBar{display:flex;align-items:center}.composeBar button{height:43px;padding:0 11px;border-right:1px solid var(--line);font-size:8px;font-weight:950}.composeBar .make{margin-left:auto;border-right:0;border-left:1px solid var(--ink);min-width:92px;background:var(--ink);color:var(--paper);font-size:10px}.composeBar .make.busy{background:var(--orange)}
+.worldBody{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) 52px;background:var(--wash)}.worldWrap{position:relative;min-height:0;display:grid;place-items:center;overflow:hidden;touch-action:none}.worldFrame{width:min(100%,calc((100dvh - 174px)*1.3695));height:min(100%,calc(100vw/1.3695));aspect-ratio:126/92;position:relative;background:#eeeae0;border:1px solid var(--line);max-width:100%;max-height:100%}#world{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}.worldOnly{position:absolute;left:6px;top:6px;padding:4px 5px;background:rgba(255,254,247,.9);border:1px solid var(--ink);font-size:7px;font-weight:950;pointer-events:none}.readout{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);background:var(--paper)}.readout>div{padding:7px 8px;border-right:1px solid var(--line);min-width:0}.readout>div:last-child{border-right:0}.readout b{display:block;font-size:7px;margin-bottom:4px}.readout span{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.readout.detective .secret{visibility:hidden}
+.traceBody{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:#fff}.proxy{padding:11px;border-bottom:1px solid var(--line)}.proxy b{display:block;font-size:7px;color:var(--muted);margin-bottom:5px}.proxy strong{font-size:14px}.ops{min-height:0;display:grid;grid-template-columns:1fr 1fr;align-content:start}.op{padding:10px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;font-size:8px}.op:nth-child(2n){border-right:0}.op strong{font-size:10px}.chain{padding:8px;background:var(--wash);font-size:8px;color:var(--muted);border-top:1px solid var(--line)}
+.guessBody{min-height:0;padding:8px;background:var(--paper);display:grid;grid-template-rows:minmax(0,1fr)}.guessCard{border:1px solid var(--ink);background:#fff;display:grid;grid-template-rows:1fr 1fr 44px}.guessLine{display:grid;grid-template-columns:66px minmax(0,1fr);border-bottom:1px solid var(--line);min-height:0}.guessLine label{padding:12px 8px;background:var(--wash);border-right:1px solid var(--line);font-size:8px;font-weight:950}.guessLine textarea{resize:none;width:100%;height:100%;padding:12px;font:800 clamp(14px,4vw,18px)/1.25 Arial,Helvetica,sans-serif}.guessHint{display:flex;align-items:center;padding:0 10px;color:var(--muted);font-size:8px}
+.revealBody{min-height:0;display:grid;grid-template-rows:1fr 1fr 1fr 36px;background:#fff}.revealRow{display:grid;grid-template-columns:72px minmax(0,1fr);border-bottom:1px solid var(--line);min-height:0}.revealKey{padding:9px 7px;background:var(--wash);border-right:1px solid var(--line);font-size:8px;font-weight:950}.revealVal{padding:9px;overflow:hidden;font:800 clamp(11px,3.4vw,15px)/1.22 Arial,Helvetica,sans-serif}.revealRow.model .revealVal{background:var(--yellow)}.revealFoot{display:flex;align-items:center;padding:0 9px;background:var(--ink);color:var(--paper);font-size:8px}.revealFoot strong{color:var(--yellow);margin-right:6px}
+.rail{display:flex;align-items:center;gap:5px;padding:0 8px;border-top:1px solid var(--ink);background:var(--paper);min-width:0}.railLabel{font-size:7px;color:var(--muted)}.railState{font-size:8px;font-weight:950;white-space:nowrap}.railGrow{flex:1}.rail button{height:24px;padding:0 8px;border-left:1px solid var(--line);font-size:7px;font-weight:950}.rail button.danger{color:#9b2f18}
+.mobileNav{display:none}
+.sheetBack{position:fixed;inset:0;background:rgba(17,17,15,.22);z-index:100;display:none;align-items:flex-end;justify-content:center}.sheetBack.open{display:flex}.sheet{width:min(560px,calc(100% - 12px));margin:0 6px 6px;background:var(--paper);border:1px solid var(--ink)}.sheetHead{height:32px;display:flex;align-items:center;padding:0 9px;border-bottom:1px solid var(--line);font-size:8px;font-weight:950}.sheetHead span:last-child{margin-left:auto;color:var(--muted);font-weight:500}.sheetRow{display:grid;grid-template-columns:1fr 118px;border-bottom:1px solid var(--line)}.sheetRow input,.sheetRow select{height:44px;padding:0 9px;border-right:1px solid var(--line);min-width:0}.sheetRow button{height:44px;font-size:8px;font-weight:950}.sheetModes{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}.sheetModes button{height:38px;border-right:1px solid var(--line);font-size:8px;font-weight:950}.sheetModes button:last-child{border-right:0}.sheetModes button.on{background:var(--ink);color:var(--paper)}.sheetStatus{height:31px;display:flex;align-items:center;gap:6px;padding:0 9px;font-size:8px;color:var(--muted)}.sheetActions{display:grid;grid-template-columns:1fr 1fr}.sheetActions button{height:40px;border-top:1px solid var(--line);border-right:1px solid var(--line);font-size:8px;font-weight:950}.sheetActions button:last-child{border-right:0;background:var(--ink);color:var(--paper)}
+@media(max-width:720px){.app{grid-template-rows:36px 25px minmax(0,1fr) 34px 39px}.role{display:none}.api{max-width:94px}.cmd{min-width:58px}.workspace{display:block;position:relative}.pane{position:absolute;inset:0;display:none!important;border:0!important}.pane.mobileOn{display:grid!important}.pane.min{flex:none!important}.pane.min .body{display:grid!important}.pane.min .head{height:27px;writing-mode:horizontal-tb;transform:none;border-bottom:1px solid var(--line);padding:0 7px}.minBtn{display:none!important}.sourceBody,.guessBody{padding:7px}.callLine,.guessLine{grid-template-columns:58px minmax(0,1fr)}.worldFrame{width:min(100%,calc((100dvh - 176px)*1.3695));height:auto}.mobileNav{display:flex;border-top:1px solid var(--ink);background:var(--paper)}.mobileNav button{flex:1;border-right:1px solid var(--line);font-size:8px;font-weight:950}.mobileNav button:last-child{border-right:0}.mobileNav button.on{background:var(--ink);color:var(--paper)}.mobileNav button:disabled{opacity:.28}.revealVal{font-size:13px}}
 </style>
 </head>
 <body>
-<div class="shell">
-  <header>
-    <div class="brand">THE ANSCOMBE GAME<small>LANGUAGE MACHINE // CALL → OPERATION → WORLD</small></div>
-    <button id="systemToggle" class="sys-toggle">SYSTEM</button>
-  </header>
-
-  <div class="status-strip" aria-label="system status">
-    <div class="status-cell"><span id="ledKey" class="led"></span><div class="status-text">KEY<span id="stKey">NONE</span></div></div>
-    <div class="status-cell"><span id="ledNet" class="led"></span><div class="status-text">NET<span id="stNet">LOCAL</span></div></div>
-    <div class="status-cell"><span id="ledModel" class="led"></span><div class="status-text">MODEL<span id="stModel">LOCAL</span></div></div>
-    <div class="status-cell"><span id="ledCompile" class="led"></span><div class="status-text">COMPILE<span id="stCompile">READY</span></div></div>
-    <div class="status-cell"><span id="ledWorld" class="led live"></span><div class="status-text">WORLD<span id="stWorld">LIVE</span></div></div>
-  </div>
-
-  <section id="systemDrawer" class="system-drawer">
-    <div class="system-title"><span>COMPUTE PATH</span><span id="engineName">LOCAL COMPILER</span></div>
-    <div class="engine-row">
-      <button class="engine-choice active" data-engine="local">LOCAL</button>
-      <button class="engine-choice" data-engine="openai">OPENAI</button>
-    </div>
-    <div class="system-grid">
-      <div class="sys-field">
-        <label>MODEL</label>
-        <select id="modelSelect">
-          <option value="gpt-5.6-luna">gpt-5.6-luna</option>
-          <option value="gpt-5.6-terra">gpt-5.6-terra</option>
-          <option value="gpt-5.6-sol">gpt-5.6-sol</option>
-        </select>
+<div class="app">
+<header class="top">
+  <div class="brand">ANSCOMBE</div>
+  <div id="role" class="role">AUTHOR</div>
+  <button id="apiBtn" class="api"><span id="apiDot" class="dot"></span><span id="apiText">LOCAL</span></button>
+  <div class="grow"></div>
+  <button id="cmdBtn" class="cmd primary">MAKE</button>
+</header>
+<div id="trace" class="trace"><strong>READY</strong><span class="cause">write one call → MAKE</span></div>
+<main class="workspace">
+  <section id="sourcePane" class="pane" data-pane="source" style="flex-basis:100%">
+    <div class="head">CALL <span id="sourceState" class="state">ready</span><button class="minBtn" data-min="source">−</button></div>
+    <div class="body sourceBody">
+      <div class="compose">
+        <div class="callLine"><label for="whenInput">WHEN</label><textarea id="whenInput" autocomplete="off">the person lies down and rolls</textarea></div>
+        <div class="callLine"><label for="worldInput">WORLD</label><textarea id="worldInput" autocomplete="off">gravity, hills and wind come alive and roll the yellow ball</textarea></div>
+        <div class="composeBar"><button id="clearBtn">CLEAR</button><button id="restoreBtn" hidden>RESTORE</button><button id="localBtn" hidden>USE LOCAL</button><button id="makeBtn" class="make">MAKE</button></div>
       </div>
-      <div class="sys-field">
-        <label>SECURE PROXY URL (RECOMMENDED FOR DEPLOYMENT)</label>
-        <input id="proxyUrl" type="url" placeholder="https://your-backend.example.com/compile-world" autocomplete="off">
-      </div>
-      <div class="sys-field">
-        <label>DIRECT OPENAI API KEY // PRIVATE TESTING ONLY</label>
-        <div class="key-row">
-          <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
-          <button id="peekKey" class="peek" type="button">SHOW</button>
-        </div>
-      </div>
-    </div>
-    <div class="security-note">The key is never written to localStorage or committed to GitHub. Direct browser API keys are still exposed to the browser environment; use a backend proxy for anything public or shared.</div>
-    <div class="system-actions">
-      <button id="clearKey">CLEAR KEY</button>
-      <button id="closeSystem" class="yellow">ARM SYSTEM</button>
     </div>
   </section>
-
-  <div class="modebar">
-    <button class="modebtn active" data-mode="author">01 // AUTHOR</button>
-    <button class="modebtn" data-mode="detect">02 // DETECT</button>
-    <button class="modebtn" data-mode="reveal">03 // REVEAL</button>
-  </div>
-
-  <main>
-    <section class="world-panel">
-      <div class="world-head"><span>WORLD BUFFER // 126 × 92</span><span class="right" id="frameLabel">FRAME 0000</span></div>
-      <div id="canvasWrap" class="canvas-wrap">
-        <canvas id="worldCanvas" width="126" height="92"></canvas>
-        <div class="world-hud">
-          <span id="hudInput" class="hud-chip">INPUT: DRAG ↔</span>
-          <span id="hudForce" class="hud-chip">WIND +0.35</span>
-        </div>
+  <section id="worldPane" class="pane min" data-pane="world">
+    <div class="head">WORLD <span id="worldState" class="state">empty</span><button class="minBtn" data-min="world">+</button></div>
+    <div class="body worldBody">
+      <div id="worldWrap" class="worldWrap">
+        <div class="worldFrame"><canvas id="world" width="126" height="92" tabindex="0"></canvas><div id="worldOnly" class="worldOnly">AUTHOR WORLD</div></div>
       </div>
-    </section>
-
-    <section id="authorSurface" class="surface author active">
-      <div class="section">
-        <div class="section-title"><span><strong>01</strong> // WRITE A CALL</span><span>WORDS → WORLD</span></div>
-        <div class="command-row">
-          <div class="command-label">WHEN</div>
-          <input id="whenInput" class="command-input" value="the person lies down and rolls" autocomplete="off">
-        </div>
-        <div class="command-row">
-          <div class="command-label">WORLD</div>
-          <input id="worldInput" class="command-input" value="gravity, hills and wind come alive and the yellow ball rolls" autocomplete="off">
-        </div>
-        <div class="command-row">
-          <div class="command-label">PRESSURE</div>
-          <textarea id="pressureInput" class="command-input">Make the world physical rather than decorative. Momentum should persist. Uphill should cost energy. Wind should visibly push both the ball and the field.</textarea>
-        </div>
-        <div class="compile-zone">
-          <div class="compile-note">The compiler must operationalize the phrase. It may choose a proxy for actions the browser cannot literally sense.</div>
-          <button id="compileBtn" class="compile-btn">COMPILE<br>WORLD →</button>
-        </div>
+      <div id="readout" class="readout">
+        <div class="secret"><b>MODEL READS THIS AS</b><span id="proxyRead">—</span></div>
+        <div><b>WORLD STATE</b><span id="worldRead">waiting</span></div>
       </div>
-
-      <div class="section trace">
-        <div class="section-title"><span><strong>02</strong> // MODEL TRACE</span><span>PROCEDURAL SEMANTICS</span></div>
-        <div class="trace-line"><div class="trace-k">CALL</div><div id="traceCall" class="trace-v">LIE DOWN + ROLL</div></div>
-        <div class="trace-line"><div class="trace-k">PROXY</div><div id="traceProxy" class="trace-v">HORIZONTAL DRAG</div></div>
-        <div class="trace-line"><div class="trace-k">FIT</div><div id="traceFit" class="trace-v">DRAG APPLIES IMPULSE; SLOPE + WIND CONTINUE THE MOTION</div></div>
-        <div id="ops" class="ops"></div>
+    </div>
+  </section>
+  <section id="tracePane" class="pane min" data-pane="tracepane">
+    <div class="head">TRACE <span id="traceState" class="state">empty</span><button class="minBtn" data-min="tracepane">+</button></div>
+    <div class="body traceBody">
+      <div class="proxy"><b>MODEL READS THE CALL AS</b><strong id="proxyFull">—</strong></div>
+      <div id="ops" class="ops"></div>
+      <div id="chain" class="chain">CALL → PROXY → OPERATIONS → WORLD</div>
+    </div>
+  </section>
+  <section id="guessPane" class="pane" data-pane="guess" hidden>
+    <div class="head">DETECTIVE <span class="state">world → words</span></div>
+    <div class="body guessBody">
+      <div class="guessCard">
+        <div class="guessLine"><label for="guessWhen">WHEN</label><textarea id="guessWhen" placeholder="what action seems to count?"></textarea></div>
+        <div class="guessLine"><label for="guessWorld">WORLD</label><textarea id="guessWorld" placeholder="what does the world do?"></textarea></div>
+        <div class="guessHint">SEE ONLY THE WORLD. RECOVER THE CALL.</div>
       </div>
-    </section>
-
-    <section id="detectSurface" class="surface detect">
-      <div class="blind-banner">CODE + AUTHOR TEXT HIDDEN // TOUCH THE WORLD // INFER THE CALL</div>
-      <div class="detect-copy">You are the detective. The only evidence is what the world does when you act on it.</div>
-      <div class="detect-grid">
-        <div class="detect-field"><label>WHEN THE PERSON...</label><input id="guessWhen" placeholder="what action seems to matter?"></div>
-        <div class="detect-field"><label>THE WORLD...</label><textarea id="guessWorld" placeholder="what rule does the world seem to follow?"></textarea></div>
-        <div class="detect-field"><label>EVIDENCE</label><textarea id="guessEvidence" placeholder="what did you observe that made you think that?"></textarea></div>
-      </div>
-      <button id="revealBtn" class="big-action">REVEAL THE AUTHORS' WORDS →</button>
-    </section>
-
-    <section id="revealSurface" class="surface reveal">
-      <div class="compare-row creator">
-        <div class="compare-tag">WORDS → WORLD // AUTHOR</div>
-        <div id="creatorOut" class="compare-body"></div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-tag">WORLD → WORDS // DETECTIVE</div>
-        <div id="detectiveOut" class="compare-body"></div>
-      </div>
-      <div class="delta">
-        <b>WHERE DID THE MEANING CHANGE?</b>
-        <span id="revealTrace">AUTHOR PHRASE → MODEL PROXY → OPERATIONS → WORLD → DETECTIVE DESCRIPTION</span>
-      </div>
-      <button id="againBtn" class="big-action">NEW ROUND ↺</button>
-    </section>
-  </main>
-
-  <footer>
-    <button id="prevMode" class="foot-btn">← BACK</button>
-    <div class="foot-center">BEFLIX × BUILDERS × SHRDLU × ANSCOMBE</div>
-    <button id="nextMode" class="foot-btn">NEXT →</button>
-  </footer>
+    </div>
+  </section>
+  <section id="revealPane" class="pane" data-pane="reveal" hidden>
+    <div class="head">REVEAL <span class="state">translation trace</span></div>
+    <div class="body revealBody">
+      <div class="revealRow"><div class="revealKey">CREATOR</div><div id="creatorOut" class="revealVal"></div></div>
+      <div class="revealRow model"><div class="revealKey">MODEL</div><div id="modelOut" class="revealVal"></div></div>
+      <div class="revealRow"><div class="revealKey">DETECTIVE</div><div id="detectiveOut" class="revealVal"></div></div>
+      <div class="revealFoot"><strong>ASK:</strong> WHERE DID THE MEANING CHANGE?</div>
+    </div>
+  </section>
+</main>
+<footer class="rail"><span class="railLabel">STATE</span><span id="railState" class="railState">REST</span><span class="railGrow"></span><button id="resetBtn" class="danger">RESET</button><button id="handoffBtn" disabled>HAND OFF</button></footer>
+<nav id="mobileNav" class="mobileNav"><button class="on" data-mobile="source">CALL</button><button id="navWorld" data-mobile="world" disabled>WORLD</button><button id="navTrace" data-mobile="tracepane" disabled>TRACE</button></nav>
 </div>
-
+<div id="sheetBack" class="sheetBack" aria-hidden="true">
+  <div class="sheet">
+    <div class="sheetHead"><span>COMPUTE PATH</span><span id="sheetTitle">LOCAL COMPILER</span></div>
+    <div class="sheetModes"><button id="modeLocal" class="on">LOCAL</button><button id="modeOpenAI">OPENAI</button></div>
+    <div class="sheetRow"><select id="modelInput"><option value="gpt-5.6-luna">gpt-5.6-luna</option><option value="gpt-5.6-terra">gpt-5.6-terra</option><option value="gpt-5.6-sol">gpt-5.6-sol</option></select><button id="testBtn">TEST</button></div>
+    <div class="sheetRow"><input id="proxyInput" type="url" placeholder="SECURE PROXY URL (OPTIONAL)" autocomplete="off"><button id="proxyClear">CLEAR</button></div>
+    <div class="sheetRow"><input id="keyInput" type="password" placeholder="OPENAI API KEY · PRIVATE TEST ONLY" autocomplete="off" spellcheck="false"><button id="peekBtn">SHOW</button></div>
+    <div class="sheetStatus"><span id="sheetDot" class="dot"></span><span id="sheetStatus">local compiler ready</span></div>
+    <div class="sheetActions"><button id="forgetBtn">FORGET KEY</button><button id="closeSheet">CLOSE</button></div>
+  </div>
+</div>
 <script>
-const $ = id => document.getElementById(id);
-const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-
-let engine = 'local';
-let currentMode = 'author';
-let frame = 0;
-let spec = null;
-let pointer = {down:false,x:0,y:0,lastX:0,lastY:0};
-
-const DEFAULT_SPEC = {
-  proxy:{type:'drag',description:'horizontal drag across the world'},
-  operations:[
-    {op:'GRAVITY',value:0.36},
-    {op:'HILLS',value:0.72},
-    {op:'WIND',value:0.38},
-    {op:'MOMENTUM',value:0.86},
-    {op:'FRICTION',value:0.985}
-  ],
-  world:{gravity:0.36,wind:0.38,hills:0.72,friction:0.985,bounce:0.18,ballSize:8,inputForce:0.17},
-  trace:[
-    'ROLL → HORIZONTAL DRAG',
-    'DRAG → IMPULSE',
-    'GRAVITY + SLOPE → ACCELERATION',
-    'WIND → CONTINUOUS FORCE'
-  ]
-};
-
-let state = {x:44,y:20,vx:0,vy:0};
-
-function resetWorld(){
-  state = {x:44,y:18,vx:0,vy:0};
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let engine='local', phase='author', activePane='source', spec=null, lastSource=null, dirty=false, busy=false, aborter=null, frame=0;
+const world=$('world'), ctx=world.getContext('2d',{alpha:false});
+const bike={x:63,y:42,vx:0,vy:0,r:5};
+const OP_KEYS=['gravity','hills','wind','momentum','friction','turbulence'];
+const state={pointer:false,lastX:0};
+function source(){return{when:$('whenInput').value.trim(),world:$('worldInput').value.trim()}}
+function sameSource(a,b){return !!a&&!!b&&a.when===b.when&&a.world===b.world}
+function setTrace(head,msg){$('trace').innerHTML=`<strong>${head}</strong><span class="cause">${msg||''}</span>`}
+function setRail(s){$('railState').textContent=s}
+function setApi(kind,text){$('apiDot').className='dot'+(kind?' '+kind:'');$('apiText').textContent=text}
+function setBusy(on,label='MAKE'){
+  busy=on;$('makeBtn').disabled=on;$('cmdBtn').disabled=false;
+  $('makeBtn').classList.toggle('busy',on);
+  $('makeBtn').textContent=on?'STOP':'MAKE';
+  $('cmdBtn').textContent=on?'STOP':label;
+  $('cmdBtn').classList.toggle('stop',on);
+  $('cmdBtn').classList.toggle('primary',!on);
 }
-
-function sanitizeSpec(raw){
-  const allowedProxy = new Set(['drag','hold','tap','move','key','none']);
-  const p = raw && typeof raw === 'object' ? raw : {};
-  const w = p.world && typeof p.world === 'object' ? p.world : {};
-  const ops = Array.isArray(p.operations) ? p.operations.slice(0,12).map(o=>({
-    op:String(o?.op||'OP').toUpperCase().replace(/[^A-Z0-9_ -]/g,'').slice(0,22),
-    value:clamp(Number(o?.value ?? 0.5),-1,1)
-  })) : [];
-  const proxyType = allowedProxy.has(p?.proxy?.type) ? p.proxy.type : 'drag';
-  return {
-    proxy:{type:proxyType,description:String(p?.proxy?.description||'horizontal drag').slice(0,140)},
-    operations:ops.length?ops:DEFAULT_SPEC.operations,
-    world:{
-      gravity:clamp(Number(w.gravity ?? .34),0,.9),
-      wind:clamp(Number(w.wind ?? .25),-1,1),
-      hills:clamp(Number(w.hills ?? .6),0,1),
-      friction:clamp(Number(w.friction ?? .986),.9,.9999),
-      bounce:clamp(Number(w.bounce ?? .18),0,.85),
-      ballSize:clamp(Number(w.ballSize ?? 8),4,16),
-      inputForce:clamp(Number(w.inputForce ?? .16),.02,.8)
-    },
-    trace:Array.isArray(p.trace)?p.trace.slice(0,6).map(x=>String(x).slice(0,160)):DEFAULT_SPEC.trace
+function mobilePane(name){
+  activePane=name;
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('mobileOn',p.dataset.pane===name));
+  document.querySelectorAll('.mobileNav button').forEach(b=>b.classList.toggle('on',b.dataset.mobile===name));
+}
+function enableCompiled(on){$('navWorld').disabled=!on;$('navTrace').disabled=!on;$('handoffBtn').disabled=!on}
+function updateAuthorValidity(){
+  if(phase!=='author'||busy)return;
+  dirty=!!spec&&!sameSource(source(),lastSource);
+  $('sourceState').textContent=dirty?'changed':(spec?'compiled':'ready');
+  $('restoreBtn').hidden=!dirty;
+  if(dirty){setTrace('CHANGED','source differs from live world → MAKE or RESTORE');setRail('CHANGED');$('cmdBtn').textContent='MAKE'}
+}
+$('whenInput').addEventListener('input',updateAuthorValidity);$('worldInput').addEventListener('input',updateAuthorValidity);
+function hashText(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function localCompile(src){
+  const t=(src.when+' '+src.world).toLowerCase(), h=hashText(t);
+  let proxy={type:'drag',description:'horizontal drag across the world'};
+  if(/hold|press|charge/.test(t))proxy={type:'hold',description:'press and hold in the world'};
+  else if(/tap|click|touch/.test(t))proxy={type:'tap',description:'tap the world'};
+  else if(/move|approach|near/.test(t))proxy={type:'move',description:'move the pointer near the yellow object'};
+  else if(/key|arrow|keyboard/.test(t))proxy={type:'keys',description:'use left and right arrow keys'};
+  const kw=(re,yes,no)=>re.test(t)?yes:no;
+  const worldSpec={
+    gravity:kw(/gravity|fall|downhill|roll/,0.38,0.12+(h%15)/100),
+    hills:kw(/hill|slope|terrain|mountain/,0.78,0.24+((h>>3)%18)/100),
+    wind:kw(/wind|gust|air/,0.52,0.06+((h>>5)%12)/100),
+    momentum:kw(/roll|momentum|fast|speed/,0.88,0.48+((h>>7)%15)/100),
+    friction:kw(/friction|sticky|slow/,0.90,0.975),
+    turbulence:kw(/alive|wild|gust|chaos/,0.42,0.12)
   };
+  return{proxy,world:worldSpec,summary:`${proxy.description}; forces configure the world rather than directly placing the ball`}
 }
-
-function compileLocal(){
-  const when = $('whenInput').value.toLowerCase();
-  const world = ($('worldInput').value+' '+$('pressureInput').value).toLowerCase();
-  let proxy = 'drag';
-  let desc = 'horizontal drag across the world';
-  if(/hold|press|squeeze/.test(when)){proxy='hold';desc='press and hold inside the world';}
-  else if(/tap|click|touch/.test(when)){proxy='tap';desc='tap the world';}
-  else if(/move|approach|near/.test(when)){proxy='move';desc='move the pointer through the world';}
-  else if(/key|type/.test(when)){proxy='key';desc='press left/right arrow keys';}
-
-  const hills = /hill|slope|terrain|ground/.test(world) ? .78 : .22;
-  const wind = /wind|air|gust/.test(world) ? .42 : .05;
-  const gravity = /gravity|fall|downhill|roll/.test(world) ? .38 : .15;
-  const bounce = /bounce|spring/.test(world) ? .58 : .16;
-  const friction = /ice|slipper/.test(world) ? .997 : (/friction|rough/.test(world) ? .972 : .987);
-  const ops = [
-    {op:'GRAVITY',value:gravity},
-    {op:'HILLS',value:hills},
-    {op:'WIND',value:wind},
-    {op:'MOMENTUM',value:.84},
-    {op:'FRICTION',value:friction}
-  ];
-  if(bounce>.3) ops.push({op:'BOUNCE',value:bounce});
-
-  return sanitizeSpec({
-    proxy:{type:proxy,description:desc},
-    operations:ops,
-    world:{gravity,wind,hills,friction,bounce,ballSize:8,inputForce:.18},
-    trace:[
-      `${$('whenInput').value.toUpperCase()} → ${desc.toUpperCase()}`,
-      `${desc.toUpperCase()} → IMPULSE`,
-      `GRAVITY + SLOPE → ACCELERATION`,
-      wind>.1 ? 'WIND → CONTINUOUS HORIZONTAL FORCE' : 'AIR → MINIMAL FORCE'
-    ]
-  });
+function systemPrompt(){return `You are the compiler inside THE ANSCOMBE GAME. Translate a human behavioral call into a tiny executable world specification. Do not write JavaScript. Do not explain philosophy. Choose one observable browser interaction proxy for the human phrase, then set normalized world forces. Return ONLY JSON with this exact shape: {"proxy":{"type":"drag|hold|tap|move|keys","description":"short concrete browser action"},"world":{"gravity":0-1,"hills":0-1,"wind":0-1,"momentum":0-1,"friction":0.85-0.999,"turbulence":0-1},"summary":"one short sentence"}. If the phrase names an unsensed human state or body action, choose a legible pointer, touch, hold, drag, move, or keyboard proxy. The geometry engine is deterministic; your job is only to configure operations.`}
+function extractOutput(data){if(typeof data.output_text==='string')return data.output_text;for(const o of data.output||[])for(const c of o.content||[])if(c.type==='output_text'&&c.text)return c.text;return''}
+function sanitizeSpec(x){
+  if(!x||!x.proxy||!x.world)throw new Error('incomplete world spec');
+  const type=['drag','hold','tap','move','keys'].includes(x.proxy.type)?x.proxy.type:'drag';
+  const w={};for(const k of OP_KEYS)w[k]=Number(x.world[k]);
+  w.gravity=clamp(isFinite(w.gravity)?w.gravity:.3,0,1);w.hills=clamp(isFinite(w.hills)?w.hills:.5,0,1);w.wind=clamp(isFinite(w.wind)?w.wind:.2,0,1);w.momentum=clamp(isFinite(w.momentum)?w.momentum:.6,0,1);w.friction=clamp(isFinite(w.friction)?w.friction:.975,.85,.999);w.turbulence=clamp(isFinite(w.turbulence)?w.turbulence:.1,0,1);
+  return{proxy:{type,description:String(x.proxy.description||type).slice(0,100)},world:w,summary:String(x.summary||'').slice(0,180)}
 }
-
-const SYSTEM_PROMPT = `You are the procedural-semantics compiler inside THE ANSCOMBE GAME. Convert a human behavioral description into a tiny executable world specification. You are not writing JavaScript and you are not drawing a final picture. Decide what observable browser action can count as the human phrase, then specify forces and operations that make the consequence discoverable by interaction.
-
-Return ONLY JSON. No markdown. Exactly this shape:
-{
-  "proxy":{"type":"drag|hold|tap|move|key|none","description":"short concrete browser action"},
-  "operations":[{"op":"UPPERCASE_OPERATION","value":0.0}],
-  "world":{"gravity":0.0,"wind":0.0,"hills":0.0,"friction":0.98,"bounce":0.0,"ballSize":8,"inputForce":0.1},
-  "trace":["PHRASE → PROXY","PROXY → OPERATION","OPERATION → WORLD EFFECT"]
-}
-
-Rules:
-- All numeric world values must be within: gravity 0..0.9, wind -1..1, hills 0..1, friction .9..1, bounce 0..0.85, ballSize 4..16, inputForce .02..0.8.
-- If a phrase names an unsensed bodily or mental state, choose an honest browser proxy instead of pretending the browser can literally perceive it.
-- Favor operations such as GRAVITY, HILLS, WIND, MOMENTUM, FRICTION, BOUNCE, ATTRACT, REPEL, GROW, SHRINK, TETHER, MEMORY.
-- The world contains one yellow ball on a black/white raster-like field. Use forces rather than decorative animation when possible.
-- The detective must be able to infer a plausible rule by touching the world.
-- Keep the trace terse and operational.`;
-
-function buildUserPrompt(){
-  return `WHEN THE PERSON: ${$('whenInput').value.trim()}\nTHE WORLD: ${$('worldInput').value.trim()}\nADDITIONAL PRESSURE: ${$('pressureInput').value.trim()}`;
-}
-
-async function compileOpenAI(){
-  const model = $('modelSelect').value;
-  const proxyUrl = $('proxyUrl').value.trim();
-  const key = $('apiKey').value.trim();
-  const body = {model,input:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:buildUserPrompt()}],max_output_tokens:1200,store:false};
-
-  let res;
-  if(proxyUrl){
-    setStatus('net','busy','PROXY');
-    res = await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  } else {
-    if(!key) throw new Error('No proxy URL or API key.');
-    setStatus('key','ready','LOADED');
-    setStatus('net','busy','OPENAI');
-    res = await fetch('https://api.openai.com/v1/responses',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify(body)
-    });
+async function aiCompile(src){
+  const key=$('keyInput').value.trim(), proxy=$('proxyInput').value.trim(), model=$('modelInput').value;
+  const input=`WHEN THE PERSON ${src.when}\nTHE WORLD ${src.world}`;
+  aborter=new AbortController();
+  if(proxy){
+    const r=await fetch(proxy,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,input,system:systemPrompt()}),signal:aborter.signal});
+    if(!r.ok)throw new Error(`proxy ${r.status}`);return sanitizeSpec(await r.json());
   }
-  if(!res.ok){
-    let msg='HTTP '+res.status;
-    try{const e=await res.json(); msg=e?.error?.message||msg;}catch{}
-    throw new Error(msg);
-  }
-  const data = await res.json();
-  if(data.proxy && data.world) return sanitizeSpec(data);
-  const text = data.output_text || (data.output||[]).flatMap(o=>o.content||[]).map(c=>c.text||'').join('');
-  const cleaned = String(text).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
-  if(!cleaned) throw new Error('Model returned no JSON text.');
-  return sanitizeSpec(JSON.parse(cleaned));
+  if(!key)throw new Error('no API key or proxy');
+  const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,input:[{role:'system',content:systemPrompt()},{role:'user',content:input}],temperature:.2}),signal:aborter.signal});
+  if(!r.ok){const txt=await r.text();throw new Error(`OpenAI ${r.status}: ${txt.slice(0,80)}`)}
+  const data=await r.json(), text=extractOutput(data).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  return sanitizeSpec(JSON.parse(text));
 }
-
-function setStatus(which,stateName,text){
-  const ids={key:['ledKey','stKey'],net:['ledNet','stNet'],model:['ledModel','stModel'],compile:['ledCompile','stCompile'],world:['ledWorld','stWorld']};
-  const pair=ids[which]; if(!pair) return;
-  const led=$(pair[0]); led.className='led '+(stateName||'');
-  $(pair[1]).textContent=text;
-}
-
-function refreshEngineStatus(){
-  const model=$('modelSelect').value;
-  if(engine==='local'){
-    $('engineName').textContent='LOCAL COMPILER';
-    setStatus('key','','NONE');
-    setStatus('net','','LOCAL');
-    setStatus('model','ready','LOCAL');
-  }else{
-    $('engineName').textContent='OPENAI RESPONSES';
-    setStatus('key',$('apiKey').value.trim()?'ready':'',$('apiKey').value.trim()?'LOADED':'NONE');
-    setStatus('net','','IDLE');
-    setStatus('model','ready',model.replace('gpt-','').toUpperCase());
-  }
-}
-
-async function compileWorld(){
-  $('compileBtn').disabled=true;
-  setStatus('compile','busy','RUNNING');
-  setStatus('world','busy','HOLD');
+async function make(){
+  if(busy){aborter?.abort();setBusy(false,'MAKE');setTrace('STOPPED','source preserved');setRail('READY');return}
+  if(phase!=='author')return;
+  const src=source();if(!src.when||!src.world){setTrace('FAULT','WHEN and WORLD are both required');setRail('FAULT');return}
+  setBusy(true);setTrace('WORKING',engine==='openai'?'model → operations':'local compiler → operations');setRail('WORKING');$('sourceState').textContent='working';setApi('busy',engine==='openai'?'OPENAI':'LOCAL');
   try{
-    let next;
-    if(engine==='openai'){
-      try{
-        next=await compileOpenAI();
-        setStatus('net','ready',$('proxyUrl').value.trim()?'PROXY OK':'OPENAI OK');
-      }catch(err){
-        console.error(err);
-        setStatus('net','err','API ERR');
-        next=compileLocal();
-        next.trace.unshift('API ERROR → LOCAL COMPILER FALLBACK');
-      }
-    }else{
-      next=compileLocal();
-    }
-    spec=next;
-    resetWorld();
-    updateTrace();
-    setStatus('compile','ready','READY');
-    setStatus('world','live','LIVE');
-  }catch(err){
-    console.error(err);
-    setStatus('compile','err','ERROR');
-    setStatus('world','err','ERROR');
-  }finally{
-    $('compileBtn').disabled=false;
+    const next=engine==='openai'?await aiCompile(src):localCompile(src);
+    spec=sanitizeSpec(next);lastSource={...src};dirty=false;applySpec();enableCompiled(true);$('restoreBtn').hidden=true;$('localBtn').hidden=true;$('sourceState').textContent='compiled';$('worldState').textContent='live';$('traceState').textContent='ready';setApi('ok',engine==='openai'?'OPENAI OK':'LOCAL');setTrace('CHANGED',`${src.when} → ${spec.proxy.description}`);setRail('WORLD LIVE');setBusy(false,'HAND OFF');mobilePane('world');
+  }catch(e){
+    if(e.name==='AbortError'){setTrace('STOPPED','source preserved');setRail('READY')}else{setApi('bad','API ERR');setTrace('FAULT',e.message);setRail('FAULT');$('localBtn').hidden=false}
+    setBusy(false,'MAKE');$('sourceState').textContent='preserved';
   }
 }
-
-function updateTrace(){
-  const s=spec||DEFAULT_SPEC;
-  $('traceCall').textContent=$('whenInput').value.trim().toUpperCase();
-  $('traceProxy').textContent=s.proxy.description.toUpperCase();
-  $('traceFit').textContent=(s.trace||[]).slice(1).join(' // ');
-  $('hudInput').textContent='INPUT: '+s.proxy.type.toUpperCase()+' // '+shorten(s.proxy.description,24).toUpperCase();
-  $('ops').innerHTML='';
-  s.operations.forEach(o=>{
-    const el=document.createElement('span'); el.className='op on';
-    el.textContent=`${o.op} ${Number(o.value).toFixed(2)}`;
-    $('ops').appendChild(el);
-  });
+function applySpec(){
+  bike.x=63;bike.y=34;bike.vx=0;bike.vy=0;frame=0;
+  $('proxyRead').textContent=spec.proxy.description;$('proxyFull').textContent=spec.proxy.description;
+  $('worldRead').textContent='forces active';$('ops').innerHTML='';
+  for(const k of OP_KEYS){const el=document.createElement('div');el.className='op';el.innerHTML=`<span>${k.toUpperCase()}</span><strong>${spec.world[k].toFixed(2)}</strong>`;$('ops').appendChild(el)}
+  $('chain').textContent=`CALL → ${spec.proxy.type.toUpperCase()} → FORCES → WORLD`;
 }
-function shorten(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
-
-/* WORLD ENGINE */
-const canvas=$('worldCanvas');
-const ctx=canvas.getContext('2d');
-ctx.imageSmoothingEnabled=false;
-
-function terrainY(x){
-  const s=spec||DEFAULT_SPEC; const a=s.world.hills;
-  return 69 + Math.sin(x*.075+1.2)*7*a + Math.sin(x*.19+.4)*3.5*a;
+function terrainY(x){const w=spec?.world||{hills:.35};return 66+Math.sin(x*.075)*7*w.hills+Math.sin(x*.022+1.7)*11*w.hills}
+function forceInput(){
+  if(!spec)return;
+  if(spec.proxy.type==='hold'&&state.pointer)bike.vx+=.018*spec.world.momentum;
+  if(spec.proxy.type==='move'){const dx=state.lastX-bike.x;if(Math.abs(dx)<24)bike.vx-=Math.sign(dx||1)*.014*spec.world.momentum}
+  if(spec.proxy.type==='keys'){if(keys.left)bike.vx-=.035*spec.world.momentum;if(keys.right)bike.vx+=.035*spec.world.momentum}
 }
-
-function terrainSlope(x){
-  return (terrainY(x+1)-terrainY(x-1))/2;
-}
-
-function applyInput(dx=0,dy=0,isTap=false){
-  const s=spec||DEFAULT_SPEC;
-  const type=s.proxy.type;
-  if(type==='drag') state.vx += clamp(dx,-12,12)*s.world.inputForce*.09;
-  if(type==='hold' && pointer.down) state.vx += (pointer.x<63?-1:1)*s.world.inputForce*.12;
-  if(type==='tap' && isTap){ state.vy -= 2.6*s.world.inputForce*5; state.vx += (pointer.x-state.x)*.018; }
-  if(type==='move') state.vx += clamp(dx,-10,10)*s.world.inputForce*.035;
-}
-
-function physics(){
-  const s=spec||DEFAULT_SPEC;
-  state.vy += s.world.gravity*.052;
-  state.vx += s.world.wind*.0045;
-  if(pointer.down && s.proxy.type==='hold') applyInput();
-  state.x += state.vx;
-  state.y += state.vy;
-  const ground=terrainY(state.x)-s.world.ballSize*.5;
-  if(state.y>ground){
-    state.y=ground;
-    if(state.vy>0) state.vy*=-s.world.bounce;
-    state.vx += terrainSlope(state.x)*.022;
-    state.vx *= s.world.friction;
-  }
-  if(state.x<2){state.x=2;state.vx=Math.abs(state.vx)*.6;}
-  if(state.x>124){state.x=124;state.vx=-Math.abs(state.vx)*.6;}
-}
-
+const keys={left:false,right:false};
 function drawWorld(){
-  const s=spec||DEFAULT_SPEC;
-  ctx.fillStyle='#f1f1ea';ctx.fillRect(0,0,126,92);
-
-  // coarse raster field
-  ctx.fillStyle='#deded5';
-  for(let y=4;y<66;y+=8){for(let x=3;x<126;x+=8){if(((x+y+frame)>>3)%5===0)ctx.fillRect(x,y,1,1);}}
-
-  // wind traces
-  ctx.fillStyle='#111';
-  const windDir=s.world.wind>=0?1:-1;
-  const strength=Math.abs(s.world.wind);
-  if(strength>.08){
-    for(let i=0;i<9;i++){
-      let wx=((frame*(.12+strength*.4)*windDir+i*19)%155+155)%155-15;
-      let wy=10+(i*11)%45;
-      let len=2+Math.floor(strength*8);
-      ctx.fillRect(Math.floor(wx),wy,len,1);
-    }
-  }
-
-  // terrain fill + line
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.moveTo(0,92);
-  for(let x=0;x<=126;x++)ctx.lineTo(x,terrainY(x));
-  ctx.lineTo(126,92);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#111';ctx.lineWidth=1;ctx.beginPath();
-  for(let x=0;x<=126;x++){const y=terrainY(x);if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
-
-  // slope ticks / grass react to wind
-  ctx.strokeStyle='#111';ctx.lineWidth=1;
-  for(let x=4;x<126;x+=7){let y=terrainY(x);let bend=s.world.wind*2.2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+bend,y-2);ctx.stroke();}
-
-  // ball
-  const r=s.world.ballSize/2;
-  ctx.fillStyle='#ffd400';ctx.beginPath();ctx.arc(state.x,state.y,r,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#111';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(state.x,state.y);ctx.lineTo(state.x+Math.cos(frame*.08)*r,state.y+Math.sin(frame*.08)*r);ctx.stroke();
-
-  // tiny world labels
-  ctx.fillStyle='#111';ctx.font='5px monospace';
-  ctx.fillText('WORLD',3,7);
-  ctx.fillText('G '+s.world.gravity.toFixed(2),3,13);
-  ctx.fillText('W '+(s.world.wind>=0?'+':'')+s.world.wind.toFixed(2),3,19);
-
-  $('frameLabel').textContent='FRAME '+String(frame%10000).padStart(4,'0');
-  $('hudForce').textContent='V '+state.vx.toFixed(2)+' // WIND '+(s.world.wind>=0?'+':'')+s.world.wind.toFixed(2);
+  frame++;const w=spec?.world||{gravity:.25,hills:.3,wind:.12,momentum:.6,friction:.975,turbulence:.1};
+  forceInput();bike.vy+=.018*w.gravity;bike.vx+=(w.wind-.5)*.0025+Math.sin(frame*.035)*.0012*w.turbulence;bike.x+=bike.vx;bike.y+=bike.vy;
+  const g=terrainY(bike.x);if(bike.y+bike.r>g){bike.y=g-bike.r;bike.vy*= -.18;const slope=(terrainY(bike.x+1)-terrainY(bike.x-1))/2;bike.vx+=slope*.015*w.gravity;bike.vx*=w.friction}
+  if(bike.x<-8)bike.x=134;if(bike.x>134)bike.x=-8;
+  ctx.fillStyle='#efede5';ctx.fillRect(0,0,126,92);
+  const windDir=w.wind>=.5?1:-1;ctx.fillStyle='#9f9b91';for(let i=0;i<22;i++){const px=(i*19+frame*(.15+w.wind)*windDir)%150-12;const py=8+(i*13)%45;ctx.fillRect(Math.round(px),py,1+(i%3),1)}
+  ctx.fillStyle='#171714';for(let x=0;x<126;x++){const y=Math.round(terrainY(x));ctx.fillRect(x,y,1,92-y)}
+  ctx.fillStyle='#f2d400';ctx.beginPath();ctx.arc(Math.round(bike.x),Math.round(bike.y),bike.r,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#171714';ctx.fillRect(Math.round(bike.x)-1,Math.round(bike.y)-1,2,2);
+  if(spec)$('worldRead').textContent=`v ${bike.vx.toFixed(2)} · g ${w.gravity.toFixed(2)} · wind ${w.wind.toFixed(2)}`;
+  requestAnimationFrame(drawWorld)
 }
-
-function loop(){
-  frame++;
-  if(currentMode!=='reveal') physics();
-  drawWorld();
-  requestAnimationFrame(loop);
-}
-
-function pointFromEvent(e){
-  const r=canvas.getBoundingClientRect();
-  return {x:(e.clientX-r.left)/r.width*126,y:(e.clientY-r.top)/r.height*92};
-}
-canvas.addEventListener('pointerdown',e=>{
-  const p=pointFromEvent(e);pointer.down=true;pointer.x=pointer.lastX=p.x;pointer.y=pointer.lastY=p.y;canvas.setPointerCapture?.(e.pointerId);applyInput(0,0,true);
-});
-canvas.addEventListener('pointermove',e=>{
-  const p=pointFromEvent(e);const dx=p.x-pointer.x,dy=p.y-pointer.y;pointer.lastX=pointer.x;pointer.lastY=pointer.y;pointer.x=p.x;pointer.y=p.y;if(pointer.down||((spec||DEFAULT_SPEC).proxy.type==='move'))applyInput(dx,dy,false);
-});
-canvas.addEventListener('pointerup',e=>{pointer.down=false;});
-canvas.addEventListener('pointercancel',e=>{pointer.down=false;});
-window.addEventListener('keydown',e=>{
-  const s=spec||DEFAULT_SPEC;
-  if(s.proxy.type==='key'){
-    if(e.key==='ArrowLeft')state.vx-=s.world.inputForce*2;
-    if(e.key==='ArrowRight')state.vx+=s.world.inputForce*2;
-  }
-});
-
-/* MODES */
-const order=['author','detect','reveal'];
-function setMode(mode){
-  currentMode=mode;
-  document.querySelectorAll('.modebtn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
-  $('authorSurface').classList.toggle('active',mode==='author');
-  $('detectSurface').classList.toggle('active',mode==='detect');
-  $('revealSurface').classList.toggle('active',mode==='reveal');
-  if(mode==='reveal') populateReveal();
-}
-document.querySelectorAll('.modebtn').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
-$('prevMode').onclick=()=>{const i=order.indexOf(currentMode);setMode(order[Math.max(0,i-1)]);};
-$('nextMode').onclick=()=>{const i=order.indexOf(currentMode);setMode(order[Math.min(order.length-1,i+1)]);};
-$('revealBtn').onclick=()=>setMode('reveal');
-$('againBtn').onclick=()=>{resetWorld();$('guessWhen').value='';$('guessWorld').value='';$('guessEvidence').value='';setMode('author');};
-
-function populateReveal(){
-  $('creatorOut').innerHTML=`WHEN THE PERSON <b>${escapeHtml($('whenInput').value.trim())}</b><br>THE WORLD <b>${escapeHtml($('worldInput').value.trim())}</b>`;
-  $('detectiveOut').innerHTML=`WHEN THE PERSON <b>${escapeHtml($('guessWhen').value.trim()||'…')}</b><br>THE WORLD <b>${escapeHtml($('guessWorld').value.trim()||'…')}</b>`;
-  const s=spec||DEFAULT_SPEC;
-  $('revealTrace').textContent=`${$('whenInput').value.trim().toUpperCase()} → ${s.proxy.description.toUpperCase()} → ${(s.operations||[]).map(o=>o.op).join(' + ')} → WORLD → DETECTIVE DESCRIPTION`;
-}
-function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
-
-/* SYSTEM UI */
-$('systemToggle').onclick=()=>$('systemDrawer').classList.toggle('open');
-$('closeSystem').onclick=()=>{$('systemDrawer').classList.remove('open');refreshEngineStatus();};
-document.querySelectorAll('.engine-choice').forEach(btn=>btn.onclick=()=>{
-  engine=btn.dataset.engine;
-  document.querySelectorAll('.engine-choice').forEach(b=>b.classList.toggle('active',b===btn));
-  refreshEngineStatus();
-});
-$('modelSelect').onchange=refreshEngineStatus;
-$('apiKey').oninput=refreshEngineStatus;
-$('clearKey').onclick=()=>{$('apiKey').value='';refreshEngineStatus();};
-$('peekKey').onclick=()=>{const f=$('apiKey');const show=f.type==='password';f.type=show?'text':'password';$('peekKey').textContent=show?'HIDE':'SHOW';};
-$('compileBtn').onclick=compileWorld;
-
-spec=DEFAULT_SPEC;
-updateTrace();
-refreshEngineStatus();
-setStatus('compile','ready','READY');
-setStatus('world','live','LIVE');
-requestAnimationFrame(loop);
+function pointerPos(e){const r=world.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*126,y:(e.clientY-r.top)/r.height*92}}
+world.addEventListener('pointerdown',e=>{const p=pointerPos(e);state.pointer=true;state.lastX=p.x;world.setPointerCapture?.(e.pointerId);if(spec?.proxy.type==='tap'){bike.vx+=(p.x-bike.x)*.008*spec.world.momentum;bike.vy-=.7*spec.world.momentum}});
+world.addEventListener('pointermove',e=>{const p=pointerPos(e);if(state.pointer&&spec?.proxy.type==='drag'){const dx=p.x-state.lastX;bike.vx+=dx*.018*spec.world.momentum}state.lastX=p.x});
+world.addEventListener('pointerup',()=>state.pointer=false);world.addEventListener('pointercancel',()=>state.pointer=false);
+window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')keys.left=true;if(e.key==='ArrowRight')keys.right=true});window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')keys.left=false;if(e.key==='ArrowRight')keys.right=false});
+function handoff(){if(!spec||phase!=='author')return;phase='detect';$('role').textContent='DETECTIVE';$('worldOnly').textContent='WORLD ONLY';$('readout').classList.add('detective');$('sourcePane').hidden=true;$('tracePane').hidden=true;$('guessPane').hidden=false;$('handoffBtn').disabled=true;$('handoffBtn').hidden=true;$('resetBtn').textContent='EXIT';$('cmdBtn').textContent='GUESS';$('cmdBtn').className='cmd primary';setTrace('DETECT','world → words · infer the hidden call');setRail('DETECTIVE');buildDetectNav();mobilePane('world')}
+function buildDetectNav(){$('mobileNav').innerHTML='<button class="on" data-mobile="world">WORLD</button><button data-mobile="guess">GUESS</button>';bindMobileNav()}
+function showGuess(){mobilePane('guess');$('cmdBtn').textContent='REVEAL';setTrace('READY','write your best reconstruction → REVEAL')}
+function reveal(){phase='reveal';$('role').textContent='REVEAL';$('worldPane').hidden=true;$('guessPane').hidden=true;$('revealPane').hidden=false;$('mobileNav').innerHTML='';$('cmdBtn').textContent='NEW';$('creatorOut').textContent=`WHEN ${lastSource.when} / WORLD ${lastSource.world}`;$('modelOut').textContent=`${spec.proxy.description} / ${OP_KEYS.map(k=>k.toUpperCase()+' '+spec.world[k].toFixed(2)).join(' · ')}`;$('detectiveOut').textContent=`WHEN ${$('guessWhen').value.trim()||'—'} / WORLD ${$('guessWorld').value.trim()||'—'}`;setTrace('COMPLETE','creator → model → world → detective');setRail('COMPLETE');mobilePane('reveal')}
+function resetAll(){phase='author';spec=null;lastSource=null;dirty=false;bike.x=63;bike.y=34;bike.vx=bike.vy=0;$('role').textContent='AUTHOR';$('sourcePane').hidden=false;$('worldPane').hidden=false;$('tracePane').hidden=false;$('guessPane').hidden=true;$('revealPane').hidden=true;$('readout').classList.remove('detective');$('worldOnly').textContent='AUTHOR WORLD';$('proxyRead').textContent='—';$('proxyFull').textContent='—';$('ops').innerHTML='';$('worldRead').textContent='waiting';$('sourceState').textContent='ready';$('worldState').textContent='empty';$('traceState').textContent='empty';$('guessWhen').value='';$('guessWorld').value='';$('handoffBtn').hidden=false;$('resetBtn').textContent='RESET';enableCompiled(false);$('cmdBtn').textContent='MAKE';setTrace('READY','write one call → MAKE');setRail('REST');buildAuthorNav();mobilePane('source')}
+function buildAuthorNav(){$('mobileNav').innerHTML='<button class="on" data-mobile="source">CALL</button><button id="navWorld" data-mobile="world" disabled>WORLD</button><button id="navTrace" data-mobile="tracepane" disabled>TRACE</button>';bindMobileNav()}
+function bindMobileNav(){document.querySelectorAll('.mobileNav button').forEach(b=>b.onclick=()=>{if(b.disabled)return;mobilePane(b.dataset.mobile);if(phase==='detect'&&b.dataset.mobile==='guess'){$('cmdBtn').textContent='REVEAL';setTrace('READY','write your best reconstruction → REVEAL')}else if(phase==='detect')$('cmdBtn').textContent='GUESS'})}
+function openSystem(){$('sheetBack').classList.add('open');$('sheetBack').setAttribute('aria-hidden','false')}
+function closeSystem(){$('sheetBack').classList.remove('open');$('sheetBack').setAttribute('aria-hidden','true')}
+function setEngine(v){engine=v;$('modeLocal').classList.toggle('on',v==='local');$('modeOpenAI').classList.toggle('on',v==='openai');$('sheetTitle').textContent=v==='local'?'LOCAL COMPILER':'OPENAI';$('sheetStatus').textContent=v==='local'?'local compiler ready':'enter key or proxy';$('sheetDot').className='dot'+(v==='local'?' ok':'');setApi(v==='local'?'ok':'',v==='local'?'LOCAL':'OPENAI')}
+async function testApi(){if(engine==='local'){setEngine('local');return}const key=$('keyInput').value.trim(),proxy=$('proxyInput').value.trim();if(!key&&!proxy){$('sheetDot').className='dot bad';$('sheetStatus').textContent='no key or proxy';return}$('sheetDot').className='dot busy';$('sheetStatus').textContent='checking…';try{const test=source();await aiCompile(test);$('sheetDot').className='dot ok';$('sheetStatus').textContent='compiler reachable';setApi('ok','OPENAI OK')}catch(e){$('sheetDot').className='dot bad';$('sheetStatus').textContent=e.message;setApi('bad','API ERR')}}
+$('makeBtn').onclick=make;$('cmdBtn').onclick=()=>{if(busy)return make();if(phase==='author'){if(spec&&!dirty)handoff();else make()}else if(phase==='detect'){if(activePane==='guess')reveal();else showGuess()}else resetAll()};$('handoffBtn').onclick=handoff;$('resetBtn').onclick=()=>{if(phase==='detect')resetAll();else resetAll()};$('clearBtn').onclick=()=>{$('whenInput').value='';$('worldInput').value='';updateAuthorValidity()};$('restoreBtn').onclick=()=>{if(!lastSource)return;$('whenInput').value=lastSource.when;$('worldInput').value=lastSource.world;dirty=false;$('restoreBtn').hidden=true;setTrace('RESTORED','source matches live world');setRail('WORLD LIVE');$('sourceState').textContent='compiled';$('cmdBtn').textContent='HAND OFF'};$('localBtn').onclick=()=>{setEngine('local');$('localBtn').hidden=true;make()};
+$('apiBtn').onclick=openSystem;$('closeSheet').onclick=closeSystem;$('sheetBack').onclick=e=>{if(e.target===$('sheetBack'))closeSystem()};$('modeLocal').onclick=()=>setEngine('local');$('modeOpenAI').onclick=()=>setEngine('openai');$('testBtn').onclick=testApi;$('peekBtn').onclick=()=>{const i=$('keyInput'),show=i.type==='password';i.type=show?'text':'password';$('peekBtn').textContent=show?'HIDE':'SHOW'};$('forgetBtn').onclick=()=>{$('keyInput').value='';$('sheetStatus').textContent='key cleared';$('sheetDot').className='dot'};$('proxyClear').onclick=()=>{$('proxyInput').value=''};
+document.querySelectorAll('.minBtn').forEach(b=>b.onclick=()=>{if(innerWidth<=720)return;const p=document.querySelector(`[data-pane="${b.dataset.min}"]`);const was=p.classList.contains('min');document.querySelectorAll('.pane').forEach(x=>x.classList.add('min'));p.classList.toggle('min',!was)});
+function initial(){setEngine('local');buildAuthorNav();if(innerWidth<=720)mobilePane('source');requestAnimationFrame(drawWorld)}
+initial();
 </script>
 </body>
 </html>
