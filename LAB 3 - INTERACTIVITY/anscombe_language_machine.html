@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>THE ANSCOMBE GAME // LANGUAGE MACHINE</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --ink:#111;
+  --paper:#f6f6f1;
+  --white:#fff;
+  --yellow:#ffd400;
+  --dim:#d8d8d0;
+  --mid:#8a8a82;
+  --bad:#ff4d2e;
+  --good:#34b76f;
+}
+html,body{margin:0;width:100%;min-height:100%;background:var(--paper);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{overscroll-behavior:none}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.shell{min-height:100dvh;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;background:var(--paper)}
+
+/* HEADER */
+header{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:3px solid var(--ink);background:var(--white);position:sticky;top:0;z-index:20}
+.brand{font-family:Arial,Helvetica,sans-serif;font-weight:950;font-size:clamp(21px,6vw,34px);line-height:.82;letter-spacing:-.055em}
+.brand small{display:block;margin-top:7px;font:800 9px/1.1 ui-monospace,monospace;letter-spacing:.08em}
+.sys-toggle{border:3px solid var(--ink);background:var(--yellow);min-width:76px;padding:10px 8px;font:900 11px/1 ui-monospace,monospace}
+
+/* STATUS STRIP */
+.status-strip{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:3px solid var(--ink);background:var(--white)}
+.status-cell{min-width:0;border-right:1px solid var(--ink);padding:7px 5px;display:grid;grid-template-columns:8px minmax(0,1fr);gap:5px;align-items:center}
+.status-cell:last-child{border-right:0}
+.led{width:8px;height:8px;border:1px solid var(--ink);background:var(--dim)}
+.led.ready,.led.live{background:var(--good)}
+.led.busy{background:var(--yellow)}
+.led.err{background:var(--bad)}
+.status-text{min-width:0;font:900 8px/1.05 ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-text span{display:block;color:var(--mid);font-size:7px;margin-top:2px}
+
+/* SYSTEM DRAWER */
+.system-drawer{display:none;border-bottom:3px solid var(--ink);background:#111;color:#fff;padding:12px;gap:10px}
+.system-drawer.open{display:grid}
+.system-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font:900 11px/1 ui-monospace,monospace;letter-spacing:.06em}
+.engine-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.engine-choice{border:2px solid #fff;background:#111;color:#fff;padding:9px 8px;text-align:center;font:900 10px/1 ui-monospace,monospace}
+.engine-choice.active{background:var(--yellow);color:#111;border-color:var(--yellow)}
+.system-grid{display:grid;gap:8px}
+.sys-field{display:grid;gap:5px}
+.sys-field label{font:900 9px/1 ui-monospace,monospace;color:var(--yellow)}
+.sys-field input,.sys-field select{width:100%;border:2px solid #fff;background:#111;color:#fff;padding:9px;outline:none}
+.key-row{display:grid;grid-template-columns:1fr auto;gap:7px}
+.peek{border:2px solid #fff;background:#111;color:#fff;padding:0 12px}
+.security-note{font:700 9px/1.35 ui-monospace,monospace;color:#ddd;border-left:4px solid var(--yellow);padding-left:8px}
+.system-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.system-actions button{border:2px solid #fff;background:#fff;color:#111;padding:9px;font-weight:900}
+.system-actions .yellow{background:var(--yellow);border-color:var(--yellow)}
+
+/* MODE BAR */
+.modebar{display:grid;grid-template-columns:repeat(3,1fr);background:var(--white);border-bottom:3px solid var(--ink)}
+.modebtn{border:0;border-right:1px solid var(--ink);background:#fff;padding:8px 4px;font:900 10px/1 ui-monospace,monospace}
+.modebtn:last-child{border-right:0}
+.modebtn.active{background:var(--yellow)}
+
+main{min-height:0;display:grid;grid-template-rows:auto auto;background:var(--paper)}
+
+/* WORLD */
+.world-panel{background:var(--paper);border-bottom:3px solid var(--ink)}
+.world-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px solid var(--ink);background:#fff;font:900 9px/1 ui-monospace,monospace}
+.world-head .right{color:var(--mid)}
+.canvas-wrap{position:relative;width:100%;aspect-ratio:126/92;max-height:48dvh;background:#efefe8;overflow:hidden;touch-action:none}
+#worldCanvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+.world-hud{position:absolute;left:8px;right:8px;bottom:7px;display:flex;justify-content:space-between;gap:6px;pointer-events:none}
+.hud-chip{background:#fff;border:1px solid #111;padding:4px 5px;font:900 8px/1 ui-monospace,monospace}
+
+/* AUTHOR */
+.surface{display:none}
+.surface.active{display:block}
+.author{background:#fff}
+.section{border-bottom:3px solid var(--ink)}
+.section-title{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#111;color:#fff;font:900 10px/1 ui-monospace,monospace;letter-spacing:.05em}
+.section-title strong{color:var(--yellow)}
+.command-row{display:grid;grid-template-columns:76px 1fr;border-bottom:1px solid var(--ink)}
+.command-row:last-child{border-bottom:0}
+.command-label{padding:10px 8px;background:#ecece5;border-right:1px solid var(--ink);font:900 10px/1.1 ui-monospace,monospace}
+.command-input{border:0;outline:0;padding:10px 9px;background:#fff;font:800 14px/1.2 Arial,Helvetica,sans-serif;min-width:0}
+.command-input:focus{background:#fff8bf}
+textarea.command-input{resize:vertical;min-height:60px}
+.compile-zone{display:grid;grid-template-columns:1fr auto;border-top:1px solid var(--ink)}
+.compile-note{padding:9px 10px;font:800 9px/1.25 ui-monospace,monospace;color:#555}
+.compile-btn{border:0;border-left:1px solid var(--ink);background:var(--yellow);padding:12px 14px;font:950 11px/1.1 ui-monospace,monospace;min-width:118px}
+
+/* TRACE */
+.trace{background:#fff}
+.trace-line{display:grid;grid-template-columns:72px 1fr;border-bottom:1px solid var(--ink);min-height:31px}
+.trace-line:last-child{border-bottom:0}
+.trace-k{padding:8px;background:#ecece5;border-right:1px solid var(--ink);font:900 9px/1 ui-monospace,monospace}
+.trace-v{padding:8px;font:900 10px/1.25 ui-monospace,monospace;word-break:break-word}
+.ops{display:flex;flex-wrap:wrap;gap:5px;padding:9px;border-top:1px solid var(--ink)}
+.op{border:1px solid var(--ink);padding:5px 6px;background:#fff;font:900 9px/1 ui-monospace,monospace}
+.op.on{background:var(--yellow)}
+
+/* DETECT */
+.detect{background:#fff}
+.blind-banner{padding:10px;background:#111;color:var(--yellow);font:900 11px/1.3 ui-monospace,monospace;border-bottom:3px solid var(--ink)}
+.detect-copy{padding:10px;font:800 12px/1.35 Arial,Helvetica,sans-serif;border-bottom:1px solid var(--ink)}
+.detect-grid{display:grid}
+.detect-field{display:grid;grid-template-columns:112px 1fr;border-bottom:1px solid var(--ink)}
+.detect-field label{background:#ecece5;border-right:1px solid var(--ink);padding:10px 8px;font:900 9px/1.15 ui-monospace,monospace}
+.detect-field input,.detect-field textarea{border:0;outline:0;padding:10px;font:800 13px/1.2 Arial,Helvetica,sans-serif;min-width:0;resize:vertical}
+.big-action{width:100%;border:0;background:var(--yellow);padding:14px;font:950 12px/1 ui-monospace,monospace;border-top:3px solid var(--ink)}
+
+/* REVEAL */
+.reveal{background:#fff}
+.compare-row{border-bottom:3px solid var(--ink)}
+.compare-tag{padding:7px 9px;background:#111;color:#fff;font:900 9px/1 ui-monospace,monospace}
+.compare-body{padding:11px;font:900 15px/1.25 Arial,Helvetica,sans-serif}
+.compare-row.creator .compare-body{background:#fff4a8}
+.delta{padding:10px;background:#ecece5;border-bottom:3px solid var(--ink);font:800 11px/1.4 ui-monospace,monospace}
+.delta b{display:block;margin-bottom:5px}
+
+/* FOOT */
+footer{position:sticky;bottom:0;z-index:18;display:grid;grid-template-columns:1fr auto 1fr;border-top:3px solid var(--ink);background:#fff;min-height:48px}
+.foot-btn{border:0;background:#fff;padding:9px;font:900 10px/1 ui-monospace,monospace}
+.foot-center{display:grid;place-items:center;padding:0 10px;border-left:1px solid var(--ink);border-right:1px solid var(--ink);font:900 8px/1 ui-monospace,monospace;color:var(--mid)}
+
+@media(min-width:850px){
+  .shell{grid-template-columns:minmax(0,1.1fr) minmax(420px,.9fr);grid-template-rows:auto auto 1fr auto}
+  header,.status-strip,.system-drawer,.modebar,footer{grid-column:1/-1}
+  main{grid-column:1/-1;grid-template-columns:minmax(0,1.1fr) minmax(420px,.9fr);grid-template-rows:1fr;min-height:0}
+  .world-panel{border-bottom:0;border-right:3px solid var(--ink);min-height:0}
+  .canvas-wrap{aspect-ratio:auto;height:100%;max-height:none}
+  .surface.active{height:100%;overflow:auto}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">THE ANSCOMBE GAME<small>LANGUAGE MACHINE // CALL → OPERATION → WORLD</small></div>
+    <button id="systemToggle" class="sys-toggle">SYSTEM</button>
+  </header>
+
+  <div class="status-strip" aria-label="system status">
+    <div class="status-cell"><span id="ledKey" class="led"></span><div class="status-text">KEY<span id="stKey">NONE</span></div></div>
+    <div class="status-cell"><span id="ledNet" class="led"></span><div class="status-text">NET<span id="stNet">LOCAL</span></div></div>
+    <div class="status-cell"><span id="ledModel" class="led"></span><div class="status-text">MODEL<span id="stModel">LOCAL</span></div></div>
+    <div class="status-cell"><span id="ledCompile" class="led"></span><div class="status-text">COMPILE<span id="stCompile">READY</span></div></div>
+    <div class="status-cell"><span id="ledWorld" class="led live"></span><div class="status-text">WORLD<span id="stWorld">LIVE</span></div></div>
+  </div>
+
+  <section id="systemDrawer" class="system-drawer">
+    <div class="system-title"><span>COMPUTE PATH</span><span id="engineName">LOCAL COMPILER</span></div>
+    <div class="engine-row">
+      <button class="engine-choice active" data-engine="local">LOCAL</button>
+      <button class="engine-choice" data-engine="openai">OPENAI</button>
+    </div>
+    <div class="system-grid">
+      <div class="sys-field">
+        <label>MODEL</label>
+        <select id="modelSelect">
+          <option value="gpt-5.6-luna">gpt-5.6-luna</option>
+          <option value="gpt-5.6-terra">gpt-5.6-terra</option>
+          <option value="gpt-5.6-sol">gpt-5.6-sol</option>
+        </select>
+      </div>
+      <div class="sys-field">
+        <label>SECURE PROXY URL (RECOMMENDED FOR DEPLOYMENT)</label>
+        <input id="proxyUrl" type="url" placeholder="https://your-backend.example.com/compile-world" autocomplete="off">
+      </div>
+      <div class="sys-field">
+        <label>DIRECT OPENAI API KEY // PRIVATE TESTING ONLY</label>
+        <div class="key-row">
+          <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+          <button id="peekKey" class="peek" type="button">SHOW</button>
+        </div>
+      </div>
+    </div>
+    <div class="security-note">The key is never written to localStorage or committed to GitHub. Direct browser API keys are still exposed to the browser environment; use a backend proxy for anything public or shared.</div>
+    <div class="system-actions">
+      <button id="clearKey">CLEAR KEY</button>
+      <button id="closeSystem" class="yellow">ARM SYSTEM</button>
+    </div>
+  </section>
+
+  <div class="modebar">
+    <button class="modebtn active" data-mode="author">01 // AUTHOR</button>
+    <button class="modebtn" data-mode="detect">02 // DETECT</button>
+    <button class="modebtn" data-mode="reveal">03 // REVEAL</button>
+  </div>
+
+  <main>
+    <section class="world-panel">
+      <div class="world-head"><span>WORLD BUFFER // 126 × 92</span><span class="right" id="frameLabel">FRAME 0000</span></div>
+      <div id="canvasWrap" class="canvas-wrap">
+        <canvas id="worldCanvas" width="126" height="92"></canvas>
+        <div class="world-hud">
+          <span id="hudInput" class="hud-chip">INPUT: DRAG ↔</span>
+          <span id="hudForce" class="hud-chip">WIND +0.35</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="authorSurface" class="surface author active">
+      <div class="section">
+        <div class="section-title"><span><strong>01</strong> // WRITE A CALL</span><span>WORDS → WORLD</span></div>
+        <div class="command-row">
+          <div class="command-label">WHEN</div>
+          <input id="whenInput" class="command-input" value="the person lies down and rolls" autocomplete="off">
+        </div>
+        <div class="command-row">
+          <div class="command-label">WORLD</div>
+          <input id="worldInput" class="command-input" value="gravity, hills and wind come alive and the yellow ball rolls" autocomplete="off">
+        </div>
+        <div class="command-row">
+          <div class="command-label">PRESSURE</div>
+          <textarea id="pressureInput" class="command-input">Make the world physical rather than decorative. Momentum should persist. Uphill should cost energy. Wind should visibly push both the ball and the field.</textarea>
+        </div>
+        <div class="compile-zone">
+          <div class="compile-note">The compiler must operationalize the phrase. It may choose a proxy for actions the browser cannot literally sense.</div>
+          <button id="compileBtn" class="compile-btn">COMPILE<br>WORLD →</button>
+        </div>
+      </div>
+
+      <div class="section trace">
+        <div class="section-title"><span><strong>02</strong> // MODEL TRACE</span><span>PROCEDURAL SEMANTICS</span></div>
+        <div class="trace-line"><div class="trace-k">CALL</div><div id="traceCall" class="trace-v">LIE DOWN + ROLL</div></div>
+        <div class="trace-line"><div class="trace-k">PROXY</div><div id="traceProxy" class="trace-v">HORIZONTAL DRAG</div></div>
+        <div class="trace-line"><div class="trace-k">FIT</div><div id="traceFit" class="trace-v">DRAG APPLIES IMPULSE; SLOPE + WIND CONTINUE THE MOTION</div></div>
+        <div id="ops" class="ops"></div>
+      </div>
+    </section>
+
+    <section id="detectSurface" class="surface detect">
+      <div class="blind-banner">CODE + AUTHOR TEXT HIDDEN // TOUCH THE WORLD // INFER THE CALL</div>
+      <div class="detect-copy">You are the detective. The only evidence is what the world does when you act on it.</div>
+      <div class="detect-grid">
+        <div class="detect-field"><label>WHEN THE PERSON...</label><input id="guessWhen" placeholder="what action seems to matter?"></div>
+        <div class="detect-field"><label>THE WORLD...</label><textarea id="guessWorld" placeholder="what rule does the world seem to follow?"></textarea></div>
+        <div class="detect-field"><label>EVIDENCE</label><textarea id="guessEvidence" placeholder="what did you observe that made you think that?"></textarea></div>
+      </div>
+      <button id="revealBtn" class="big-action">REVEAL THE AUTHORS' WORDS →</button>
+    </section>
+
+    <section id="revealSurface" class="surface reveal">
+      <div class="compare-row creator">
+        <div class="compare-tag">WORDS → WORLD // AUTHOR</div>
+        <div id="creatorOut" class="compare-body"></div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-tag">WORLD → WORDS // DETECTIVE</div>
+        <div id="detectiveOut" class="compare-body"></div>
+      </div>
+      <div class="delta">
+        <b>WHERE DID THE MEANING CHANGE?</b>
+        <span id="revealTrace">AUTHOR PHRASE → MODEL PROXY → OPERATIONS → WORLD → DETECTIVE DESCRIPTION</span>
+      </div>
+      <button id="againBtn" class="big-action">NEW ROUND ↺</button>
+    </section>
+  </main>
+
+  <footer>
+    <button id="prevMode" class="foot-btn">← BACK</button>
+    <div class="foot-center">BEFLIX × BUILDERS × SHRDLU × ANSCOMBE</div>
+    <button id="nextMode" class="foot-btn">NEXT →</button>
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+let engine = 'local';
+let currentMode = 'author';
+let frame = 0;
+let spec = null;
+let pointer = {down:false,x:0,y:0,lastX:0,lastY:0};
+
+const DEFAULT_SPEC = {
+  proxy:{type:'drag',description:'horizontal drag across the world'},
+  operations:[
+    {op:'GRAVITY',value:0.36},
+    {op:'HILLS',value:0.72},
+    {op:'WIND',value:0.38},
+    {op:'MOMENTUM',value:0.86},
+    {op:'FRICTION',value:0.985}
+  ],
+  world:{gravity:0.36,wind:0.38,hills:0.72,friction:0.985,bounce:0.18,ballSize:8,inputForce:0.17},
+  trace:[
+    'ROLL → HORIZONTAL DRAG',
+    'DRAG → IMPULSE',
+    'GRAVITY + SLOPE → ACCELERATION',
+    'WIND → CONTINUOUS FORCE'
+  ]
+};
+
+let state = {x:44,y:20,vx:0,vy:0};
+
+function resetWorld(){
+  state = {x:44,y:18,vx:0,vy:0};
+}
+
+function sanitizeSpec(raw){
+  const allowedProxy = new Set(['drag','hold','tap','move','key','none']);
+  const p = raw && typeof raw === 'object' ? raw : {};
+  const w = p.world && typeof p.world === 'object' ? p.world : {};
+  const ops = Array.isArray(p.operations) ? p.operations.slice(0,12).map(o=>({
+    op:String(o?.op||'OP').toUpperCase().replace(/[^A-Z0-9_ -]/g,'').slice(0,22),
+    value:clamp(Number(o?.value ?? 0.5),-1,1)
+  })) : [];
+  const proxyType = allowedProxy.has(p?.proxy?.type) ? p.proxy.type : 'drag';
+  return {
+    proxy:{type:proxyType,description:String(p?.proxy?.description||'horizontal drag').slice(0,140)},
+    operations:ops.length?ops:DEFAULT_SPEC.operations,
+    world:{
+      gravity:clamp(Number(w.gravity ?? .34),0,.9),
+      wind:clamp(Number(w.wind ?? .25),-1,1),
+      hills:clamp(Number(w.hills ?? .6),0,1),
+      friction:clamp(Number(w.friction ?? .986),.9,.9999),
+      bounce:clamp(Number(w.bounce ?? .18),0,.85),
+      ballSize:clamp(Number(w.ballSize ?? 8),4,16),
+      inputForce:clamp(Number(w.inputForce ?? .16),.02,.8)
+    },
+    trace:Array.isArray(p.trace)?p.trace.slice(0,6).map(x=>String(x).slice(0,160)):DEFAULT_SPEC.trace
+  };
+}
+
+function compileLocal(){
+  const when = $('whenInput').value.toLowerCase();
+  const world = ($('worldInput').value+' '+$('pressureInput').value).toLowerCase();
+  let proxy = 'drag';
+  let desc = 'horizontal drag across the world';
+  if(/hold|press|squeeze/.test(when)){proxy='hold';desc='press and hold inside the world';}
+  else if(/tap|click|touch/.test(when)){proxy='tap';desc='tap the world';}
+  else if(/move|approach|near/.test(when)){proxy='move';desc='move the pointer through the world';}
+  else if(/key|type/.test(when)){proxy='key';desc='press left/right arrow keys';}
+
+  const hills = /hill|slope|terrain|ground/.test(world) ? .78 : .22;
+  const wind = /wind|air|gust/.test(world) ? .42 : .05;
+  const gravity = /gravity|fall|downhill|roll/.test(world) ? .38 : .15;
+  const bounce = /bounce|spring/.test(world) ? .58 : .16;
+  const friction = /ice|slipper/.test(world) ? .997 : (/friction|rough/.test(world) ? .972 : .987);
+  const ops = [
+    {op:'GRAVITY',value:gravity},
+    {op:'HILLS',value:hills},
+    {op:'WIND',value:wind},
+    {op:'MOMENTUM',value:.84},
+    {op:'FRICTION',value:friction}
+  ];
+  if(bounce>.3) ops.push({op:'BOUNCE',value:bounce});
+
+  return sanitizeSpec({
+    proxy:{type:proxy,description:desc},
+    operations:ops,
+    world:{gravity,wind,hills,friction,bounce,ballSize:8,inputForce:.18},
+    trace:[
+      `${$('whenInput').value.toUpperCase()} → ${desc.toUpperCase()}`,
+      `${desc.toUpperCase()} → IMPULSE`,
+      `GRAVITY + SLOPE → ACCELERATION`,
+      wind>.1 ? 'WIND → CONTINUOUS HORIZONTAL FORCE' : 'AIR → MINIMAL FORCE'
+    ]
+  });
+}
+
+const SYSTEM_PROMPT = `You are the procedural-semantics compiler inside THE ANSCOMBE GAME. Convert a human behavioral description into a tiny executable world specification. You are not writing JavaScript and you are not drawing a final picture. Decide what observable browser action can count as the human phrase, then specify forces and operations that make the consequence discoverable by interaction.
+
+Return ONLY JSON. No markdown. Exactly this shape:
+{
+  "proxy":{"type":"drag|hold|tap|move|key|none","description":"short concrete browser action"},
+  "operations":[{"op":"UPPERCASE_OPERATION","value":0.0}],
+  "world":{"gravity":0.0,"wind":0.0,"hills":0.0,"friction":0.98,"bounce":0.0,"ballSize":8,"inputForce":0.1},
+  "trace":["PHRASE → PROXY","PROXY → OPERATION","OPERATION → WORLD EFFECT"]
+}
+
+Rules:
+- All numeric world values must be within: gravity 0..0.9, wind -1..1, hills 0..1, friction .9..1, bounce 0..0.85, ballSize 4..16, inputForce .02..0.8.
+- If a phrase names an unsensed bodily or mental state, choose an honest browser proxy instead of pretending the browser can literally perceive it.
+- Favor operations such as GRAVITY, HILLS, WIND, MOMENTUM, FRICTION, BOUNCE, ATTRACT, REPEL, GROW, SHRINK, TETHER, MEMORY.
+- The world contains one yellow ball on a black/white raster-like field. Use forces rather than decorative animation when possible.
+- The detective must be able to infer a plausible rule by touching the world.
+- Keep the trace terse and operational.`;
+
+function buildUserPrompt(){
+  return `WHEN THE PERSON: ${$('whenInput').value.trim()}\nTHE WORLD: ${$('worldInput').value.trim()}\nADDITIONAL PRESSURE: ${$('pressureInput').value.trim()}`;
+}
+
+async function compileOpenAI(){
+  const model = $('modelSelect').value;
+  const proxyUrl = $('proxyUrl').value.trim();
+  const key = $('apiKey').value.trim();
+  const body = {model,input:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:buildUserPrompt()}],max_output_tokens:1200,store:false};
+
+  let res;
+  if(proxyUrl){
+    setStatus('net','busy','PROXY');
+    res = await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  } else {
+    if(!key) throw new Error('No proxy URL or API key.');
+    setStatus('key','ready','LOADED');
+    setStatus('net','busy','OPENAI');
+    res = await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify(body)
+    });
+  }
+  if(!res.ok){
+    let msg='HTTP '+res.status;
+    try{const e=await res.json(); msg=e?.error?.message||msg;}catch{}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  if(data.proxy && data.world) return sanitizeSpec(data);
+  const text = data.output_text || (data.output||[]).flatMap(o=>o.content||[]).map(c=>c.text||'').join('');
+  const cleaned = String(text).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  if(!cleaned) throw new Error('Model returned no JSON text.');
+  return sanitizeSpec(JSON.parse(cleaned));
+}
+
+function setStatus(which,stateName,text){
+  const ids={key:['ledKey','stKey'],net:['ledNet','stNet'],model:['ledModel','stModel'],compile:['ledCompile','stCompile'],world:['ledWorld','stWorld']};
+  const pair=ids[which]; if(!pair) return;
+  const led=$(pair[0]); led.className='led '+(stateName||'');
+  $(pair[1]).textContent=text;
+}
+
+function refreshEngineStatus(){
+  const model=$('modelSelect').value;
+  if(engine==='local'){
+    $('engineName').textContent='LOCAL COMPILER';
+    setStatus('key','','NONE');
+    setStatus('net','','LOCAL');
+    setStatus('model','ready','LOCAL');
+  }else{
+    $('engineName').textContent='OPENAI RESPONSES';
+    setStatus('key',$('apiKey').value.trim()?'ready':'',$('apiKey').value.trim()?'LOADED':'NONE');
+    setStatus('net','','IDLE');
+    setStatus('model','ready',model.replace('gpt-','').toUpperCase());
+  }
+}
+
+async function compileWorld(){
+  $('compileBtn').disabled=true;
+  setStatus('compile','busy','RUNNING');
+  setStatus('world','busy','HOLD');
+  try{
+    let next;
+    if(engine==='openai'){
+      try{
+        next=await compileOpenAI();
+        setStatus('net','ready',$('proxyUrl').value.trim()?'PROXY OK':'OPENAI OK');
+      }catch(err){
+        console.error(err);
+        setStatus('net','err','API ERR');
+        next=compileLocal();
+        next.trace.unshift('API ERROR → LOCAL COMPILER FALLBACK');
+      }
+    }else{
+      next=compileLocal();
+    }
+    spec=next;
+    resetWorld();
+    updateTrace();
+    setStatus('compile','ready','READY');
+    setStatus('world','live','LIVE');
+  }catch(err){
+    console.error(err);
+    setStatus('compile','err','ERROR');
+    setStatus('world','err','ERROR');
+  }finally{
+    $('compileBtn').disabled=false;
+  }
+}
+
+function updateTrace(){
+  const s=spec||DEFAULT_SPEC;
+  $('traceCall').textContent=$('whenInput').value.trim().toUpperCase();
+  $('traceProxy').textContent=s.proxy.description.toUpperCase();
+  $('traceFit').textContent=(s.trace||[]).slice(1).join(' // ');
+  $('hudInput').textContent='INPUT: '+s.proxy.type.toUpperCase()+' // '+shorten(s.proxy.description,24).toUpperCase();
+  $('ops').innerHTML='';
+  s.operations.forEach(o=>{
+    const el=document.createElement('span'); el.className='op on';
+    el.textContent=`${o.op} ${Number(o.value).toFixed(2)}`;
+    $('ops').appendChild(el);
+  });
+}
+function shorten(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+
+/* WORLD ENGINE */
+const canvas=$('worldCanvas');
+const ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+
+function terrainY(x){
+  const s=spec||DEFAULT_SPEC; const a=s.world.hills;
+  return 69 + Math.sin(x*.075+1.2)*7*a + Math.sin(x*.19+.4)*3.5*a;
+}
+
+function terrainSlope(x){
+  return (terrainY(x+1)-terrainY(x-1))/2;
+}
+
+function applyInput(dx=0,dy=0,isTap=false){
+  const s=spec||DEFAULT_SPEC;
+  const type=s.proxy.type;
+  if(type==='drag') state.vx += clamp(dx,-12,12)*s.world.inputForce*.09;
+  if(type==='hold' && pointer.down) state.vx += (pointer.x<63?-1:1)*s.world.inputForce*.12;
+  if(type==='tap' && isTap){ state.vy -= 2.6*s.world.inputForce*5; state.vx += (pointer.x-state.x)*.018; }
+  if(type==='move') state.vx += clamp(dx,-10,10)*s.world.inputForce*.035;
+}
+
+function physics(){
+  const s=spec||DEFAULT_SPEC;
+  state.vy += s.world.gravity*.052;
+  state.vx += s.world.wind*.0045;
+  if(pointer.down && s.proxy.type==='hold') applyInput();
+  state.x += state.vx;
+  state.y += state.vy;
+  const ground=terrainY(state.x)-s.world.ballSize*.5;
+  if(state.y>ground){
+    state.y=ground;
+    if(state.vy>0) state.vy*=-s.world.bounce;
+    state.vx += terrainSlope(state.x)*.022;
+    state.vx *= s.world.friction;
+  }
+  if(state.x<2){state.x=2;state.vx=Math.abs(state.vx)*.6;}
+  if(state.x>124){state.x=124;state.vx=-Math.abs(state.vx)*.6;}
+}
+
+function drawWorld(){
+  const s=spec||DEFAULT_SPEC;
+  ctx.fillStyle='#f1f1ea';ctx.fillRect(0,0,126,92);
+
+  // coarse raster field
+  ctx.fillStyle='#deded5';
+  for(let y=4;y<66;y+=8){for(let x=3;x<126;x+=8){if(((x+y+frame)>>3)%5===0)ctx.fillRect(x,y,1,1);}}
+
+  // wind traces
+  ctx.fillStyle='#111';
+  const windDir=s.world.wind>=0?1:-1;
+  const strength=Math.abs(s.world.wind);
+  if(strength>.08){
+    for(let i=0;i<9;i++){
+      let wx=((frame*(.12+strength*.4)*windDir+i*19)%155+155)%155-15;
+      let wy=10+(i*11)%45;
+      let len=2+Math.floor(strength*8);
+      ctx.fillRect(Math.floor(wx),wy,len,1);
+    }
+  }
+
+  // terrain fill + line
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.moveTo(0,92);
+  for(let x=0;x<=126;x++)ctx.lineTo(x,terrainY(x));
+  ctx.lineTo(126,92);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#111';ctx.lineWidth=1;ctx.beginPath();
+  for(let x=0;x<=126;x++){const y=terrainY(x);if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+
+  // slope ticks / grass react to wind
+  ctx.strokeStyle='#111';ctx.lineWidth=1;
+  for(let x=4;x<126;x+=7){let y=terrainY(x);let bend=s.world.wind*2.2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+bend,y-2);ctx.stroke();}
+
+  // ball
+  const r=s.world.ballSize/2;
+  ctx.fillStyle='#ffd400';ctx.beginPath();ctx.arc(state.x,state.y,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#111';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(state.x,state.y);ctx.lineTo(state.x+Math.cos(frame*.08)*r,state.y+Math.sin(frame*.08)*r);ctx.stroke();
+
+  // tiny world labels
+  ctx.fillStyle='#111';ctx.font='5px monospace';
+  ctx.fillText('WORLD',3,7);
+  ctx.fillText('G '+s.world.gravity.toFixed(2),3,13);
+  ctx.fillText('W '+(s.world.wind>=0?'+':'')+s.world.wind.toFixed(2),3,19);
+
+  $('frameLabel').textContent='FRAME '+String(frame%10000).padStart(4,'0');
+  $('hudForce').textContent='V '+state.vx.toFixed(2)+' // WIND '+(s.world.wind>=0?'+':'')+s.world.wind.toFixed(2);
+}
+
+function loop(){
+  frame++;
+  if(currentMode!=='reveal') physics();
+  drawWorld();
+  requestAnimationFrame(loop);
+}
+
+function pointFromEvent(e){
+  const r=canvas.getBoundingClientRect();
+  return {x:(e.clientX-r.left)/r.width*126,y:(e.clientY-r.top)/r.height*92};
+}
+canvas.addEventListener('pointerdown',e=>{
+  const p=pointFromEvent(e);pointer.down=true;pointer.x=pointer.lastX=p.x;pointer.y=pointer.lastY=p.y;canvas.setPointerCapture?.(e.pointerId);applyInput(0,0,true);
+});
+canvas.addEventListener('pointermove',e=>{
+  const p=pointFromEvent(e);const dx=p.x-pointer.x,dy=p.y-pointer.y;pointer.lastX=pointer.x;pointer.lastY=pointer.y;pointer.x=p.x;pointer.y=p.y;if(pointer.down||((spec||DEFAULT_SPEC).proxy.type==='move'))applyInput(dx,dy,false);
+});
+canvas.addEventListener('pointerup',e=>{pointer.down=false;});
+canvas.addEventListener('pointercancel',e=>{pointer.down=false;});
+window.addEventListener('keydown',e=>{
+  const s=spec||DEFAULT_SPEC;
+  if(s.proxy.type==='key'){
+    if(e.key==='ArrowLeft')state.vx-=s.world.inputForce*2;
+    if(e.key==='ArrowRight')state.vx+=s.world.inputForce*2;
+  }
+});
+
+/* MODES */
+const order=['author','detect','reveal'];
+function setMode(mode){
+  currentMode=mode;
+  document.querySelectorAll('.modebtn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  $('authorSurface').classList.toggle('active',mode==='author');
+  $('detectSurface').classList.toggle('active',mode==='detect');
+  $('revealSurface').classList.toggle('active',mode==='reveal');
+  if(mode==='reveal') populateReveal();
+}
+document.querySelectorAll('.modebtn').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$('prevMode').onclick=()=>{const i=order.indexOf(currentMode);setMode(order[Math.max(0,i-1)]);};
+$('nextMode').onclick=()=>{const i=order.indexOf(currentMode);setMode(order[Math.min(order.length-1,i+1)]);};
+$('revealBtn').onclick=()=>setMode('reveal');
+$('againBtn').onclick=()=>{resetWorld();$('guessWhen').value='';$('guessWorld').value='';$('guessEvidence').value='';setMode('author');};
+
+function populateReveal(){
+  $('creatorOut').innerHTML=`WHEN THE PERSON <b>${escapeHtml($('whenInput').value.trim())}</b><br>THE WORLD <b>${escapeHtml($('worldInput').value.trim())}</b>`;
+  $('detectiveOut').innerHTML=`WHEN THE PERSON <b>${escapeHtml($('guessWhen').value.trim()||'…')}</b><br>THE WORLD <b>${escapeHtml($('guessWorld').value.trim()||'…')}</b>`;
+  const s=spec||DEFAULT_SPEC;
+  $('revealTrace').textContent=`${$('whenInput').value.trim().toUpperCase()} → ${s.proxy.description.toUpperCase()} → ${(s.operations||[]).map(o=>o.op).join(' + ')} → WORLD → DETECTIVE DESCRIPTION`;
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+
+/* SYSTEM UI */
+$('systemToggle').onclick=()=>$('systemDrawer').classList.toggle('open');
+$('closeSystem').onclick=()=>{$('systemDrawer').classList.remove('open');refreshEngineStatus();};
+document.querySelectorAll('.engine-choice').forEach(btn=>btn.onclick=()=>{
+  engine=btn.dataset.engine;
+  document.querySelectorAll('.engine-choice').forEach(b=>b.classList.toggle('active',b===btn));
+  refreshEngineStatus();
+});
+$('modelSelect').onchange=refreshEngineStatus;
+$('apiKey').oninput=refreshEngineStatus;
+$('clearKey').onclick=()=>{$('apiKey').value='';refreshEngineStatus();};
+$('peekKey').onclick=()=>{const f=$('apiKey');const show=f.type==='password';f.type=show?'text':'password';$('peekKey').textContent=show?'HIDE':'SHOW';};
+$('compileBtn').onclick=compileWorld;
+
+spec=DEFAULT_SPEC;
+updateTrace();
+refreshEngineStatus();
+setStatus('compile','ready','READY');
+setStatus('world','live','LIVE');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
