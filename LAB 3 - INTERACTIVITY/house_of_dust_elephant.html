@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>HOUSE OF DUST ELEPHANT</title>
+<style>
+:root{--paper:#fffef7;--wash:#f3f0e7;--ink:#10100e;--line:#cfc9bc;--muted:#777168;--yellow:#f2df70;--green:#0b704f;--orange:#d85e25}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font:12px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}button,input,textarea{font:inherit;color:inherit}button{border:0;background:none;cursor:pointer}button:disabled{opacity:.26;cursor:default}button:focus-visible,input:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}[hidden]{display:none!important}
+.app{height:100dvh;display:grid;grid-template-rows:36px 25px minmax(0,1fr) 35px 39px;background:var(--paper)}
+.top{display:flex;align-items:center;border-bottom:1px solid var(--ink);min-width:0}.brand{height:35px;display:flex;align-items:center;padding:0 10px;border-right:1px solid var(--ink);font-weight:950;font-size:13px;letter-spacing:-.05em;white-space:nowrap}.gen{height:35px;display:flex;align-items:center;padding:0 9px;border-right:1px solid var(--line);font-size:8px;color:var(--muted);white-space:nowrap}.grow{flex:1}.topBtn{height:35px;min-width:72px;padding:0 11px;border-left:1px solid var(--line);font-size:8px;font-weight:950}.topBtn.primary{background:var(--yellow)}.topBtn.dark{background:var(--ink);color:var(--paper)}
+.trace{height:25px;display:flex;align-items:center;padding:0 8px;border-bottom:1px solid var(--line);background:var(--wash);font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trace strong{color:var(--ink);margin-right:7px}.main{min-height:0;position:relative;overflow:hidden}.pane{position:absolute;inset:0;display:none;min-height:0;background:var(--paper)}.pane.on{display:grid}
+/* CALL */
+#callPane{grid-template-rows:56px minmax(0,1fr) 34px}.promptRow{display:grid;grid-template-columns:62px minmax(0,1fr) 82px;border-bottom:1px solid var(--ink)}.promptRow label{display:flex;align-items:center;padding:0 8px;background:var(--wash);border-right:1px solid var(--line);font-size:8px;font-weight:950}.promptRow input{border:0;outline:0;padding:0 10px;background:#fff;font:800 14px/1.2 Arial,Helvetica,sans-serif;min-width:0}.promptRow button{border-left:1px solid var(--ink);background:var(--yellow);font-size:8px;font-weight:950}.stanza{min-height:0;display:grid;grid-template-rows:26px minmax(0,1fr);padding:8px}.stanzaHead{display:flex;align-items:center;font-size:8px;font-weight:950;letter-spacing:.06em}.stanzaHead span{margin-left:auto;color:var(--muted);font-weight:500}.calls{min-height:0;border:1px solid var(--ink);display:grid;grid-template-rows:repeat(7,1fr);background:#fff}.callLine{min-height:0;display:grid;grid-template-columns:54px minmax(0,1fr) 58px;border-bottom:1px solid var(--line);align-items:center}.callLine:last-child{border-bottom:0}.callN{height:100%;display:grid;place-items:center;background:var(--wash);border-right:1px solid var(--line);font-size:8px;color:var(--muted)}.callText{padding:0 10px;font:800 clamp(11px,3.4vw,15px)/1.1 Arial,Helvetica,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.callWho{padding-right:7px;text-align:right;font-size:7px;color:var(--muted)}.formula{display:flex;align-items:center;padding:0 9px;border-top:1px solid var(--line);color:var(--muted);font-size:8px}.formula strong{color:var(--ink);margin-right:7px}
+/* WORLD */
+#worldPane{grid-template-rows:minmax(0,1fr) 42px 43px}.world{position:relative;min-height:0;background:#eeeae0;overflow:hidden;touch-action:none}.world canvas{width:100%;height:100%;display:block;touch-action:none}.worldHud{position:absolute;left:7px;right:7px;top:7px;display:flex;justify-content:space-between;gap:6px;pointer-events:none}.chip{border:1px solid var(--ink);background:rgba(255,254,247,.92);padding:4px 6px;font-size:7px;font-weight:950}.callBar{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);background:#fff}.callBar button{border-right:1px solid var(--line);font-size:8px;font-weight:950}.callBar button:last-child{border-right:0}.callBar button.on{background:var(--yellow)}.worldRead{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--line);background:var(--paper)}.worldRead div{padding:7px 8px;border-right:1px solid var(--line);min-width:0}.worldRead div:last-child{border-right:0}.worldRead b{display:block;font-size:7px;margin-bottom:3px}.worldRead span{display:block;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.good{color:var(--green)}
+/* LINEAGE */
+#lineagePane{grid-template-rows:34px minmax(0,1fr)}.lineageHead{display:flex;align-items:center;padding:0 9px;border-bottom:1px solid var(--ink);font-size:8px;font-weight:950}.lineageHead span{margin-left:auto;color:var(--muted);font-weight:500}.lineageGrid{min-height:0;padding:8px;display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(4,1fr);gap:7px}.node{border:1px solid var(--line);background:#fff;display:grid;grid-template-columns:80px 1fr;min-height:0;text-align:left;padding:0}.node.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}.node canvas{width:80px;height:100%;background:var(--wash);border-right:1px solid var(--line)}.nodeMeta{padding:7px;overflow:hidden}.nodeMeta b{display:block;font-size:9px;margin-bottom:4px}.nodeMeta span{display:block;font-size:7px;color:var(--muted);line-height:1.4}
+/* FOOT + NAV */
+.rail{display:flex;align-items:center;border-top:1px solid var(--ink);background:var(--paper);min-width:0}.railState{padding:0 8px;font-size:8px;color:var(--muted)}.railState b{color:var(--ink)}.railGrow{flex:1}.rail button{height:34px;padding:0 9px;border-left:1px solid var(--line);font-size:8px;font-weight:950}.rail button.warn{color:var(--orange)}.mobileNav{display:flex;border-top:1px solid var(--ink);background:var(--paper)}.mobileNav button{flex:1;border-right:1px solid var(--line);font-size:8px;font-weight:950}.mobileNav button:last-child{border-right:0}.mobileNav button.on{background:var(--ink);color:var(--paper)}
+@media(min-width:860px){.app{grid-template-rows:36px 25px minmax(0,1fr) 35px}.main{display:grid;grid-template-columns:320px minmax(0,1fr) 280px;position:relative}.pane{position:relative;display:grid!important;inset:auto;border-right:1px solid var(--line)}.pane:last-child{border-right:0}.mobileNav{display:none}.lineageGrid{grid-template-columns:1fr;grid-template-rows:repeat(8,1fr)}.node{grid-template-columns:70px 1fr}.node canvas{width:70px}.brand{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="brand">HOUSE OF DUST ELEPHANT</div><div id="genLabel" class="gen">E0 · 0 PARTS</div><div class="grow"></div><button id="branchBtn" class="topBtn" disabled>BRANCH</button><button id="buildBtn" class="topBtn primary" disabled>BUILD</button></header>
+<div id="trace" class="trace"><strong>REST</strong>permute a call sequence</div>
+<main class="main">
+<section id="callPane" class="pane on">
+  <div class="promptRow"><label>PROMPT</label><input id="prompt" value="make an elephant that stands" autocomplete="off"><button id="permuteBtn">PERMUTE</button></div>
+  <div class="stanza"><div class="stanzaHead">PERMUTATION STANZA <span>parts × qualities × relations × regions</span></div><div id="calls" class="calls"></div></div>
+  <div class="formula"><strong>HOUSE OF DUST</strong> word lists → calls → coordinated action → one elephant</div>
+</section>
+<section id="worldPane" class="pane">
+  <div id="world" class="world"><canvas id="worldCanvas" width="960" height="620"></canvas><div class="worldHud"><span id="worldMode" class="chip">GHOST WORLD</span><span id="worldScore" class="chip">ELEPHANT 0%</span></div></div>
+  <div id="callBar" class="callBar"><button data-part="block">BLOCK!</button><button data-part="pillar">PILLAR!</button><button data-part="slab">SLAB!</button><button data-part="beam">BEAM!</button></div>
+  <div class="worldRead"><div><b>CALL</b><span id="lastCall">none</span></div><div><b>STAND TEST</b><span id="standRead">waiting</span></div><div><b>USE</b><span>tap to place · drag to move</span></div></div>
+</section>
+<section id="lineagePane" class="pane">
+  <div class="lineageHead">LINEAGE <span>branch, compare, restore</span></div><div id="lineageGrid" class="lineageGrid"></div>
+</section>
+</main>
+<footer class="rail"><div class="railState">STATE&nbsp;<b id="stateText">REST</b></div><div class="railGrow"></div><button id="undoBtn" disabled>UNDO</button><button id="clearBtn" class="warn">CLEAR WORLD</button></footer>
+<nav class="mobileNav"><button class="on" data-pane="call">CALL</button><button data-pane="world">WORLD</button><button data-pane="lineage">LINEAGE</button></nav>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const PARTS=['block','pillar','slab','beam'];
+const QUALITIES=['small','large','thin','thick','long','short','wide','narrow'];
+const BUILDERS=['TRUNK','LEGS','BODY','FACE','BACK','TAIL'];
+let calls=[],parts=[],history=[],lineage=[],currentNode=null,selectedPartType='block',selectedId=null,busy=false,stopBuild=false,idSeq=1;
+let pane='call';
+const canvas=$('worldCanvas'),ctx=canvas.getContext('2d');
+
+const plans=[
+ {part:'slab',region:'body',relation:'across',builder:'BODY',repeat:2},
+ {part:'block',region:'head',relation:'at',builder:'FACE',repeat:2},
+ {part:'block',region:'trunk',relation:'along',builder:'TRUNK',repeat:5},
+ {part:'pillar',region:'front legs',relation:'under',builder:'LEGS',repeat:2},
+ {part:'pillar',region:'rear legs',relation:'under',builder:'LEGS',repeat:2},
+ {part:'slab',region:'ear',relation:'beside',builder:'FACE',repeat:2},
+ {part:'beam',region:'back',relation:'across',builder:'BACK',repeat:1}
+];
+const anchors={
+ body:[520,290],head:[310,255],trunk:[205,360],"front legs":[420,445],"rear legs":[650,445],ear:[330,270],back:[535,195],tail:[770,320]
+};
+function rnd(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function setState(s,msg){$('stateText').textContent=s;$('trace').innerHTML='<strong>'+s+'</strong>'+msg}
+function setPane(name){pane=name;document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===name+'Pane'));document.querySelectorAll('.mobileNav button').forEach(b=>b.classList.toggle('on',b.dataset.pane===name))}
+
+document.querySelectorAll('.mobileNav button').forEach(b=>b.onclick=()=>setPane(b.dataset.pane));
+
+function permute(){
+  const source=shuffle(plans.map(p=>({...p,quality:rnd(QUALITIES)})));
+  calls=source.map((p,i)=>({...p,id:i+1,text:callText(p)}));
+  renderCalls();$('buildBtn').disabled=false;setState('READY','seven calls · BUILD makes one possible elephant');
+}
+function callText(p){
+  const verbs=p.part==='block'?'REPEAT':p.part==='pillar'?'PLACE':p.part==='beam'?'SPAN':'MAKE';
+  const noun=p.repeat>1?cap(p.part)+'S':cap(p.part);
+  return `${verbs} ${p.quality.toUpperCase()} ${noun} ${p.relation.toUpperCase()} THE ${p.region.toUpperCase()}`;
+}
+function renderCalls(){
+  $('calls').innerHTML='';calls.forEach(c=>{const d=document.createElement('div');d.className='callLine';d.innerHTML=`<div class="callN">${String(c.id).padStart(2,'0')}</div><div class="callText">${c.text}</div><div class="callWho">${c.builder}</div>`;$('calls').appendChild(d)})
+}
+
+function partDims(type,q){
+  let w=48,h=48;
+  if(type==='pillar'){w=36;h=125}
+  if(type==='slab'){w=150;h=58}
+  if(type==='beam'){w=175;h=24}
+  const k=q==='small'?.72:q==='large'?1.28:q==='thin'?.75:q==='thick'?1.18:q==='long'?1.3:q==='short'?.76:q==='wide'?1.22:q==='narrow'?.78:1;
+  return [w*k,h*(q==='long'&&type!=='beam'?1.18:k)];
+}
+function placeFromCall(c,index,total){
+  const [ax,ay]=anchors[c.region]||[480,310];const [w,h]=partDims(c.part,c.quality);
+  let x=ax,y=ay,r=0;
+  if(c.region==='body'){x=ax+(index-(total-1)/2)*95;y=ay+(index%2)*8}
+  if(c.region==='head'){x=ax+(index-(total-1)/2)*42;y=ay-index*18;r=index?-.18:.1}
+  if(c.region==='trunk'){x=ax-index*26;y=ay+index*35;r=.35+index*.08}
+  if(c.region==='front legs'){x=ax+(index?70:0);y=ay;r=0}
+  if(c.region==='rear legs'){x=ax+(index?70:0);y=ay;r=0}
+  if(c.region==='ear'){x=ax+(index?55:-20);y=ay+(index?20:-8);r=index?.35:-.35}
+  if(c.region==='back'){x=ax;y=ay;r=.03}
+  return {id:idSeq++,type:c.part,region:c.region,builder:c.builder,x,y,w,h,r,quality:c.quality,call:c.text};
+}
+function snapshot(){return parts.map(p=>({...p}))}
+function pushHistory(){history.push(snapshot());if(history.length>40)history.shift();$('undoBtn').disabled=false}
+async function build(){
+  if(busy){stopBuild=true;return}
+  if(!calls.length)return;busy=true;stopBuild=false;$('buildBtn').textContent='STOP';setPane('world');pushHistory();parts=[];selectedId=null;setState('WORKING','calls are becoming parts');
+  for(const c of calls){
+    if(stopBuild)break;$('lastCall').textContent=c.text;$('worldMode').textContent=c.builder+' · '+c.part.toUpperCase()+'!';
+    for(let i=0;i<c.repeat;i++)parts.push(placeFromCall(c,i,c.repeat));
+    draw();updateTests();await new Promise(r=>setTimeout(r,280));
+  }
+  busy=false;$('buildBtn').textContent='BUILD';saveNode(null);setState('CHANGED','one call sequence stabilized as E'+currentNode.id);$('branchBtn').disabled=false;draw();
+}
+function undo(){if(!history.length)return;parts=history.pop();$('undoBtn').disabled=history.length===0;selectedId=null;draw();updateTests();setState('RECOVERY','restored the previous construction state')}
+function clearWorld(){if(parts.length)pushHistory();parts=[];selectedId=null;draw();updateTests();setState('REST','world cleared · calls preserved')}
+
+function manualPart(type){selectedPartType=type;document.querySelectorAll('#callBar button').forEach(b=>b.classList.toggle('on',b.dataset.part===type));$('worldMode').textContent=type.toUpperCase()+'! · tap world'}
+document.querySelectorAll('#callBar button').forEach(b=>b.onclick=()=>manualPart(b.dataset.part));
+function pointerPos(e){const r=canvas.getBoundingClientRect();return [(e.clientX-r.left)/r.width*canvas.width,(e.clientY-r.top)/r.height*canvas.height]}
+function hit(x,y){for(let i=parts.length-1;i>=0;i--){const p=parts[i];if(Math.abs(x-p.x)<p.w*.65&&Math.abs(y-p.y)<p.h*.65)return p}return null}
+let dragging=false,dragOffset=[0,0];
+canvas.addEventListener('pointerdown',e=>{const [x,y]=pointerPos(e),p=hit(x,y);if(p){pushHistory();selectedId=p.id;dragging=true;dragOffset=[x-p.x,y-p.y];canvas.setPointerCapture?.(e.pointerId);draw();return}pushHistory();const [w,h]=partDims(selectedPartType,'medium');const part={id:idSeq++,type:selectedPartType,region:'manual',builder:'DIRECTOR',x,y,w,h,r:0,quality:'manual',call:selectedPartType.toUpperCase()+'!'};parts.push(part);selectedId=part.id;$('lastCall').textContent=part.call+' → placed';setState('CHANGED','direct call added a part');draw();updateTests()});
+canvas.addEventListener('pointermove',e=>{if(!dragging)return;const [x,y]=pointerPos(e),p=parts.find(q=>q.id===selectedId);if(!p)return;p.x=x-dragOffset[0];p.y=y-dragOffset[1];$('lastCall').textContent='PUT THAT THERE → '+p.type.toUpperCase();draw()});
+canvas.addEventListener('pointerup',()=>{if(dragging){dragging=false;updateTests();setState('CHANGED','PUT THAT THERE moved one part')}});
+
+function testsFor(ps){
+  const regs=new Set(ps.map(p=>p.region));const need=['body','head','trunk','front legs','rear legs','ear'];let present=need.filter(n=>regs.has(n)).length;let elephant=Math.round(present/need.length*100);
+  const legs=ps.filter(p=>p.type==='pillar'&&p.y>390);const body=ps.filter(p=>p.region==='body');let stands=legs.length>=3&&body.length>=1;
+  return {elephant,stands,parts:ps.length};
+}
+function updateTests(){const t=testsFor(parts);$('worldScore').textContent='ELEPHANT '+t.elephant+'%';$('standRead').textContent=t.stands?'STANDS ✓':'NOT YET';$('standRead').className=t.stands?'good':'';$('genLabel').textContent=(currentNode?'E'+currentNode.id:'E0')+' · '+parts.length+' PARTS'}
+
+function drawGhost(c,w=canvas.width,h=canvas.height){c.save();c.strokeStyle='#9d978c';c.lineWidth=2;c.setLineDash([8,8]);c.beginPath();c.ellipse(520,285,245,145,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(315,265,88,0,Math.PI*2);c.stroke();c.beginPath();c.moveTo(255,315);c.bezierCurveTo(220,360,180,410,195,505);c.stroke();[410,485,625,700].forEach(x=>{c.strokeRect(x,385,44,150)});c.beginPath();c.moveTo(760,290);c.quadraticCurveTo(820,330,790,390);c.stroke();c.restore()}
+function drawPart(c,p,scale=1,ox=0,oy=0){c.save();c.translate(ox+p.x*scale,oy+p.y*scale);c.rotate(p.r);const w=p.w*scale,h=p.h*scale;c.fillStyle=p.id===selectedId?'#f2df70':p.type==='block'?'#d9d3c7':p.type==='pillar'?'#cfc7b8':p.type==='slab'?'#e6e0d4':'#b9afa1';c.strokeStyle='#10100e';c.lineWidth=Math.max(1,2*scale);c.fillRect(-w/2,-h/2,w,h);c.strokeRect(-w/2,-h/2,w,h);c.beginPath();c.moveTo(-w/2,-h/2);c.lineTo(-w/2+8*scale,-h/2-7*scale);c.lineTo(w/2+8*scale,-h/2-7*scale);c.lineTo(w/2,-h/2);c.stroke();c.restore()}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#eeeae0';ctx.fillRect(0,0,canvas.width,canvas.height);drawGhost(ctx);ctx.strokeStyle='#b8b1a4';ctx.lineWidth=1;for(let x=0;x<960;x+=40){ctx.beginPath();ctx.moveTo(x,570);ctx.lineTo(480+(x-480)*.32,395);ctx.stroke()}ctx.beginPath();ctx.moveTo(0,570);ctx.lineTo(960,570);ctx.stroke();parts.forEach(p=>drawPart(ctx,p));if(selectedId){const p=parts.find(q=>q.id===selectedId);if(p){ctx.fillStyle='#10100e';ctx.font='12px ui-monospace';ctx.fillText(p.call.slice(0,42),12,605)}}}
+
+function saveNode(parent){const t=testsFor(parts);const node={id:lineage.length?Math.max(...lineage.map(n=>n.id))+1:1,parent:parent?.id||null,parts:snapshot(),calls:calls.map(c=>({...c})),score:t,kept:false};lineage.push(node);currentNode=node;if(lineage.length>24)lineage=lineage.slice(-24);renderLineage();updateTests();return node}
+function branch(){if(!parts.length)return;pushHistory();const parent=currentNode;parts=parts.map(p=>({...p,id:idSeq++,x:p.x+(Math.random()-.5)*34,y:p.y+(Math.random()-.5)*24,w:p.w*(.88+Math.random()*.24),h:p.h*(.88+Math.random()*.24),r:p.r+(Math.random()-.5)*.18}));const node=saveNode(parent);setState('CHANGED','branched E'+(parent?.id||0)+' → E'+node.id);setPane('world');draw()}
+function renderMini(c,ps){const w=c.width=160,h=c.height=90;c.fillStyle='#f3f0e7';c.fillRect(0,0,w,h);const sx=.16,sy=.14;c.save();c.scale(sx,sy);drawGhost(c,960,620);ps.forEach(p=>drawPart(c,p,1));c.restore()}
+function renderLineage(){const g=$('lineageGrid');g.innerHTML='';lineage.slice(-8).reverse().forEach(n=>{const b=document.createElement('button');b.className='node'+(currentNode&&n.id===currentNode.id?' on':'');const cv=document.createElement('canvas'),m=document.createElement('div');m.className='nodeMeta';m.innerHTML=`<b>E${n.id}${n.parent?' ← E'+n.parent:''}</b><span>${n.score.parts} parts</span><span>elephant ${n.score.elephant}% · ${n.score.stands?'stands':'unstable'}</span>`;b.append(cv,m);b.onclick=()=>{pushHistory();parts=n.parts.map(p=>({...p,id:idSeq++}));calls=n.calls.map(c=>({...c}));currentNode=n;renderCalls();renderLineage();draw();updateTests();setPane('world');setState('RECOVERY','restored E'+n.id)};g.appendChild(b);renderMini(cv,n.parts)})}
+
+$('permuteBtn').onclick=permute;$('buildBtn').onclick=build;$('branchBtn').onclick=branch;$('undoBtn').onclick=undo;$('clearBtn').onclick=clearWorld;
+window.addEventListener('resize',draw);
+permute();manualPart('block');draw();updateTests();renderLineage();
+</script>
+</body>
+</html>
