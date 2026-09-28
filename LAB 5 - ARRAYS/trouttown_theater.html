@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TROUTTOWN: The Current Calls (Episode 7) // Screening Theater</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+:root {
+  --paper: #ffffff;
+  --bg: #0f1115;
+  --panel: #161920;
+  --panel-border: #262a35;
+  --ink: #f0f2f5;
+  --muted: #8b949e;
+  --red: #ff3b30;
+  --amber: #ffd23f;
+  --teal: #19e6c8;
+  --blue: #3b82f6;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --serif: "IBM Plex Serif", Georgia, serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  -webkit-font-smoothing: antialiased;
+}
+button, a { font: inherit; color: inherit; text-decoration: none; }
+button { cursor: pointer; border-radius: 0; }
+
+/* HEADER */
+header {
+  height: 52px;
+  background: #11141a;
+  border-bottom: 2px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: 14px; font-weight: 700; }
+.badge-ep {
+  background: var(--amber);
+  color: #000;
+  padding: 3px 8px;
+  font-weight: 800;
+  border-radius: 3px;
+}
+.brand-sub { color: var(--muted); font-size: 10px; }
+.nav-actions { display: flex; gap: 10px; }
+.btn-nav {
+  border: 1.5px solid var(--panel-border);
+  background: var(--panel);
+  padding: 5px 12px;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  transition: all .15s;
+  color: var(--ink);
+}
+.btn-nav:hover { background: #262a36; border-color: var(--teal); color: var(--teal); }
+.btn-nav.primary { background: var(--teal); color: #000; border-color: var(--teal); font-weight: 700; }
+.btn-nav.primary:hover { background: #fff; border-color: #fff; }
+
+/* MAIN THEATER LAYOUT */
+.theater-container {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* SCREEN STAGE */
+.stage {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border-right: 2px solid var(--panel-border);
+  overflow: hidden;
+}
+.screen-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #11141c 0%, #000 100%);
+  position: relative;
+  overflow: hidden;
+}
+video#mainVideo {
+  width: 100%;
+  height: 100%;
+  max-height: calc(100vh - 160px);
+  object-fit: contain;
+  background: #000;
+}
+.stage-hud {
+  height: 98px;
+  background: #11141a;
+  border-top: 2px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 24px;
+  gap: 8px;
+}
+.hud-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hud-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hud-cut-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 9.5px;
+  padding: 2px 7px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.hud-meta {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  gap: 16px;
+}
+.hud-meta b { color: var(--ink); }
+
+/* CONTROLS BAR */
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ctrl-group { display: flex; align-items: center; gap: 8px; }
+.ctrl-btn {
+  border: 1.5px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 4px 10px;
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  font-weight: 600;
+  transition: all .15s;
+}
+.ctrl-btn:hover { background: #262a35; border-color: var(--amber); }
+.ctrl-btn.active { background: var(--amber); color: #000; border-color: var(--amber); }
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.toggle-switch input { cursor: pointer; accent-color: var(--teal); }
+
+/* SIDEBAR & PLAYLIST */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  overflow-y: auto;
+}
+
+/* CUT TABS */
+.cut-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 2px solid var(--panel-border);
+  background: #11141a;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.cut-tab {
+  padding: 14px 6px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  border-left: 1px solid var(--panel-border);
+  border-right: 1px solid var(--panel-border);
+  transition: all .15s;
+}
+.cut-tab:hover { color: var(--ink); background: rgba(255,255,255,.03); }
+.cut-tab.active {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+  background: rgba(255, 210, 63, .06);
+}
+
+/* PLAYLIST */
+.playlist-header {
+  padding: 14px 20px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--panel-border);
+}
+.playlist-title { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.playlist-count { font-size: 10px; color: var(--teal); font-weight: 700; }
+
+.parts-list {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 8px;
+  border-bottom: 2px solid var(--panel-border);
+}
+.part-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #12141a;
+  border: 1.5px solid var(--panel-border);
+  cursor: pointer;
+  transition: all .15s;
+}
+.part-card:hover {
+  border-color: var(--teal);
+  background: #181c24;
+}
+.part-card.active {
+  border-color: var(--amber);
+  background: rgba(255, 210, 63, .08);
+}
+.part-num {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: #1c202a;
+  border: 1px solid var(--panel-border);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.part-card.active .part-num {
+  background: var(--amber);
+  color: #000;
+  border-color: var(--amber);
+}
+.part-info { flex: 1; min-width: 0; }
+.part-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.part-card.active .part-title { color: var(--amber); }
+.part-sub {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.part-dur {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  padding: 2px 6px;
+  background: #191c25;
+  border: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+.part-card.active .part-dur {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+/* DOSSIER SECTION */
+.dossier-box {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.dossier-sec-title {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--teal);
+  font-weight: 700;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 6px;
+}
+.dossier-desc { color: #c0c6cf; font-size: 12px; line-height: 1.55; }
+.concepts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+}
+.concepts-list li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 11px;
+  color: #d0d6e0;
+}
+.concepts-list li::before {
+  content: "■";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  font-size: 8px;
+  color: var(--teal);
+}
+.meta-credits {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 12px;
+}
+.meta-credits b { color: var(--ink); }
+
+@media (max-width: 980px) {
+  .theater-container { grid-template-columns: 1fr; height: auto; }
+  .stage { height: 60vh; }
+  .sidebar { height: auto; }
+}
+
+/* QR Code Modal Dialog */
+.qr-modal-scrim {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2500; display: none; place-items: center; padding: 16px;
+}
+.qr-modal-scrim.open { display: grid; }
+.qr-card {
+  width: 100%; max-width: 380px; background: #181c24; border: 2px solid var(--teal); box-shadow: 0 12px 36px rgba(0,0,0,0.6); padding: 22px; text-align: center;
+}
+.qr-tag { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); margin-bottom: 6px; }
+.qr-card h2 { font-size: 18px; margin: 0 0 6px; color: var(--ink); }
+.qr-card p { font-size: 11.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.4; }
+.qr-container { width: 200px; height: 200px; background: #fff; margin: 0 auto 14px; padding: 8px; display: grid; place-items: center; }
+.qr-url-box { background: #11141a; border: 1px solid var(--panel-border); padding: 6px 8px; font-size: 10px; color: #a0a6b2; word-break: break-all; margin-bottom: 14px; text-align: left; }
+.qr-actions { display: flex; gap: 8px; }
+.qr-btn { flex: 1; padding: 8px 12px; font-size: 11px; font-weight: 700; border: 1.5px solid var(--panel-border); background: var(--panel); color: var(--ink); cursor: pointer; }
+.qr-btn:hover { background: var(--teal); color: #000; border-color: var(--teal); }
+.qr-btn.primary { background: var(--teal); color: #000; border-color: var(--teal); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="badge-ep">EPISODE 07</span>
+    <span>TROUTTOWN: The Current Calls</span>
+    <span class="brand-sub">Hand-Coded Multiplane Cartoon</span>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-nav" id="theaterQrBtn" style="border-color:var(--teal);color:var(--teal);font-weight:700;">[ QR CODE ]</button>
+    <a href="index.html" class="btn-nav">← LAB 05 HUB</a>
+    <a href="HOUSE of SILT/index.html" class="btn-nav" style="border-color:var(--amber);color:var(--amber);font-weight:700;">⚡ HOUSE OF SILT STUDIO</a>
+    <a href="../index.html" class="btn-nav">COURSE WHEEL</a>
+    <a href="so-much-depends-lab5.html" class="btn-nav primary">SO MUCH DEPENDS STUDIO →</a>
+  </div>
+</header>
+
+<div class="theater-container">
+  <!-- LEFT: CINEMA STAGE -->
+  <main class="stage">
+    <div class="screen-wrapper">
+      <video id="mainVideo" controls autoplay playsinline></video>
+    </div>
+    <div class="stage-hud">
+      <div class="hud-title-row">
+        <div class="hud-title">
+          <span id="hudCutBadge" class="hud-cut-badge">COLLEGE CUT</span>
+          <span id="hudPartTitle">Part 0: Attendance (setup & draw callbacks)</span>
+        </div>
+        <div class="hud-meta">
+          <span>FRAME COUNT: <b>6,801 CALLS</b></span>
+          <span>RESOLUTION: <b>1080p HD</b></span>
+        </div>
+      </div>
+      <div class="controls-bar">
+        <div class="ctrl-group">
+          <button class="ctrl-btn" id="prevPartBtn" title="Previous Part">⏮ Prev</button>
+          <button class="ctrl-btn" id="nextPartBtn" title="Next Part">Next ⏭</button>
+          <button class="ctrl-btn" id="speedBtn" title="Cycle Speed">1.0x</button>
+          <button class="ctrl-btn" id="fullscreenBtn" title="Fullscreen">⛶ Fullscreen</button>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="autoAdvanceCheck" checked>
+          <span>Auto-advance next part</span>
+        </label>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT: PLAYLIST & DOSSIER -->
+  <aside class="sidebar">
+    <div class="cut-tabs" style="grid-template-columns: repeat(4, 1fr);">
+      <button class="cut-tab active" data-cut="college">College<br><span style="font-size:8px;opacity:.7">5 Parts · Lab</span></button>
+      <button class="cut-tab" data-cut="professional">Pro<br><span style="font-size:8px;opacity:.7">3 Parts · Pure</span></button>
+      <button class="cut-tab" data-cut="middle-school">Middle<br><span style="font-size:8px;opacity:.7">3 Parts · Room 4</span></button>
+      <button class="cut-tab" data-cut="house-of-silt">Silt<br><span style="font-size:8px;opacity:.7">Film & Studio</span></button>
+    </div>
+
+    <div class="playlist-header">
+      <span class="playlist-title">EPISODE CHAPTERS</span>
+      <span class="playlist-count" id="playlistCount">5 PARTS</span>
+    </div>
+
+    <div class="parts-list" id="partsList"></div>
+
+    <div class="dossier-box">
+      <div class="dossier-sec-title">What This Cut Covers</div>
+      <ul class="concepts-list" id="conceptsList"></ul>
+
+      <div class="dossier-sec-title">Story & Educational Premise</div>
+      <p class="dossier-desc" id="storyDesc">
+        The district put attendance on the old TV in Room 4. It marks Finley Current with a C every morning, even the one morning he is early. Ms. Rainey turns the TV around and the class reads the program: a bubble that won't move until someone calls it, a Lost & Found drawer that starts at slot zero, and a crosswalk on Main Street painted by a loop. The bug in the attendance loop is one number.
+      </p>
+
+      <div class="meta-credits">
+        <b>Created by:</b> Watson Hartsoe<br>
+        <b>Animation Code:</b> Claude (Anthropic)<br>
+        <b>Music:</b> Treblo, "Silt, Wire & Mountain Current"<br>
+        <b>Voices:</b> Piper TTS by rhasspy (lessac, libritts, kathleen, ryan)<br>
+        <b>Broadcast:</b> FANTROL RADIO 88.7 · A Consequence Works Production
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function() {
+  const CUTS = {
+    college: {
+      name: "College Cut",
+      badge: "COLLEGE CUT (LAB EDITION)",
+      frames: "6,801 CALLS",
+      poster: "trouttown-ep7-college-thumbnail.png",
+      concepts: [
+        "setup() and draw() are callbacks: you hand them to p5 and p5 calls them. mousePressed() waits for current frame.",
+        "Clear, then update, then draw: order matters every single frame.",
+        "Radius-aware bounce, and why objects placed inside walls shudder if not heading outward.",
+        "Parameterized functions: move(b) works for one bubble or an entire array.",
+        "Zero-based indexing as memory offset; undefined past the end.",
+        "Wrap backward formula: ((i % n) + n) % n (JavaScript % keeps negative sign).",
+        "Reading .length dynamically instead of hardcoded bound.",
+        "width / (count + 1) spacing, parity i % 2, rectMode(CENTER), and noLoop() slack water."
+      ],
+      story: "The district put attendance on the old TV in Room 4. It marks Finley Current with a C every morning, even the one morning he is early. Ms. Rainey turns the TV around and the class reads the program: a bubble that won't move until someone calls it, a Lost & Found drawer that starts at slot zero, and a crosswalk on Main Street painted by a loop.",
+      parts: [
+        { file: "trouttown-ep7-college-part0.mp4", title: "Part 0: Attendance (0:00)", sub: "setup() & draw() callbacks", dur: "1:03" },
+        { file: "trouttown-ep7-college-part1.mp4", title: "Part 1: The TV Turns On (0:30)", sub: "Functions & radius-aware bounce", dur: "0:58" },
+        { file: "trouttown-ep7-college-part2.mp4", title: "Part 2: Lost & Found (2:01)", sub: "Arrays, zero-indexing & offset", dur: "1:05" },
+        { file: "trouttown-ep7-college-part3.mp4", title: "Part 3: The Crosswalk (3:10)", sub: "Loops, modulo & dynamic length", dur: "0:59" },
+        { file: "trouttown-ep7-college-part4.mp4", title: "Part 4: Slack Water & Credits (3:40)", sub: "noLoop(), function arrays & roll call", dur: "0:38" }
+      ]
+    },
+    professional: {
+      name: "Professional Cut",
+      badge: "PROFESSIONAL CUT (ENGINEERING REVIEW)",
+      frames: "6,262 CALLS",
+      poster: "trouttown-ep7-professional-thumbnail.png",
+      concepts: [
+        "Inversion of control: you register setup() and draw(); the runtime owns the loop.",
+        "Pure step(state, bounds, r) with clamping, plus invariants checked every frame.",
+        "Frame-rate independence: deltaTime velocity measurement for 60Hz vs 120Hz displays.",
+        "Cyclic cursor as small immutable module; decisions for empty cases and removals.",
+        "Stable IDs over array indexes: slots move, claim numbers do not.",
+        "A hardcoded loop bound as a latent defect.",
+        "Layout as data from pure functions; push()/pop() to isolate global state (rectMode)."
+      ],
+      story: "This is the Review cut, written for professional developers and computer science instructors. The same episode exists in three cuts; here the code on the board focuses on immutable state, pure functions, invariants, and latent defects.",
+      parts: [
+        { file: "trouttown-ep7-professional-part0.mp4", title: "Part 0: Pure Step & Control (0:00)", sub: "Inversion of control & invariants", dur: "1:32" },
+        { file: "trouttown-ep7-professional-part1.mp4", title: "Part 1: Cyclic Cursor & Stable IDs (1:40)", sub: "Immutable array modules", dur: "1:25" },
+        { file: "trouttown-ep7-professional-part2.mp4", title: "Part 2: Layout as Data & Roll Call (2:45)", sub: "Pure layout funcs & push/pop", dur: "1:24" }
+      ]
+    },
+    "middle-school": {
+      name: "Middle School Cut",
+      badge: "MIDDLE SCHOOL CUT (CLASSROOM)",
+      frames: "6,801 CALLS",
+      poster: "trouttown-ep7-college-thumbnail.png",
+      concepts: [
+        "Room 4 TV: Why computers only do what we tell them to do.",
+        "Functions: Giving a block of instructions a name you can call anytime.",
+        "Arrays: Numbered drawers starting at slot 0.",
+        "Loops: Having the computer repeat work until the job is done.",
+        "Finding and fixing the one-character bug."
+      ],
+      story: "Written for younger learners and middle school classrooms. Explores the friendly story of Finley Current, Ms. Rainey's classroom TV, and how to spot a repeating loop bug.",
+      parts: [
+        { file: "trouttown-ep7-middle-school-part0.mp4", title: "Part 0: The Current Calls (0:00)", sub: "Room 4 TV & Functions", dur: "1:23" },
+        { file: "trouttown-ep7-middle-school-part1.mp4", title: "Part 1: Lost & Found Drawer (1:23)", sub: "Arrays starting at 0", dur: "1:10" },
+        { file: "trouttown-ep7-middle-school-part2.mp4", title: "Part 2: Main Street Loop (2:33)", sub: "Painting crosswalks with a loop", dur: "1:14" }
+      ]
+    },
+    "house-of-silt": {
+      name: "House of Silt Film",
+      badge: "TROUTTOWN: HOUSE OF SILT (1967/1970)",
+      frames: "108 SECONDS",
+      poster: "trouttown-ep7-college-thumbnail.png",
+      concepts: [
+        "In 1967 Alison Knowles wrote four lists and a FORTRAN program picked one word from each: The House of Dust.",
+        "In 1970 she built one of the quatrains at CalArts: Silt, on open ground, natural light, friends and enemies.",
+        "Trouttown was built the same way: every house is one pick from four arrays.",
+        "Words as switches: each word in the object selects the graphical routine that draws it.",
+        "The edge of town: the total number of houses the town can hold is the product of the four array lengths."
+      ],
+      story: "The zoning office prints a quatrain. The paper drifts downstream to an empty lot. The house goes up in four steps, one per line: the material, the place, the light, and who lives there. Open the interactive House of Silt studio to build with the zoning board or edit the p5 code!",
+      parts: [
+        { file: "HOUSE of SILT/trouttown-house-of-silt.mp4", title: "House of Silt: The Animated Film (1080p)", sub: "How the town is built from 4 arrays", dur: "1:48" }
+      ]
+    }
+  };
+
+  const urlParams = new URLSearchParams(window.location.search);
+  let activeCutKey = urlParams.get("cut") || "college";
+  if (!CUTS[activeCutKey]) activeCutKey = "college";
+  let activePartIdx = parseInt(urlParams.get("part") || "0", 10);
+
+  const video = document.getElementById("mainVideo");
+  const hudCutBadge = document.getElementById("hudCutBadge");
+  const hudPartTitle = document.getElementById("hudPartTitle");
+  const partsList = document.getElementById("partsList");
+  const playlistCount = document.getElementById("playlistCount");
+  const conceptsList = document.getElementById("conceptsList");
+  const storyDesc = document.getElementById("storyDesc");
+  const autoAdvanceCheck = document.getElementById("autoAdvanceCheck");
+  const prevBtn = document.getElementById("prevPartBtn");
+  const nextBtn = document.getElementById("nextPartBtn");
+  const speedBtn = document.getElementById("speedBtn");
+  const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+  const speeds = [1.0, 1.25, 1.5, 0.75];
+  let speedIdx = 0;
+
+  function loadPart(partIndex, autoplay = true) {
+    const cut = CUTS[activeCutKey];
+    activePartIdx = Math.max(0, Math.min(cut.parts.length - 1, partIndex));
+    const part = cut.parts[activePartIdx];
+
+    hudCutBadge.textContent = cut.badge;
+    hudPartTitle.textContent = part.title + " · " + part.sub;
+    video.src = part.file;
+    video.poster = cut.poster;
+    if (autoplay) {
+      video.play().catch(() => {});
+    }
+
+    // Update active highlight
+    const cards = partsList.querySelectorAll(".part-card");
+    cards.forEach((c, idx) => {
+      c.classList.toggle("active", idx === activePartIdx);
+    });
+
+    // Update URL without reload
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set("cut", activeCutKey);
+    newUrl.searchParams.set("part", activePartIdx);
+    window.history.replaceState({}, "", newUrl.toString());
+  }
+
+  function renderCut() {
+    const cut = CUTS[activeCutKey];
+    hudCutBadge.textContent = cut.badge;
+    playlistCount.textContent = cut.parts.length + " PARTS";
+
+    // Concepts
+    conceptsList.innerHTML = cut.concepts.map(c => `<li>${c}</li>`).join("");
+    storyDesc.textContent = cut.story;
+
+    // Tabs
+    document.querySelectorAll(".cut-tab").forEach(tab => {
+      tab.classList.toggle("active", tab.dataset.cut === activeCutKey);
+    });
+
+    // Parts list
+    partsList.innerHTML = cut.parts.map((p, idx) => `
+      <div class="part-card${idx === activePartIdx ? " active" : ""}" data-idx="${idx}">
+        <div class="part-num">${idx}</div>
+        <div class="part-info">
+          <div class="part-title">${p.title}</div>
+          <div class="part-sub">${p.sub}</div>
+        </div>
+        <div class="part-dur">${p.dur}</div>
+      </div>
+    `).join("");
+
+    partsList.querySelectorAll(".part-card").forEach(card => {
+      card.addEventListener("click", () => {
+        loadPart(parseInt(card.dataset.idx, 10), true);
+      });
+    });
+
+    loadPart(activePartIdx, false);
+  }
+
+  // Switch cut
+  document.querySelectorAll(".cut-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeCutKey = tab.dataset.cut;
+      activePartIdx = 0;
+      renderCut();
+    });
+  });
+
+  // Next / Prev buttons
+  prevBtn.addEventListener("click", () => {
+    if (activePartIdx > 0) loadPart(activePartIdx - 1, true);
+  });
+  nextBtn.addEventListener("click", () => {
+    const cut = CUTS[activeCutKey];
+    if (activePartIdx < cut.parts.length - 1) loadPart(activePartIdx + 1, true);
+  });
+
+  // Auto advance
+  video.addEventListener("ended", () => {
+    if (autoAdvanceCheck.checked) {
+      const cut = CUTS[activeCutKey];
+      if (activePartIdx < cut.parts.length - 1) {
+        loadPart(activePartIdx + 1, true);
+      }
+    }
+  });
+
+  // Speed cycle
+  speedBtn.addEventListener("click", () => {
+    speedIdx = (speedIdx + 1) % speeds.length;
+    const spd = speeds[speedIdx];
+    video.playbackRate = spd;
+    speedBtn.textContent = spd + "x";
+  });
+
+  // Fullscreen
+  fullscreenBtn.addEventListener("click", () => {
+    if (video.requestFullscreen) video.requestFullscreen();
+    else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+  });
+
+  // Keyboard navigation
+  window.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (video.paused) video.play(); else video.pause();
+    } else if (e.code === "ArrowRight") {
+      if (e.shiftKey) {
+        const cut = CUTS[activeCutKey];
+        if (activePartIdx < cut.parts.length - 1) loadPart(activePartIdx + 1, true);
+      } else {
+        video.currentTime += 5;
+      }
+    } else if (e.code === "ArrowLeft") {
+      if (e.shiftKey) {
+        if (activePartIdx > 0) loadPart(activePartIdx - 1, true);
+      } else {
+        video.currentTime -= 5;
+      }
+    } else if (e.key.toLowerCase() === "c") {
+      const cutKeys = Object.keys(CUTS);
+      const nextCut = cutKeys[(cutKeys.indexOf(activeCutKey) + 1) % cutKeys.length];
+      activeCutKey = nextCut;
+      activePartIdx = 0;
+      renderCut();
+    }
+  });
+
+  // QR Code Modal
+  const theaterQrBtn = document.getElementById("theaterQrBtn");
+  const qrModal = document.getElementById("qrModal");
+  const qrTitle = document.getElementById("qrTitle");
+  const qrContainer = document.getElementById("qrContainer");
+  const qrUrlBox = document.getElementById("qrUrlBox");
+  const qrCopyBtn = document.getElementById("qrCopyBtn");
+  const qrCloseBtn = document.getElementById("qrCloseBtn");
+
+  theaterQrBtn.addEventListener("click", () => {
+    const prodUrl = `https://hartswf0.github.io/2700-fa26/LAB%205%20-%20ARRAYS/trouttown_theater.html?cut=${activeCutKey}&part=${activePartIdx}`;
+    qrTitle.textContent = `${CUTS[activeCutKey].title} (Part ${activePartIdx})`;
+    qrUrlBox.textContent = prodUrl;
+    const enc = encodeURIComponent(prodUrl);
+    qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=${enc}" alt="QR Code" width="200" height="200" style="display:block;width:100%;height:100%;" onerror="this.outerHTML='<div style=\\'font-family:monospace;font-size:10px;padding:20px;\\'>Scan URL:<br>${prodUrl}</div>'" />`;
+    qrModal.classList.add("open");
+  });
+
+  qrCloseBtn.addEventListener("click", () => qrModal.classList.remove("open"));
+  qrModal.addEventListener("click", (e) => { if (e.target === qrModal) qrModal.classList.remove("open"); });
+  qrCopyBtn.addEventListener("click", () => {
+    const text = qrUrlBox.textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => alert("Direct link copied!"));
+    else prompt("Copy link:", text);
+  });
+
+  // Init
+  renderCut();
+})();
+</script>
+
+<!-- QR Scanner Modal -->
+<div class="qr-modal-scrim" id="qrModal">
+  <div class="qr-card">
+    <div class="qr-tag">[ SCAN TO WATCH ON MOBILE ]</div>
+    <h2 id="qrTitle">Trouttown Cinema</h2>
+    <p>Scan with your phone to stream this cartoon cut instantly:</p>
+    <div class="qr-container" id="qrContainer"></div>
+    <div class="qr-url-box" id="qrUrlBox"></div>
+    <div class="qr-actions">
+      <button class="qr-btn primary" id="qrCopyBtn">Copy Link</button>
+      <button class="qr-btn" id="qrCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

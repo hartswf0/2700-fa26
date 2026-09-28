@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>LAB 05: ARRAYS, OBJECTS & GENERATIVE LITERATURE // Master Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,a{font:inherit;color:inherit}
+a{text-decoration:none}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 36px;border-bottom:3px solid #111;background:#fff;position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-badge{background:#111;color:#ff3b30;font:900 11px/1 ui-monospace,monospace;padding:6px 10px;border-radius:4px;letter-spacing:.08em}
+.brand-title{font:900 20px/1 Arial,sans-serif;letter-spacing:-.03em}
+.header-links{display:flex;gap:12px;flex-wrap:wrap}
+.h-btn{border:2px solid #111;background:#fff;padding:6px 14px;border-radius:6px;font:800 12px/1 ui-monospace,monospace;cursor:pointer;transition:all .1s}
+.h-btn:hover{background:#111;color:#fff}
+.h-btn.primary{background:#ff3b30;color:#fff}
+.h-btn.primary:hover{background:#111;color:#ff3b30}
+.h-btn.amber{background:#ffd23f;color:#000}
+.h-btn.amber:hover{background:#111;color:#ffd23f}
+
+/* CONTAINER */
+.container{max-width:1440px;margin:0 auto;padding:40px 36px 80px}
+
+/* HERO SECTION */
+.hero{margin-bottom:40px}
+.hero-tag{font:900 13px/1 ui-monospace,monospace;letter-spacing:.1em;color:#ff3b30;margin-bottom:12px}
+.hero-title{font-size:clamp(40px,5.8vw,86px);font-weight:900;line-height:.92;letter-spacing:-.05em;margin:0 0 24px}
+.hero-lead{font:800 clamp(18px,2vw,27px)/1.28 Arial,sans-serif;max-width:1120px;margin-bottom:28px;color:#222}
+
+/* 4-LAYER HIERARCHY BAR */
+.hierarchy-bar{background:#f6f3ec;border:3px solid #111;border-radius:8px;padding:20px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:48px}
+.layer-step{display:flex;flex-direction:column;gap:6px;position:relative}
+.layer-step:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:20px;font:900 24px/1 ui-monospace,monospace;color:#111}
+.layer-num{font:900 11px/1 ui-monospace,monospace;letter-spacing:.08em;color:#ff3b30}
+.layer-name{font:900 19px/1 Arial,sans-serif;letter-spacing:-.02em}
+.layer-dir{font:700 11px/1.35 ui-monospace,monospace;color:#444}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:28px}
+.section-title{font-size:26px;font-weight:900;letter-spacing:-.03em;margin:0}
+.section-count{font:900 13px/1 ui-monospace,monospace}
+
+/* CINEMA SECTION */
+.cinema-banner{background:#11141a;color:#fff;border:3px solid #111;border-radius:8px;padding:28px;margin-bottom:48px;display:grid;grid-template-columns:1fr 480px;gap:32px;box-shadow:8px 8px 0 #111}
+.cinema-info{display:flex;flex-direction:column;justify-content:space-between}
+.cinema-badge{display:inline-block;background:#ffd23f;color:#000;font:900 10.5px/1 ui-monospace,monospace;padding:5px 9px;border-radius:3px;letter-spacing:.1em;margin-bottom:12px}
+.cinema-title{font-size:clamp(28px,3vw,42px);font-weight:900;line-height:1;margin-bottom:14px;color:#fff}
+.cinema-desc{font:500 14px/1.5 ui-monospace,monospace;color:#a8b3cf;margin-bottom:24px}
+.cinema-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.cinema-pill{background:#1d222d;border:1px solid #313849;padding:5px 10px;font:700 10.5px/1 ui-monospace,monospace;color:#19e6c8;border-radius:4px}
+.cinema-actions{display:flex;gap:12px;flex-wrap:wrap}
+.cinema-player-box{background:#000;border:2px solid #313849;border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+.cinema-video{width:100%;aspect-ratio:16/9;background:#000;display:block}
+.cinema-player-footer{padding:10px 14px;background:#181c25;border-top:1px solid #313849;display:flex;align-items:center;justify-content:space-between;font:700 11px/1 ui-monospace,monospace;color:#ffd23f}
+
+/* ARTIFACTS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:24px;margin-bottom:56px}
+.card{border:3px solid #111;border-radius:8px;background:#fff;padding:28px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .12s,box-shadow .12s}
+.card:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 #111}
+.card.featured{background:#fff2f0;border-width:4px}
+.card.featured.amber{background:#fffbe6}
+.card.pending{background:#f9f9f9;border-style:dashed}
+.card-header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.card-handle{font:900 11px/1 ui-monospace,monospace;background:#111;color:#fff;padding:4px 8px;border-radius:4px}
+.card-tier{font:800 12px/1 ui-monospace,monospace;letter-spacing:.04em;color:#555}
+.card-title{font-size:clamp(22px,2.2vw,30px);font-weight:900;line-height:1.05;letter-spacing:-.03em;margin:0 0 12px}
+.card-desc{font:700 14px/1.4 Arial,sans-serif;color:#222;margin-bottom:20px;flex:1}
+.card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+.meta-chip{border:1.5px solid #111;background:#fff;padding:4px 8px;border-radius:4px;font:700 11px/1 ui-monospace,monospace}
+.meta-chip.red{background:#ffebee;color:#b3261e;border-color:#b3261e}
+.meta-chip.amber{background:#fff8e1;color:#8d6e00;border-color:#8d6e00}
+.meta-chip.pending{background:#eee;color:#777;border-color:#aaa}
+.card-actions{display:flex;gap:10px}
+.card-btn{flex:1;border:2.5px solid #111;background:#fff;padding:12px;border-radius:6px;font:900 13px/1 ui-monospace,monospace;text-align:center;cursor:pointer;transition:all .1s}
+.card-btn:hover{background:#111;color:#fff}
+.card-btn.primary{background:#ff3b30;color:#fff}
+.card-btn.primary:hover{background:#111;color:#ff3b30}
+.card-btn.amber{background:#ffd23f;color:#000}
+.card-btn.amber:hover{background:#111;color:#ffd23f}
+.card-btn.disabled{background:#e0e0e0;color:#888;border-color:#aaa;cursor:not-allowed}
+.card-btn.qr-btn{flex:0 0 auto;min-width:44px;padding:12px 10px;font-weight:900;background:#fbfbf9}
+.card-btn.qr-btn:hover{background:#ffd23f;color:#111;border-color:#111}
+
+/* QR Code Modal Dialog */
+.qr-modal-scrim{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;z-index:2500;place-items:center;padding:16px}
+.qr-modal-scrim.open{display:grid}
+.qr-card{width:100%;max-width:400px;background:#fbfbf9;border:3px solid #111;box-shadow:8px 8px 0 #111;padding:24px;text-align:center}
+.qr-tag{font:900 11px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#ff3b30;margin-bottom:8px}
+.qr-card h2{font-size:20px;font-weight:900;letter-spacing:-.02em;margin:0 0 6px;color:#111}
+.qr-card p{font:700 12.5px/1.4 Arial,sans-serif;color:#555;margin:0 0 16px}
+.qr-container{width:220px;height:220px;background:#fff;border:2.5px solid #111;margin:0 auto 16px;padding:10px;display:grid;place-items:center}
+.qr-container img{width:100%;height:100%;display:block}
+.qr-url-box{background:#eee;border:1.5px solid #ccc;border-radius:4px;padding:8px 10px;font:700 10.5px/1.3 ui-monospace,monospace;color:#333;word-break:break-all;margin-bottom:16px;text-align:left}
+.qr-actions{display:flex;gap:8px}
+.qr-btn-action{flex:1;padding:10px 14px;font:900 12px/1 ui-monospace,monospace;border:2px solid #111;background:#fff;cursor:pointer;transition:all .1s}
+.qr-btn-action:hover{background:#ffd23f}
+.qr-btn-action.primary{background:#111;color:#fff}
+.qr-btn-action.primary:hover{background:#ff3b30}
+
+/* EMBED PREVIEW DRAWER */
+#previewDrawer{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;z-index:100;place-items:center;padding:24px}
+#previewDrawer.active{display:grid}
+.drawer-shell{width:100%;max-width:1420px;height:92vh;background:#fff;border:4px solid #111;box-shadow:16px 16px 0 #111;display:grid;grid-template-rows:54px 1fr;overflow:hidden}
+.drawer-bar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#ffd23f;border-bottom:3px solid #111}
+.drawer-bar-title{font:900 16px/1 ui-monospace,monospace}
+.drawer-actions{display:flex;gap:10px}
+.drawer-btn{border:2px solid #111;background:#fff;padding:6px 12px;border-radius:4px;font:900 12px/1 ui-monospace,monospace;cursor:pointer}
+.drawer-btn:hover{background:#111;color:#fff}
+iframe.preview-frame{width:100%;height:100%;border:0;display:block}
+
+/* FOOTER */
+footer{border-top:3px solid #111;padding:32px 36px;display:flex;align-items:center;justify-content:space-between;background:#fff;flex-wrap:wrap;gap:16px}
+.footer-text{font:700 13px/1.4 Arial,sans-serif;color:#444}
+.footer-text b{color:#111}
+.footer-links{display:flex;gap:12px}
+
+@media(max-width:980px){
+  .cinema-banner{grid-template-columns:1fr;padding:20px}
+  .hierarchy-bar{grid-template-columns:1fr 1fr}
+  .cards-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-badge">FALL 2026</span>
+    <span class="brand-title">INTRO TO COMPUTATIONAL MEDIA · LAB 5</span>
+  </div>
+  <div class="header-links">
+    <a href="../index.html" class="h-btn">← COURSE WHEEL</a>
+    <a href="so-much-depends-lab5.html" class="h-btn primary">★ SO MUCH DEPENDS STUDIO (26)</a>
+    <a href="HOUSE of SILT/index.html" class="h-btn amber" style="font-weight:900;">⚡ HOUSE OF SILT (STUDIO & FILM)</a>
+    <a href="trouttown_theater.html" class="h-btn">TROUTTOWN THEATER</a>
+    <a href="so-much-depends-lab5.html#s24" class="h-btn">BANK BUILDER</a>
+  </div>
+</header>
+
+<div class="container">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">PHASE I: FOUNDATION · LAB 05 // WEEK 06 · SEP 30</div>
+    <h1 class="hero-title">ARRAYS, OBJECTS & GENERATIVE LITERATURE</h1>
+    <div class="hero-lead">
+      A loop is not only repetition; an array is not only storage; randomness is not only a function. Lab 5 investigates the perceptual and agential consequences of objects, arrays, and generative combinations—from William Carlos Williams' 1923 red wheelbarrow to Alison Knowles' 1967 House of Dust and Watson Hartsoe's Trouttown.
+    </div>
+
+    <!-- 4-LAYER HIERARCHY BAR -->
+    <div class="hierarchy-bar">
+      <div class="layer-step">
+        <span class="layer-num">01 · OBJECT</span>
+        <span class="layer-name">ONE STANZA</span>
+        <span class="layer-dir">Groups what describes one thing (Properties & Values)</span>
+      </div>
+      <div class="layer-step">
+        <span class="layer-num">02 · ARRAY</span>
+        <span class="layer-name">NUMBERED SEATS</span>
+        <span class="layer-dir">Zero-based memory offset & dynamic .length bound</span>
+      </div>
+      <div class="layer-step">
+        <span class="layer-num">03 · LOOP</span>
+        <span class="layer-name">VISITS EVERY SEAT</span>
+        <span class="layer-dir">Pointer traversal ($i=0; i < \text{length}; i++$)</span>
+      </div>
+      <div class="layer-step">
+        <span class="layer-num">04 · FUNCTION</span>
+        <span class="layer-name">THE NAMED JOB</span>
+        <span class="layer-dir">Inversion of control, pure steps & callbacks</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TROUTTOWN SCREENING ROOM BANNER -->
+  <section class="cinema-banner">
+    <div class="cinema-info">
+      <div>
+        <span class="cinema-badge">HAND-CODED MULTIPLANE CARTOON</span>
+        <h2 class="cinema-title">Trouttown Ep 7: The Current Calls</h2>
+        <p class="cinema-desc">
+          The district put attendance on the old TV in Room 4. It marks Finley Current with a C every morning, even the one morning he is early. Ms. Rainey turns the TV around and the class reads the program: a bubble that won't move until someone calls it, a Lost & Found drawer that starts at slot zero, and a crosswalk on Main Street painted by a loop.
+        </p>
+        <div class="cinema-pills">
+          <span class="cinema-pill">setup() & draw() Callbacks</span>
+          <span class="cinema-pill">Zero-Based Offset</span>
+          <span class="cinema-pill">Modulo Wrap Formula</span>
+          <span class="cinema-pill">Dynamic .length</span>
+          <span class="cinema-pill">Pure step() Functions</span>
+          <span class="cinema-pill">noLoop() Slack Water</span>
+        </div>
+      </div>
+      <div class="cinema-actions">
+        <a href="trouttown_theater.html" class="h-btn amber" style="padding:12px 20px;font-size:13px;">⚡ Open Screening Theater (All 3 Cuts) →</a>
+        <button class="h-btn" onclick="openPreview('trouttown_theater.html', 'Trouttown Theater')">Preview Theater</button>
+        <button class="h-btn" onclick="openQrModal('trouttown_theater.html', 'Trouttown Ep 7 Screening Theater')">[ QR CODE ]</button>
+      </div>
+    </div>
+    <div class="cinema-player-box">
+      <video class="cinema-video" controls poster="trouttown-ep7-college-thumbnail.png" preload="metadata">
+        <source src="trouttown-ep7-college-part0.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+      </video>
+      <div class="cinema-player-footer">
+        <span>COLLEGE CUT · PART 0: ATTENDANCE</span>
+        <span>6,801 DRAW CALLS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOUSE OF SILT SHOWCASE BANNER -->
+  <section class="cinema-banner" style="background:#101c17; border-color:#2f463b; box-shadow:8px 8px 0 #1b2a22; margin-bottom:48px;">
+    <div class="cinema-info">
+      <div>
+        <span class="cinema-badge" style="background:#d9774f; color:#fff;">ALISON KNOWLES (1967) · INTERACTIVE STUDIO</span>
+        <h2 class="cinema-title" style="color:#eef0e4; font-family:'Alfa Slab One', Rockwell, Georgia, serif; letter-spacing:.02em;">Trouttown: House of Silt</h2>
+        <p class="cinema-desc" style="color:#cfe3c8;">
+          In 1967 Alison Knowles wrote four lists and a FORTRAN program picked one word from each, printing quatrain after quatrain: <i>The House of Dust</i>. In 1970 she built one of them at CalArts. Trouttown was built the same way. Every house below is one pick from four arrays, and each word selects the graphical routine that draws it.
+        </p>
+        <div class="cinema-pills">
+          <span class="cinema-pill" style="color:#f2d27a; background:#1e3228; border-color:#2f463b;">FILM: Real-Time Multiplane Canvas</span>
+          <span class="cinema-pill" style="color:#f2d27a; background:#1e3228; border-color:#2f463b;">BUILD: Interactive Zoning Board &amp; .push()</span>
+          <span class="cinema-pill" style="color:#f2d27a; background:#1e3228; border-color:#2f463b;">CODE: In-Browser IDE &amp; Sandboxed TV</span>
+          <span class="cinema-pill" style="color:#f2d27a; background:#1e3228; border-color:#2f463b;">112-Line Pure p5.js Reference</span>
+        </div>
+      </div>
+      <div class="cinema-actions">
+        <a href="HOUSE of SILT/index.html" class="h-btn" style="background:#c9a24a; color:#1b1408; font-weight:800; padding:12px 20px; font-size:13px;">★ Open House of Silt Studio →</a>
+        <a href="HOUSE of SILT/5-house-of-silt.html" class="h-btn" style="background:#1e3228; color:#f2d27a; border-color:#2f463b;">Run p5.js Sketch</a>
+        <a href="HOUSE of SILT/5-house-of-silt.js" target="_blank" class="h-btn" style="background:#1e3228; color:#eef0e4; border-color:#2f463b;">View Source</a>
+        <button class="h-btn" onclick="openPreview('HOUSE of SILT/index.html', 'House of Silt Studio')">Preview</button>
+        <button class="h-btn" onclick="openQrModal('HOUSE of SILT/index.html', 'House of Silt Studio')" style="background:#1e3228; color:#f2d27a; border-color:#2f463b;">[ QR ]</button>
+      </div>
+    </div>
+    <div class="cinema-player-box" style="border-color:#2f463b;">
+      <video class="cinema-video" controls poster="trouttown-ep7-college-thumbnail.png" preload="metadata">
+        <source src="HOUSE of SILT/trouttown-house-of-silt.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+      </video>
+      <div class="cinema-player-footer" style="background:#17271f; border-color:#2f463b; color:#f2d27a;">
+        <span>HOUSE OF SILT · THE ANIMATED FILM (1080p)</span>
+        <span>1:48 DURATION</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARTIFACTS LIST -->
+  <div class="section-header">
+    <h2 class="section-title">LAB 5 ARTIFACT ARCHIVE &amp; ACTIVE SUITE</h2>
+    <span class="section-count">15 CURATED UNITS</span>
+  </div>
+
+  <div class="cards-grid">
+    <!-- HOUSE OF SILT: PRIMARY STUDIO APP -->
+    <div class="card featured" style="background:#f4f7f2; border-color:#2f463b; border-width:4px;">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#2f463b; color:#f2d27a;">HS.01 · STUDIO</span>
+          <span class="card-tier" style="color:#2f463b; font-weight:900;">PRIMARY 03 · HOUSE OF SILT STUDIO</span>
+        </div>
+        <h3 class="card-title">House of Silt: Film, Build &amp; Code Studio</h3>
+        <p class="card-desc">
+          <b>Complete interactive Trouttown environment.</b> Features 3 integrated operating modes: <b>FILM</b> (real-time 60fps multiplane canvas animation with scrub bar), <b>BUILD</b> (interactive 4-array zoning board with live quatrain, JSON object literal, and <code>.push()</code> dynamic word additions), and <b>CODE</b> (in-browser IDE with live sandboxed TV and console log).
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip" style="background:#1e3228; color:#f2d27a; border-color:#2f463b;">FILM / BUILD / CODE</span>
+          <span class="meta-chip">Zoning Board .push()</span>
+          <span class="meta-chip">Live Multiplane Canvas</span>
+          <span class="meta-chip">Built-in IDE</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="HOUSE of SILT/index.html" class="card-btn" style="background:#c9a24a; color:#1b1408; font-weight:800;">★ Launch Studio →</a>
+        <button class="card-btn" onclick="openPreview('HOUSE of SILT/index.html', 'House of Silt Studio')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('HOUSE of SILT/index.html', 'House of Silt Studio')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- HOUSE OF SILT: INTERACTIVE SKETCH RUNNER -->
+    <div class="card featured" style="background:#f4f7f2; border-color:#2f463b;">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#2f463b; color:#f2d27a;">HS.02 · RUNNER</span>
+          <span class="card-tier" style="color:#2f463b; font-weight:900;">INTERACTIVE P5.JS RUNNER</span>
+        </div>
+        <h3 class="card-title">House of Silt: p5.js Sketch Runner</h3>
+        <p class="card-desc">
+          Dedicated responsive web runner executing <code>5-house-of-silt.js</code> in p5.js. Click directly on the river canvas to generate Knowles' 1967 quatrain houses at custom X coordinates, hover near any house to inspect its 4-line poem, or spawn Knowles' 1970 CalArts prototype.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">Standalone Web Canvas</span>
+          <span class="meta-chip">Click to Build (X Coord)</span>
+          <span class="meta-chip">HUD Quatrain Inspector</span>
+          <span class="meta-chip">CalArts 1970 Preset</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="HOUSE of SILT/5-house-of-silt.html" class="card-btn primary">★ Run Sketch →</a>
+        <button class="card-btn" onclick="openPreview('HOUSE of SILT/5-house-of-silt.html', 'House of Silt Runner')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('HOUSE of SILT/5-house-of-silt.html', 'House of Silt Sketch Runner')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- HOUSE OF SILT: FILM -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#d9774f; color:#fff;">HS.03 · FILM</span>
+          <span class="card-tier">HD ANIMATION (1080p)</span>
+        </div>
+        <h3 class="card-title">Trouttown: House of Silt Film</h3>
+        <p class="card-desc">
+          108-second 1080p cartoon film showing how Trouttown is built from the zoning office quatrain down to the creek. The zoning office prints a quatrain, the paper drifts downstream, and the house goes up in four sequential steps.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">1:48 Duration</span>
+          <span class="meta-chip">1080p 16:9 HD</span>
+          <span class="meta-chip">Multiplane Animation</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="HOUSE of SILT/trouttown-house-of-silt.mp4" target="_blank" class="card-btn primary">Watch Film →</a>
+        <button class="card-btn" onclick="openPreview('HOUSE of SILT/trouttown-house-of-silt.mp4', 'House of Silt Film')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('HOUSE of SILT/trouttown-house-of-silt.mp4', 'House of Silt Film')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- HOUSE OF SILT: REFERENCE SKETCH CODE -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#2f463b; color:#fff;">HS.04 · CODE</span>
+          <span class="card-tier">REFERENCE P5.JS SOURCE</span>
+        </div>
+        <h3 class="card-title">House of Silt: 5-house-of-silt.js</h3>
+        <p class="card-desc">
+          Standalone 112-line p5.js reference implementation. Four categorical arrays (<code>materials</code>, <code>locations</code>, <code>lights</code>, <code>inhabitants</code>), <code>makeHouse(x)</code> object factory, <code>quatrain()</code> printer, and <code>drawHouse()</code> procedural routine turning words directly into architectural drawings.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">112 Clean Lines</span>
+          <span class="meta-chip">makeHouse() Object Factory</span>
+          <span class="meta-chip">drawHouse() Branching</span>
+          <span class="meta-chip">Array .length Bound</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="HOUSE of SILT/5-house-of-silt.js" target="_blank" class="card-btn primary">View Source →</a>
+        <button class="card-btn" onclick="openPreview('HOUSE of SILT/5-house-of-silt.js', '5-house-of-silt.js')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('HOUSE of SILT/5-house-of-silt.js', 'House of Silt Source Code')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 1. MAIN STUDIO: SO MUCH DEPENDS UPON AN ARRAY -->
+    <div class="card featured">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#ff3b30;color:#fff;">L5.01 · PRIMARY</span>
+          <span class="card-tier">PRIMARY STUDIO WORKBENCH</span>
+        </div>
+        <h3 class="card-title">So Much Depends Upon an Array (Main Studio)</h3>
+        <p class="card-desc">
+          <b>The core foundation for Lab 5.</b> Complete 26-slide interactive studio deck and workbench: William Carlos Williams' 1923 poem, Alison Knowles' 1967 House of Dust, interactive steppers, state inspector, bug hunt game, Monte Carlo probability grid, and the complete farmscape generator.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip red">26 Interactive Slides</span>
+          <span class="meta-chip">Farmscape Simulator</span>
+          <span class="meta-chip">Knowles 1967 Generator</span>
+          <span class="meta-chip">Inlined p5.js v1.9.4</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="so-much-depends-lab5.html" class="card-btn primary">★ Launch Main Studio →</a>
+        <button class="card-btn" onclick="openPreview('so-much-depends-lab5.html', 'So Much Depends Main Studio')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('so-much-depends-lab5.html', 'So Much Depends Main Studio')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 2. TROUTTOWN THEATER -->
+    <div class="card featured amber">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#111;color:#ffd23f;">L5.02 · CINEMA</span>
+          <span class="card-tier">PEDAGOGICAL CARTOON THEATER</span>
+        </div>
+        <h3 class="card-title">Trouttown Ep 7: Screening Theater</h3>
+        <p class="card-desc">
+          <b>Dedicated video cinema.</b> Features Watson Hartsoe's hand-coded cartoon with Claude animation code. Watch College (5 parts), Professional (3 parts), and Middle School (3 parts) cuts with auto-advance, speed toggle, and deep technical notes.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip amber">3 Cuts (11 Parts)</span>
+          <span class="meta-chip">1080p Multiplane</span>
+          <span class="meta-chip">Chapter Playlists</span>
+          <span class="meta-chip">Keyboard Nav</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown_theater.html" class="card-btn amber">Launch Theater →</a>
+        <button class="card-btn" onclick="openPreview('trouttown_theater.html', 'Trouttown Screening Theater')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('trouttown_theater.html', 'Trouttown Ep 7 Screening Theater')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 3. STUDIO BANK BUILDER -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle">L5.03</span>
+          <span class="card-tier">HANDS-ON STUDIO WORKBENCH</span>
+        </div>
+        <h3 class="card-title">Generative Bank Builder &amp; p5.js Exporter</h3>
+        <p class="card-desc">
+          Interactive blank-and-bank workbench directly from Slide 24. Write a frame with four blanks ({A}, {B}, {C}, {D}), populate word banks, observe live combinatoric formula multiplication ($N_A \times N_B \times N_C \times N_D$), and export runnable p5.js code.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">Live Combinatorics</span>
+          <span class="meta-chip">Instant Code Export</span>
+          <span class="meta-chip">Williams &amp; Knowles Presets</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="so-much-depends-lab5.html#s24" class="card-btn primary">Open Builder →</a>
+        <button class="card-btn" onclick="openPreview('so-much-depends-lab5.html#s24', 'Generative Bank Builder')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('so-much-depends-lab5.html#s24', 'Generative Bank Builder')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 4. ALISON KNOWLES HOUSE OF DUST -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle">L5.04</span>
+          <span class="card-tier">GENERATIVE LITERATURE ARCHITECTURE</span>
+        </div>
+        <h3 class="card-title">Alison Knowles: A House of Dust (1967)</h3>
+        <p class="card-desc">
+          Theoretical and historical foundation exploring the 1967 computer poem created by Alison Knowles and James Tenney that became physical architecture at CalArts. Includes live greenbar terminal simulator running Knowles's lists.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">Historical Lineage</span>
+          <span class="meta-chip">Live Printout Simulator</span>
+          <span class="meta-chip">CalArts Architecture</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="so-much-depends-lab5.html#s5" class="card-btn primary">Open Archive →</a>
+        <button class="card-btn" onclick="openPreview('so-much-depends-lab5.html#s5', 'A House of Dust')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('so-much-depends-lab5.html#s5', 'Alison Knowles: A House of Dust')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 5. 1,296 POEMS MONTE CARLO GRID -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle">L5.05</span>
+          <span class="card-tier">PROBABILITY &amp; CHANCE</span>
+        </div>
+        <h3 class="card-title">1,296 Poems: Monte Carlo Probability Grid</h3>
+        <p class="card-desc">
+          Visualizing the full $6 \times 6 \times 6 \times 6 = 1,296$ combinatoric space. Interactive Monte Carlo trial runner comparing class predictions against experimental distributions, demonstrating why the mean sits at 1,296 while the median lands near ~900.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">500-Trial Simulator</span>
+          <span class="meta-chip">Mean vs Median</span>
+          <span class="meta-chip">Distribution Histogram</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="so-much-depends-lab5.html#s21" class="card-btn primary">Run Simulator →</a>
+        <button class="card-btn" onclick="openPreview('so-much-depends-lab5.html#s21', 'Monte Carlo Grid')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('so-much-depends-lab5.html#s21', '1,296 Poems: Monte Carlo Probability Grid')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 6. TROUTTOWN COLLEGE CUT -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle">TT.01</span>
+          <span class="card-tier">HD ANIMATION · LAB EDITION</span>
+        </div>
+        <h3 class="card-title">Trouttown Ep 7: College Cut (5 Parts)</h3>
+        <p class="card-desc">
+          Complete 5-part college lecture cut: setup/draw callbacks, radius-aware bounce physics, zero-based indexing as offset, dynamic .length vs hardcoded bounds, negative modulo wrapping, and noLoop() slack water.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">5 HD Chapters</span>
+          <span class="meta-chip">6,801 Draw Calls</span>
+          <span class="meta-chip">1080p 16:9</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown_theater.html?cut=college" class="card-btn primary">Watch College Cut →</a>
+        <button class="card-btn" onclick="openPreview('trouttown_theater.html?cut=college', 'Trouttown College Cut')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('trouttown_theater.html?cut=college', 'Trouttown Ep 7: College Cut')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 7. TROUTTOWN PROFESSIONAL CUT -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle">TT.02</span>
+          <span class="card-tier">HD ANIMATION · CS REVIEW</span>
+        </div>
+        <h3 class="card-title">Trouttown Ep 7: Professional Cut (3 Parts)</h3>
+        <p class="card-desc">
+          Engineering review cut: inversion of control, pure step(state, bounds, r) with clamping, invariants checked every frame, deltaTime velocity independence for 120Hz displays, cyclic cursor modules, and stable IDs over array indexes.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">Pure Functions</span>
+          <span class="meta-chip">Invariants</span>
+          <span class="meta-chip">Stable IDs</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown_theater.html?cut=professional" class="card-btn primary">Watch Pro Cut →</a>
+        <button class="card-btn" onclick="openPreview('trouttown_theater.html?cut=professional', 'Trouttown Professional Cut')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('trouttown_theater.html?cut=professional', 'Trouttown Ep 7: Professional Cut')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 8. TROUTTOWN MIDDLE SCHOOL CUT -->
+    <div class="card">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle">TT.03</span>
+          <span class="card-tier">HD ANIMATION · CLASSROOM</span>
+        </div>
+        <h3 class="card-title">Trouttown Ep 7: Middle School Cut (3 Parts)</h3>
+        <p class="card-desc">
+          Friendly classroom cut: Room 4 TV, why computers only do what we tell them, functions as named instructions, arrays as numbered drawers, and finding the repeating loop defect.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip">Classroom Friendly</span>
+          <span class="meta-chip">Intuition First</span>
+          <span class="meta-chip">Room 4 Mystery</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown_theater.html?cut=middle-school" class="card-btn primary">Watch Middle School Cut →</a>
+        <button class="card-btn" onclick="openPreview('trouttown_theater.html?cut=middle-school', 'Trouttown Middle School Cut')">Preview</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('trouttown_theater.html?cut=middle-school', 'Trouttown Ep 7: Middle School Cut')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 9. [EXPECTED FILE SET] LAB 05 SPEC -->
+    <div class="card pending">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#777;color:#fff;">L5.07 · SPEC</span>
+          <span class="card-tier">EXPECTED INCOMING FILE SET</span>
+        </div>
+        <h3 class="card-title">Lab 5 Spec: The Generative Scene &amp; Bank</h3>
+        <p class="card-desc">
+          <b>Pre-wired assignment specification slot.</b> Formally defines the core Lab 5 deliverables: an object type with 3+ properties, an array of 5+ objects at start, at least one custom function that loops through the array, and interactive click/key/condition mutations.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip pending">Slot: l5-spec.md</span>
+          <span class="meta-chip">4 Properties Min</span>
+          <span class="meta-chip">5 Objects Min</span>
+          <span class="meta-chip">Array Loop Required</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="l5-spec.md" class="card-btn" id="l5SpecBtn" target="_blank">Open Spec (If Present)</a>
+        <button class="card-btn" onclick="checkFile('l5-spec.md', 'Lab 5 Assignment Spec')">Check Slot</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('l5-spec.md', 'Lab 5 Assignment Spec')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 10. [EXPECTED FILE SET] TEACHING BLUEPRINT -->
+    <div class="card pending">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#777;color:#fff;">L5.08 · GUIDE</span>
+          <span class="card-tier">EXPECTED INCOMING FILE SET</span>
+        </div>
+        <h3 class="card-title">Faculty Teaching Blueprint: So Much Depends</h3>
+        <p class="card-desc">
+          <b>Pre-wired faculty manual slot.</b> Structured 90-minute faculty lesson architecture, time allocations across the 26 slides, live code-along choreography, student failure modes (misspelled properties, off-by-one loops, splice skipping), and whiteboard scripts.
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip pending">Slot: TEACHING_GUIDE_LAB5.md</span>
+          <span class="meta-chip">90-Minute Runbook</span>
+          <span class="meta-chip">Failure Modes</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="TEACHING_GUIDE_LAB5.md" class="card-btn" id="l5GuideBtn" target="_blank">Open Guide (If Present)</a>
+        <button class="card-btn" onclick="checkFile('TEACHING_GUIDE_LAB5.md', 'Lab 5 Teaching Guide')">Check Slot</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('TEACHING_GUIDE_LAB5.md', 'Lab 5 Teaching Guide')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+
+    <!-- 11. [EXPECTED FILE SET] 9-SKETCH SUITE -->
+    <div class="card pending">
+      <div>
+        <div class="card-header-row">
+          <span class="card-handle" style="background:#777;color:#fff;">TT.04 · CODE</span>
+          <span class="card-tier">EXPECTED INCOMING FILE SET</span>
+        </div>
+        <h3 class="card-title">Trouttown 9-Sketch p5.js Reference Suite</h3>
+        <p class="card-desc">
+          <b>Pre-wired sketch suite slot.</b> Nine working p5.js sketches corresponding to the episode: three lessons (functions, arrays, loops) across three levels (Middle School, College, Professional with node tests).
+        </p>
+        <div class="card-meta">
+          <span class="meta-chip pending">Slot: trouttown-sketches/</span>
+          <span class="meta-chip">3 Lessons × 3 Levels</span>
+          <span class="meta-chip">Pure Functions</span>
+          <span class="meta-chip">Node Test Suites</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn disabled" title="Awaiting incoming file set">Awaiting File Set</button>
+        <button class="card-btn" onclick="checkFile('trouttown-sketches/index.html', 'Trouttown Sketches')">Check Slot</button>
+        <button class="card-btn qr-btn" onclick="openQrModal('trouttown-sketches/index.html', 'Trouttown Sketches')" title="Scan QR Code">[ QR ]</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EMBED PREVIEW DRAWER -->
+<div id="previewDrawer" role="dialog" aria-modal="true">
+  <div class="drawer-shell">
+    <div class="drawer-bar">
+      <span class="drawer-bar-title" id="drawerTitle">Preview</span>
+      <div class="drawer-actions">
+        <a id="drawerDirectLink" href="#" target="_blank" class="drawer-btn">Open in New Tab ↗</a>
+        <button class="drawer-btn" onclick="closePreview()">Close ✕</button>
+      </div>
+    </div>
+    <iframe class="preview-frame" id="drawerIframe" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- QR SCANNER MODAL -->
+<div class="qr-modal-scrim" id="qrModal">
+  <div class="qr-card">
+    <div class="qr-tag">[ SCAN TO OPEN ON DEVICE ]</div>
+    <h2 id="qrTitle">QR Code</h2>
+    <p>Scan with any mobile camera to launch this page instantly on GitHub Pages:</p>
+    <div class="qr-container" id="qrContainer"></div>
+    <div class="qr-url-box" id="qrUrlBox"></div>
+    <div class="qr-actions">
+      <button class="qr-btn-action primary" id="qrCopyBtn">Copy Link</button>
+      <button class="qr-btn-action" id="qrOpenBtn">Open Link ↗</button>
+      <button class="qr-btn-action" id="qrCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-text">
+    <b>INTRO TO COMPUTATIONAL MEDIA (2700 FALL 2026)</b> · LAB 05: ARRAYS, OBJECTS &amp; GENERATIVE FORM
+  </div>
+  <div class="footer-links">
+    <button class="h-btn" onclick="openQrModal('index.html', 'Lab 05 Master Hub')" style="background:#ffd23f;color:#000;font-weight:900;">[ QR CODE ]</button>
+    <a href="../index.html" class="h-btn">COURSE WHEEL</a>
+    <a href="../LAB 1 - HELLO MONDRIAN/index.html" class="h-btn">LAB 01</a>
+    <a href="../LAB 3 - INTERACTIVITY/index.html" class="h-btn">LAB 03</a>
+    <a href="HOUSE of SILT/index.html" class="h-btn amber">HOUSE OF SILT</a>
+    <a href="so-much-depends-lab5.html" class="h-btn primary">MAIN STUDIO</a>
+  </div>
+</footer>
+
+<script>
+function openPreview(url, title) {
+  document.getElementById("drawerTitle").textContent = title || "Module Preview";
+  document.getElementById("drawerDirectLink").href = url;
+  document.getElementById("drawerIframe").src = url;
+  document.getElementById("previewDrawer").classList.add("active");
+}
+function closePreview() {
+  document.getElementById("previewDrawer").classList.remove("active");
+  document.getElementById("drawerIframe").src = "about:blank";
+}
+document.getElementById("previewDrawer").addEventListener("click", function(e) {
+  if (e.target === this) closePreview();
+});
+window.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") {
+    closePreview();
+    closeQrModal();
+  }
+});
+
+// Canonical production base URL for mobile QR code scanning
+const PROD_BASE_URL = "https://hartswf0.github.io/2700-fa26/LAB%205%20-%20ARRAYS/";
+let activeQrUrl = "";
+
+function getAbsoluteWebUrl(relUrl) {
+  const clean = relUrl.replace(/^(\.\/|\/)/, "");
+  return new URL(clean, PROD_BASE_URL).href;
+}
+
+function openQrModal(relUrl, title) {
+  const absUrl = getAbsoluteWebUrl(relUrl);
+  activeQrUrl = absUrl;
+  document.getElementById("qrTitle").textContent = title || "Module QR Code";
+  document.getElementById("qrUrlBox").textContent = absUrl;
+  const encoded = encodeURIComponent(absUrl);
+  document.getElementById("qrContainer").innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encoded}" alt="QR Code" width="220" height="220" style="display:block; width:100%; height:100%;" onerror="this.outerHTML='<div style=\\'font-family:monospace;font-size:10px;padding:20px;\\'>Scan URL:<br>${absUrl}</div>'" />`;
+  document.getElementById("qrModal").classList.add("open");
+}
+
+function closeQrModal() {
+  document.getElementById("qrModal").classList.remove("open");
+}
+
+document.getElementById("qrCloseBtn").addEventListener("click", closeQrModal);
+document.getElementById("qrModal").addEventListener("click", function(e) {
+  if (e.target === this) closeQrModal();
+});
+document.getElementById("qrCopyBtn").addEventListener("click", function() {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(activeQrUrl).then(() => alert("Direct link copied:\n" + activeQrUrl));
+  } else {
+    prompt("Copy link:", activeQrUrl);
+  }
+});
+document.getElementById("qrOpenBtn").addEventListener("click", function() {
+  window.open(activeQrUrl, "_blank");
+});
+
+// Proactively check if pending files have been added to the directory
+function checkFile(filename, label) {
+  fetch(filename, { method: "HEAD" }).then(res => {
+    if (res.ok) {
+      alert("✓ " + label + " (" + filename + ") is present and active! Opening now.");
+      window.open(filename, "_blank");
+    } else {
+      alert("⏳ " + label + " (" + filename + ") is currently pending the incoming file set. As soon as the file is placed in this directory, this link will automatically resolve.");
+    }
+  }).catch(() => {
+    alert("⏳ " + label + " (" + filename + ") is currently pending the incoming file set.");
+  });
+}
+</script>
+
+</body>
+</html>

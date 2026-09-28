@@ -1,0 +1,50 @@
+TITLE
+TROUTTOWN: The Current Calls (College) | learn p5.js with a hand-coded cartoon
+
+SUBTITLE
+Nobody calls the current. It calls us.
+
+TAGS
+trouttown, p5.js, creative coding, javascript, coding for kids, learn to code, coding train, animation, cartoon, functions, arrays, loops, college
+
+DESCRIPTION
+The district put attendance on the old TV in Room 4. It marks Finley Current with a C every morning, even the one morning he is early. Ms. Rainey turns the TV around and the class reads the program: a bubble that won't move until someone calls it, a Lost & Found drawer that starts at slot zero, and a crosswalk on Main Street painted by a loop. The bug in the attendance loop is one number.
+
+This is the Lab cut, written for college viewers. The same episode exists in three cuts: Middle School, College, and Professional. The story is the same; the code on the board and the explanations change.
+
+WHAT THIS CUT COVERS
+- setup() and draw() are callbacks: you hand them to p5 and p5 calls them. mousePressed() waits for the current frame to finish.
+- Clear, then update, then draw. Order matters every frame.
+- Radius-aware bounce, and why an object placed inside the wall shudders: it flips every frame. Only flip when heading outward.
+- Parameterized functions: move(b) works for one bubble or a whole array, the step before a class.
+- Zero-based indexing as an offset; undefined past the end; ((i % n) + n) % n for wrapping backward, because JavaScript's % keeps the sign.
+- Reading .length instead of a hardcoded bound, so appended items stay reachable.
+- width / (count + 1) spacing, parity with i % 2, rectMode(CENTER), noLoop(), an array of drawing functions, and why a 2-cycle and a 3-cycle repeat every 6.
+
+CHAPTERS
+0:00 Attendance
+0:30 The TV turns on (functions)
+0:47 Definitions and calls
+1:04 draw(): the current calls it
+2:01 Lost & Found (arrays)
+2:57 The attendance bug
+3:10 The crosswalk (loops)
+3:40 noLoop(): slack water
+4:05 Roll call
+4:25 Credits
+
+THE SKETCHES
+Nine working p5.js sketches go with the episode: three lessons (functions, arrays, loops) at three levels. Paste any of them into editor.p5js.org and press Play. Each ends with things to try. The professional sketches export their pure functions and come with a test file you can run with node.
+
+HOW IT WAS MADE
+Every frame is drawn by code on a canvas, with a multiplane camera: each drawing sits on a plane at a set depth, and near planes move faster than far ones. The school's mill wheel turns a frame counter; the counter in the credits stops at the number of frames in this cut. The episode is one draw function called 6,801 times.
+
+Lessons after Daniel Shiffman, The Coding Train: 5.1 Function Basics and 7.1 What is an Array? (p5.js tutorials).
+Created by Watson Hartsoe. Animation code: Claude (Anthropic).
+Music: Treblo, "Silt, Wire & Mountain Current": Trouttown Silt; Pool Cue (Brusque Bounce); Dead-Water Docket; Upstream (Main Street to the Rise); The Current Returns (the rush); The Bell (Hold in the Current); Stay in the Current.
+Voices: Piper TTS by rhasspy (lessac, libritts, kathleen, ryan).
+Broadcast on FANTROL RADIO 88.7. A CONSEQUENCE WORKS production.
+
+Stay in the current.
+
+#Trouttown #p5js #creativecoding
