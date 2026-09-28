@@ -457,6 +457,8 @@ video#mainVideo {
     college: {
       name: "College Cut",
       badge: "COLLEGE CUT (LAB EDITION)",
+      file: "trouttown-ep7-college.mp4",
+      totalDur: "4:43",
       frames: "6,801 CALLS",
       poster: "trouttown-ep7-college-thumbnail.png",
       concepts: [
@@ -471,16 +473,18 @@ video#mainVideo {
       ],
       story: "The district put attendance on the old TV in Room 4. It marks Finley Current with a C every morning, even the one morning he is early. Ms. Rainey turns the TV around and the class reads the program: a bubble that won't move until someone calls it, a Lost & Found drawer that starts at slot zero, and a crosswalk on Main Street painted by a loop.",
       parts: [
-        { file: "trouttown-ep7-college-part0.mp4", title: "Part 0: Attendance (0:00)", sub: "setup() & draw() callbacks", dur: "1:03" },
-        { file: "trouttown-ep7-college-part1.mp4", title: "Part 1: The TV Turns On (0:30)", sub: "Functions & radius-aware bounce", dur: "0:58" },
-        { file: "trouttown-ep7-college-part2.mp4", title: "Part 2: Lost & Found (2:01)", sub: "Arrays, zero-indexing & offset", dur: "1:05" },
-        { file: "trouttown-ep7-college-part3.mp4", title: "Part 3: The Crosswalk (3:10)", sub: "Loops, modulo & dynamic length", dur: "0:59" },
-        { file: "trouttown-ep7-college-part4.mp4", title: "Part 4: Slack Water & Credits (3:40)", sub: "noLoop(), function arrays & roll call", dur: "0:38" }
+        { title: "Part 0: Attendance (00:00)", sub: "setup() & draw() callbacks", start: 0, dur: "1:03" },
+        { title: "Part 1: The TV Turns On (01:03)", sub: "Functions & radius-aware bounce", start: 63.42, dur: "0:58" },
+        { title: "Part 2: Lost & Found (02:01)", sub: "Arrays, zero-indexing & offset", start: 121.29, dur: "1:05" },
+        { title: "Part 3: The Crosswalk (03:06)", sub: "Loops, modulo & dynamic length", start: 186.75, dur: "0:59" },
+        { title: "Part 4: Slack Water & Credits (04:05)", sub: "noLoop(), function arrays & roll call", start: 245.34, dur: "0:38" }
       ]
     },
     professional: {
       name: "Professional Cut",
       badge: "PROFESSIONAL CUT (ENGINEERING REVIEW)",
+      file: "trouttown-ep7-professional.mp4",
+      totalDur: "4:21",
       frames: "6,262 CALLS",
       poster: "trouttown-ep7-professional-thumbnail.png",
       concepts: [
@@ -494,15 +498,17 @@ video#mainVideo {
       ],
       story: "This is the Review cut, written for professional developers and computer science instructors. The same episode exists in three cuts; here the code on the board focuses on immutable state, pure functions, invariants, and latent defects.",
       parts: [
-        { file: "trouttown-ep7-professional-part0.mp4", title: "Part 0: Pure Step & Control (0:00)", sub: "Inversion of control & invariants", dur: "1:32" },
-        { file: "trouttown-ep7-professional-part1.mp4", title: "Part 1: Cyclic Cursor & Stable IDs (1:40)", sub: "Immutable array modules", dur: "1:25" },
-        { file: "trouttown-ep7-professional-part2.mp4", title: "Part 2: Layout as Data & Roll Call (2:45)", sub: "Pure layout funcs & push/pop", dur: "1:24" }
+        { title: "Part 0: Pure Step & Control (00:00)", sub: "Inversion of control & invariants", start: 0, dur: "1:32" },
+        { title: "Part 1: Cyclic Cursor & Stable IDs (01:31)", sub: "Immutable array modules", start: 91.79, dur: "1:25" },
+        { title: "Part 2: Layout as Data & Roll Call (02:57)", sub: "Pure layout funcs & push/pop", start: 177.04, dur: "1:24" }
       ]
     },
     "middle-school": {
       name: "Middle School Cut",
       badge: "MIDDLE SCHOOL CUT (CLASSROOM)",
-      frames: "6,801 CALLS",
+      file: "trouttown-ep7-middle-school.mp4",
+      totalDur: "3:46",
+      frames: "5,426 CALLS",
       poster: "trouttown-ep7-college-thumbnail.png",
       concepts: [
         "Room 4 TV: Why computers only do what we tell them to do.",
@@ -513,15 +519,17 @@ video#mainVideo {
       ],
       story: "Written for younger learners and middle school classrooms. Explores the friendly story of Finley Current, Ms. Rainey's classroom TV, and how to spot a repeating loop bug.",
       parts: [
-        { file: "trouttown-ep7-middle-school-part0.mp4", title: "Part 0: The Current Calls (0:00)", sub: "Room 4 TV & Functions", dur: "1:23" },
-        { file: "trouttown-ep7-middle-school-part1.mp4", title: "Part 1: Lost & Found Drawer (1:23)", sub: "Arrays starting at 0", dur: "1:10" },
-        { file: "trouttown-ep7-middle-school-part2.mp4", title: "Part 2: Main Street Loop (2:33)", sub: "Painting crosswalks with a loop", dur: "1:14" }
+        { title: "Part 0: The Current Calls (00:00)", sub: "Room 4 TV & Functions", start: 0, dur: "1:23" },
+        { title: "Part 1: Lost & Found Drawer (01:22)", sub: "Arrays starting at 0", start: 82.54, dur: "1:10" },
+        { title: "Part 2: Main Street Loop (02:32)", sub: "Painting crosswalks with a loop", start: 152.33, dur: "1:14" }
       ]
     },
     "house-of-silt": {
       name: "House of Silt Film",
       badge: "TROUTTOWN: HOUSE OF SILT (1967/1970)",
-      frames: "108 SECONDS",
+      file: "HOUSE of SILT/trouttown-house-of-silt.mp4",
+      totalDur: "1:48",
+      frames: "2,592 FRAMES",
       poster: "trouttown-ep7-college-thumbnail.png",
       concepts: [
         "In 1967 Alison Knowles wrote four lists and a FORTRAN program picked one word from each: The House of Dust.",
@@ -532,7 +540,7 @@ video#mainVideo {
       ],
       story: "The zoning office prints a quatrain. The paper drifts downstream to an empty lot. The house goes up in four steps, one per line: the material, the place, the light, and who lives there. Open the interactive House of Silt studio to build with the zoning board or edit the p5 code!",
       parts: [
-        { file: "HOUSE of SILT/trouttown-house-of-silt.mp4", title: "House of Silt: The Animated Film (1080p)", sub: "How the town is built from 4 arrays", dur: "1:48" }
+        { title: "House of Silt: The Animated Film (1080p)", sub: "How the town is built from 4 arrays", start: 0, dur: "1:48" }
       ]
     }
   };
@@ -558,38 +566,51 @@ video#mainVideo {
   const speeds = [1.0, 1.25, 1.5, 0.75];
   let speedIdx = 0;
 
-  function loadPart(partIndex, autoplay = true) {
+  function seekChapter(partIndex, autoplay = true) {
     const cut = CUTS[activeCutKey];
     activePartIdx = Math.max(0, Math.min(cut.parts.length - 1, partIndex));
     const part = cut.parts[activePartIdx];
 
     hudCutBadge.textContent = cut.badge;
-    hudPartTitle.textContent = part.title + " · " + part.sub;
-    video.src = part.file;
-    video.poster = cut.poster;
+    hudPartTitle.textContent = `${part.title} · ${part.sub} [${cut.totalDur}]`;
+
+    // Check if source matches
+    const currentSrc = video.getAttribute("src") || "";
+    if (currentSrc !== cut.file) {
+      video.src = cut.file;
+      video.poster = cut.poster;
+      video.load();
+    }
+
+    if (Math.abs(video.currentTime - part.start) > 0.4) {
+      video.currentTime = part.start;
+    }
+
     if (autoplay) {
       video.play().catch(() => {});
     }
 
-    // Update active highlight
-    const cards = partsList.querySelectorAll(".part-card");
-    cards.forEach((c, idx) => {
-      c.classList.toggle("active", idx === activePartIdx);
-    });
+    updateActiveHighlight(activePartIdx);
 
-    // Update URL without reload
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set("cut", activeCutKey);
     newUrl.searchParams.set("part", activePartIdx);
     window.history.replaceState({}, "", newUrl.toString());
   }
 
+  function updateActiveHighlight(idx) {
+    const cards = partsList.querySelectorAll(".part-card");
+    cards.forEach((c, i) => {
+      c.classList.toggle("active", i === idx);
+    });
+  }
+
   function renderCut() {
     const cut = CUTS[activeCutKey];
     hudCutBadge.textContent = cut.badge;
-    playlistCount.textContent = cut.parts.length + " PARTS";
+    playlistCount.textContent = cut.parts.length + (cut.parts.length === 1 ? " FULL VIDEO" : " CHAPTERS");
 
-    // Concepts
+    // Concepts & story
     conceptsList.innerHTML = cut.concepts.map(c => `<li>${c}</li>`).join("");
     storyDesc.textContent = cut.story;
 
@@ -598,7 +619,15 @@ video#mainVideo {
       tab.classList.toggle("active", tab.dataset.cut === activeCutKey);
     });
 
-    // Parts list
+    // Load video file if needed
+    const currentSrc = video.getAttribute("src") || "";
+    if (currentSrc !== cut.file) {
+      video.src = cut.file;
+      video.poster = cut.poster;
+      video.load();
+    }
+
+    // Chapters list
     partsList.innerHTML = cut.parts.map((p, idx) => `
       <div class="part-card${idx === activePartIdx ? " active" : ""}" data-idx="${idx}">
         <div class="part-num">${idx}</div>
@@ -612,12 +641,35 @@ video#mainVideo {
 
     partsList.querySelectorAll(".part-card").forEach(card => {
       card.addEventListener("click", () => {
-        loadPart(parseInt(card.dataset.idx, 10), true);
+        const idx = parseInt(card.dataset.idx, 10);
+        seekChapter(idx, true);
       });
     });
 
-    loadPart(activePartIdx, false);
+    seekChapter(activePartIdx, false);
   }
+
+  // Synchronize active chapter highlight with live playback position
+  video.addEventListener("timeupdate", () => {
+    const cut = CUTS[activeCutKey];
+    if (!cut || !cut.parts || cut.parts.length <= 1) return;
+    const cur = video.currentTime;
+    let curChapter = 0;
+    for (let i = 0; i < cut.parts.length; i++) {
+      if (cur >= cut.parts[i].start - 0.25) {
+        curChapter = i;
+      }
+    }
+    if (curChapter !== activePartIdx) {
+      activePartIdx = curChapter;
+      const part = cut.parts[activePartIdx];
+      hudPartTitle.textContent = `${part.title} · ${part.sub} [${cut.totalDur}]`;
+      updateActiveHighlight(activePartIdx);
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set("part", activePartIdx);
+      window.history.replaceState({}, "", newUrl.toString());
+    }
+  });
 
   // Switch cut
   document.querySelectorAll(".cut-tab").forEach(tab => {
@@ -630,20 +682,23 @@ video#mainVideo {
 
   // Next / Prev buttons
   prevBtn.addEventListener("click", () => {
-    if (activePartIdx > 0) loadPart(activePartIdx - 1, true);
+    if (activePartIdx > 0) seekChapter(activePartIdx - 1, true);
+    else video.currentTime = 0;
   });
   nextBtn.addEventListener("click", () => {
     const cut = CUTS[activeCutKey];
-    if (activePartIdx < cut.parts.length - 1) loadPart(activePartIdx + 1, true);
+    if (activePartIdx < cut.parts.length - 1) seekChapter(activePartIdx + 1, true);
   });
 
-  // Auto advance
+  // Auto advance to next cut when current full video ends
   video.addEventListener("ended", () => {
     if (autoAdvanceCheck.checked) {
-      const cut = CUTS[activeCutKey];
-      if (activePartIdx < cut.parts.length - 1) {
-        loadPart(activePartIdx + 1, true);
-      }
+      const cutKeys = Object.keys(CUTS);
+      const nextIdx = (cutKeys.indexOf(activeCutKey) + 1) % cutKeys.length;
+      activeCutKey = cutKeys[nextIdx];
+      activePartIdx = 0;
+      renderCut();
+      video.play().catch(() => {});
     }
   });
 
