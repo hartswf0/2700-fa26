@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TROUTTOWN EXHIBIT LABS & PROOF SUITE // Lab 5 Arrays & Objects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root {
+  --bg: #0c0e12;
+  --surface: #141720;
+  --surface-alt: #1a1e2a;
+  --border: #222634;
+  --border-light: #343a4e;
+  --ink: #f0f2f5;
+  --muted: #8b949e;
+  --subtle: #565d68;
+  --amber: #ffd23f;
+  --teal: #19e6c8;
+  --red: #ff3b30;
+  --blue: #3b82f6;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+button, a { font: inherit; color: inherit; text-decoration: none; }
+button { cursor: pointer; border-radius: 0; }
+
+/* HEADER */
+header {
+  height: 52px;
+  background: #101218;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-back {
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--teal);
+  font-weight: 700;
+  padding: 6px 12px;
+  font-size: 11px;
+  transition: all .15s;
+}
+.btn-back:hover { background: var(--teal); color: #000; border-color: var(--teal); }
+.brand-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.badge-tag {
+  background: var(--amber);
+  color: #000;
+  padding: 2px 7px;
+  font-weight: 800;
+  font-size: 10px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-action {
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  transition: all .15s;
+}
+.btn-action:hover { border-color: var(--amber); color: var(--amber); }
+.btn-action.primary {
+  background: var(--amber);
+  color: #000;
+  border-color: var(--amber);
+}
+.btn-action.primary:hover { background: #fff; border-color: #fff; }
+
+/* HERO BANNER */
+.hero {
+  border-bottom: 2px solid var(--border);
+  background: radial-gradient(circle at 80% 20%, #17212e 0%, #0c0e12 70%);
+  padding: 44px 24px 36px;
+}
+.hero-wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.hero-tagline {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: var(--teal);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.hero-title {
+  font-size: clamp(28px, 4.5vw, 56px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  margin-bottom: 16px;
+  color: #fff;
+}
+.hero-desc {
+  font-size: clamp(13px, 1.4vw, 16px);
+  line-height: 1.6;
+  color: #b4bcc8;
+  max-width: 980px;
+  margin-bottom: 24px;
+}
+.hero-meta-strip {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.meta-chip {
+  background: #151821;
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  font-size: 11px;
+  color: #cfd5e0;
+}
+.meta-chip b { color: var(--amber); }
+
+/* CONTROLS & FILTER BAR */
+.controls-bar {
+  background: #11141b;
+  border-bottom: 1.5px solid var(--border);
+  padding: 12px 24px;
+  position: sticky;
+  top: 52px;
+  z-index: 90;
+}
+.controls-wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+.filter-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 7px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.filter-btn:hover { color: var(--ink); border-color: var(--subtle); }
+.filter-btn.active {
+  background: rgba(25, 230, 200, 0.12);
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0 10px;
+  width: 260px;
+}
+.search-box input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 7px 6px;
+  font-size: 11.5px;
+  outline: none;
+  width: 100%;
+}
+
+/* MAIN CONTENT */
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* SECTION TITLE */
+.sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 10px;
+  margin: 36px 0 20px;
+}
+.sec-head:first-of-type { margin-top: 0; }
+.sec-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  background: #1d2230;
+  border: 1px solid var(--border-light);
+  color: var(--teal);
+}
+
+/* WAX MUSEUM FEATURE BANNER */
+.master-banner {
+  background: linear-gradient(135deg, #181d28 0%, #10131a 100%);
+  border: 2px solid var(--amber);
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.master-badge {
+  display: inline-block;
+  background: var(--amber);
+  color: #000;
+  font-size: 10.5px;
+  font-weight: 900;
+  padding: 3px 8px;
+  margin-bottom: 10px;
+}
+.master-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 10px;
+}
+.master-desc {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #b0b8c6;
+  margin-bottom: 16px;
+}
+.master-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+.master-btn {
+  display: block;
+  text-align: center;
+  padding: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border: 1.5px solid var(--amber);
+  background: var(--amber);
+  color: #000;
+  transition: all .15s;
+}
+.master-btn:hover { background: #fff; border-color: #fff; }
+.master-btn.secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border-light);
+}
+.master-btn.secondary:hover { border-color: var(--teal); color: var(--teal); }
+
+/* GRID OF CARDS */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 18px;
+  transition: all .15s ease-out;
+}
+.card:hover {
+  border-color: var(--teal);
+  background: var(--surface-alt);
+  transform: translateY(-2px);
+}
+.card.highlight {
+  border-color: var(--amber);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.card-num {
+  background: #1c212d;
+  color: var(--teal);
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+}
+.card-tier {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.card-desc {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #a0a8b6;
+  margin-bottom: 14px;
+  flex: 1;
+}
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.card-tag {
+  background: #11141c;
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  font-size: 9.5px;
+  color: #8f98a8;
+}
+.card-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.btn-card {
+  flex: 1;
+  text-align: center;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border-light);
+  background: #12151e;
+  color: var(--ink);
+  transition: all .15s;
+}
+.btn-card:hover { border-color: var(--teal); background: var(--teal); color: #000; }
+.btn-card.primary {
+  background: var(--teal);
+  color: #000;
+  border-color: var(--teal);
+}
+.btn-card.primary:hover { background: #fff; border-color: #fff; }
+.btn-card.qr {
+  flex: none;
+  width: 38px;
+  padding: 8px 0;
+  color: var(--amber);
+  border-color: rgba(255,210,63,0.3);
+}
+.btn-card.qr:hover { background: var(--amber); color: #000; border-color: var(--amber); }
+
+/* EMBEDDED PREVIEW DRAWER */
+#previewDrawer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 2000;
+  display: none;
+  place-items: center;
+  padding: 16px;
+}
+#previewDrawer.active { display: grid; }
+.drawer-box {
+  width: 100%;
+  max-width: 1400px;
+  height: 92vh;
+  background: #0f1117;
+  border: 2px solid var(--teal);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.drawer-header {
+  height: 48px;
+  background: #141822;
+  border-bottom: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+.drawer-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drawer-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.drawer-btn {
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.drawer-btn:hover { border-color: var(--amber); color: var(--amber); }
+.drawer-frame-wrap {
+  flex: 1;
+  position: relative;
+  background: #000;
+}
+.drawer-frame-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* QR MODAL */
+.qr-scrim {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2500; display: none; place-items: center; padding: 16px;
+}
+.qr-scrim.open { display: grid; }
+.qr-box {
+  width: 100%; max-width: 360px; background: #151922; border: 2px solid var(--teal); box-shadow: 0 16px 40px rgba(0,0,0,0.8); padding: 20px; text-align: center;
+}
+.qr-tag { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); margin-bottom: 6px; }
+.qr-box h2 { font-size: 16px; margin: 0 0 6px; color: var(--ink); }
+.qr-box p { font-size: 11px; color: var(--muted); margin: 0 0 12px; line-height: 1.4; }
+.qr-container { width: 190px; height: 190px; background: #fff; margin: 0 auto 12px; padding: 6px; display: grid; place-items: center; }
+.qr-url { background: #0c0e12; border: 1px solid var(--border); padding: 6px 8px; font-size: 9.5px; color: #a0a6b2; word-break: break-all; margin-bottom: 12px; text-align: left; }
+.qr-actions { display: flex; gap: 8px; }
+.qr-btn { flex: 1; padding: 8px; font-size: 11px; font-weight: 700; border: 1px solid var(--border-light); background: var(--surface); color: var(--ink); }
+.qr-btn:hover { background: var(--teal); color: #000; }
+.qr-btn.primary { background: var(--teal); color: #000; border-color: var(--teal); }
+
+/* FOOTER */
+footer {
+  border-top: 2px solid var(--border);
+  padding: 32px 24px;
+  background: #0f1117;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.footer-wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .master-banner { grid-template-columns: 1fr; }
+  .controls-wrap { flex-direction: column; align-items: stretch; }
+  .search-box { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-group">
+    <a href="../index.html" class="btn-back">← LAB 05 HUB</a>
+    <div class="brand-title">
+      <span class="badge-tag">LAB 5</span>TROUTTOWN EXHIBIT LABS
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-action" onclick="openQrModal('trouttown-wax-museum-all-exhibits.html', 'Wax Museum All Exhibits')">[ QR CODE ]</button>
+    <a href="trouttown-wax-museum-all-exhibits.html" class="btn-action primary">RUN WAX MUSEUM →</a>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-wrap">
+    <div class="hero-tagline">Interactive Learning Surfaces · p5.js Array Physics · Historical Coding Proofs</div>
+    <h1 class="hero-title">Trouttown Exhibit Labs &amp; Proof Surfaces</h1>
+    <p class="hero-desc">
+      Explore the complete suite of interactive computational media labs for Lab 5: ten progressive historical coding exhibits from the Trouttown Wax Museum (1776–Trouttown), real-time Code The Pond mobile proof surfaces, 0-based memory number grids, Alison Knowles' House of Silt generative architecture studio, and the Trouttown Episode 7 screening theater.
+    </p>
+    <div class="hero-meta-strip">
+      <span class="meta-chip">Total Modules: <b>15 Interactive Apps</b></span>
+      <span class="meta-chip">Wax Museum Exhibits: <b>10 Progressive Labs</b></span>
+      <span class="meta-chip">Mobile Proof Surfaces: <b>Zero-Scroll Viewport</b></span>
+      <span class="meta-chip">Cinema Suite: <b>Single 1080p MP4 + VTT Chapters</b></span>
+    </div>
+  </div>
+</div>
+
+<div class="controls-bar">
+  <div class="controls-wrap">
+    <div class="filter-tabs">
+      <button class="filter-btn active" data-filter="all">All Labs (15)</button>
+      <button class="filter-btn" data-filter="exhibits">Historical Exhibits (10)</button>
+      <button class="filter-btn" data-filter="pond">Code The Pond &amp; Grids (3)</button>
+      <button class="filter-btn" data-filter="studios">Cinema &amp; Silt Studios (3)</button>
+    </div>
+    <div class="search-box">
+      <span style="color:var(--muted);font-size:12px;">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search exhibits, concepts, arrays...">
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <!-- MASTER FEATURE: TROUTTOWN WAX MUSEUM -->
+  <div class="master-banner card-item" data-category="exhibits">
+    <div>
+      <span class="master-badge">MASTER COMPENDIUM · 10 EXHIBITS IN 1</span>
+      <h2 class="master-title">Trouttown Wax Museum: All Exhibits (1776 → Trouttown)</h2>
+      <p class="master-desc">
+        The complete continuous wax museum learning environment. Features all 10 historical figures—from Benjamin Franklin's printing press to Abigail Adams' letters—in a single, unified split-screen p5.js coding surface with real-time state tables, multiplane canvas rendering, and zero-based array index inspection.
+      </p>
+      <div class="card-tags">
+        <span class="card-tag">All 10 Exhibits</span>
+        <span class="card-tag">Split-Screen IDE</span>
+        <span class="card-tag">Array Index Tables</span>
+        <span class="card-tag">Mobile Proof Dock</span>
+      </div>
+    </div>
+    <div class="master-actions">
+      <a href="trouttown-wax-museum-all-exhibits.html" class="master-btn">Launch Full Wax Museum →</a>
+      <button class="master-btn secondary" onclick="openPreview('trouttown-wax-museum-all-exhibits.html', 'Trouttown Wax Museum: All Exhibits')">Live In-Page Preview</button>
+      <button class="master-btn secondary" onclick="openQrModal('trouttown-wax-museum-all-exhibits.html', 'Wax Museum All Exhibits')">[ Scan Mobile QR ]</button>
+    </div>
+  </div>
+
+  <!-- SECTION 1: THE 10 HISTORICAL EXHIBIT LABS -->
+  <div class="sec-head">
+    <h2 class="sec-title">The 10 Historical Exhibit Labs <span class="sec-badge">Progressive p5.js Array Physics</span></h2>
+    <span style="font-size:11px;color:var(--muted)">1776 Era · Array Offset &amp; Inversion Math</span>
+  </div>
+
+  <div class="cards-grid">
+
+    <!-- Exhibit 01: Franklin -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 01</span>
+          <span class="card-tier">PRINTING PRESS</span>
+        </div>
+        <h3 class="card-title">Benjamin Franklin</h3>
+        <p class="card-desc">
+          Typesetting coordinates, font property objects, and ink tray memory slot offsets in colonial Philadelphia.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Typeset Arrays</span>
+          <span class="card-tag">Slot 0 Indexing</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-01-franklin.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-01-franklin.html', 'Exhibit 01: Benjamin Franklin')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-01-franklin.html', 'Exhibit 01: Franklin')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 02: Stamp -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 02</span>
+          <span class="card-tier">STAMP ACT 1765</span>
+        </div>
+        <h3 class="card-title">A Stamp Seller</h3>
+        <p class="card-desc">
+          Revenue stamp grid math, royal seal properties, and conditional boycott branch routines.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Grid Math</span>
+          <span class="card-tag">Tax Seals</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-02-stamp.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-02-stamp.html', 'Exhibit 02: Stamp Seller')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-02-stamp.html', 'Exhibit 02: Stamp')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 03: Tea -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 03</span>
+          <span class="card-tier">BOSTON 1773</span>
+        </div>
+        <h3 class="card-title">A Son Of Liberty</h3>
+        <p class="card-desc">
+          Disguise property objects, midnight harbor coordinates, and tea crate array gravity drops.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Object Arrays</span>
+          <span class="card-tag">Gravity Physics</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-03-tea.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-03-tea.html', 'Exhibit 03: Son Of Liberty')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-03-tea.html', 'Exhibit 03: Tea')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 04: Harbor -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 04</span>
+          <span class="card-tier">MARITIME COMMERCE</span>
+        </div>
+        <h3 class="card-title">A Boston Fisherman</h3>
+        <p class="card-desc">
+          Wharf boundary collision logic, tide level variables, and fish school array displacement.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Tidal Variables</span>
+          <span class="card-tag">Bounds Clamping</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-04-harbor.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-04-harbor.html', 'Exhibit 04: Boston Fisherman')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-04-harbor.html', 'Exhibit 04: Harbor')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 05: Revere -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 05</span>
+          <span class="card-tier">SIGNAL LANTERNS</span>
+        </div>
+        <h3 class="card-title">Paul Revere</h3>
+        <p class="card-desc">
+          "One if by land, two if by sea": binary dispatch signals, waypoint array traversal, and steed step() physics.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Waypoint Arrays</span>
+          <span class="card-tag">Signal Logic</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-05-revere.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-05-revere.html', 'Exhibit 05: Paul Revere')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-05-revere.html', 'Exhibit 05: Revere')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 06: Hancock -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 06</span>
+          <span class="card-tier">BOLD CALLIGRAPHY</span>
+        </div>
+        <h3 class="card-title">John Hancock</h3>
+        <p class="card-desc">
+          Vector curve point arrays, stroke weight multipliers, and oversized bold text scaling math.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Vector Curves</span>
+          <span class="card-tag">Scale Transforms</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-06-hancock.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-06-hancock.html', 'Exhibit 06: John Hancock')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-06-hancock.html', 'Exhibit 06: Hancock')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 07: Dunlap -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 07</span>
+          <span class="card-tier">DUNLAP BROADSIDE</span>
+        </div>
+        <h3 class="card-title">John Dunlap</h3>
+        <p class="card-desc">
+          Overnight printing loops, letterpress leading mathematics, and array-based typo correction routines.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Leading Math</span>
+          <span class="card-tag">Loop Replacement</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-07-dunlap.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-07-dunlap.html', 'Exhibit 07: John Dunlap')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-07-dunlap.html', 'Exhibit 07: Dunlap')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 08: Parchment -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 08</span>
+          <span class="card-tier">56 SIGNERS</span>
+        </div>
+        <h3 class="card-title">The Signed Copy</h3>
+        <p class="card-desc">
+          Managing the 56 Signers array, column/row index mapping, and document degradation alpha filters.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">56 Entities</span>
+          <span class="card-tag">Row/Col Math</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-08-parchment.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-08-parchment.html', 'Exhibit 08: Signed Copy')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-08-parchment.html', 'Exhibit 08: Parchment')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 09: Wheatley -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 09</span>
+          <span class="card-tier">NEOCLASSICAL POETRY</span>
+        </div>
+        <h3 class="card-title">Phillis Wheatley</h3>
+        <p class="card-desc">
+          Iambic pentameter arrays, rhyming couplet dictionary lookup, and elegiac stanza generation.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Meter Arrays</span>
+          <span class="card-tag">Couplet Dictionaries</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-09-wheatley.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-09-wheatley.html', 'Exhibit 09: Phillis Wheatley')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-09-wheatley.html', 'Exhibit 09: Wheatley')">QR</button>
+      </div>
+    </div>
+
+    <!-- Exhibit 10: Abigail -->
+    <div class="card card-item" data-category="exhibits">
+      <div>
+        <div class="card-head">
+          <span class="card-num">EXHIBIT 10</span>
+          <span class="card-tier">REMEMBER THE LADIES</span>
+        </div>
+        <h3 class="card-title">Abigail Adams</h3>
+        <p class="card-desc">
+          Letter archive queues, philosophical counsel objects, and bidirectional post-rider courier simulation.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Queue Arrays</span>
+          <span class="card-tag">Counsel Objects</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="trouttown-exhibit-10-abigail.html" class="btn-card primary">Launch Lab →</a>
+        <button class="btn-card" onclick="openPreview('trouttown-exhibit-10-abigail.html', 'Exhibit 10: Abigail Adams')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('trouttown-exhibit-10-abigail.html', 'Exhibit 10: Abigail')">QR</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 2: CODE THE POND & NUMBER GRID MOBILE SURFACES -->
+  <div class="sec-head">
+    <h2 class="sec-title">Code The Pond &amp; Array Memory Proof Surfaces <span class="sec-badge">Mobile First</span></h2>
+    <span style="font-size:11px;color:var(--muted)">Zero-Scroll Fixed Viewports &amp; Visual Index Strips</span>
+  </div>
+
+  <div class="cards-grid">
+
+    <!-- Code the Pond Mobile Proof -->
+    <div class="card card-item highlight" data-category="pond">
+      <div>
+        <div class="card-head">
+          <span class="card-num" style="background:var(--teal);color:#000;">CP.01</span>
+          <span class="card-tier">TOUCHSCREEN PROOF SURFACE</span>
+        </div>
+        <h3 class="card-title">Code The Pond: Mobile Proof Surface</h3>
+        <p class="card-desc">
+          State-of-the-art mobile proof environment. Code and execution share one single viewport without elastic scroll conflicts. Features live assertion testing and mobile bottom navigation dock.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Split/Code/Pond Dock</span>
+          <span class="card-tag">Zero Elastic Scroll</span>
+          <span class="card-tag">Live State Assertions</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="../Lab5_CODE_THE_POND_Mobile_Proof_Surface_FINAL.html" class="btn-card primary">Launch Surface →</a>
+        <button class="btn-card" onclick="openPreview('../Lab5_CODE_THE_POND_Mobile_Proof_Surface_FINAL.html', 'Code The Pond: Mobile Proof Surface')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('../Lab5_CODE_THE_POND_Mobile_Proof_Surface_FINAL.html', 'Code The Pond Mobile')">QR</button>
+      </div>
+    </div>
+
+    <!-- Code the Pond NoScroll Mobile -->
+    <div class="card card-item highlight" data-category="pond">
+      <div>
+        <div class="card-head">
+          <span class="card-num" style="background:var(--amber);color:#000;">CP.02</span>
+          <span class="card-tier">NO-SCROLL EDITION</span>
+        </div>
+        <h3 class="card-title">Code The Pond: NoScroll Mobile Edition</h3>
+        <p class="card-desc">
+          Dedicated 100dvh mobile surface lock. Eliminates gesture interference on iOS Safari and Android Chrome, locking touch focus entirely on the p5 code editor and canvas pond.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">100dvh Lock</span>
+          <span class="card-tag">Touch Gesture Safe</span>
+          <span class="card-tag">Quick Run/Reset</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="../Lab5_CODE_THE_POND_NoScroll_Mobile_FINAL%20(1).html" class="btn-card primary">Launch Surface →</a>
+        <button class="btn-card" onclick="openPreview('../Lab5_CODE_THE_POND_NoScroll_Mobile_FINAL%20(1).html', 'Code The Pond: NoScroll Mobile')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('../Lab5_CODE_THE_POND_NoScroll_Mobile_FINAL%20(1).html', 'Code The Pond NoScroll')">QR</button>
+      </div>
+    </div>
+
+    <!-- Trout Number Grid -->
+    <div class="card card-item highlight" data-category="pond">
+      <div>
+        <div class="card-head">
+          <span class="card-num" style="background:var(--blue);color:#fff;">TG.01</span>
+          <span class="card-tier">INDEX VISUALIZER</span>
+        </div>
+        <h3 class="card-title">Trout Pond: Number Grid Mobile Surface</h3>
+        <p class="card-desc">
+          Interactive zero-based array index strip. Directly visualizes array memory slots (0 through length-1), out-of-bounds undefined hazards, and real-time element mutation tracking.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Slot-0 Index Strip</span>
+          <span class="card-tag">Bounds Protection</span>
+          <span class="card-tag">Active Pointer Tracking</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="../lab5_trout_number_grid_mobile_v3_FIXED.html" class="btn-card primary">Launch Surface →</a>
+        <button class="btn-card" onclick="openPreview('../lab5_trout_number_grid_mobile_v3_FIXED.html', 'Trout Pond: Number Grid')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('../lab5_trout_number_grid_mobile_v3_FIXED.html', 'Trout Number Grid')">QR</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 3: CINEMA & LITERATURE STUDIOS -->
+  <div class="sec-head">
+    <h2 class="sec-title">Cinema, Architecture &amp; Literature Studios <span class="sec-badge">Generative Systems</span></h2>
+    <span style="font-size:11px;color:var(--muted)">Knowles 1967 · Williams 1923 · Trouttown Ep 7</span>
+  </div>
+
+  <div class="cards-grid">
+
+    <!-- Trouttown Screening Theater -->
+    <div class="card card-item" data-category="studios">
+      <div>
+        <div class="card-head">
+          <span class="card-num">TH.01</span>
+          <span class="card-tier">HD SCREENING THEATER</span>
+        </div>
+        <h3 class="card-title">Trouttown Ep 7: The Current Calls</h3>
+        <p class="card-desc">
+          Hand-coded multiplane cartoon theater. Unified 1080p MP4 features with FFmpeg embedded chapters and WebVTT tracks for College (4:43), Pro (4:21), Middle (3:46), and House of Silt (1:48) cuts.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">4 Unified Cuts</span>
+          <span class="card-tag">FFmpeg Chapter Marks</span>
+          <span class="card-tag">VOIDBASTARD Mobile</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="../trouttown_theater.html" class="btn-card primary">Open Theater →</a>
+        <button class="btn-card" onclick="openPreview('../trouttown_theater.html', 'Trouttown Theater')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('../trouttown_theater.html', 'Trouttown Theater')">QR</button>
+      </div>
+    </div>
+
+    <!-- House of Silt Studio -->
+    <div class="card card-item" data-category="studios">
+      <div>
+        <div class="card-head">
+          <span class="card-num">HS.01</span>
+          <span class="card-tier">ALISON KNOWLES 1967</span>
+        </div>
+        <h3 class="card-title">Trouttown: House of Silt Studio</h3>
+        <p class="card-desc">
+          Interactive Alison Knowles architecture studio. Features real-time multiplane cartoon film, 4-array zoning board builder with .push(), and in-browser p5.js live IDE.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">4 Categorical Arrays</span>
+          <span class="card-tag">Zoning Board .push()</span>
+          <span class="card-tag">Film + Build + Code</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="../HOUSE%20of%20SILT/index.html" class="btn-card primary">Open Studio →</a>
+        <button class="btn-card" onclick="openPreview('../HOUSE%20of%20SILT/index.html', 'House of Silt Studio')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('../HOUSE%20of%20SILT/index.html', 'House of Silt Studio')">QR</button>
+      </div>
+    </div>
+
+    <!-- So Much Depends Studio -->
+    <div class="card card-item" data-category="studios">
+      <div>
+        <div class="card-head">
+          <span class="card-num">SM.01</span>
+          <span class="card-tier">WCW 1923 WORKBENCH</span>
+        </div>
+        <h3 class="card-title">So Much Depends Upon an Array</h3>
+        <p class="card-desc">
+          26-slide master studio system: generative stanza combinatorics (1,296 poems), 500-trial Monte Carlo probability simulator, word bank builder, and live p5.js code exporter.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">26 Interactive Slides</span>
+          <span class="card-tag">Monte Carlo Grid</span>
+          <span class="card-tag">Bank Builder IDE</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="../so-much-depends-lab5.html" class="btn-card primary">Open Studio →</a>
+        <button class="btn-card" onclick="openPreview('../so-much-depends-lab5.html', 'So Much Depends Upon an Array')">Preview</button>
+        <button class="btn-card qr" onclick="openQrModal('../so-much-depends-lab5.html', 'So Much Depends Studio')">QR</button>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- LIVE PREVIEW DRAWER -->
+<div id="previewDrawer">
+  <div class="drawer-box">
+    <div class="drawer-header">
+      <span class="drawer-title" id="drawerTitle">Interactive Lab Preview</span>
+      <div class="drawer-ctrls">
+        <button class="drawer-btn" id="drawerMobileToggle">📱 Phone View</button>
+        <button class="drawer-btn" id="drawerReload">⟳ Reload</button>
+        <button class="drawer-btn" id="drawerNewTab">Open in Tab ↗</button>
+        <button class="drawer-btn" style="border-color:var(--red);color:var(--red);" onclick="closePreview()">✕ Close</button>
+      </div>
+    </div>
+    <div class="drawer-frame-wrap" id="frameWrap">
+      <iframe id="previewIframe" src="about:blank"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- QR MODAL -->
+<div class="qr-scrim" id="qrModal">
+  <div class="qr-box">
+    <div class="qr-tag">[ SCAN TO TEST ON PHONE ]</div>
+    <h2 id="qrTitle">Interactive Lab Surface</h2>
+    <p>Scan with your phone to test the touch controls and zero-scroll proof surface:</p>
+    <div class="qr-container" id="qrContainer"></div>
+    <div class="qr-url" id="qrUrl"></div>
+    <div class="qr-actions">
+      <button class="qr-btn primary" id="qrCopyBtn">Copy Link</button>
+      <button class="qr-btn" onclick="closeQrModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-wrap">
+    <div>
+      <b>Trouttown Exhibit Labs &amp; Proof Suite</b> · Intro to Computational Media · Fall 2026<br>
+      Department of Computational Media · Watson Hartsoe
+    </div>
+    <div style="display:flex;gap:14px;">
+      <a href="../index.html" style="color:var(--teal)">Lab 05 Master Hub</a>
+      <a href="../../index.html" style="color:var(--amber)">Course Semester Wheel</a>
+      <a href="../trouttown_theater.html" style="color:var(--ink)">Trouttown Theater</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Filter functionality
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const filter = btn.dataset.filter;
+    document.querySelectorAll(".card-item").forEach(item => {
+      if (filter === "all" || item.dataset.category === filter) {
+        item.style.display = "";
+      } else {
+        item.style.display = "none";
+      }
+    });
+  });
+});
+
+// Search functionality
+const searchInput = document.getElementById("searchInput");
+searchInput.addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase().trim();
+  document.querySelectorAll(".card-item").forEach(item => {
+    const text = item.textContent.toLowerCase();
+    if (!query || text.includes(query)) {
+      item.style.display = "";
+    } else {
+      item.style.display = "none";
+    }
+  });
+});
+
+// Preview Drawer
+const previewDrawer = document.getElementById("previewDrawer");
+const previewIframe = document.getElementById("previewIframe");
+const drawerTitle = document.getElementById("drawerTitle");
+const drawerNewTab = document.getElementById("drawerNewTab");
+const drawerReload = document.getElementById("drawerReload");
+const drawerMobileToggle = document.getElementById("drawerMobileToggle");
+const frameWrap = document.getElementById("frameWrap");
+let currentTargetUrl = "";
+let isMobileMode = false;
+
+function openPreview(url, title) {
+  currentTargetUrl = url;
+  drawerTitle.textContent = "Live Interactive Preview: " + title;
+  previewIframe.src = url;
+  previewDrawer.classList.add("active");
+}
+
+function closePreview() {
+  previewDrawer.classList.remove("active");
+  previewIframe.src = "about:blank";
+}
+
+drawerReload.addEventListener("click", () => {
+  if (currentTargetUrl) previewIframe.src = currentTargetUrl;
+});
+
+drawerNewTab.addEventListener("click", () => {
+  if (currentTargetUrl) window.open(currentTargetUrl, "_blank");
+});
+
+drawerMobileToggle.addEventListener("click", () => {
+  isMobileMode = !isMobileMode;
+  if (isMobileMode) {
+    frameWrap.style.display = "grid";
+    frameWrap.style.placeItems = "center";
+    previewIframe.style.width = "390px";
+    previewIframe.style.height = "844px";
+    previewIframe.style.border = "3px solid var(--amber)";
+    drawerMobileToggle.textContent = "🖥 Desktop View";
+    drawerMobileToggle.style.color = "var(--amber)";
+  } else {
+    frameWrap.style.display = "block";
+    previewIframe.style.width = "100%";
+    previewIframe.style.height = "100%";
+    previewIframe.style.border = "none";
+    drawerMobileToggle.textContent = "📱 Phone View";
+    drawerMobileToggle.style.color = "inherit";
+  }
+});
+
+// QR Modal
+const qrModal = document.getElementById("qrModal");
+const qrContainer = document.getElementById("qrContainer");
+const qrTitle = document.getElementById("qrTitle");
+const qrUrl = document.getElementById("qrUrl");
+const qrCopyBtn = document.getElementById("qrCopyBtn");
+
+function openQrModal(path, label) {
+  // Construct production github.io URL
+  const prodUrl = window.location.href.includes("github.io") 
+    ? new URL(path, window.location.href).href 
+    : `https://hartswf0.github.io/2700-fa26/LAB%205%20-%20ARRAYS/trouttown-exhibit-labs/${path}`;
+
+  qrTitle.textContent = label;
+  qrUrl.textContent = prodUrl;
+  const enc = encodeURIComponent(prodUrl);
+  qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&margin=0&data=${enc}" alt="QR Code" width="190" height="190" style="display:block;width:100%;height:100%;" onerror="this.outerHTML='<div style=\\'font-family:monospace;font-size:10px;padding:20px;\\'>Scan URL:<br>${prodUrl}</div>'" />`;
+  qrModal.classList.add("open");
+}
+
+function closeQrModal() {
+  qrModal.classList.remove("open");
+}
+
+qrModal.addEventListener("click", (e) => {
+  if (e.target === qrModal) closeQrModal();
+});
+
+qrCopyBtn.addEventListener("click", () => {
+  const text = qrUrl.textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      qrCopyBtn.textContent = "COPIED!";
+      setTimeout(() => qrCopyBtn.textContent = "Copy Link", 1800);
+    });
+  } else {
+    prompt("Copy link:", text);
+  }
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closePreview();
+    closeQrModal();
+  }
+});
+</script>
+
+</body>
+</html>
