@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Lab 6 · Class vs Instance Proof Surface</title>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#111;--paper:#f7f3e6;--gold:#ffd23f;--red:#ef513f;--water:#0b3d49;--mint:#9ce8ce}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+button,input,a{font:inherit;color:inherit}a{text-decoration:none}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:3px solid #111;background:#fff;padding:12px 18px;position:sticky;top:0;z-index:5}
+.brand{font-weight:950;letter-spacing:-.03em}.tag{font:900 10px/1 ui-monospace,monospace;background:#111;color:var(--gold);padding:6px 9px;border-radius:3px;letter-spacing:.08em}
+.btn{border:2px solid #111;background:#fff;padding:8px 10px;font:900 11px/1 ui-monospace,monospace;cursor:pointer;border-radius:4px}.btn.primary{background:var(--gold)}
+main{max-width:1180px;margin:0 auto;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{border:3px solid #111;background:#fff;border-radius:7px;box-shadow:5px 5px 0 #111;overflow:hidden}
+.card h2{margin:0;padding:14px 16px;border-bottom:2px solid #111;font-size:20px;letter-spacing:-.03em}
+.body{padding:16px}
+.lead{grid-column:1/-1}.lead h1{font-size:clamp(38px,7vw,80px);line-height:.86;letter-spacing:-.06em;margin:0 0 14px}.lead p{max-width:850px;font-size:16px;line-height:1.45;font-weight:700}
+.proof{grid-column:1/-1}
+#pond{height:320px;background:var(--water);position:relative;overflow:hidden;border-bottom:3px solid #111}
+.fish{position:absolute;width:44px;height:22px;border-radius:50%;background:#e4b65b;transform:translate(-50%,-50%);cursor:pointer;border:2px solid rgba(255,255,255,.25)}
+.fish:before{content:"";position:absolute;left:-13px;top:3px;border-top:7px solid transparent;border-bottom:7px solid transparent;border-right:14px solid #e4b65b}
+.fish:after{content:"";position:absolute;right:7px;top:5px;width:5px;height:5px;background:#111;border:2px solid #fff;border-radius:50%}
+.fish.selected{outline:3px solid #fff;outline-offset:4px}
+.pondlabel{position:absolute;left:10px;top:10px;color:#fff;font:900 10px/1 ui-monospace,monospace;letter-spacing:.08em;background:rgba(0,0,0,.45);padding:7px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.controlbox{border:2px solid #111;padding:14px;background:#fafafa}.controlbox h3{margin:0 0 6px;font-size:16px}.controlbox p{font-size:12px;line-height:1.35;margin:0 0 12px}
+label{display:block;font:900 10px/1 ui-monospace,monospace;margin:10px 0 4px}.value{font:900 22px/1 ui-monospace,monospace;color:#a32e24}
+input[type=range]{width:100%}
+.code{font:800 12px/1.55 ui-monospace,monospace;background:#111;color:#f3f0e5;padding:14px;white-space:pre-wrap;border-radius:4px}
+.rule{border-left:5px solid var(--red);padding:8px 12px;background:#fff7e5;font-weight:800;line-height:1.4;margin:10px 0}
+.test{padding:10px;border:1.5px solid #111;background:#fff;margin:8px 0;font-size:13px;line-height:1.35}.test b{font-family:ui-monospace,monospace}
+@media(max-width:780px){main{grid-template-columns:1fr;padding:14px}.lead,.proof{grid-column:1}.controls{grid-template-columns:1fr}#pond{height:42vh;min-height:280px}}
+</style>
+</head>
+<body>
+<header>
+  <div><span class="tag">L6.02 · PROOF</span> <span class="brand">CLASS ≠ INSTANCE</span></div>
+  <div><a class="btn" href="index.html">LAB HUB</a> <a class="btn primary" href="the-current-is-the-law.html">OPEN TROUTTOWN</a></div>
+</header>
+<main>
+  <section class="lead">
+    <h1>Change the theory.<br>Watch who changes.</h1>
+    <p>This proof surface makes one distinction visible: changing a constructor default does not reach backward through time and rewrite already-created instances. A class describes how a new trout begins; an instance carries its own state after construction.</p>
+  </section>
+
+  <section class="card proof">
+    <h2>THE POND · click one trout</h2>
+    <div id="pond"><div class="pondlabel">EXISTING INSTANCES</div></div>
+    <div class="body controls">
+      <div class="controlbox">
+        <h3>&lt;CLASS DEFAULT&gt;</h3>
+        <p>This value is read when <b>new Trout()</b> runs. Move it, then spawn another trout.</p>
+        <label>constructor defaultSpeed</label>
+        <div class="value" id="classVal">1.0</div>
+        <input id="classSpeed" type="range" min=".2" max="3" step=".1" value="1">
+        <button class="btn primary" id="spawn" style="margin-top:12px;width:100%">new Trout()</button>
+      </div>
+      <div class="controlbox">
+        <h3>&lt;SELECTED INSTANCE&gt;</h3>
+        <p>This modifies one already-existing trout. The other instances should remain unchanged.</p>
+        <label>selected.speed</label>
+        <div class="value" id="instanceVal">SELECT A TROUT</div>
+        <input id="instanceSpeed" type="range" min=".2" max="3" step=".1" value="1" disabled>
+        <button class="btn" id="allBtn" style="margin-top:12px;width:100%">APPLY SELECTED SPEED TO ALL</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>PROGRAM THEORY</h2>
+    <div class="body">
+      <div class="rule">&lt;class&gt; [describes] how an entity begins and what operations it can perform.</div>
+      <div class="rule">&lt;instance&gt; [stores] the current state of one particular entity.</div>
+      <div class="rule">new Trout() [copies-from] &lt;constructor defaults&gt; at the moment of creation.</div>
+      <div class="rule">&lt;later class change&gt; [does not automatically rewrite] &lt;existing instance state&gt;.</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>VISIBLE TESTS</h2>
+    <div class="body">
+      <div class="test"><b>TEST 1.</b> Set class default to 3.0. Existing trout should not suddenly become faster.</div>
+      <div class="test"><b>TEST 2.</b> Spawn a trout. The new instance should inherit the new 3.0 starting speed.</div>
+      <div class="test"><b>TEST 3.</b> Select one trout and slow it to 0.2. Only that individual should change.</div>
+      <div class="test"><b>TEST 4.</b> Apply the selected value to all. Now the population changes because you explicitly iterated over the array.</div>
+    </div>
+  </section>
+
+  <section class="card" style="grid-column:1/-1">
+    <h2>THE SAME IDEA IN JAVASCRIPT</h2>
+    <div class="body"><div class="code">let defaultSpeed = 1;
+
+class Trout {
+  constructor() {
+    this.speed = defaultSpeed;   // copied when this instance is born
+  }
+
+  update() {
+    this.x += this.speed;
+  }
+}
+
+trout.push(new Trout());         // one independent instance</div></div>
+  </section>
+</main>
+<script>
+const pond=document.getElementById('pond');
+const classSpeed=document.getElementById('classSpeed');
+const instanceSpeed=document.getElementById('instanceSpeed');
+const classVal=document.getElementById('classVal');
+const instanceVal=document.getElementById('instanceVal');
+let defaultSpeed=1;
+let fish=[];
+let selected=null;
+let nextId=0;
+
+class TroutView{
+  constructor(){
+    this.id=nextId++;
+    this.x=Math.random()*(pond.clientWidth-100)+50;
+    this.y=Math.random()*(pond.clientHeight-80)+40;
+    this.speed=defaultSpeed;
+    this.dir=Math.random()<.5?-1:1;
+    this.el=document.createElement('div');
+    this.el.className='fish';
+    this.el.title='Trout #'+this.id+' · speed '+this.speed.toFixed(1);
+    this.el.addEventListener('click',e=>{e.stopPropagation();selectFish(this);});
+    pond.appendChild(this.el);
+  }
+  step(){
+    this.x+=this.speed*this.dir;
+    if(this.x<28){this.x=28;this.dir=1}
+    if(this.x>pond.clientWidth-28){this.x=pond.clientWidth-28;this.dir=-1}
+    this.el.style.left=this.x+'px';
+    this.el.style.top=this.y+'px';
+    this.el.style.transform='translate(-50%,-50%) scaleX('+(this.dir<0?-1:1)+')';
+    this.el.title='Trout #'+this.id+' · speed '+this.speed.toFixed(1);
+  }
+}
+
+function spawn(){fish.push(new TroutView())}
+function selectFish(f){
+  selected=f;
+  fish.forEach(x=>x.el.classList.toggle('selected',x===f));
+  instanceSpeed.disabled=false;
+  instanceSpeed.value=f.speed;
+  instanceVal.textContent=f.speed.toFixed(1)+' · TROUT #'+f.id;
+}
+classSpeed.addEventListener('input',()=>{
+  defaultSpeed=Number(classSpeed.value);
+  classVal.textContent=defaultSpeed.toFixed(1);
+});
+instanceSpeed.addEventListener('input',()=>{
+  if(!selected)return;
+  selected.speed=Number(instanceSpeed.value);
+  instanceVal.textContent=selected.speed.toFixed(1)+' · TROUT #'+selected.id;
+});
+document.getElementById('spawn').addEventListener('click',spawn);
+document.getElementById('allBtn').addEventListener('click',()=>{
+  if(!selected)return;
+  fish.forEach(f=>f.speed=selected.speed);
+});
+for(let i=0;i<7;i++)spawn();
+function tick(){fish.forEach(f=>f.step());requestAnimationFrame(tick)}
+tick();
+window.addEventListener('resize',()=>{fish.forEach(f=>{f.x=Math.min(f.x,pond.clientWidth-28);f.y=Math.min(f.y,pond.clientHeight-28)})});
+</script>
+</body>
+</html>
