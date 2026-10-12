@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Lab 6 · The Current Is the Law</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#111;--paper:#f4f0df;--water:#0b3440;--water2:#0f5261;--gold:#ffd23f;--red:#ef513f;--mint:#9ce8ce;--blue:#9cdcff}
+html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+button,a{font:inherit;color:inherit}
+a{text-decoration:none}
+header{min-height:58px;border-bottom:3px solid var(--ink);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;background:#fff;position:sticky;top:0;z-index:20}
+.brand{font-weight:950;letter-spacing:-.03em}.tag{font:900 10px/1 ui-monospace,monospace;letter-spacing:.1em;background:var(--ink);color:var(--gold);padding:7px 9px;border-radius:3px}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:2px solid var(--ink);background:#fff;padding:8px 11px;font:900 11px/1 ui-monospace,monospace;border-radius:4px;cursor:pointer}.btn:hover,.btn.active{background:var(--ink);color:#fff}.btn.gold{background:var(--gold);color:var(--ink)}
+.shell{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.7fr);min-height:calc(100vh - 61px)}
+.stage{background:#071e25;min-width:0;display:flex;flex-direction:column;border-right:3px solid var(--ink)}
+.stagebar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#0e252c;color:#e8f5f3;border-bottom:1px solid #31515a;font:800 10px/1.25 ui-monospace,monospace;letter-spacing:.05em}
+#canvasWrap{position:relative;flex:1;min-height:520px;overflow:hidden}
+#canvasWrap canvas{display:block}
+.hud{position:absolute;left:12px;bottom:12px;right:12px;display:flex;justify-content:space-between;gap:10px;pointer-events:none}
+.hudbox{background:rgba(4,16,20,.83);border:1px solid rgba(255,255,255,.25);color:#eaf7f5;padding:8px 10px;font:800 10px/1.35 ui-monospace,monospace;max-width:48%}
+.panel{background:var(--paper);overflow:auto}
+.block{padding:22px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:900 10px/1 ui-monospace,monospace;letter-spacing:.12em;color:#9d2c21;margin-bottom:8px}
+h1{font-size:clamp(31px,4.2vw,58px);line-height:.88;letter-spacing:-.05em;margin:0 0 14px}h2{font-size:22px;letter-spacing:-.03em;margin:0 0 10px}
+p{font-size:14px;line-height:1.45;margin:0 0 12px}.quote{font:800 16px/1.3 Georgia,serif;border-left:5px solid var(--red);padding-left:12px}
+.modegrid{display:grid;grid-template-columns:1fr;gap:8px}.mode{border:2px solid var(--ink);background:#fff;padding:11px;text-align:left;cursor:pointer}.mode strong{display:block;font:900 12px/1 ui-monospace,monospace;margin-bottom:4px}.mode span{font-size:12px;line-height:1.3}.mode.active{background:var(--gold)}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.stat{border:1.5px solid var(--ink);background:#fff;padding:8px}.stat b{display:block;font:900 9px/1 ui-monospace,monospace;letter-spacing:.06em;color:#666;margin-bottom:4px}.stat span{font:900 15px/1 ui-monospace,monospace}
+.rule{font:800 12px/1.45 ui-monospace,monospace;background:#fff;border:1.5px solid var(--ink);padding:10px;margin-top:8px}.arrow{color:#b52f22}
+.small{font-size:11px;color:#4e4c45}.warning{background:#fff8d8;border:2px solid var(--ink);padding:10px;font-size:12px;line-height:1.4}
+kbd{border:1px solid #999;background:#fff;padding:2px 5px;border-radius:3px;font:800 10px/1 ui-monospace,monospace}
+@media(max-width:850px){
+  header{position:relative;align-items:flex-start}.shell{display:block}.stage{border-right:0;border-bottom:3px solid var(--ink)}#canvasWrap{min-height:58vh}.panel{overflow:visible}
+  .header-actions{overflow-x:auto;flex-wrap:nowrap;max-width:58vw}.btn{white-space:nowrap}.hudbox{max-width:60%}
+}
+</style>
+</head>
+<body>
+<header>
+  <div><span class="tag">LAB 06 · TROUTTOWN</span> <span class="brand">THE CURRENT IS THE LAW</span></div>
+  <div class="header-actions">
+    <a class="btn" href="index.html">LAB HUB</a>
+    <button class="btn" id="addBtn">+ TROUT</button>
+    <button class="btn gold" id="resetBtn">RESET SOCIETY</button>
+  </div>
+</header>
+<div class="shell">
+  <section class="stage">
+    <div class="stagebar">
+      <span>CLICK A TROUT TO INSPECT AN INSTANCE · CLICK WATER IN MODE 3 TO BROADCAST THE LURE</span>
+      <span id="decreeTop">DECREE: THE CURRENT IS THE LAW</span>
+    </div>
+    <div id="canvasWrap">
+      <div class="hud">
+        <div class="hudbox" id="eventHud">No crisis at present. This is suspicious.</div>
+        <div class="hudbox" id="selectedHud">SELECTED INSTANCE: none</div>
+      </div>
+    </div>
+  </section>
+  <aside class="panel">
+    <div class="block">
+      <div class="eyebrow">CLASSES → INSTANCES → POPULATIONS → INSTITUTIONS</div>
+      <h1>Medieval<br>Trout.</h1>
+      <p class="quote">“Paleolithic emotions, medieval institutions and godlike technology.”</p>
+      <p class="small">E. O. Wilson’s formulation is used here as a provocation, not as a biological truth about people. Trouttown is an intentionally ridiculous toy model for exposing what our code assumes.</p>
+    </div>
+    <div class="block">
+      <h2>Run the mismatch</h2>
+      <div class="modegrid">
+        <button class="mode" data-mode="1"><strong>1 · PALEOLITHIC TROUT</strong><span>Local drives only: avoid crowding, align, stay with the school.</span></button>
+        <button class="mode active" data-mode="2"><strong>2 · MEDIEVAL INSTITUTIONS</strong><span>The same Trout class must now survive an abbey, toll gate, court, rank, and decrees.</span></button>
+        <button class="mode" data-mode="3"><strong>3 · GODLIKE LURE</strong><span>Click anywhere. Attention becomes a force stronger than the institutions.</span></button>
+      </div>
+    </div>
+    <div class="block">
+      <h2>The program theory</h2>
+      <div class="rule">&lt;class Trout&gt; <span class="arrow">[defines]</span> what one trout can know and do</div>
+      <div class="rule">new Trout(...) <span class="arrow">[creates]</span> one independent &lt;instance&gt;</div>
+      <div class="rule">{trout[]} <span class="arrow">[becomes]</span> a &lt;population&gt;</div>
+      <div class="rule">&lt;institution&gt; <span class="arrow">[changes]</span> behavior without changing species</div>
+      <div class="rule">{local rules} <span class="arrow">[produce]</span> &lt;emergent pattern&gt;</div>
+    </div>
+    <div class="block">
+      <h2>Population inspector</h2>
+      <div class="statgrid">
+        <div class="stat"><b>INSTANCES</b><span id="sCount">0</span></div>
+        <div class="stat"><b>COMMONERS</b><span id="sCommon">0</span></div>
+        <div class="stat"><b>OFFICIALS</b><span id="sOfficial">0</span></div>
+        <div class="stat"><b>LURE POWER</b><span id="sLure">0</span></div>
+      </div>
+      <p class="small" style="margin-top:10px">Keyboard: <kbd>1</kbd> instincts, <kbd>2</kbd> institutions, <kbd>3</kbd> lure, <kbd>A</kbd> add trout, <kbd>R</kbd> reset.</p>
+    </div>
+    <div class="block">
+      <div class="warning"><b>MODEL WARNING.</b> A simulation is a theory with executable consequences. If every trout has “obedience,” the program did not discover obedience in nature. The programmer put it there. Change the theory and watch the society change.</div>
+    </div>
+  </aside>
+</div>
+<script>
+let trout = [];
+let mode = 2;
+let lure = {x:0,y:0,power:0};
+let selected = null;
+let courtDecree = 1;
+let nextDecree = 0;
+let eventText = 'No crisis at present. This is suspicious.';
+let wrap;
+
+const roles = ['FRY','COMMON','COMMON','COMMON','CLERK','KNIGHT','ABBOT','LORD'];
+
+function setup(){
+  wrap = document.getElementById('canvasWrap');
+  const c = createCanvas(wrap.clientWidth, wrap.clientHeight);
+  c.parent('canvasWrap');
+  resetSociety();
+}
+
+function resetSociety(){
+  trout = [];
+  const n = width < 600 ? 24 : 42;
+  for(let i=0;i<n;i++) trout.push(new Trout(random(width),random(height),i));
+  selected = null;
+  lure.power = 0;
+  courtDecree = random([-1,1]);
+  nextDecree = frameCount + 240;
+  eventText = 'The borough has been re-founded. Nobody remembers why.';
+  updateStats();
+}
+
+class Trout{
+  constructor(x,y,id){
+    this.id = id;
+    this.x = x; this.y = y;
+    this.vx = random(-1.4,1.4); this.vy = random(-.8,.8);
+    if(abs(this.vx)<.35) this.vx = random([-.8,.8]);
+    this.size = random(11,20);
+    this.affiliation = random(.45,1);
+    this.fear = random(.25,1);
+    this.obedience = random(.15,1);
+    this.role = random(roles);
+    this.rank = roles.indexOf(this.role);
+    this.pause = 0;
+    this.tollCooldown = 0;
+    this.attention = 0;
+    this.lastX = x;
+  }
+
+  update(){
+    this.lastX = this.x;
+    this.primitiveRules();
+    if(mode >= 2) this.medievalRules();
+    if(mode === 3) this.godlikeTechnology();
+
+    if(this.pause>0){
+      this.pause--;
+      this.vx *= .90; this.vy *= .90;
+    }
+
+    this.vx = constrain(this.vx,-2.8,2.8);
+    this.vy = constrain(this.vy,-2.2,2.2);
+    this.x += this.vx;
+    this.y += this.vy;
+    this.attention *= .95;
+    if(this.tollCooldown>0) this.tollCooldown--;
+
+    if(this.x < -30) this.x = width+30;
+    if(this.x > width+30) this.x = -30;
+    if(this.y < 34) { this.y=34; this.vy=abs(this.vy); }
+    if(this.y > height-28) { this.y=height-28; this.vy=-abs(this.vy); }
+  }
+
+  primitiveRules(){
+    let near=0, ax=0, ay=0, cx=0, cy=0, sx=0, sy=0;
+    for(const other of trout){
+      if(other===this) continue;
+      const dx = other.x-this.x, dy=other.y-this.y;
+      const d2 = dx*dx+dy*dy;
+      if(d2 < 110*110){
+        near++; ax += other.vx; ay += other.vy; cx += other.x; cy += other.y;
+        if(d2 < 28*28 && d2>0){ sx -= dx/d2*25; sy -= dy/d2*25; }
+      }
+    }
+    if(near){
+      this.vx += (ax/near-this.vx)*.012*this.affiliation;
+      this.vy += (ay/near-this.vy)*.012*this.affiliation;
+      this.vx += (cx/near-this.x)*.00035*this.affiliation;
+      this.vy += (cy/near-this.y)*.00035*this.affiliation;
+      this.vx += sx*.02*this.fear;
+      this.vy += sy*.02*this.fear;
+    }
+    this.vx += random(-.025,.025);
+    this.vy += random(-.018,.018);
+  }
+
+  medievalRules(){
+    const gateX = width*.50;
+    const abbey = {x:width*.08,y:height*.12,w:width*.25,h:height*.23};
+    const court = {x:width*.67,y:height*.57,w:width*.25,h:height*.24};
+
+    if(this.x>abbey.x && this.x<abbey.x+abbey.w && this.y>abbey.y && this.y<abbey.y+abbey.h){
+      this.vx *= .955; this.vy *= .955;
+      if(this.role==='ABBOT'){ this.vx*=.88; this.vy*=.88; }
+    }
+
+    const crossed = (this.lastX < gateX && this.x >= gateX) || (this.lastX > gateX && this.x <= gateX);
+    const privileged = this.role==='LORD' || this.role==='KNIGHT' || this.role==='ABBOT';
+    if(crossed && !privileged && this.tollCooldown<=0){
+      this.pause = 28 + floor(this.obedience*42);
+      this.tollCooldown = 150;
+      if(random()<.08) eventText = 'A common trout has paid one imaginary worm to cross water.';
+    }
+
+    if(this.x>court.x && this.x<court.x+court.w && this.y>court.y && this.y<court.y+court.h){
+      this.vx += courtDecree*.025*this.obedience;
+      if(random()<.004) eventText = 'CURRENT COURT: upstream appeal denied for being upstream.';
+    }
+
+    for(const other of trout){
+      if(other.role==='LORD'){
+        const d = dist(this.x,this.y,other.x,other.y);
+        if(d<70 && this.role!=='LORD'){
+          this.vx *= (1-.025*this.obedience);
+          this.vy *= (1-.025*this.obedience);
+        }
+      }
+    }
+  }
+
+  godlikeTechnology(){
+    if(lure.power>0){
+      const dx=lure.x-this.x, dy=lure.y-this.y;
+      const d=max(28,sqrt(dx*dx+dy*dy));
+      const force = lure.power * .065 / d;
+      this.vx += dx*force;
+      this.vy += dy*force;
+      this.attention = constrain(this.attention + lure.power*.035,0,1);
+    }
+  }
+
+  display(){
+    push();
+    translate(this.x,this.y);
+    if(this.vx<0) scale(-1,1);
+
+    const rankColors = [
+      [170,210,185],[223,181,91],[223,181,91],[223,181,91],
+      [132,199,220],[220,220,230],[182,150,220],[255,210,63]
+    ];
+    const col = rankColors[max(0,this.rank)];
+    noStroke();
+    fill(col[0],col[1],col[2]);
+    ellipse(0,0,this.size*2.0,this.size);
+    triangle(-this.size*.85,0,-this.size*1.55,-this.size*.62,-this.size*1.55,this.size*.62);
+    fill(255); circle(this.size*.48,-this.size*.14,max(3,this.size*.2));
+    fill(20); circle(this.size*.5,-this.size*.14,max(1.7,this.size*.09));
+
+    if(this.role==='LORD'){
+      fill(255,210,63);
+      triangle(-4,-this.size*.65,0,-this.size*1.08,3,-this.size*.65);
+      triangle(1,-this.size*.65,5,-this.size*1.03,8,-this.size*.65);
+      rect(-5,-this.size*.70,13,3);
+    }
+    if(this.role==='ABBOT'){
+      noFill(); stroke(240,235,210); strokeWeight(1.4); circle(0,-this.size*.72,this.size*.7);
+    }
+    if(this.attention>.08){
+      noFill(); stroke(255,65,72,140*this.attention); strokeWeight(2); circle(0,0,this.size*2.7+this.attention*14);
+    }
+    if(selected===this){
+      noFill(); stroke(255); strokeWeight(2); circle(0,0,this.size*3.2);
+    }
+    pop();
+  }
+}
+
+function draw(){
+  drawWater();
+  if(mode>=2) drawInstitutions();
+  if(mode===3) drawLure();
+
+  if(frameCount>nextDecree){
+    courtDecree *= -1;
+    nextDecree = frameCount + 210;
+    eventText = courtDecree>0 ? 'DECREE: downstream is temporarily patriotic.' : 'DECREE: upstream has been restored by order.';
+    document.getElementById('decreeTop').textContent = eventText;
+  }
+
+  for(const t of trout){ t.update(); t.display(); }
+  lure.power *= .975;
+  if(lure.power<.02) lure.power=0;
+
+  updateHud();
+  if(frameCount%20===0) updateStats();
+}
+
+function drawWater(){
+  background(8,48,59);
+  noStroke();
+  for(let y=45;y<height;y+=34){
+    fill(20,90,102,35);
+    const off = (frameCount*.25+y)%width;
+    rect(off-width, y, width*.45, 2);
+    rect(off, y, width*.45, 2);
+  }
+  fill(235,229,193,30);
+  rect(0,height-22,width,22);
+}
+
+function drawInstitutions(){
+  const gateX=width*.50;
+  const ax=width*.08, ay=height*.12, aw=width*.25, ah=height*.23;
+  const cx=width*.67, cy=height*.57, cw=width*.25, ch=height*.24;
+
+  noStroke(); fill(160,200,185,22); rect(ax,ay,aw,ah,8);
+  fill(255,240,205,180); textFont('monospace'); textStyle(BOLD); textSize(10);
+  text('ABBEY OF STILL WATER',ax+8,ay+16);
+  textSize(8); text('VOW: REDUCE VELOCITY',ax+8,ay+29);
+
+  stroke(255,210,63,170); strokeWeight(3); line(gateX,45,gateX,height-25);
+  noStroke(); fill(255,210,63); textSize(10); text('TOLL: 1 WORM',gateX+8,61);
+  textSize(8); text('LORDS PASS FREE',gateX+8,74);
+
+  noStroke(); fill(150,175,210,22); rect(cx,cy,cw,ch,8);
+  fill(220,235,255,190); textSize(10); text('THE CURRENT COURT',cx+8,cy+17);
+  textSize(8); text(courtDecree>0?'DECREE: DOWNSTREAM':'DECREE: UPSTREAM',cx+8,cy+30);
+
+  fill(255,255,255,130); textSize(9);
+  text('OLD BRIDGE',gateX-33,height-35);
+}
+
+function drawLure(){
+  if(lure.power<=0) return;
+  push();
+  noFill();
+  for(let i=1;i<=4;i++){
+    stroke(255,60,70,180/i); strokeWeight(2);
+    circle(lure.x,lure.y,18+i*24+(1-lure.power)*18);
+  }
+  noStroke(); fill(255,210,63); circle(lure.x,lure.y,9);
+  fill(255); textFont('monospace'); textStyle(BOLD); textSize(9); text('TRENDING WORM',lure.x+10,lure.y-10);
+  pop();
+}
+
+function mousePressed(){
+  if(mouseX<0||mouseY<0||mouseX>width||mouseY>height) return;
+  let nearest=null, best=9999;
+  for(const t of trout){
+    const d=dist(mouseX,mouseY,t.x,t.y);
+    if(d<best){best=d;nearest=t;}
+  }
+  if(best<32){
+    selected=nearest;
+    eventText = 'Selected Trout #' + nearest.id + ': ' + nearest.role + '. It believes this is a meaningful title.';
+  } else if(mode===3){
+    lure.x=mouseX; lure.y=mouseY; lure.power=1;
+    eventText = 'GODLIKE TECHNOLOGY: a worm has gone viral.';
+  }
+}
+
+function keyPressed(){
+  if(key==='1') setMode(1);
+  if(key==='2') setMode(2);
+  if(key==='3') setMode(3);
+  if(key==='a'||key==='A') addTrout();
+  if(key==='r'||key==='R') resetSociety();
+}
+
+function addTrout(){
+  trout.push(new Trout(random(width),random(60,height-40),trout.length ? max(trout.map(t=>t.id))+1 : 0));
+  eventText='A new subject has entered the realm without completing Form 6-F.';
+  updateStats();
+}
+
+function setMode(m){
+  mode=m; lure.power=0;
+  document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',Number(b.dataset.mode)===mode));
+  eventText = m===1 ? 'Institutions suspended. The trout immediately invent cliques.' :
+              m===2 ? 'The abbey, toll gate, court, and rank system are now legally fish.' :
+              'Godlike lure technology enabled. Click open water to manufacture importance.';
+}
+
+function updateHud(){
+  document.getElementById('eventHud').textContent=eventText;
+  document.getElementById('sLure').textContent=(lure.power*100).toFixed(0)+'%';
+  if(selected){
+    document.getElementById('selectedHud').textContent =
+      'Trout #'+selected.id+' · '+selected.role+
+      ' · fear '+selected.fear.toFixed(2)+
+      ' · affiliation '+selected.affiliation.toFixed(2)+
+      ' · obedience '+selected.obedience.toFixed(2);
+  } else {
+    document.getElementById('selectedHud').textContent='SELECTED INSTANCE: none';
+  }
+}
+
+function updateStats(){
+  document.getElementById('sCount').textContent=trout.length;
+  document.getElementById('sCommon').textContent=trout.filter(t=>t.role==='COMMON'||t.role==='FRY').length;
+  document.getElementById('sOfficial').textContent=trout.filter(t=>!['COMMON','FRY'].includes(t.role)).length;
+}
+
+function windowResized(){
+  wrap=document.getElementById('canvasWrap');
+  resizeCanvas(wrap.clientWidth,wrap.clientHeight);
+}
+
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(Number(b.dataset.mode))));
+document.getElementById('addBtn').addEventListener('click',addTrout);
+document.getElementById('resetBtn').addEventListener('click',resetSociety);
+</script>
+</body>
+</html>
