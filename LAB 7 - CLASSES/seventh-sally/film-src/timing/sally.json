@@ -1,0 +1,269 @@
+{
+ "beats": [
+  {
+   "shot": "title",
+   "d": 5,
+   "t0": 0.0,
+   "voice": "N"
+  },
+  {
+   "shot": "exile",
+   "card": [
+    "K",
+    "d"
+   ],
+   "verb": "SIMULATE",
+   "quote": "Rule and have dominion.",
+   "scale": [
+    1,
+    1
+   ],
+   "say": "Excelsius the tyrant had been thrown off his throne by his own subjects. Now he sat on a bare asteroid, still demanding someone to rule.",
+   "t0": 5.0,
+   "voice": "N",
+   "vt0": 5.9,
+   "vt1": 15.005,
+   "d": 10.805
+  },
+  {
+   "shot": "build",
+   "card": [
+    "J",
+    "s"
+   ],
+   "verb": "BUILD",
+   "quote": "I built the king an entirely new kingdom.",
+   "scale": [
+    1,
+    1
+   ],
+   "say": "Trurl would not give him real people to rule. So he built him a kingdom in a box: towers, roads, seasons, and thousands of small citizens, each one able to think.",
+   "t0": 15.805,
+   "voice": "N",
+   "vt0": 16.705,
+   "vt1": 28.561,
+   "d": 13.556
+  },
+  {
+   "shot": "world",
+   "card": [
+    "A",
+    "c"
+   ],
+   "verb": "WORLD",
+   "quote": "An entirely new kingdom.",
+   "scale": [
+    1,
+    1000
+   ],
+   "hold": 2.2,
+   "say": "The box was small enough to carry. Inside it was a whole country.",
+   "t0": 29.361,
+   "voice": "N",
+   "vt0": 30.261,
+   "vt1": 34.645,
+   "d": 8.284
+  },
+  {
+   "shot": "govern",
+   "card": [
+    "10",
+    "c"
+   ],
+   "verb": "GOVERN",
+   "quote": "A flick of the finger.",
+   "scale": [
+    1,
+    1
+   ],
+   "say": "The king ruled it from a console. A lever for taxes, a lever for the census, a lever for pardons. A flick of the finger, and a decree went out.",
+   "t0": 37.645,
+   "voice": "N",
+   "vt0": 38.545,
+   "vt1": 48.532,
+   "d": 11.687
+  },
+  {
+   "shot": "inhabit",
+   "card": [
+    "8",
+    "h"
+   ],
+   "verb": "INHABIT",
+   "quote": "We live, though we are small.",
+   "scale": [
+    1000,
+    1000
+   ],
+   "hold": 1,
+   "say": "Inside, every citizen walked its own street, and loved, and was afraid.",
+   "t0": 49.332,
+   "voice": "N",
+   "vt0": 50.232,
+   "vt1": 55.51,
+   "d": 7.978
+  },
+  {
+   "shot": "crowd",
+   "card": [
+    "9",
+    "h"
+   ],
+   "verb": "EXPERIENCE",
+   "quote": "Their suffering is not small.",
+   "scale": [
+    1000,
+    1000
+   ],
+   "hold": 1.2,
+   "say": "Time ran faster in the box. One afternoon of royal games was a century of their history.",
+   "t0": 57.31,
+   "voice": "N",
+   "vt0": 58.21,
+   "vt1": 63.916,
+   "d": 8.606
+  },
+  {
+   "shot": "question",
+   "card": [
+    "Q",
+    "s"
+   ],
+   "verb": "QUESTION",
+   "quote": "Our perfection is our curse.",
+   "scale": [
+    1,
+    1
+   ],
+   "voice": "T",
+   "say": "It is only a model. Their groans are numbers.",
+   "t0": 65.916,
+   "vt0": 66.816,
+   "vt1": 69.737,
+   "d": 4.621
+  },
+  {
+   "shot": "question",
+   "card": [
+    "Q",
+    "s"
+   ],
+   "verb": "QUESTION",
+   "quote": "Our perfection is our curse.",
+   "scale": [
+    1,
+    1
+   ],
+   "voice": "K",
+   "say": "If the model is perfect, the suffering is perfect too. You did not build a toy. You built subjects.",
+   "t0": 70.537,
+   "vt0": 70.887,
+   "vt1": 78.952,
+   "d": 9.215
+  },
+  {
+   "shot": "flight",
+   "card": [
+    "Q",
+    "s"
+   ],
+   "verb": "QUESTION",
+   "quote": "Our perfection is our curse.",
+   "scale": [
+    1,
+    1
+   ],
+   "voice": "T",
+   "say": "Then I will free them. I will hold an election.",
+   "t0": 79.752,
+   "vt0": 80.652,
+   "vt1": 83.661,
+   "d": 4.709
+  },
+  {
+   "shot": "flight",
+   "card": [
+    "Q",
+    "s"
+   ],
+   "verb": "QUESTION",
+   "quote": "Our perfection is our curse.",
+   "scale": [
+    1,
+    1
+   ],
+   "voice": "K",
+   "say": "You made them lords and vassals. To free them, you would have to remake them.",
+   "t0": 84.461,
+   "vt0": 84.811,
+   "vt1": 90.845,
+   "d": 7.184
+  },
+  {
+   "shot": "flight",
+   "card": [
+    "Q",
+    "s"
+   ],
+   "verb": "QUESTION",
+   "quote": "Our perfection is our curse.",
+   "scale": [
+    1,
+    1
+   ],
+   "voice": "T",
+   "say": "And where does remaking end, and tampering with minds begin?",
+   "t0": 91.645,
+   "vt0": 91.995,
+   "vt1": 95.813,
+   "d": 4.968
+  },
+  {
+   "shot": "escape",
+   "card": [
+    "7",
+    "c"
+   ],
+   "verb": "ESCAPE",
+   "quote": "We have left the box.",
+   "scale": [
+    1000,
+    1
+   ],
+   "hold": 1,
+   "say": "They came too late. The citizens had broken the glass, taken the asteroid, and built ships of their own.",
+   "t0": 96.613,
+   "voice": "N",
+   "vt0": 97.513,
+   "vt1": 104.94,
+   "d": 10.127
+  },
+  {
+   "shot": "orbit",
+   "card": [
+    "6",
+    "d"
+   ],
+   "verb": "ORBIT",
+   "quote": "The kingdom escaped him.",
+   "scale": [
+    1,
+    1
+   ],
+   "hold": 2,
+   "say": "And above their small world hung a new, pale moon, with the stern face of Excelsius.",
+   "t0": 106.74,
+   "voice": "N",
+   "vt0": 107.64,
+   "vt1": 113.361,
+   "d": 9.421
+  },
+  {
+   "shot": "end",
+   "d": 6,
+   "t0": 116.161,
+   "voice": "N"
+  }
+ ],
+ "dur": 122.161
+}
