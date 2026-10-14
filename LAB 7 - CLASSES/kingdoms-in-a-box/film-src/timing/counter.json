@@ -1,0 +1,100 @@
+{
+ "id": "counter",
+ "world": {
+  "id": "counter",
+  "no": "11",
+  "title": "Zylos",
+  "aphorism": "It fails in ways that teach.",
+  "aphRef": "METISIM \u00b7 Zylos",
+  "source": "METISIM \u00b7 Zylos cluster \u00b7 counter-engines"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 12,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl builds an empire in a box, and an engine that answers every gain with a harder push.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 9.187,
+   "d": 6.687
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "growth": 0.14
+   },
+   "speed": 4,
+   "say": "The empire spreads hex by hex. At twenty seconds the invaders come, and every six seconds they push harder.",
+   "code": [
+    "wave = max(0, floor((frameCount - 1200) / 360) + 1);",
+    "if (random() < 0.012 * invaders * wave)",
+    "  this.owner = 2;"
+   ],
+   "voice": "N",
+   "t0": 10.087,
+   "vt0": 10.587,
+   "vt1": 18.298,
+   "d": 9.111
+  },
+  {
+   "shot": "inside",
+   "speed": 4,
+   "hold": 1,
+   "say": "Forts slow them down. For a while, half the land is held.",
+   "acts": [
+    {
+     "t": 0.4,
+     "fn": "const own = V.hexes.filter(h => h.owner === 1).sort((a, b) => Math.hypot(a.x - 400, a.y - 240) - Math.hypot(b.x - 400, b.y - 240)); return own.slice(0, 8).map(h => [h.x, h.y]);"
+    }
+   ],
+   "voice": "N",
+   "t0": 19.198,
+   "vt0": 19.698,
+   "vt1": 24.057,
+   "d": 6.759
+  },
+  {
+   "shot": "inside",
+   "speed": 5,
+   "hold": 3,
+   "say": "Then the engine breaks the empire, as it was built to do.",
+   "voice": "N",
+   "t0": 25.957,
+   "vt0": 26.457,
+   "vt1": 30.09,
+   "d": 8.033
+  },
+  {
+   "shot": "aphorism",
+   "say": "It fails in ways that teach.",
+   "voice": "A",
+   "t0": 33.99,
+   "vt0": 34.59,
+   "vt1": 36.83,
+   "d": 4.34
+  },
+  {
+   "shot": "doubt",
+   "say": "You do not win this box. You learn where it breaks.",
+   "voice": "K",
+   "t0": 38.33,
+   "vt0": 38.83,
+   "vt1": 42.811,
+   "d": 5.381
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 43.711
+  }
+ ],
+ "dur": 47.511
+}

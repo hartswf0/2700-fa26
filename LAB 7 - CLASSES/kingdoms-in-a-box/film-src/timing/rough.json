@@ -1,0 +1,119 @@
+{
+ "id": "rough",
+ "world": {
+  "id": "rough",
+  "no": "06",
+  "title": "Rough Country",
+  "aphorism": "Resistance persists where power reaches badly.",
+  "aphRef": "Growing Entanglements \u00b7 Model 05",
+  "source": "Cioffi-Revilla & Rouleau 2009 \u00b7 RebeLand"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 9,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl lays mountains in a box, and puts a capital on its western edge.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 8.457,
+   "d": 5.957
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "speed": 1,
+   "say": "The state reaches out from the capital. Its reach falls with distance, and falls again in rough country.",
+   "code": [
+    "power() {",
+    "  let d = dist(this.i, this.j, 0, 12);",
+    "  return reach * exp(-d / 22)",
+    "    * (1 - 0.7 * this.rough);",
+    "}"
+   ],
+   "voice": "N",
+   "t0": 9.357,
+   "vt0": 9.857,
+   "vt1": 16.548,
+   "d": 8.091
+  },
+  {
+   "shot": "inside",
+   "speed": 1,
+   "say": "Six cells of resistance are planted: three near the capital, three in the far mountains.",
+   "acts": [
+    {
+     "t": 0.6,
+     "click": [
+      70,
+      210
+     ]
+    },
+    {
+     "t": 1,
+     "click": [
+      90,
+      290
+     ]
+    },
+    {
+     "t": 1.4,
+     "click": [
+      50,
+      170
+     ]
+    },
+    {
+     "t": 2,
+     "fn": "const P = V.patches.filter(p => p.i > 22).sort((a, b) => b.rough - a.rough); const out = []; for (const p of P) { if (out.every(o => Math.abs(o.i - p.i) + Math.abs(o.j - p.j) > 6)) out.push(p); if (out.length === 3) break; } return out.map(p => [p.i * 20 + 10, p.j * 20 + 10]);"
+    }
+   ],
+   "voice": "N",
+   "t0": 17.448,
+   "vt0": 17.948,
+   "vt1": 23.636,
+   "d": 7.088
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 4,
+   "say": "The sweeps begin. Near the capital the cells are cleared. In the mountains they spread.",
+   "voice": "N",
+   "t0": 24.536,
+   "vt0": 25.036,
+   "vt1": 30.775,
+   "d": 11.139
+  },
+  {
+   "shot": "aphorism",
+   "say": "Resistance persists where power reaches badly.",
+   "voice": "A",
+   "t0": 35.675,
+   "vt0": 36.275,
+   "vt1": 39.849,
+   "d": 5.674
+  },
+  {
+   "shot": "doubt",
+   "say": "The map of the rebellion is a map of where the state is weak.",
+   "voice": "K",
+   "t0": 41.349,
+   "vt0": 41.849,
+   "vt1": 45.62,
+   "d": 5.171
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 46.52
+  }
+ ],
+ "dur": 50.32
+}

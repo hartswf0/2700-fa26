@@ -1,0 +1,111 @@
+{
+ "id": "crowd",
+ "world": {
+  "id": "crowd",
+  "no": "02",
+  "title": "The Quiet Crowd",
+  "aphorism": "The crowd is quiet until risk changes.",
+  "aphRef": "Growing Entanglements \u00b7 Model 01",
+  "source": "Epstein 2002 \u00b7 Civil Violence"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 2,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl builds a public square inside a box. Six hundred and eighty citizens, and forty-five police.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 11.264,
+   "d": 8.764
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "speed": 3,
+   "say": "Each citizen weighs grievance against the risk of arrest. Grievance is hardship, times one minus legitimacy.",
+   "code": [
+    "let grievance = this.hardship * (1 - legitimacy);",
+    "let arrestRisk = 1 - exp(-2.3 * floor(cops / rebels));",
+    "this.active = grievance",
+    "  - this.riskAversion * arrestRisk > 0.1;"
+   ],
+   "voice": "N",
+   "t0": 12.164,
+   "vt0": 12.664,
+   "vt1": 19.894,
+   "d": 8.63
+  },
+  {
+   "shot": "inside",
+   "speed": 3,
+   "hold": 1,
+   "say": "With police close by, the risk is high. The square stays quiet.",
+   "voice": "N",
+   "t0": 20.794,
+   "vt0": 21.294,
+   "vt1": 25.969,
+   "d": 7.075
+  },
+  {
+   "shot": "inside",
+   "speed": 3,
+   "hold": 1,
+   "say": "Legitimacy does not change. Only the police are taken away, one by one.",
+   "acts": [
+    {
+     "from": 0.5,
+     "to": 7,
+     "every": 0.12,
+     "fn": "return V.police.length ? [[V.police[0].i * 20 + 10, V.police[0].j * 20 + 10]] : [];"
+    }
+   ],
+   "voice": "N",
+   "t0": 27.869,
+   "vt0": 28.369,
+   "vt1": 33.626,
+   "d": 7.657
+  },
+  {
+   "shot": "inside",
+   "speed": 3,
+   "hold": 3,
+   "say": "Then the quiet breaks, all at once.",
+   "voice": "N",
+   "t0": 35.526,
+   "vt0": 36.026,
+   "vt1": 38.653,
+   "d": 7.027
+  },
+  {
+   "shot": "aphorism",
+   "say": "The crowd is quiet until risk changes.",
+   "voice": "A",
+   "t0": 42.553,
+   "vt0": 43.153,
+   "vt1": 46.31,
+   "d": 5.257
+  },
+  {
+   "shot": "doubt",
+   "say": "Quiet is not the same as consent.",
+   "voice": "K",
+   "t0": 47.81,
+   "vt0": 48.31,
+   "vt1": 50.741,
+   "d": 3.831
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 51.641
+  }
+ ],
+ "dur": 55.441
+}

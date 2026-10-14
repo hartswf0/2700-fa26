@@ -1,0 +1,147 @@
+{
+ "id": "ties",
+ "world": {
+  "id": "ties",
+  "no": "05",
+  "title": "Long Ties",
+  "aphorism": "A few long ties collapse distance.",
+  "aphRef": "Growing Entanglements \u00b7 Model 04",
+  "source": "Watts & Strogatz 1998 \u00b7 Small Worlds"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 2,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "In the First Sally, an army becomes one machine once its recruits plug into each other. Trurl builds a ring of sixty.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 11.672,
+   "d": 9.172
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "speed": 1,
+   "hold": 1,
+   "say": "Each node is tied to its two nearest neighbours on each side. A message from the top takes eight steps to cross.",
+   "code": [
+    "for (let d = 1; d <= 2; d++) {",
+    "  tie(a, nodes[(a.id + d) % n]);",
+    "}"
+   ],
+   "voice": "N",
+   "t0": 12.572,
+   "vt0": 13.072,
+   "vt1": 20.184,
+   "d": 9.512
+  },
+  {
+   "shot": "inside",
+   "speed": 1,
+   "hold": 1,
+   "say": "Klapaucius is given six plugs. Each one drops a local tie and reaches across the ring.",
+   "code": [
+    "untie(a, random(local));",
+    "tie(a, far);",
+    "rewires++;"
+   ],
+   "acts": [
+    {
+     "t": 0.6,
+     "fn": "const N = V.nodes; return [[N[10].x, N[10].y]];"
+    },
+    {
+     "t": 0.9,
+     "fn": "const N = V.nodes; return [[N[0].x, N[0].y]];"
+    },
+    {
+     "t": 1.4,
+     "fn": "const N = V.nodes; return [[N[20].x, N[20].y]];"
+    },
+    {
+     "t": 1.7000000000000002,
+     "fn": "const N = V.nodes; return [[N[0].x, N[0].y]];"
+    },
+    {
+     "t": 2.2,
+     "fn": "const N = V.nodes; return [[N[30].x, N[30].y]];"
+    },
+    {
+     "t": 2.5,
+     "fn": "const N = V.nodes; return [[N[0].x, N[0].y]];"
+    },
+    {
+     "t": 3.0000000000000004,
+     "fn": "const N = V.nodes; return [[N[40].x, N[40].y]];"
+    },
+    {
+     "t": 3.3000000000000003,
+     "fn": "const N = V.nodes; return [[N[0].x, N[0].y]];"
+    },
+    {
+     "t": 3.8000000000000003,
+     "fn": "const N = V.nodes; return [[N[50].x, N[50].y]];"
+    },
+    {
+     "t": 4.1000000000000005,
+     "fn": "const N = V.nodes; return [[N[0].x, N[0].y]];"
+    },
+    {
+     "t": 4.6,
+     "fn": "const N = V.nodes; return [[N[15].x, N[15].y]];"
+    },
+    {
+     "t": 4.9,
+     "fn": "const N = V.nodes; return [[N[45].x, N[45].y]];"
+    }
+   ],
+   "voice": "N",
+   "t0": 22.084,
+   "vt0": 22.584,
+   "vt1": 28.726,
+   "d": 8.542
+  },
+  {
+   "shot": "inside",
+   "speed": 1,
+   "hold": 2,
+   "say": "The average distance falls from almost eight steps to about four. The neighbourhoods stay as they were.",
+   "voice": "N",
+   "t0": 30.626,
+   "vt0": 31.126,
+   "vt1": 37.444,
+   "d": 9.718
+  },
+  {
+   "shot": "aphorism",
+   "say": "A few long ties collapse distance.",
+   "voice": "A",
+   "t0": 40.344,
+   "vt0": 40.944,
+   "vt1": 43.677,
+   "d": 4.833
+  },
+  {
+   "shot": "doubt",
+   "say": "Six plugs, and every recruit is a few steps from every other.",
+   "voice": "K",
+   "t0": 45.177,
+   "vt0": 45.677,
+   "vt1": 50.255,
+   "d": 5.978
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 51.155
+  }
+ ],
+ "dur": 54.955
+}

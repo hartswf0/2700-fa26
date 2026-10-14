@@ -1,0 +1,93 @@
+{
+ "id": "city",
+ "world": {
+  "id": "city",
+  "no": "04",
+  "title": "The Divided City",
+  "aphorism": "Small moves divide the whole city.",
+  "aphRef": "Growing Entanglements \u00b7 Model 03",
+  "source": "Schelling 1971 \u00b7 Segregation"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 5,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl fills a box with two kinds of households, and gives each one a mild wish.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 9.224,
+   "d": 6.724
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "tolerance": 0.34
+   },
+   "speed": 0,
+   "say": "A household stays if a third of its neighbours are its kind. Otherwise it moves.",
+   "code": [
+    "happy() {",
+    "  return this.share() >= tolerance;",
+    "}"
+   ],
+   "voice": "N",
+   "t0": 10.124,
+   "vt0": 10.624,
+   "vt1": 15.947,
+   "d": 6.723
+  },
+  {
+   "shot": "inside",
+   "speed": 0.6,
+   "say": "Every move is small. Each one unsettles someone else.",
+   "voice": "N",
+   "t0": 16.847,
+   "vt0": 17.347,
+   "vt1": 21.093,
+   "d": 5.146
+  },
+  {
+   "shot": "inside",
+   "speed": 1.5,
+   "hold": 3,
+   "say": "Until the whole city is divided, and every household is content.",
+   "voice": "N",
+   "t0": 21.993,
+   "vt0": 22.493,
+   "vt1": 26.919,
+   "d": 8.826
+  },
+  {
+   "shot": "aphorism",
+   "say": "Small moves divide the whole city.",
+   "voice": "A",
+   "t0": 30.819,
+   "vt0": 31.419,
+   "vt1": 34.248,
+   "d": 4.929
+  },
+  {
+   "shot": "doubt",
+   "say": "Nobody in the box asked for a divided city.",
+   "voice": "K",
+   "t0": 35.748,
+   "vt0": 36.248,
+   "vt1": 39.504,
+   "d": 4.656
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 40.404
+  }
+ ],
+ "dur": 44.204
+}

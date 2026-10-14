@@ -1,0 +1,112 @@
+{
+ "id": "metis",
+ "world": {
+  "id": "metis",
+  "no": "09",
+  "title": "Lyrael",
+  "aphorism": "Maps slip. Myths persist.",
+  "aphRef": "METISIM",
+  "source": "METISIM \u00b7 Lyrael cluster \u00b7 Scott 1998"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 8,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl builds a valley that a state is trying to map. A survey line crosses it, again and again.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 10.279,
+   "d": 7.779
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "cunning": 0.3
+   },
+   "speed": 2,
+   "hold": 1,
+   "say": "Every villager the line catches in the open makes the valley more legible.",
+   "code": [
+    "if (beam >= 0 && abs(beam - this.x) < 3",
+    "    && !inCover) {",
+    "  legibility += 3;",
+    "}"
+   ],
+   "voice": "N",
+   "t0": 11.179,
+   "vt0": 11.679,
+   "vt1": 15.815,
+   "d": 6.536
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 3,
+   "say": "Metis is what they do so that the map comes out wrong. They run for cover, and they leave false trails.",
+   "acts": [
+    {
+     "from": 0,
+     "to": 12,
+     "every": 0.25,
+     "fn": "return (V.beam >= 0 && V.beam < 80 && V.trailsLeft === 4) ? [[220, 120], [380, 330], [540, 160], [680, 300]] : [];"
+    }
+   ],
+   "voice": "N",
+   "t0": 17.715,
+   "vt0": 18.215,
+   "vt1": 24.801,
+   "d": 10.986
+  },
+  {
+   "shot": "inside",
+   "speed": 3,
+   "hold": 2,
+   "say": "The survey records the trails instead of the people. The index stays low, and the harvest comes in.",
+   "acts": [
+    {
+     "from": 0,
+     "to": 12,
+     "every": 0.25,
+     "fn": "return (V.beam >= 0 && V.beam < 80 && V.trailsLeft === 4) ? [[220, 120], [380, 330], [540, 160], [680, 300]] : [];"
+    }
+   ],
+   "voice": "N",
+   "t0": 28.701,
+   "vt0": 29.201,
+   "vt1": 36.02,
+   "d": 10.219
+  },
+  {
+   "shot": "aphorism",
+   "say": "Maps slip. Myths persist.",
+   "voice": "A",
+   "t0": 38.92,
+   "vt0": 39.52,
+   "vt1": 42.179,
+   "d": 4.759
+  },
+  {
+   "shot": "doubt",
+   "say": "The map is wrong because the villagers made it wrong.",
+   "voice": "K",
+   "t0": 43.679,
+   "vt0": 44.179,
+   "vt1": 47.55,
+   "d": 4.771
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 48.45
+  }
+ ],
+ "dur": 52.25
+}

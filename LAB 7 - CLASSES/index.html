@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lab 7 · Classes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--yellow:#ffdc00;--grey:#6d695f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:44px 22px 70px}
+.kick{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--grey);margin:0}
+h1{font:800 52px/1 Inter,Arial,sans-serif;letter-spacing:-.02em;margin:12px 0 14px}
+.lead{font:400 22px/1.3 "IM Fell English",Georgia,serif;max-width:46ch;margin:0 0 30px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+a.card{display:flex;flex-direction:column;gap:8px;padding:12px;background:#fff;border:2px solid var(--ink);text-decoration:none;color:inherit;transition:transform .12s}
+a.card:hover{transform:translateY(-2px);box-shadow:5px 5px 0 var(--ink)}
+.card img{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--ink);background:#e8e1cf}
+.card .tag{align-self:flex-start;background:var(--ink);color:var(--yellow);font:700 11px "IBM Plex Mono",monospace;padding:4px 7px;letter-spacing:.06em}
+.card b{font:800 24px Inter,Arial,sans-serif}
+.card p{margin:0;font-size:15px;line-height:1.45}
+.card small{font:500 11px "IBM Plex Mono",monospace;color:var(--grey)}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:40px 0 12px;padding-top:12px;border-top:2px solid var(--ink)}
+ol{margin:0;padding-left:20px;font-size:15px;line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+  <p class="kick">LAB 7 · CLASSES · AFTER THE CYBERIAD</p>
+  <h1>One class, many instances, one rule.</h1>
+  <p class="lead">A constructor decides what exists. An update() decides how it changes. Run many, and watch what none of them was told to do.</p>
+  <div class="grid">
+    <a class="card" href="the-constructors/index.html">
+      <span class="tag">01 · THE BENCH</span>
+      <img src="the-constructors/films/click.jpg" alt="">
+      <b>The Constructors</b>
+      <p>Fifteen screens from a yellow circle to a 25-team arena. Real p5.js, a step-through debugger, a puzzle on every screen, clips from Two Sallies.</p>
+      <small>The First Sally · Trurl's Electronic Bard</small>
+    </a>
+    <a class="card" href="kingdoms-in-a-box/index.html">
+      <span class="tag">02 · THE BOXES</span>
+      <img src="kingdoms-in-a-box/films/city.jpg" alt="">
+      <b>Kingdoms in a Box</b>
+      <p>Eleven small worlds, each one class and one rule: Kealakekua Bay, the seven small worlds of Growing Entanglements, and three METISIM clusters. Each has a game and a film.</p>
+      <small>The Seventh Sally · Growing Entanglements · METISIM</small>
+    </a>
+  </div>
+  <h2>ORDER IN CLASS</h2>
+  <ol>
+    <li>The Constructors, screens 1 to 12: from p5 basics to classes.</li>
+    <li>Kingdoms in a Box: each pair takes one box, solves it, and reads its update() aloud as one sentence.</li>
+    <li>The Constructors, screens 13 and 14: the arena.</li>
+    <li>Hand-in: your own class, with its rule stated as an aphorism.</li>
+  </ol>
+</main>
+</body>
+</html>

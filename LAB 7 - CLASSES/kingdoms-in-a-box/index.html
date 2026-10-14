@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kingdoms in a Box</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../the-constructors/lib/codemirror.css">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--white:#fff;--grey:#6d695f;--rule:#dcd8cc;--yellow:#ffdc00;--soft:#fff5bf;--red:#c23b22;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;--sans:"Inter",Arial,Helvetica,sans-serif;--serif:"IM Fell English",Georgia,serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body.box{overflow:hidden}
+[hidden]{display:none!important}
+a{color:inherit}
+button{font:inherit;color:inherit}
+
+/* top */
+#top{height:52px;display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--white);border-bottom:2px solid var(--ink)}
+#top .home{display:flex;align-items:center;gap:10px;text-decoration:none;white-space:nowrap}
+.mark{width:22px;height:22px;border:2px solid var(--ink);position:relative;background:var(--yellow)}
+.mark:after{content:"";position:absolute;inset:4px;border:2px solid var(--ink)}
+#top .home b{font:800 15px var(--sans);letter-spacing:.01em}
+#tabs{display:flex;gap:18px;margin-left:auto;align-items:flex-end}
+.grp b{display:block;font:600 9px var(--mono);letter-spacing:.14em;color:var(--grey);margin-bottom:4px}
+.grp .row{display:flex;gap:4px}
+.grp a{display:grid;place-items:center;width:28px;height:22px;border:1.5px solid var(--ink);font:600 10.5px var(--mono);text-decoration:none;background:var(--white)}
+.grp a:hover{background:var(--soft)}
+.grp a.solved{background:var(--ink);color:var(--yellow)}
+.grp a.here{outline:2px solid var(--ink);outline-offset:2px;background:var(--yellow);color:var(--ink)}
+#top .back{font:600 11px var(--mono);white-space:nowrap}
+
+/* shelf */
+#shelf{max-width:1180px;margin:0 auto;padding:34px 22px 60px}
+body.box #shelf{display:none}
+body.shelf #boxView{display:none}
+.intro{max-width:760px}
+.intro .kick{font:600 11px var(--mono);letter-spacing:.12em;color:var(--grey);margin:0}
+.intro h1{font:800 46px/1 var(--sans);letter-spacing:-.02em;margin:10px 0 14px}
+.intro p{font-size:16px;line-height:1.5;margin:0 0 12px}
+.intro .aph{font:400 24px/1.25 var(--serif);margin:18px 0 4px}
+.intro .src{font:500 11px var(--mono);color:var(--grey)}
+#shelf h2{font:700 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:34px 0 12px;padding-top:12px;border-top:2px solid var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{position:relative;display:flex;flex-direction:column;gap:5px;padding:10px;background:var(--white);border:2px solid var(--ink);text-decoration:none;transition:transform .12s}
+.card:hover{transform:translateY(-2px);box-shadow:4px 4px 0 var(--ink)}
+.card img{width:100%;aspect-ratio:16/9;object-fit:cover;background:#e8e1cf;border:1px solid var(--ink)}
+.card .no{position:absolute;top:16px;left:16px;background:var(--ink);color:var(--yellow);font:700 11px var(--mono);padding:4px 6px}
+.card b{font:800 17px var(--sans);margin-top:4px}
+.card q{font:400 17px/1.25 var(--serif);quotes:none}
+.card small{font:500 10.5px var(--mono);color:var(--grey)}
+.card.solved:after{content:"SOLVED";position:absolute;top:16px;right:16px;background:var(--yellow);border:1.5px solid var(--ink);font:700 10px var(--mono);padding:3px 6px}
+
+/* one box: sketch and rail */
+#boxView{height:calc(100vh - 52px);height:calc(100dvh - 52px);display:grid;grid-template-columns:minmax(0,1fr) 360px}
+#stage{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
+#view{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;background:repeating-linear-gradient(0deg,#ebe8de 0 1px,transparent 1px 28px),repeating-linear-gradient(90deg,#ebe8de 0 1px,transparent 1px 28px)}
+#box{position:relative;box-shadow:0 0 0 2px var(--ink),8px 8px 0 rgba(20,20,20,.12);background:#f5f5f5;overflow:hidden}
+#box iframe{position:absolute;left:0;top:0;width:800px;height:500px;border:0;transform-origin:0 0}
+#err{position:absolute;left:16px;right:16px;bottom:16px;background:#fde3dc;border:2px solid var(--red);padding:10px 12px;font:13px/1.4 var(--mono);display:flex;gap:10px;z-index:5}
+#err b{color:var(--red);white-space:nowrap}
+#log{position:absolute;left:16px;top:16px;max-width:60%;background:var(--ink);color:var(--yellow);padding:6px 10px;font:12px var(--mono);z-index:5}
+#stage.coding #view{padding-left:min(600px,55%)}
+#code{position:absolute;left:0;top:0;bottom:0;width:min(600px,55%);display:flex;flex-direction:column;background:var(--white);border-right:2px solid var(--ink);z-index:6;box-shadow:8px 0 0 rgba(20,20,20,.08)}
+#code .bar{display:flex;gap:6px;align-items:center;padding:8px 10px;border-bottom:2px solid var(--ink)}
+#code .bar .sp{flex:1}
+#cm{flex:1;min-height:0;position:relative}
+#cm .CodeMirror{position:absolute;inset:0;height:auto;font:13px/1.55 var(--mono)}
+.CodeMirror-gutters{background:#faf9f4;border-right:1px solid var(--rule)}
+.cm-err{background:#fde3dc!important}
+.cm-s-default .cm-keyword{color:#7a2fa0;font-weight:600}
+.cm-s-default .cm-def{color:#1b4fbf}
+.cm-s-default .cm-number{color:#b25b00}
+.cm-s-default .cm-string{color:#2c7a2c}
+.cm-s-default .cm-comment{color:#8b8676;font-style:italic}
+
+#rail{background:var(--white);border-left:2px solid var(--ink);display:flex;flex-direction:column;min-height:0}
+#rail .scroll{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+#no{font:600 10.5px var(--mono);letter-spacing:.06em;color:var(--grey)}
+#title{font:800 26px/1.05 var(--sans);letter-spacing:-.02em;margin:0}
+#aph{font:400 25px/1.2 var(--serif);margin:0}
+#aphRef{display:block;font:500 10.5px var(--mono);color:var(--grey);margin-top:6px}
+.goal{border:2px solid var(--ink)}
+.goal .head{display:flex;justify-content:space-between;align-items:center;background:var(--ink);color:var(--yellow);font:700 11px var(--mono);letter-spacing:.1em;padding:7px 10px}
+.state.on{background:var(--yellow);color:var(--ink);padding:2px 6px}
+#goal{margin:10px 10px 6px;font:600 14px/1.4 var(--sans)}
+#checks{list-style:none;margin:0 10px 10px;padding:0;display:grid;gap:6px}
+#checks li{display:flex;gap:9px;font-size:13px;line-height:1.35}
+.mk{flex:none;width:15px;height:15px;border:2px solid var(--ink);margin-top:2px;position:relative}
+#checks li.ok .mk{background:var(--ink)}
+#checks li.ok .mk:after{content:"";position:absolute;left:3px;top:0;width:4px;height:8px;border:solid var(--yellow);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+#controls{display:grid;gap:12px}
+.ctl label{display:flex;justify-content:space-between;font:600 11px var(--mono);letter-spacing:.04em;margin-bottom:4px}
+.ctl label i{font-style:normal;color:var(--grey);font-weight:400;margin-right:auto;margin-left:6px}
+.ctl output{font-weight:700}
+.ctl input[type=range]{width:100%;accent-color:var(--ink)}
+.seg{display:flex;border:2px solid var(--ink)}
+.seg button{flex:1;border:0;background:var(--white);padding:7px;font:700 11px var(--mono);cursor:pointer}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button.on{background:var(--yellow)}
+#click{font:500 12.5px/1.45 var(--mono);color:var(--grey);margin:0}
+#frame{font:400 15px/1.4 var(--serif);margin:0;padding-left:10px;border-left:4px solid var(--yellow)}
+.btns{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--ink)}
+.btns button,.bar button{border:0;background:var(--white);padding:13px 4px;font:700 11.5px var(--mono);letter-spacing:.05em;cursor:pointer}
+.btns button+button{border-left:2px solid var(--ink)}
+.btns button:hover,.bar button:hover{background:var(--soft)}
+.btns button.prim{background:var(--yellow)}
+.bar button{border:2px solid var(--ink);padding:6px 10px;font-size:11px}
+.bar button.prim{background:var(--yellow)}
+
+#filmModal{position:fixed;inset:0;background:rgba(20,20,20,.82);display:flex;align-items:center;justify-content:center;z-index:20;padding:20px}
+.filmBox{width:min(1100px,100%);background:var(--white);border:2px solid var(--ink)}
+.filmBox .bar{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:2px solid var(--ink);font:700 12px var(--mono)}
+.filmBox .bar .sp{flex:1}
+#filmVideo{display:block;width:100%;aspect-ratio:16/9;background:#e8e1cf}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:var(--ink);color:var(--yellow);font:700 12px var(--mono);padding:10px 14px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:980px){
+  #stage.coding #view{padding-left:0}
+  #top{height:auto;flex-wrap:wrap;padding:8px 12px}
+  #tabs{margin-left:0;width:100%;overflow-x:auto}
+  body.box{overflow:auto}
+  #boxView{height:auto;grid-template-columns:1fr}
+  #stage{height:62vh}
+  #rail{border-left:0;border-top:2px solid var(--ink)}
+  #code{width:100%}
+}
+</style>
+</head>
+<body class="shelf">
+<header id="top">
+  <a class="home" href="#"><span class="mark"></span><b>KINGDOMS IN A BOX</b></a>
+  <nav id="tabs" aria-label="Boxes"></nav>
+  <a class="back" href="../the-constructors/index.html">THE CONSTRUCTORS</a>
+</header>
+
+<main id="shelf"></main>
+
+<main id="boxView">
+  <section id="stage">
+    <div id="view">
+      <div id="box"></div>
+      <div id="log" hidden></div>
+      <div id="err" hidden></div>
+    </div>
+    <div id="code" hidden>
+      <div class="bar"><button id="apply" class="prim" title="Ctrl+Enter">RUN THIS CODE</button><button id="copy">COPY FOR p5</button><button id="resetCode">ORIGINAL</button><span class="sp"></span><button id="closeCode">CLOSE</button></div>
+      <div id="cm"></div>
+    </div>
+  </section>
+  <aside id="rail">
+    <div class="scroll">
+      <div id="no"></div>
+      <h1 id="title"></h1>
+      <div><p id="aph"></p><span id="aphRef"></span></div>
+      <div class="goal"><div class="head"><span>GOAL</span><span id="state" class="state"></span></div><p id="goal"></p><ul id="checks"></ul></div>
+      <div id="controls"></div>
+      <p id="click"></p>
+      <p id="frame"></p>
+    </div>
+    <div class="btns">
+      <button id="restart" title="R">RESTART</button>
+      <button id="pause" title="Space">PAUSE</button>
+      <button id="openCode">CODE</button>
+      <button id="openFilm" class="prim" title="F">FILM</button>
+    </div>
+  </aside>
+</main>
+
+<div id="filmModal" hidden><div class="filmBox"><div class="bar"><span id="filmTitle"></span><span class="sp"></span><button id="closeFilm">CLOSE</button></div><video id="filmVideo" controls playsinline></video></div></div>
+<div id="toast" role="status"></div>
+
+<script src="../the-constructors/lib/codemirror.js"></script>
+<script src="../the-constructors/lib/javascript.js"></script>
+<script src="../the-constructors/lib/matchbrackets.js"></script>
+<script src="../the-constructors/lib/closebrackets.js"></script>
+<script src="../the-constructors/lib/acorn.js"></script>
+<script src="worlds.js"></script>
+<script src="lib/box.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+{
+ "id": "culture",
+ "world": {
+  "id": "culture",
+  "no": "03",
+  "title": "Copying Cultures",
+  "aphorism": "Similarity invites copying.",
+  "aphRef": "Growing Entanglements \u00b7 Model 02",
+  "source": "Axelrod 1997 \u00b7 Dissemination of Culture"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 2,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl gives every cell of a box a list of five traits.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 7.359,
+   "d": 4.859
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "features": 4,
+    "traits": 8
+   },
+   "speed": 0,
+   "say": "One rule. Talk to a neighbour as often as you already agree. When you talk, copy one trait.",
+   "code": [
+    "let s = shared(this, other);",
+    "if (random() < s / features) {",
+    "  let k = random(differ);",
+    "  this.culture[k] = other.culture[k];",
+    "}"
+   ],
+   "voice": "N",
+   "t0": 8.259,
+   "vt0": 8.759,
+   "vt1": 14.965,
+   "d": 7.606
+  },
+  {
+   "shot": "inside",
+   "speed": 1,
+   "hold": 2,
+   "say": "Neighbours who agree a little come to agree completely. Borders thicken where nobody agrees at all.",
+   "voice": "N",
+   "t0": 15.865,
+   "vt0": 16.365,
+   "vt1": 22.566,
+   "d": 9.601
+  },
+  {
+   "shot": "inside",
+   "speed": 8,
+   "hold": 3,
+   "say": "Then nothing can change any more. The world has frozen into a few cultures.",
+   "voice": "N",
+   "t0": 25.466,
+   "vt0": 25.966,
+   "vt1": 31.013,
+   "d": 9.447
+  },
+  {
+   "shot": "aphorism",
+   "say": "Similarity invites copying.",
+   "voice": "A",
+   "t0": 34.913,
+   "vt0": 35.513,
+   "vt1": 37.806,
+   "d": 4.393
+  },
+  {
+   "shot": "doubt",
+   "say": "The borders froze because the rule stopped, not because anyone drew them.",
+   "voice": "K",
+   "t0": 39.306,
+   "vt0": 39.806,
+   "vt1": 45.054,
+   "d": 6.648
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 45.954
+  }
+ ],
+ "dur": 49.754
+}

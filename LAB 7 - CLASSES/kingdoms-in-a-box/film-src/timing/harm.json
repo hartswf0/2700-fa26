@@ -1,0 +1,180 @@
+{
+ "id": "harm",
+ "world": {
+  "id": "harm",
+  "no": "07",
+  "title": "Collateral",
+  "aphorism": "Harm can manufacture allegiance.",
+  "aphRef": "Growing Entanglements \u00b7 Model 06",
+  "source": "Doran & Lees 2005 \u00b7 IRUBA"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 4,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl builds four villages in a box, with a few fighters among them. Klapaucius is handed a strike, and a gift of care.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 11.934,
+   "d": 9.434
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "tool": "strike"
+   },
+   "speed": 2,
+   "hold": 1,
+   "say": "First, strikes alone. Each strike removes the fighters near it, and harms everyone around them.",
+   "code": [
+    "if (d < 45 && p.fighter()) p.allegiance = -0.2;",
+    "else if (d < 90) p.anger += 1;"
+   ],
+   "acts": [
+    {
+     "from": 0.8,
+     "to": 9,
+     "every": 0.9,
+     "fn": "const F = V.villagers.filter(v => v.fighter()); return F.length ? [[F[0].x, F[0].y]] : [];"
+    }
+   ],
+   "voice": "N",
+   "t0": 12.834,
+   "vt0": 13.334,
+   "vt1": 20.179,
+   "d": 9.245
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 1,
+   "say": "Anger turns neighbours into fighters faster than the strikes can remove them.",
+   "acts": [
+    {
+     "from": 0,
+     "to": 6,
+     "every": 0.9,
+     "fn": "const F = V.villagers.filter(v => v.fighter()); return F.length ? [[F[0].x, F[0].y]] : [];"
+    }
+   ],
+   "voice": "N",
+   "t0": 22.079,
+   "vt0": 22.579,
+   "vt1": 27.118,
+   "d": 6.939
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "tool": "care"
+   },
+   "speed": 2,
+   "hold": 2,
+   "say": "Again, from the start. Care for every village first. Then strike only where the fighters are.",
+   "code": [
+    "p.anger = max(0, p.anger - 0.6);",
+    "p.allegiance -= 0.25;",
+    "p.trust = 600;"
+   ],
+   "acts": [
+    {
+     "t": 0.5,
+     "click": [
+      180,
+      140
+     ]
+    },
+    {
+     "t": 0.8,
+     "click": [
+      600,
+      130
+     ]
+    },
+    {
+     "t": 1.1,
+     "click": [
+      220,
+      360
+     ]
+    },
+    {
+     "t": 1.4,
+     "click": [
+      610,
+      360
+     ]
+    },
+    {
+     "t": 1.8,
+     "set": {
+      "tool": "strike"
+     }
+    },
+    {
+     "from": 2,
+     "to": 12,
+     "every": 0.3,
+     "fn": "const F = V.villagers.filter(v => v.fighter()); const out = []; for (const f of F) { if (out.every(o => Math.hypot(o[0] - f.x, o[1] - f.y) > 60)) out.push([f.x, f.y]); if (out.length === 3) break; } return out;"
+    }
+   ],
+   "voice": "N",
+   "t0": 29.018,
+   "vt0": 29.518,
+   "vt1": 36.105,
+   "d": 9.987
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 1,
+   "say": "The insurgency ends, and most of the villagers lean toward the state.",
+   "acts": [
+    {
+     "from": 0,
+     "to": 6,
+     "every": 0.3,
+     "fn": "const F = V.villagers.filter(v => v.fighter()); const out = []; for (const f of F) { if (out.every(o => Math.hypot(o[0] - f.x, o[1] - f.y) > 60)) out.push([f.x, f.y]); if (out.length === 3) break; } return out;"
+    }
+   ],
+   "voice": "N",
+   "t0": 39.005,
+   "vt0": 39.505,
+   "vt1": 43.882,
+   "d": 6.777
+  },
+  {
+   "shot": "aphorism",
+   "say": "Harm can manufacture allegiance.",
+   "voice": "A",
+   "t0": 45.782,
+   "vt0": 46.382,
+   "vt1": 48.947,
+   "d": 4.665
+  },
+  {
+   "shot": "doubt",
+   "say": "Every strike recruited someone. The care decided who.",
+   "voice": "K",
+   "t0": 50.447,
+   "vt0": 50.947,
+   "vt1": 55.386,
+   "d": 5.839
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 56.286
+  }
+ ],
+ "dur": 60.086
+}

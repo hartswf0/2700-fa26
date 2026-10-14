@@ -1,0 +1,167 @@
+{
+ "id": "bay",
+ "world": {
+  "id": "bay",
+  "no": "01",
+  "title": "Kealakekua Bay",
+  "aphorism": "Cook\u2019s death can be grown from practical agents. It can also be grown from ritual obligations.",
+  "aphRef": "Growing Entanglements",
+  "source": "Sahlins 1985 \u00b7 Obeyesekere 1992 \u00b7 the PIE slider"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 7,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl builds Kealakekua Bay, as it was in seventeen seventy-nine, inside a box. Klapaucius asks which rule grew the crowd on the shore.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 13.515,
+   "d": 11.015
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "symbolic": 0
+   },
+   "speed": 0,
+   "say": "Each islander gets a hardship, a fear of acting alone, and a rite that can be broken.",
+   "code": [
+    "constructor(x, y) {",
+    "  this.hardship = random(0.1, 0.5);",
+    "  this.riskAversion = random(0.3, 0.8);",
+    "  this.breach = random(0.05, 0.45);",
+    "}"
+   ],
+   "voice": "N",
+   "t0": 14.415,
+   "vt0": 14.915,
+   "vt1": 20.579,
+   "d": 7.064
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 2,
+   "say": "First, the practical rule. A cutter is taken. Those with grievance and support go down to the shore.",
+   "code": [
+    "let support = activeNear / near;",
+    "let practical = this.hardship",
+    "  - (1 - support) * this.riskAversion;"
+   ],
+   "acts": [
+    {
+     "t": 0.8,
+     "click": [
+      200,
+      180
+     ]
+    },
+    {
+     "t": 1.4,
+     "click": [
+      400,
+      180
+     ]
+    },
+    {
+     "t": 2,
+     "click": [
+      600,
+      180
+     ]
+    }
+   ],
+   "voice": "N",
+   "t0": 21.479,
+   "vt0": 21.979,
+   "vt1": 29.153,
+   "d": 10.574
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "symbolic": 1
+   },
+   "speed": 2,
+   "hold": 3,
+   "say": "Again, from the start, with the ritual rule. A rite is broken, and the breach passes to everyone near it.",
+   "code": [
+    "breachMax = max(breachMax, o.breach);",
+    "this.breach = lerp(this.breach, breachMax, 0.02);",
+    "let ritual = this.breach - 0.5;"
+   ],
+   "acts": [
+    {
+     "t": 0.8,
+     "click": [
+      200,
+      180
+     ]
+    },
+    {
+     "t": 1.4,
+     "click": [
+      400,
+      180
+     ]
+    },
+    {
+     "t": 2,
+     "click": [
+      600,
+      180
+     ]
+    }
+   ],
+   "voice": "N",
+   "t0": 32.053,
+   "vt0": 32.553,
+   "vt1": 39.719,
+   "d": 11.566
+  },
+  {
+   "shot": "inside",
+   "speed": 1,
+   "hold": 1,
+   "say": "Two different rules. The same crowd, on the same shore.",
+   "voice": "N",
+   "t0": 43.619,
+   "vt0": 44.119,
+   "vt1": 48.108,
+   "d": 6.389
+  },
+  {
+   "shot": "aphorism",
+   "say": "Cook\u2019s death can be grown from practical agents. It can also be grown from ritual obligations.",
+   "voice": "A",
+   "t0": 50.008,
+   "vt0": 50.608,
+   "vt1": 58.343,
+   "d": 9.835
+  },
+  {
+   "shot": "doubt",
+   "say": "A successful run does not choose between them.",
+   "voice": "K",
+   "t0": 59.843,
+   "vt0": 60.343,
+   "vt1": 63.613,
+   "d": 4.67
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 64.513
+  }
+ ],
+ "dur": 68.313
+}

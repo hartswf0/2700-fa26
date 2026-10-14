@@ -1318,6 +1318,17 @@ header {
     { handle: "L3.09", lab: 3, lvl: 4, tier: "Classroom Runbook", file: "LAB 3 - INTERACTIVITY/ANSCOMBE_GAME_FACILITATOR_GUIDE.md", url: "LAB 3 - INTERACTIVITY/ANSCOMBE_GAME_FACILITATOR_GUIDE.md", title: "Anscombe Game Facilitator Runbook", ext: "md", type: "Runbook", sizeStr: "8.9 KB", purpose: "Field manual for running the 2+2 laptop swap game with timer choreography and discussion prompts." }
   ];
 
+  // Lab 7 Artifacts (Classes: The Constructors and Kingdoms in a Box)
+  const LAB7_ARTIFACTS = [
+    { handle: "L7.01", lab: 7, lvl: 1, isCore: true, tier: "Lab 07 Hub", file: "LAB 7 - CLASSES/index.html", url: "LAB 7 - CLASSES/index.html", title: "Lab 07 Hub: One Class, Many Instances, One Rule", ext: "html", type: "Master Portal", sizeStr: "3 KB", purpose: "Entry page for Lab 7: The Constructors bench and Kingdoms in a Box, with the order for class." },
+    { handle: "L7.02", lab: 7, lvl: 2, isCore: true, tier: "Primary 01 · The Bench", file: "LAB 7 - CLASSES/the-constructors/index.html", url: "LAB 7 - CLASSES/the-constructors/index.html", title: "The Constructors: p5 Bench, Puzzles and Arena", ext: "html", type: "Studio App", sizeStr: "15 screens", purpose: "Real p5.js editor with PLAY and a step-through debugger that marks each operation in the code and the sketch; a self-checking puzzle on every screen; a practice field and a 25-team shared arena." },
+    { handle: "L7.03", lab: 7, lvl: 2, isCore: true, tier: "Primary 02 · The Boxes", file: "LAB 7 - CLASSES/kingdoms-in-a-box/index.html", url: "LAB 7 - CLASSES/kingdoms-in-a-box/index.html", title: "Kingdoms in a Box: Eleven Small Worlds", ext: "html", type: "Game Engine", sizeStr: "11 boxes", purpose: "Kealakekua Bay, the seven small worlds of Growing Entanglements (Epstein, Axelrod, Schelling, Watts-Strogatz, RebeLand, IRUBA, CCIM) and three METISIM clusters, each a p5 class with a goal and a film." },
+    { handle: "L7.04", lab: 7, lvl: 3, isCore: true, tier: "Film · The Bay", file: "LAB 7 - CLASSES/kingdoms-in-a-box/films/bay.mp4", url: "LAB 7 - CLASSES/kingdoms-in-a-box/index.html#bay", title: "Film: Kealakekua Bay", ext: "mp4", type: "Film", sizeStr: "68 s", purpose: "Trurl grows the 1779 shore confrontation twice, once with the practical rule and once with the ritual rule." },
+    { handle: "L7.05", lab: 7, lvl: 3, tier: "Films · Seven Small Worlds", file: "LAB 7 - CLASSES/kingdoms-in-a-box/films/city.mp4", url: "LAB 7 - CLASSES/kingdoms-in-a-box/index.html#city", title: "Films: The Seven Small Worlds", ext: "mp4", type: "Film Set", sizeStr: "7 films", purpose: "Engraved films that run each model's own sketch: the quiet crowd, copying cultures, the divided city, long ties, rough country, collateral, the third culture." },
+    { handle: "L7.06", lab: 7, lvl: 3, tier: "Films · METISIM", file: "LAB 7 - CLASSES/kingdoms-in-a-box/films/metis.mp4", url: "LAB 7 - CLASSES/kingdoms-in-a-box/index.html#metis", title: "Films: Lyrael, Duviii, Zylos", ext: "mp4", type: "Film Set", sizeStr: "3 films", purpose: "Metis against legibility, the dream-space, and the counter-engine that cannot be won." },
+    { handle: "L7.07", lab: 7, lvl: 4, tier: "Two Sallies Clips", file: "LAB 7 - CLASSES/the-constructors/films/click.mp4", url: "LAB 7 - CLASSES/the-constructors/films/click.mp4", title: "Two Sallies: The Click", ext: "mp4", type: "Film", sizeStr: "18 s", purpose: "The First Sally reel clip used to open The Constructors." }
+  ];
+
   // 20 Lab 5 Artifacts (Arrays, Objects, Generative Literature & Exhibit Labs)
   const LAB5_ARTIFACTS = [
     { handle: "L5.01", lab: 5, lvl: 3, isCore: true, tier: "Primary 01 · Main Studio System", file: "LAB 5 - ARRAYS/so-much-depends-lab5.html", url: "LAB 5 - ARRAYS/so-much-depends-lab5.html", title: "So Much Depends Upon an Array (Main Studio)", ext: "html", type: "Main Studio", sizeStr: "1.15 MB", purpose: "The primary 26-slide interactive studio workbench: Williams' 1923 poem, Knowles' 1967 House of Dust, live p5 sandboxes, steppers, and the farmscape simulator." },
@@ -1436,7 +1447,7 @@ header {
   }
 
   function getDirectPath(item) {
-    if (item.lab === 3 || item.lab === 5) {
+    if (item.lab === 3 || item.lab === 5 || item.lab === 7) {
       return "./" + (item.url || item.file);
     }
     const fileRef = item.url || item.file;
@@ -1571,7 +1582,7 @@ header {
     svg.appendChild(el("text", { x: cx, y: cy + 86, "text-anchor": "middle", class: "bullseye-state" }, 
       selectedWeek === 2 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "30 PROTOTYPES") : 
       (selectedWeek === 4 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "9 LAB 03 MODULES") : 
-      (selectedWeek === 5 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "15 LAB 05 MODULES") : "CURRICULUM"))));
+      (selectedWeek === 5 ? (activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "15 LAB 05 MODULES") : (selectedWeek === 7 ? "LAB 07 · CLASSES" : "CURRICULUM")))));
 
     updateWheelRotation();
   }
@@ -1720,6 +1731,10 @@ header {
       objectCount.textContent = activeSpectrumLvl === "arc" ? "5 ESSENTIALS" : "15 LAB 05 MODULES";
       spectrumStrip.style.display = "flex";
       renderDossierCards();
+    } else if (selectedWeek === 7) {
+      objectCount.textContent = activeSpectrumLvl === "arc" ? "LAB 07 ESSENTIALS" : "7 LAB 07 MODULES";
+      spectrumStrip.style.display = "flex";
+      renderDossierCards();
     } else {
       objectCount.textContent = "CURRICULUM OUTLINE";
       spectrumStrip.style.display = "none";
@@ -1731,7 +1746,8 @@ header {
           <div style="display:flex;gap:10px;justify-content:center;max-width:440px;margin:0 auto;flex-wrap:wrap;">
             <button class="dossier-btn" onclick="selectWeek(2)" style="flex:1;min-width:120px;">Lab 01 Dossier</button>
             <button class="dossier-btn" onclick="selectWeek(4)" style="flex:1;min-width:120px;">Lab 03 Dossier</button>
-            <button class="dossier-btn primary" onclick="selectWeek(5)" style="flex:1;min-width:120px;">Lab 05 Dossier</button>
+            <button class="dossier-btn" onclick="selectWeek(5)" style="flex:1;min-width:120px;">Lab 05 Dossier</button>
+            <button class="dossier-btn primary" onclick="selectWeek(7)" style="flex:1;min-width:120px;">Lab 07 Dossier</button>
           </div>
         </div>
       `;
@@ -1739,7 +1755,7 @@ header {
   }
 
   function renderDossierCards() {
-    const activeArtifacts = selectedWeek === 5 ? LAB5_ARTIFACTS : (selectedWeek === 4 ? LAB3_ARTIFACTS : LAB_ARTIFACTS);
+    const activeArtifacts = selectedWeek === 7 ? LAB7_ARTIFACTS : (selectedWeek === 5 ? LAB5_ARTIFACTS : (selectedWeek === 4 ? LAB3_ARTIFACTS : LAB_ARTIFACTS));
     const filtered = activeArtifacts.filter(item => {
       if (activeSpectrumLvl === "arc") return item.isCore;
       if (activeSpectrumLvl === "all") return true;

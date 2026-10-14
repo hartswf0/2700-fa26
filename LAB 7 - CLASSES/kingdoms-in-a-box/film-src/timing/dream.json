@@ -1,0 +1,119 @@
+{
+ "id": "dream",
+ "world": {
+  "id": "dream",
+  "no": "10",
+  "title": "Duviii",
+  "aphorism": "Noise coagulates into meaning.",
+  "aphRef": "METISIM \u00b7 the Dream-Space",
+  "source": "METISIM \u00b7 Duviii cluster \u00b7 Freud"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 10,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl builds a sleeper inside a box, three floors deep.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 7.593,
+   "d": 5.093
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "repression": 0.6,
+    "drive": 0.8
+   },
+   "speed": 2,
+   "say": "Wishes rise from the bottom. Censors patrol the middle floor. A wish that reaches the surface is a symptom.",
+   "code": [
+    "let ego = egos.find(e => dist(this.x, this.y, e.x, e.y) < 30);",
+    "let censor = censors.find(c =>",
+    "  dist(this.x, this.y, c.x, c.y) < 110);",
+    "if (ego && censor) made++;"
+   ],
+   "voice": "N",
+   "t0": 8.493,
+   "vt0": 8.993,
+   "vt1": 16.31,
+   "d": 8.717
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 2,
+   "say": "Where a go-between waits beside a censor, a wish is turned into an image.",
+   "acts": [
+    {
+     "t": 0.6,
+     "click": [
+      130,
+      240
+     ]
+    },
+    {
+     "t": 1.2,
+     "click": [
+      270,
+      240
+     ]
+    },
+    {
+     "t": 1.8,
+     "click": [
+      560,
+      240
+     ]
+    }
+   ],
+   "voice": "N",
+   "t0": 17.21,
+   "vt0": 17.71,
+   "vt1": 22.258,
+   "d": 7.948
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 3,
+   "say": "The censor does not stop the dream. It is part of how the image is made.",
+   "voice": "N",
+   "t0": 25.158,
+   "vt0": 25.658,
+   "vt1": 30.239,
+   "d": 8.981
+  },
+  {
+   "shot": "aphorism",
+   "say": "Noise coagulates into meaning.",
+   "voice": "A",
+   "t0": 34.139,
+   "vt0": 34.739,
+   "vt1": 37.236,
+   "d": 4.597
+  },
+  {
+   "shot": "doubt",
+   "say": "Without the censor there are only symptoms.",
+   "voice": "K",
+   "t0": 38.736,
+   "vt0": 39.236,
+   "vt1": 42.168,
+   "d": 4.332
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 43.068
+  }
+ ],
+ "dur": 46.868
+}

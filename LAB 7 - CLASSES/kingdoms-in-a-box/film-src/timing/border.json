@@ -1,0 +1,102 @@
+{
+ "id": "border",
+ "world": {
+  "id": "border",
+  "no": "08",
+  "title": "The Third Culture",
+  "aphorism": "A border can become a third culture.",
+  "aphRef": "Growing Entanglements \u00b7 Model 07",
+  "source": "Green & Costion 2018 \u00b7 Cross-Cultural Interaction"
+ },
+ "closing": "A clean result may describe the rule more clearly than it describes the world.",
+ "seed": 6,
+ "beats": [
+  {
+   "shot": "title",
+   "d": 3.4,
+   "t0": 0.0
+  },
+  {
+   "shot": "workshop",
+   "say": "Trurl divides a box between two peoples, and opens the border to trade.",
+   "voice": "N",
+   "t0": 3.4,
+   "vt0": 3.9,
+   "vt1": 8.803,
+   "d": 6.303
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "trade": 0.2,
+    "assimilation": 0.8
+   },
+   "speed": 2,
+   "hold": 1,
+   "say": "With strong assimilation, every border cell is pulled back to one side. The line stays sharp.",
+   "code": [
+    "if (differ && random() < trade) {",
+    "  this.h = min(1, this.h + 0.12);",
+    "}",
+    "this.h -= 0.006 * assimilation;"
+   ],
+   "voice": "N",
+   "t0": 9.703,
+   "vt0": 10.203,
+   "vt1": 16.463,
+   "d": 8.66
+  },
+  {
+   "shot": "inside",
+   "restart": true,
+   "set": {
+    "trade": 0.3,
+    "assimilation": 0.5
+   },
+   "speed": 2,
+   "hold": 3,
+   "say": "With more trade and less assimilation, the border thickens into something that is neither.",
+   "voice": "N",
+   "t0": 18.363,
+   "vt0": 18.863,
+   "vt1": 24.364,
+   "d": 9.901
+  },
+  {
+   "shot": "inside",
+   "speed": 2,
+   "hold": 1,
+   "say": "A third culture holds the middle. Both first cultures remain.",
+   "voice": "N",
+   "t0": 28.264,
+   "vt0": 28.764,
+   "vt1": 32.999,
+   "d": 6.635
+  },
+  {
+   "shot": "aphorism",
+   "say": "A border can become a third culture.",
+   "voice": "A",
+   "t0": 34.899,
+   "vt0": 35.499,
+   "vt1": 38.082,
+   "d": 4.683
+  },
+  {
+   "shot": "doubt",
+   "say": "Neither people was erased. A third one was made.",
+   "voice": "K",
+   "t0": 39.582,
+   "vt0": 40.082,
+   "vt1": 43.87,
+   "d": 5.188
+  },
+  {
+   "shot": "end",
+   "d": 3.8,
+   "t0": 44.77
+  }
+ ],
+ "dur": 48.57
+}
