@@ -1,6 +1,6 @@
-# Lab 6 · The Constructors
+# Lab 7 · The Constructors
 
-A one-screen p5.js bench for Lab 6 (classes). Plain HTML: open `index.html` from GitHub Pages, or double-click it.
+A one-screen p5.js bench for Lab 7 (classes). Plain HTML: open `index.html` from GitHub Pages, or double-click it.
 
 - **15 screens**: Basics (1–3), Arrays (4–6), Classes (7–12), Arena (13–14), Hand-in (15).
 - **Each screen** shows the code, the running sketch (real p5.js 1.11.10), a puzzle that checks itself, and a clip from *Two Sallies*.

@@ -14,8 +14,8 @@
     return n;
   };
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('c6.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem('c6.' + k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
+    get(k, d) { try { const v = localStorage.getItem('c7.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('c7.' + k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
   };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const unq = (s) => { if (typeof s === 'string' && s[0] === '"') { try { return JSON.parse(s); } catch (e) { return s; } } return s; };
@@ -931,7 +931,7 @@
      ===================================================================== */
   const RECRUIT_HELPER = `
 
-// recruit(x, y): the recruit from the films (from the Lab 6 bench)
+// recruit(x, y): the recruit from the films (from the Lab 7 bench)
 function recruit(x, y) {
   push();
   stroke(30);
@@ -956,7 +956,7 @@ function recruit(x, y) {
     if (k === 'train') return copyText(code, 'Entry code');
     let out = code;
     if (/recruit\s*\(/.test(code) && !/function\s+recruit\s*\(/.test(code)) out += RECRUIT_HELPER;
-    if (/\bworld\b|letterPoints\s*\(/.test(code)) out += '\n\n// world and letterPoints() come from the Lab 6 bench.\n// In the p5 editor, make your own: let world = { stone: { x: 300, y: 250, r: 40 } };';
+    if (/\bworld\b|letterPoints\s*\(/.test(code)) out += '\n\n// world and letterPoints() come from the Lab 7 bench.\n// In the p5 editor, make your own: let world = { stone: { x: 300, y: 250, r: 40 } };';
     copyText(out, 'Code for the p5 editor');
   }
   let resetArm = 0;
@@ -1076,7 +1076,7 @@ function recruit(x, y) {
     IDX = i; store.set('lesson', i);
     const L = lesson(), k = kindOf(L);
     if (!keepHash) history.replaceState(null, '', '#' + (i + 1));
-    document.title = `${L.title} · Lab 6 · The Constructors`;
+    document.title = `${L.title} · Lab 7 · The Constructors`;
     $('#main').className = 'k-' + k;
     $('#next').classList.remove('pulse');
     renderMap(); renderBrief(L); renderAlt(L); renderStageBar(L);
