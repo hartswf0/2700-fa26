@@ -65,8 +65,8 @@ BOOK = [
   ('How the World Was Saved', 'world-saved', None),
   ('Trurl’s Machine', None, ('A thinking machine eight storeys tall says two and two make seven, and chases its makers when they disagree.', 'Testing: expected value against actual value, and what a program does when it is sure and wrong.')),
   ('A Good Shellacking', None, None),
-  ('The First Sally, or The Trap of Gargantius', None, ('Two kings each hire a constructor to link their soldiers into one mind. Joined, each army becomes a single thinker that would rather think than fight.', 'Objects that hold references to other objects: a network, and what it does that no single node was told to do.')),
-  ('The First Sally (A), or Trurl’s Electronic Bard', 'reel', ('The poetry machine already appears in the reel. An engraved version could build each poem under the constraint Klapaucius sets.', 'Strings and generative text: a grammar, a rule, and output that has to obey it.')),
+  ('The First Sally, or The Trap of Gargantius', 'reel:click', ('Two kings each hire a constructor to link their soldiers into one mind. Joined, each army becomes a single thinker that would rather think than fight.', 'Objects that hold references to other objects: a network, and what it does that no single node was told to do.')),
+  ('The First Sally (A), or Trurl’s Electronic Bard', 'reel:bard', ('The poetry machine already appears in the reel. An engraved version could build each poem under the constraint Klapaucius sets.', 'Strings and generative text: a grammar, a rule, and output that has to obey it.')),
   ('The Second Sally, or The Offer of King Krool', None, None),
   ('The Third Sally, or The Dragons of Probability', 'dragons', None),
   ('The Fourth Sally, or The Femfatalatron', None, None),
@@ -90,7 +90,7 @@ for i, f in enumerate(FILMS):
 num = {f['dir']: f['n'] for f in FILMS}
 mmss = lambda s: f"{int(s // 60)}:{int(round(s % 60)):02d}"
 total = sum(f['sec'] for f in FILMS)
-made = sum(1 for b in BOOK if b[1] and b[1] != 'reel')
+made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
@@ -108,13 +108,16 @@ for f in FILMS:
         if ls: scenes.append(ls)
     films[d] = dict(title=f['title'], sub=f['sub'], n=f['n'], dur=round(f['sec'], 2), idea=f['idea'], video=f'../{d}/{d}.mp4', poster=f'../{d}/{d}.jpg', page=f'../{d}/index.html',
                     picture=f['picture'], sound=f['sound'], code=f['code'], after=f['builds'], scenes=scenes)
+# the two chapters filmed inside the Two Sallies reel (261.75 s): where each sits in it
+REEL = {'reel:click': dict(sec='I. The Click', t0=1.75, t1=19.75, poster='../two-sallies/click.jpg', note='Soldiers close ranks until their separate bodies make one thinking body.'),
+        'reel:bard': dict(sec='II. The Warm-Up and III. The Commissions', t0=19.75, t1=257.77, poster='../two-sallies/bard.jpg', note='An engine is repaired until it speaks, then answers seven commissions with seven poems.')}
 book = []
 for title, d, nxt in BOOK:
     if title.startswith('The First Sally, or'): book.append(dict(part='The Seven Sallies of Trurl and Klapaucius'))
     if title.startswith('Non Serviam'): book.append(dict(part='From A Perfect Vacuum')); title = 'Non Serviam'
     if title.startswith('Tale of'): book.append(dict(part='Tales'))
     e = dict(title=title)
-    if d == 'reel': e['reel'] = True
+    if d and d.startswith('reel'): e['reel'] = REEL[d]
     elif d: e['slug'] = d
     elif nxt: e['next'] = 'not yet filmed · could carry: ' + nxt[1].split(':')[0].lower()
     book.append(e)
@@ -141,7 +144,7 @@ groups.append(dict(label='ELSEWHERE IN THE BOOK', title='', blurb='Not yet filme
 data = json.dumps(dict(book=book, groups=groups, films=films, course='INTRO TO COMPUTATIONAL MEDIA'), ensure_ascii=False, separators=(',', ':'))
 page = open(os.path.join(HERE, 'template.html')).read().replace('/*DATA*/null', data)
 total = sum(f['sec'] for f in FILMS)
-made = sum(1 for b in BOOK if b[1] and b[1] != 'reel')
+made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 open(os.path.join(HERE, 'index.html'), 'w').write(page)
 
 # ---------------- one header for every film page ----------------

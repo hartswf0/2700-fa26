@@ -177,7 +177,7 @@ function tocRows(cur) {
       const f = e.slug && D.films[e.slug];
       if (f) { const p = Math.min(1, store.get('cyb-p-' + e.slug, 0) / f.dur);
         rows += `<a class="row${cur === e.slug ? ' cur' : ''}" href="#/${e.slug}"><span class="rn">${rn}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span>${p > 0.01 ? `<span></span><span></span><span class="pg"><b style="width:${(p * 100).toFixed(1)}%"></b></span>` : ''}</a>`; }
-      else if (e.reel) rows += `<a class="row" href="../two-sallies/index.html"><span class="rn">${rn}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">reel</span><span></span><span></span><span class="sub">in the earlier reel, Two Sallies</span></a>`;
+      else if (e.reel) rows += `<a class="row" href="../two-sallies/index.html"><span class="rn">${rn}</span><img class="th" src="${e.reel.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(e.reel.t1 - e.reel.t0)}</span><span></span><span></span><span class="sub">in the reel Two Sallies, ${esc(e.reel.sec)} · ${mmss(e.reel.t0)} to ${mmss(e.reel.t1)}</span></a>`;
       else rows += `<div class="row todo"><span class="rn">${rn}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">&mdash;</span><span></span><span></span><span class="sub">${esc(e.next || 'not yet filmed')}</span></div>`;
     });
   });
@@ -193,7 +193,7 @@ function home() {
       <a class="cue" href="#contents" aria-label="Contents"><span class="sc">Contents</span><b></b></a></section>
     <section class="toc" id="contents"><h2 class="sc">Contents</h2>${tocRows()}</section>
     <p class="colophon">Each chapter is filmed in a form that does what one programming idea does. In a chapter, scroll through the text and the film moves with you; press play and the text moves with the film.
-      <span class="mono">${n} CHAPTERS FILMED · ${mins} MINUTES<br>LAB 7 · ${esc(D.course)}<br>DRAWN WITH THE <a href="https://hartswf0.github.io/elsewhere/studio.html">MULTIPLANE ANIMATION STUDIO</a> PROMPT</span></p>`;
+      <span class="mono">${n} FILMS · ${mins} MINUTES · AND THE TWO SALLIES REEL, WHICH HOLDS TWO MORE CHAPTERS<br>LAB 7 · ${esc(D.course)}<br>DRAWN WITH THE <a href="https://hartswf0.github.io/elsewhere/studio.html">MULTIPLANE ANIMATION STUDIO</a> PROMPT</span></p>`;
   const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('seen'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' }) : null;
   $$('.toc .row').forEach((r, i) => { r.style.transitionDelay = (i % 6) * 0.05 + 's'; io ? io.observe(r) : r.classList.add('seen'); });
   $('.cue').addEventListener('click', (e) => { e.preventDefault(); $('#contents').scrollIntoView({ behavior: 'smooth' }); });
@@ -243,7 +243,7 @@ function chapter(slug) {
         <dt class="sc">Picture</dt><dd>${esc(f.picture)}</dd><dt class="sc">Sound</dt><dd>${esc(f.sound)}</dd>
         <dt class="sc">Code</dt><dd>${esc(f.code)}</dd><dt class="sc">After the film before</dt><dd>${esc(f.after)}</dd></dl>
         <p class="more"><a href="${f.page}">The script, notes and the bench exercise</a></p></section>
-      ${next ? `<a class="nextcard" href="#/${next}"><span class="sc">Next chapter · ${NUM[next]}</span><h3>${esc(D.films[next].title)}</h3><p>${esc(D.films[next].sub)}</p><img src="${D.films[next].poster}" alt="" loading="lazy"></a>` : `<a class="nextcard" href="#/"><span class="sc">The end of the filmed chapters</span><h3>Contents</h3><p>${esc(String(GROUPS[4 - 1].items.length))} chapters are not yet filmed</p></a>`}
+      ${next ? `<a class="nextcard" href="#/${next}"><span class="sc">Next chapter · ${NUM[next]}</span><h3>${esc(D.films[next].title)}</h3><p>${esc(D.films[next].sub)}</p><img src="${D.films[next].poster}" alt="" loading="lazy"></a>` : `<a class="nextcard" href="#/"><span class="sc">The end of the filmed chapters</span><h3>Contents</h3><p>${esc(String(GROUPS.reduce((n, g) => n + g.items.filter((e) => !e.slug && !e.reel).length, 0)))} chapters are not yet filmed</p></a>`}
     </article>`;
 
   const v = $('#v'), ch = $('#ch'), els = $$('#text p, #text .gap'), ps = $$('#text p'), pr = $('#pr'), tc = $('#tc'), pb = $('#pb'), cap = $('#cap'), hint = $('#hint');
