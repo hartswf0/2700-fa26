@@ -92,139 +92,36 @@ mmss = lambda s: f"{int(s // 60)}:{int(round(s % 60)):02d}"
 total = sum(f['sec'] for f in FILMS)
 made = sum(1 for b in BOOK if b[1] and b[1] != 'reel')
 
-# ---------------- the strip: the whole book, made or not ----------------
-cells = []
-for title, d, nxt in BOOK:
-    if d and d != 'reel':
-        cells.append(f'<a class="cell made" href="#f{num[d]:02d}"><img src="../{d}/{d}.jpg" alt="" loading="lazy"><span class="n">{num[d]:02d}</span><span class="t">{E(title)}</span></a>')
-    elif d == 'reel':
-        cells.append(f'<a class="cell reel" href="../two-sallies/index.html"><span class="box">IN THE REEL</span><span class="t">{E(title)}</span></a>')
-    else:
-        cells.append(f'<a class="cell todo" href="#next"><span class="box"></span><span class="t">{E(title)}</span></a>')
-strip = ''.join(cells)
 
-# ---------------- the arc: which ideas are covered, which are not yet ----------------
-covered = [(f['n'], f['idea']) for f in FILMS]
-ahead = [(t, n[1].split(':')[0]) for t, d, n in BOOK if n]
-arc_l = ''.join(f'<li><span class="sq on"></span><b>{n:02d}</b> {E(c)}</li>' for n, c in covered)
-arc_r = ''.join(f'<li><span class="sq"></span>{E(c)} <i>{E(t.split(", or ")[-1])}</i></li>' for t, c in ahead)
-
-# ---------------- the films ----------------
-rows = []
+# ---------------- the videotext: data for the contents page and the reader ----------------
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps'}
+films = {}
 for f in FILMS:
-    d = f['dir']; who, ln = f['line']
-    rows.append(f'''<article id="f{f['n']:02d}">
-<div class="vid"><video controls preload="none" poster="../{d}/{d}.jpg" src="../{d}/{d}.mp4"></video></div>
-<div class="txt">
-<p class="meta">{f['n']:02d} · {mmss(f['sec'])}{(' · ' + E(f['source'])) if f.get('source') else ''}</p>
-<h3><a href="../{d}/index.html">{E(f['title'])}</a></h3>
-<p class="sub">{E(f['sub'])}</p>
-<p class="key"><span>{E(who)}</span>{E(ln)}</p>
-<dl><dt>PICTURE</dt><dd>{E(f['picture'])}</dd><dt>SOUND</dt><dd>{E(f['sound'])}</dd><dt>CODE</dt><dd>{E(f['code'])}</dd><dt>AFTER</dt><dd>{E(f['builds'])}</dd></dl>
-<p class="go"><a href="../{d}/index.html">Script, notes and bench exercise</a></p>
-</div>
-</article>''')
-
-nexts = []
-for title, d, n in BOOK:
-    if d and d != 'reel': continue
-    if n: nexts.append(f'<li><b>{E(title)}</b><p>{E(n[0])}</p><p class="code">{E(n[1])}</p></li>')
-    else: nexts.append(f'<li><b>{E(title)}</b><p class="dim">Not proposed yet. Read the story first.</p></li>')
-
-page = f'''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>All the Films · Lab 7</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
-<style>
-:root{{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f}}
-*{{box-sizing:border-box}}
-body{{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}}
-header{{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}}
-header a{{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}}
-header a:hover{{background:var(--yellow)}}
-main{{max-width:1120px;margin:0 auto;padding:28px 22px 80px}}
-.kick{{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--grey);margin:0}}
-h1{{font:400 54px/1 "IM Fell English",Georgia,serif;margin:8px 0 10px}}
-.lead{{font:400 21px/1.35 "IM Fell English",Georgia,serif;max-width:52ch;margin:0 0 26px}}
-h2{{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:44px 0 14px;padding-top:12px;border-top:2px solid var(--ink)}}
-.count{{font:500 12px "IBM Plex Mono",monospace;color:var(--grey);margin:0 0 10px}}
-.strip{{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}}
-@media (max-width:820px){{.strip{{grid-template-columns:repeat(4,1fr)}}h1{{font-size:40px}}}}
-.cell{{display:flex;flex-direction:column;gap:5px;text-decoration:none;color:inherit;position:relative}}
-.cell img,.cell .box{{width:100%;aspect-ratio:16/9;object-fit:cover;border:2px solid var(--ink);display:block;background:var(--card)}}
-.cell.todo .box{{border:1.5px dashed var(--grey);background:transparent}}
-.cell.reel .box{{border:1.5px solid var(--grey);background:transparent;font:700 9px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);display:flex;align-items:center;justify-content:center}}
-.cell .n{{position:absolute;top:4px;left:4px;background:var(--ink);color:var(--yellow);font:700 10px "IBM Plex Mono",monospace;padding:2px 4px}}
-.cell .t{{font:500 10px/1.3 "IBM Plex Mono",monospace;color:var(--ink)}}
-.cell.todo .t,.cell.reel .t{{color:var(--grey)}}
-.cell.made:hover img{{outline:3px solid var(--yellow)}}
-.arc{{display:grid;grid-template-columns:1fr 1fr;gap:36px}}
-@media (max-width:820px){{.arc{{grid-template-columns:1fr}}}}
-.arc h4{{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--grey);margin:0 0 10px}}
-.arc ul{{list-style:none;margin:0;padding:0}}
-.arc li{{font-size:15px;line-height:1.4;margin:0 0 9px;display:flex;gap:10px;align-items:baseline}}
-.arc li b{{font:700 11px "IBM Plex Mono",monospace}}
-.arc li i{{font:italic 15px "IM Fell English",Georgia,serif;color:var(--grey)}}
-.sq{{flex:none;width:10px;height:10px;border:1.5px solid var(--ink);display:inline-block;transform:translateY(1px)}}
-.sq.on{{background:var(--ink)}}
-article{{display:grid;grid-template-columns:1.15fr 1fr;gap:28px;padding:26px 0;border-top:1px solid #cfc8b6}}
-article:first-of-type{{border-top:none}}
-@media (max-width:820px){{article{{grid-template-columns:1fr}}}}
-video{{width:100%;display:block;border:2px solid var(--ink);background:var(--card);aspect-ratio:16/9}}
-.meta{{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);margin:0}}
-article h3{{font:400 32px/1.05 "IM Fell English",Georgia,serif;margin:6px 0 4px}}
-article h3 a{{color:inherit;text-decoration:none}}
-article h3 a:hover{{background:var(--yellow)}}
-article .sub{{font:italic 18px "IM Fell English",Georgia,serif;margin:0 0 12px}}
-.key{{font:19px/1.3 "IM Fell English",Georgia,serif;margin:0 0 14px}}
-.key span{{display:block;font:700 10px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);text-transform:uppercase;margin-bottom:2px}}
-dl{{display:grid;grid-template-columns:78px 1fr;gap:6px 10px;margin:0 0 12px}}
-dt{{font:700 10px "IBM Plex Mono",monospace;letter-spacing:.1em;padding-top:3px}}
-dd{{margin:0;font-size:14px;line-height:1.5}}
-.go{{margin:0;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.06em}}
-.go a{{color:var(--ink)}}
-ol.next{{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}}
-ol.next li{{border:1.5px dashed var(--grey);padding:12px 14px}}
-ol.next b{{font:400 19px/1.2 "IM Fell English",Georgia,serif;display:block;margin-bottom:6px}}
-ol.next p{{margin:0 0 6px;font-size:14px;line-height:1.5}}
-ol.next p.code{{font:500 12px/1.5 "IBM Plex Mono",monospace}}
-ol.next p.dim{{color:var(--grey)}}
-</style>
-</head>
-<body>
-<header><a href="../index.html">LAB 7</a><a href="../two-sallies/index.html">THE REEL</a><a href="../the-constructors/index.html">THE BENCH</a><a href="../kingdoms-in-a-box/index.html">THE BOXES</a></header>
-<main>
-<p class="kick">LAB 7 · AFTER THE CYBERIAD</p>
-<h1>All the films</h1>
-<p class="lead">Each film takes one story and one programming idea, and gives the story a form that does what the idea does. {len(FILMS)} films so far, {int(total // 60)} minutes.</p>
-
-<h2>THE BOOK</h2>
-<p class="count">{made - 1} of {len(BOOK) - 1} stories in The Cyberiad made · 1 in the reel · {len(BOOK) - made - 1} not yet made · plus Non Serviam, from A Perfect Vacuum</p>
-<div class="strip">{strip}</div>
-
-<h2>THE IDEAS</h2>
-<div class="arc">
-<div><h4>COVERED</h4><ul>{arc_l}</ul></div>
-<div><h4>NOT YET, AND A STORY FOR EACH</h4><ul>{arc_r}</ul></div>
-</div>
-
-<h2>THE FILMS, IN THE ORDER MADE</h2>
-{''.join(rows)}
-
-<h2 id="next">NOT YET MADE</h2>
-<ol class="next">{''.join(nexts)}</ol>
-</main>
-<script>
-document.querySelectorAll('video').forEach((v) => v.addEventListener('play', () => document.querySelectorAll('video').forEach((o) => {{ if (o !== v) o.pause(); }})));
-</script>
-</body>
-</html>
-'''
+    d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
+    cast = T.get('cast', {}); shots = T.get('shots') or T.get('chapters')
+    scenes = []
+    for sh in shots:
+        ls = [dict(t0=round(sh['t0'] + l['t0'], 2), t1=round(sh['t0'] + l['t1'], 2), who='' if l['who'] == 'N' else cast.get(l['who'], {}).get('name', l['who']), say=l['say'], f=bool(l.get('line'))) for l in sh.get('lines', [])]
+        for fc in sh.get('facts', []):
+            ls.append(dict(t0=round(sh['t0'] + fc['t0'], 2), t1=round(sh['t0'] + fc['t1'], 2), who='', say=T['facts'][fc['i']], tape=True))
+        ls.sort(key=lambda x: x['t0'])
+        if ls: scenes.append(ls)
+    films[d] = dict(title=f['title'], sub=f['sub'], n=f['n'], dur=round(f['sec'], 2), idea=f['idea'], video=f'../{d}/{d}.mp4', poster=f'../{d}/{d}.jpg', page=f'../{d}/index.html',
+                    picture=f['picture'], sound=f['sound'], code=f['code'], after=f['builds'], scenes=scenes)
+book = []
+for title, d, nxt in BOOK:
+    if title.startswith('The First Sally, or'): book.append(dict(part='The Seven Sallies of Trurl and Klapaucius'))
+    if title.startswith('Non Serviam'): book.append(dict(part='From A Perfect Vacuum')); title = 'Non Serviam'
+    if title.startswith('Tale of'): book.append(dict(part='Tales'))
+    e = dict(title=title)
+    if d == 'reel': e['reel'] = True
+    elif d: e['slug'] = d
+    elif nxt: e['next'] = 'not yet filmed · could carry: ' + nxt[1].split(':')[0].lower()
+    book.append(e)
+data = json.dumps(dict(book=book, films=films, course='INTRO TO COMPUTATIONAL MEDIA'), ensure_ascii=False, separators=(',', ':'))
+page = open(os.path.join(HERE, 'template.html')).read().replace('/*DATA*/null', data)
+total = sum(f['sec'] for f in FILMS)
+made = sum(1 for b in BOOK if b[1] and b[1] != 'reel')
 open(os.path.join(HERE, 'index.html'), 'w').write(page)
 
 # ---------------- one header for every film page ----------------
