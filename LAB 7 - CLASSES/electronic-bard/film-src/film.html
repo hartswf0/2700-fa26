@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The First Sally (A) · film</title>
+<style>
+@font-face{font-family:"IM Fell English";src:url(../../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal}
+@font-face{font-family:"IM Fell English";src:url(../../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic}
+@font-face{font-family:"IBM Plex Mono";src:url(../../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400}
+@font-face{font-family:"IBM Plex Mono";src:url(../../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2");font-weight:600}
+html,body{margin:0;background:#222}
+canvas#film{display:block;width:1280px;height:720px}
+</style>
+</head>
+<body>
+<canvas id="film" width="1280" height="720"></canvas>
+<script src="../../kingdoms-in-a-box/film-src/ink.js"></script>
+<script src="script.js"></script>
+<script src="eb.js"></script>
+<script>
+/* preview: film.html?play shows the film live (no audio) */
+if (new URLSearchParams(location.search).has('play')) {
+  (async () => { while (!window.__ready) await new Promise((r) => setTimeout(r, 50)); let f = 0; const tick = async () => { if (f < window.__NF) { await window.__render(f++); setTimeout(tick, 1000 / 24); } }; tick(); })();
+}
+</script>
+</body>
+</html>
