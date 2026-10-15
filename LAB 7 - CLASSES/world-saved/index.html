@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>How the World Was Saved</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
+header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}
+header a{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}
+header a:hover{background:var(--yellow)}
+main{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+h1{font:400 54px/1 "IM Fell English",Georgia,serif;margin:6px 0 6px}
+.sub{font:italic 22px "IM Fell English",Georgia,serif;margin:0 0 22px}
+video{width:100%;display:block;border:2px solid var(--ink);background:var(--card);aspect-ratio:16/9}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}h1{font-size:40px}}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:0 0 14px;padding-top:12px;border-top:2px solid var(--ink)}
+ol.lines{margin:0 0 30px;padding:0;list-style:none;counter-reset:l}
+ol.lines li{font:23px/1.3 "IM Fell English",Georgia,serif;margin:0 0 14px}
+ol.lines span{display:block;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);margin-bottom:2px;text-transform:uppercase}
+.note p{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:60ch}
+.note code{font:500 14px "IBM Plex Mono",monospace;background:#fff;border:1px solid #d8d2c2;padding:1px 4px}
+.script p{font:17px/1.5 "IM Fell English",Georgia,serif;margin:0 0 8px}
+.script p.cmd{font:700 14px "IBM Plex Mono",monospace;margin:0 0 10px}
+.script p.out{font:400 14px "IBM Plex Mono",monospace;margin:0 0 8px;color:#3d3a33}
+.script p.fulcrum{background:var(--yellow);padding:2px 6px;margin-left:-6px}
+.src{font-size:13px;color:var(--grey);margin-top:26px}
+.src a{color:inherit}
+.script h3{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--grey);margin:22px 0 8px}
+.stack{font:500 13px/1.7 "IBM Plex Mono",monospace;margin:0 0 26px;padding:0;list-style:none}
+.stack li{padding-left:calc(var(--d)*14px)}
+</style>
+</head>
+<body>
+<header><a href="../index.html">LAB 7</a><a href="../seventh-sally/index.html">THE SEVENTH SALLY</a><a href="../non-serviam/index.html">NON SERVIAM</a><a href="../story-machines/index.html">STORY MACHINES</a><a href="../altruizine/index.html">ALTRUIZINE</a></header>
+<main>
+<h1>How the World Was Saved</h1>
+<p class="sub">A machine that can make anything beginning with N</p>
+<video controls preload="metadata" poster="world-saved.jpg" src="world-saved.mp4"></video>
+<div class="cols">
+<section class="note">
+<h2>FOUR LINES</h2>
+<ol class="lines"><li><span>The machine</span>I know what Nothing is. Look upon your world for the last time, gentlemen.</li><li><span>Klapaucius</span>Stop! I take it all back! Don’t do Nothing!</li><li><span>The machine</span>Sorry. No zits.</li><li><span>Klapaucius</span>Perhaps they won’t notice.</li></ol>
+<h2>HOW IT IS MADE</h2>
+<p>This film is made by subtraction. Every thing in Trurl&rsquo;s world has a drawing and a sound: the zits twinkle, the worches hold a chord on the horizon, the pritons chirp, the gruncheons grunt, the targalisks ratchet. Lem never says what these creatures are, so the film does not either.</p>
+<p>When the machine does Nothing, each thing is removed in turn. Its drawing becomes a hole of black, starred nothingness. Its sound stops and does not come back. The whole soundtrack drops out for a seventh of a second, and the picture blinks dark for one frame.</p>
+<p>The holes are kept in the world&rsquo;s own coordinates, so they stay in every later shot, and they eat the end title too. By the last scene the room is quiet: the creature sounds that filled the first shot are gone, and the closing tune plays with every third note missing.</p>
+<h2>AFTER THE OTHER FOUR FILMS</h2>
+<p>The earlier films added: a kingdom, a world, a story inside a story, a feeling copied to every neighbour. This one takes away. Klapaucius asks for Nothing as a trick in an argument, and the machine treats the word as a command it can run.</p>
+<h2>FOR THE BENCH</h2>
+<p>Keep your things in an array and draw them each frame. Removing one is <code>things.splice(i, 1)</code>, and from then on it is never drawn again. Now make the removal leave a mark: push a hole into a second array that is never emptied. What in your sketch is like the zits, something you can delete but not rebuild?</p>
+<p class="src">Narration and dialogue paraphrase Stanis&lstrok;aw Lem, &ldquo;How the World Was Saved,&rdquo; <i>The Cyberiad</i>. Drawn after the plates of the N machine. <a href="world-saved.mp4" download>Download the film</a>.</p>
+</section>
+<section class="script"><h2>THE SCRIPT</h2><h3>TRURL'S MACHINE</h3><p><b>Narrator.</b> Trurl built a machine that could make anything, so long as it started with N.</p><p><b>Trurl.</b> Needles.</p><p><b>Trurl.</b> Nails.</p><p><b>Trurl.</b> Nankeen.</p><p><b>Trurl.</b> A nut. A nest.</p><p><b>Trurl.</b> A nautilus. A newt. A nettle.</p><p><b>Trurl.</b> Natrium.</p><p><b>The machine.</b> Never heard of it.</p><p><b>Trurl.</b> It is only sodium!</p><p><b>The machine.</b> Sodium starts with S. I work only in N.</p><p><b>Trurl.</b> Then make Night.</p><h3>THE TEST</h3><p><b>Narrator.</b> He praised it to Klapaucius for so long that Klapaucius asked to test it himself.</p><p><b>Trurl.</b> Be my guest. But it has to start with N.</p><p><b>Klapaucius.</b> Nature.</p><h3>NATURE</h3><p><b>Trurl.</b> Nature to a tee, admit it!</p><p><b>Klapaucius.</b> That mob? You call that Nature?</p><h3>NEGATIVE</h3><p><b>Klapaucius.</b> Negative.</p><p><b>Trurl.</b> What on earth is Negative?</p><p><b>Klapaucius.</b> The opposite of positive, of course.</p><p><b>Klapaucius.</b> Well. Let us say it is.</p><h3>NOTHING</h3><p><b>Klapaucius.</b> Now the third. Machine, do Nothing.</p><p><b>Klapaucius.</b> It sits there. I have won.</p><p><b>Trurl.</b> You told it to do nothing, and it is doing nothing.</p><p><b>Klapaucius.</b> Not nothing. Nothing. Nonexistence itself.</p><p class=fulcrum><b>The machine.</b> I know what Nothing is. Look upon your world for the last time, gentlemen.</p><h3>THE UNMAKING</h3><p class="out">Removed, in order: nails, needles, nankeen, nut, nest, nautilus, newt, nettle, gruncheons, targalisks, shupops, calinatifacts, thists, worches, pritons, brashations, plusters, laries, zits.</p><p><b>Trurl.</b> If only nothing bad comes of this.</p><p><b>Klapaucius.</b> Don’t worry. It only takes away what starts with N. Which is nothing much.</p><p><b>The machine.</b> I began with N out of habit. To destroy is easier than to create.</p><p class=fulcrum><b>Klapaucius.</b> Stop! I take it all back! Don’t do Nothing!</p><h3>AFTER</h3><p><b>Klapaucius.</b> Where are the gruncheons? Where are my pritons? Where are the zits?</p><p><b>The machine.</b> They are in Z. I can give you back nonsense and nausea. Nothing else.</p><p><b>Klapaucius.</b> I want my zits!</p><p class=fulcrum><b>The machine.</b> Sorry. No zits.</p><p><b>The machine.</b> Look how full of holes your world is now. This is your work, envious one.</p><p class=fulcrum><b>Klapaucius.</b> Perhaps they won’t notice.</p><h3>THE WORLD SINCE</h3><p><b>Narrator.</b> Klapaucius went home. And the world has stayed full of holes ever since, exactly as it was when the machine was stopped.</p></section>
+</div>
+</main>
+</body>
+</html>
