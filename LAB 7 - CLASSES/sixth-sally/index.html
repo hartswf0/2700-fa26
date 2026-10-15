@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Sixth Sally · Lab 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
+header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}
+header a{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}
+header a:hover{background:var(--yellow)}
+main{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+h1{font:400 54px/1 "IM Fell English",Georgia,serif;margin:6px 0 6px}
+.sub{font:italic 22px "IM Fell English",Georgia,serif;margin:0 0 22px}
+video{width:100%;display:block;border:2px solid var(--ink);background:var(--card);aspect-ratio:16/9}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}h1{font-size:40px}}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:0 0 14px;padding-top:12px;border-top:2px solid var(--ink)}
+ol.lines{margin:0 0 30px;padding:0;list-style:none;counter-reset:l}
+ol.lines li{font:23px/1.3 "IM Fell English",Georgia,serif;margin:0 0 14px}
+ol.lines span{display:block;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);margin-bottom:2px;text-transform:uppercase}
+.note p{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:60ch}
+.note code{font:500 14px "IBM Plex Mono",monospace;background:#fff;border:1px solid #d8d2c2;padding:1px 4px}
+.script p{font:17px/1.5 "IM Fell English",Georgia,serif;margin:0 0 8px}
+.script p.cmd{font:700 14px "IBM Plex Mono",monospace;margin:0 0 10px}
+.script p.out{font:400 14px "IBM Plex Mono",monospace;margin:0 0 8px;color:#3d3a33}
+.script p.fulcrum{background:var(--yellow);padding:2px 6px;margin-left:-6px}
+.src{font-size:13px;color:var(--grey);margin-top:26px}
+.src a{color:inherit}
+.script h3{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--grey);margin:22px 0 8px}
+.stack{font:500 13px/1.7 "IBM Plex Mono",monospace;margin:0 0 26px;padding:0;list-style:none}
+.stack li{padding-left:calc(var(--d)*14px)}
+</style>
+</head>
+<body>
+<header><a href="../index.html">LAB 7</a><a href="../seventh-sally/index.html">THE SEVENTH SALLY</a><a href="../dragons/index.html">THE DRAGONS</a><a href="../ferrix/index.html">FERRIX</a></header>
+<main>
+<h1>The Sixth Sally</h1>
+<p class="sub">or, The Demon of the Second Kind</p>
+<video controls preload="metadata" poster="sixth-sally.jpg" src="sixth-sally.mp4"></video>
+<div class="cols">
+<section class="note">
+<h2>FIVE LINES</h2>
+<ol class="lines"><li><span>Klapaucius</span>I could draw you a dragon right now, with a thousand suns for each eye. Would the drawing prove that it exists?</li><li><span>Pugg</span>If the universe were gold, gold would be worthless.</li><li><span>Trurl</span>So the whole trick is a selector, that keeps only what means something. That is the Demon of the Second Kind.</li><li><span>Narrator</span>All of it was true. All of it meant something. All of it was useless.</li><li><span>Narrator</span>He learns about rickshaws, rents and roaches, and about his own fate, which has been told here. That is on the tape too.</li></ol>
+<h2>HOW IT IS MADE</h2>
+<p>The whole film is printed on one long strip of paper tape. Each scene is a panel on the strip, and between scenes the tape slides sideways to the next panel instead of cutting. A row of feed holes runs along the top edge. Along the bottom edge the tape prints everything that is said in that panel, in small type, the way the Demon prints what it finds.</p>
+<p>In the last scene the camera pulls back from the final panel. The panel turns out to be a frame on the tape lying on Pugg&rsquo;s cellar floor, coming out from under the Demon&rsquo;s pen, and the frames before it are the rest of the film. The story says that Pugg&rsquo;s own fate is somewhere on the tape. Here it is the film itself.</p>
+<p>The sound treats meaning as a filter on noise. The air in the barrel is a stream of random clicks. Whenever the atoms happen to form something, a short pitched tone sounds, and in the gas box the dots gather into a letter for a moment before they fly apart. The Demon keeps only the tones. In the flood the facts on the tape are read aloud by many voices, each one starting before the last has finished, until they pile into a wall of speech. They drop back under the narrator for the line that matters.</p>
+<h2>AFTER THE OTHER FILMS</h2>
+<p>In <a href="../ferrix/index.html">Prince Ferrix</a> the princess tests only what comes out of the prince, and the prince passes by producing the right outputs. Pugg has the opposite problem. He asks only that what he gets be true, and the Demon gives him exactly that: every fact it prints is true and means something. None of it is any use, because nothing in the filter asks what the facts are for.</p>
+<h2>FOR THE BENCH</h2>
+<p>Make a box of random letters that changes every frame. Keep a short word list, and every time a word from the list appears somewhere in the box, print it to a running tape at the bottom of the canvas. This is a Demon of the Second Kind: <code>if (words.includes(found)) tape.push(found)</code>. Let it run. What does the tape fill up with? What would you have to add to the test so that it keeps only what someone needs, rather than everything that is a word?</p>
+<p class="src">Narration and dialogue paraphrase Stanis&lstrok;aw Lem, &ldquo;The Sixth Sally, or How Trurl and Klapaucius Created a Demon of the Second Kind to Defeat the Pirate Pugg,&rdquo; <i>The Cyberiad</i>. <a href="sixth-sally.mp4" download>Download the film</a>.</p>
+</section>
+<section class="script"><h2>THE SCRIPT</h2><h3>THE OLD BOOK</h3><p><b>Narrator.</b> Trurl bought an old book from a passing peddler. It described a tunnel through a burning star, and beyond it a black waste called the Shroud, where a nameless monster lies in wait for caravans.</p><p><b>Trurl.</b> Look. There is even an engraving of it, eating two ships.</p><p class=fulcrum><b>Klapaucius.</b> I could draw you a dragon right now, with a thousand suns for each eye. Would the drawing prove that it exists?</p><p><b>Klapaucius.</b> Your Shroud is a cosmic dump. It is dark because of the garbage.</p><p><b>Trurl.</b> We will go there. Then you will see what is true in this book, and what is not.</p><h3>THE WASTES</h3><p><b>Narrator.</b> The Wastes were not a shroud. They were a junkyard. Old stars, cinders, cans and wrecks, all clattering together.</p><p><b>Narrator.</b> Sand pattered on the bow. Then the ship lurched, and everything went flying.</p><p><b>Narrator.</b> It stuck nose first in something soft. Outside it was pitch black, and someone was banging on the hull.</p><h3>THE FACE</h3><p><b>Narrator.</b> A face filled the hatch. It was covered with bulging eyes. The nose was a saw, and the jaw was an iron hook. The eyes looked everything over, as if pricing it.</p><p><b>Trurl.</b> Well? What do you want, you unwashed mug? We have no gold and no silver. Take that face away!</p><p><b>Pugg.</b> I have no use for gold or silver. Speak to me delicately. I am a pirate with a Ph.D.</p><p><b>Pugg.</b> I rob in a modern and scientific manner. I collect facts. Genuine truths. Information of value.</p><p><b>Pugg.</b> Hand it over, or I whistle. One. Two. Three.</p><p><b>Pugg.</b> Four. Five.</p><h3>THE PAW</h3><p><b>Pugg.</b> You don’t like my face? Maybe you will like my hand.</p><p><b>Pugg.</b> Come to terms now, or I will put you at the bottom of my bin, under the rocks, and let you rust.</p><p><b>Klapaucius.</b> What exactly does Your Doctoral Diplomahood want?</p><p><b>Pugg.</b> Everything is information. I want all of it, as long as it is true. For false information, as for false coin, I give a good beating.</p><p><b>Klapaucius.</b> He could keep us here an eon before we told him everything we know.</p><h3>GOLD</h3><p><b>Trurl.</b> Then take the best fact we have. How to make gold out of hydrogen.</p><p><b>Trurl.</b> One hundred and ninety-six atoms. Shell the electrons, knead the protons, sprinkle the electrons back on. Watch.</p><p><b>Pugg.</b> Yes, that is gold.</p><p><b>Trurl.</b> You could turn the whole universe into gold!</p><p class=fulcrum><b>Pugg.</b> If the universe were gold, gold would be worthless.</p><p><b>Trurl.</b> Then what do you want to know?</p><p><b>Pugg.</b> Everything!</p><h3>THE CELLAR</h3><p><b>Narrator.</b> Trurl promised him a Demon of the Second Kind, if he swore to let them go. Pugg swore. He led them down through his cellars, past sacks of stolen facts tied with string, and a great catalog chained to the rock, beginning with A.</p><p><b>Pugg.</b> There is air down here. It is not very clean.</p><p><b>Trurl.</b> It does not matter. Air is atoms, jumping this way and that, colliding billions of times a second.</p><p><b>Trurl.</b> They jump at random. But there are so many that now and then, by accident, they make something with meaning.</p><p><b>Trurl.</b> As if you fired at a wall blindfold, and the holes spelled a letter. For every sentence of sense there are thousands of nonsense, and both fly apart at once.</p><p class=fulcrum><b>Trurl.</b> So the whole trick is a selector, that keeps only what means something. That is the Demon of the Second Kind.</p><p><b>Pugg.</b> And what is the First Kind?</p><p><b>Klapaucius.</b> An ordinary demon. It lets the fast atoms out and keeps the slow ones in. It has nothing to do with information.</p><h3>THE BARREL</h3><p><b>Narrator.</b> Pugg found an old iron barrel, and made a tiny hole in it. The air inside was so foul that one’s nose wanted to hide.</p><p><b>Narrator.</b> Trurl set the Demon astride the hole, a mote of a mite with a diamond pen, and threaded the paper tape under it.</p><p><b>Narrator.</b> The pen began to scratch, like a telegraph, only a million times faster. Pugg sat down by the barrel, lifted the tape to his hundred eyes, and read.</p><h3>THE ESCAPE</h3><p><b>Narrator.</b> He did not notice the two constructors leave. They pulled the ship once, twice, and the third time it came free.</p><p><b>Narrator.</b> They knew the Demon would work. It would work too well.</p><h3>THE TAPE</h3><p><b>Narrator.</b> He read about everything.</p><p class=fulcrum><b>Narrator.</b> All of it was true. All of it meant something. All of it was useless.</p><p><b>Pugg.</b> Enough! I have had enough!</p><p><b>Narrator.</b> But the tape had wrapped him in its paper miles, and he had too many eyes not to keep reading.</p><p><i>The tape, read aloud by many voices:</i> how exactly the Harlebardonian wrigglers wriggle; that the daughter of King Petrolius of Labondia is named Humpinella; how many electron shells thermionolium would have, if it existed; the number of books on stamp collecting to be published in the year seventy thousand; how to tell a bindlesnurk from an ordinary trundlespiff; why fan-tailed fleas will not eat moss; how to play Fratcher-My-Pliss, and win; the drinking songs of the Quaidacabondish; the sizes of bedroom slippers on the continent of Cob, with pompons and without; six ways to cook cream of wheat; the names of all the citizens of Foofaraw Junction beginning with M; what unmarried whales think about, getting on in years; how to mend an old gunny sack; all the words that rhyme with spinach; the difference between fiddle and faddle; who plays the eight-tone autocomb; a poll on the taste of beer mixed with mushroom syrup; how many bruises one can have at a single time.</p><h3>TO THIS DAY</h3><p><b>Narrator.</b> He sits there to this day, at the bottom of his rubbish, under a mountain of paper, and the diamond pen still flickers.</p><p class=fulcrum><b>Narrator.</b> He learns about rickshaws, rents and roaches, and about his own fate, which has been told here. That is on the tape too.</p><p><b>Narrator.</b> There is no hope for him. Unless the paper runs out.</p></section>
+</div>
+</main>
+</body>
+</html>
