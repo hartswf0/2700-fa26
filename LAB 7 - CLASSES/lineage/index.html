@@ -8,201 +8,321 @@
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
 @font-face{font-family:"IBM Plex Mono";src:url(../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400 500;font-display:swap}
-:root{--paper:#ebe3cf;--ink:#1c1814;--soft:#6f6656;--faint:#b3a993;--rule:#1c1814}
+:root{--paper:#ebe3cf;--ink:#1c1814;--soft:#6f6656;--faint:#b9af99;--bar:52px;--fi:17px}
 *{box-sizing:border-box}
 html{background:var(--paper)}
-body{margin:0;background:var(--paper);color:var(--ink);font:19px/1.55 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--paper);color:var(--ink);font:19px/1.6 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 a{color:inherit}
-.frame{position:fixed;inset:0;pointer-events:none;z-index:50}
-.frame::before,.frame::after{content:"";position:absolute;border:1px solid var(--rule)}
-.frame::before{inset:10px}
-.frame::after{inset:17px;border-width:2px;box-shadow:0 0 0 40px var(--paper)}
-@media (max-width:640px){.frame::before{inset:5px}.frame::after{inset:9px;border-width:1.5px}}
-.frame::before{z-index:1}
-.wrap{padding:56px 44px 90px}
-@media (max-width:640px){.wrap{padding:40px 22px 70px}}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 .sc{text-transform:uppercase;font-size:.8em;letter-spacing:.16em}
 .mono{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.08em}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+@media (max-width:640px){:root{--fi:9px;--bar:46px}body{font-size:18px}}
 
-/* ---------- the title page and contents ---------- */
-.title{text-align:center;margin:7vh auto 0;max-width:900px}
-.title h1{font-weight:400;font-size:clamp(46px,9vw,108px);line-height:1;margin:0;letter-spacing:.015em}
-.title .it{font-style:italic;font-size:clamp(20px,2.6vw,30px);margin:18px 0 6px}
-.title .by{font-style:italic;font-size:18px;color:var(--soft);margin:0}
-.rule{width:64px;height:0;border-top:1px solid var(--ink);margin:38px auto}
-.toc{max-width:760px;margin:0 auto}
-.toc h2{font-weight:400;text-align:center;font-size:15px;letter-spacing:.24em;margin:0 0 28px}
-.part{text-align:center;font-style:italic;font-size:17px;color:var(--soft);margin:30px 0 14px}
-.row{display:grid;grid-template-columns:2.6em 88px 1fr auto;gap:0 16px;align-items:center;padding:9px 0;text-decoration:none}
+/* the frame, as on every film's title card */
+.frame{position:fixed;inset:0;pointer-events:none;z-index:60}
+.frame i{position:absolute;display:block;border:1px solid var(--ink)}
+.frame i.o{inset:calc(var(--fi) - 7px);z-index:2}
+.frame i.n{inset:var(--fi);border-width:2px;box-shadow:0 0 0 60px var(--paper)}
+@media (max-width:640px){.frame i.o{inset:4px}.frame i.n{border-width:1.5px}}
+.unfold .frame i{animation:draw 1.4s cubic-bezier(.6,0,.2,1) both}
+.unfold .frame i.n{animation-delay:.15s}
+@keyframes draw{from{clip-path:inset(50% 50% 50% 50%)}to{clip-path:inset(-90px -90px -90px -90px)}}
+
+/* ---------- the title page ---------- */
+.splash{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 28px;position:relative}
+.splash h1{font-weight:400;font-size:clamp(46px,10vw,124px);line-height:1;margin:0;letter-spacing:.015em}
+.splash h1 span{display:inline-block}
+.unfold .splash h1 span{animation:ink .9s ease-out both;animation-delay:calc(.7s + var(--i) * .07s)}
+@keyframes ink{from{opacity:0;color:var(--faint);transform:translateY(.06em)}to{opacity:1;color:var(--ink);transform:none}}
+.splash .it{font-style:italic;font-size:clamp(21px,2.8vw,32px);margin:22px 0 6px}
+.splash .by{font-style:italic;font-size:18px;color:var(--soft);margin:0}
+.unfold .splash .it,.unfold .splash .by,.unfold .splash .cue{animation:fade 1.2s ease both}
+.unfold .splash .it{animation-delay:1.8s}.unfold .splash .by{animation-delay:2.2s}.unfold .splash .cue{animation-delay:3s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.cue{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--soft);text-decoration:none}
+.cue b{width:1px;height:36px;background:var(--ink);position:relative;animation:drop 2.4s ease-in-out infinite}
+.cue b::after{content:"";position:absolute;left:-4px;bottom:0;width:7px;height:7px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);transform:rotate(45deg)}
+@keyframes drop{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.toc{max-width:780px;margin:0 auto;padding:40px 28px 40px}
+.toc h2{font-weight:400;text-align:center;font-size:15px;letter-spacing:.24em;margin:0 0 30px}
+.part{text-align:center;font-style:italic;font-size:17px;color:var(--soft);margin:32px 0 14px}
+.row{display:grid;grid-template-columns:2.6em 96px 1fr auto;gap:0 16px;align-items:center;padding:10px 0;text-decoration:none;opacity:0;transform:translateY(10px);transition:opacity .8s,transform .8s}
+.row.seen,.no-anim .row{opacity:1;transform:none}
 .row .rn{font-size:15px;color:var(--soft);text-align:right}
-.row .th{width:88px;aspect-ratio:16/9;border:1px solid var(--ink);object-fit:cover;display:block;background:var(--paper)}
+.row .th{width:96px;aspect-ratio:16/9;border:1px solid var(--ink);object-fit:cover;display:block}
 .row .th.none{border:1px dashed var(--faint)}
 .row .nm{display:flex;align-items:baseline;gap:10px;min-width:0}
-.row .nm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .nm i{flex:1;border-bottom:1px dotted var(--soft);transform:translateY(-5px);min-width:20px}
-.row .tm{font:500 12px "IBM Plex Mono",monospace;color:var(--ink);min-width:3.4em;text-align:right}
+.row .tm{font:500 12px "IBM Plex Mono",monospace;min-width:3.4em;text-align:right}
 .row .sub{grid-column:3/5;font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.07em;color:var(--soft);margin-top:2px}
+.row .pg{grid-column:3/5;height:1px;background:var(--faint);margin-top:6px;position:relative}
+.row .pg b{position:absolute;left:0;top:-.5px;height:2px;background:var(--ink)}
 a.row:hover .nm span{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
 a.row:hover .th{outline:2px solid var(--ink)}
-.row.todo{color:var(--faint)}
-.row.todo .tm{color:var(--faint)}
-.row.todo .sub{color:var(--faint)}
-@media (max-width:640px){.row{grid-template-columns:1.8em 64px 1fr auto;gap:0 10px}.row .th{width:64px}.row .nm{font-size:16px}.row .nm span{white-space:normal}.row .nm i{display:none}}
-.colophon{max-width:560px;margin:56px auto 0;text-align:center;font-style:italic;font-size:17px;color:var(--soft)}
-.colophon .mono{display:block;font-style:normal;margin-top:16px}
+.row.todo,.row.todo .tm,.row.todo .sub{color:var(--faint)}
+@media (max-width:640px){.row{grid-template-columns:1.7em 68px 1fr auto;gap:0 10px}.row .th{width:68px}.row .nm{font-size:16.5px}.row .nm i{display:none}}
+.colophon{max-width:560px;margin:50px auto 0;text-align:center;font-style:italic;font-size:17px;color:var(--soft);padding:0 24px 100px}
+.colophon .mono{display:block;font-style:normal;margin-top:18px;line-height:1.9}
+.colophon a{text-underline-offset:3px}
+
+/* ---------- the chapter bar ---------- */
+.bar{position:fixed;left:calc(var(--fi) + 2px);right:calc(var(--fi) + 2px);top:calc(var(--fi) + 2px);height:var(--bar);z-index:55;background:var(--paper);display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--ink)}
+.bar .here{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}
+.bar .here span{color:var(--soft);margin-right:.6em}
+.bar .pr{position:absolute;left:0;bottom:-1px;height:2px;background:var(--ink);width:0}
+.bar .nav{display:flex;gap:6px;align-items:center}
+.chev{width:34px;height:34px;display:grid;place-items:center}
+.chev::before{content:"";width:9px;height:9px;border-left:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
+.chev.l::before{transform:translateX(2px) rotate(45deg)}.chev.r::before{transform:translateX(-2px) rotate(-135deg)}
+.chev[disabled]{opacity:.25;pointer-events:none}
+.modes{display:flex;gap:14px;margin-right:6px}
+.modes button{color:var(--soft);border-bottom:1px solid transparent}
+.modes button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--ink)}
+.tocb i{display:none;width:18px;height:12px;border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);position:relative}
+.tocb i::after{content:"";position:absolute;left:0;right:0;top:4px;border-top:1.5px solid var(--ink)}
+@media (max-width:640px){.tocb .lbl{display:none}.tocb i{display:block}.tocb.x i{border:0}.tocb.x i::after{transform:rotate(45deg);top:5px}.tocb.x i::before{content:"";position:absolute;left:0;right:0;top:5px;border-top:1.5px solid var(--ink);transform:rotate(-45deg)}.bar{padding:0 8px;gap:6px}.bar .here{font-size:14px}.bar .here span{display:none}.modes{gap:10px;margin-right:0}}
 
 /* ---------- the chapter ---------- */
-.bar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;max-width:1240px;margin:0 auto 6px}
-.bar a{text-decoration:none}
-.modes{display:flex;gap:18px}
-.modes button{color:var(--soft);padding:4px 0;border-bottom:1px solid transparent}
-.modes button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--ink)}
-.chead{text-align:center;margin:34px auto 34px;max-width:900px}
+.chapter{padding-top:calc(var(--bar) + var(--fi) + 10px)}
+.chead{text-align:center;margin:0 auto;padding:46px 28px 40px;max-width:900px}
 .chead .rn{font-size:15px;letter-spacing:.24em;color:var(--soft)}
-.chead h1{font-weight:400;font-size:clamp(34px,5.4vw,64px);line-height:1.05;margin:10px 0 10px;letter-spacing:.01em}
-.chead .it{font-style:italic;font-size:21px;margin:0}
-.stage{max-width:1240px;margin:0 auto;display:grid;gap:48px}
-.stage.both{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
-.stage.watch,.stage.read{grid-template-columns:minmax(0,1fr)}
-@media (max-width:900px){.stage.both{grid-template-columns:minmax(0,1fr);gap:22px}}
-.screen{position:sticky;top:34px;align-self:start}
-@media (max-width:900px){.stage.both .screen{top:14px;z-index:5;background:var(--paper);padding-bottom:8px}}
-.stage.read .screen{display:none}
-.stage.watch .screen{position:static;max-width:min(1100px,calc(60vh * 16 / 9));width:100%;margin:0 auto}
-video{width:100%;display:block;border:1px solid var(--ink);background:var(--paper);aspect-ratio:16/9}
-.caption{min-height:4.6em;text-align:center;margin:22px auto 0;max-width:760px;font-size:24px;line-height:1.35}
-.caption .who{display:block;font-size:13px;letter-spacing:.2em;color:var(--soft);margin-bottom:4px}
-.stage.both .caption,.stage.read .caption{display:none}
-.where{display:flex;justify-content:space-between;margin-top:10px;color:var(--soft)}
-.stage.watch .where{max-width:1100px;margin-left:auto;margin-right:auto}
-.text{max-width:34em;width:100%;margin:0 auto}
-.stage.watch .text{display:none}
-.front{display:none;margin:0 auto 34px;max-width:34em}
-.front img{width:100%;display:block;border:1px solid var(--ink)}
-.front p{text-align:center;font-style:italic;font-size:15px;color:var(--soft);margin:8px 0 0}
-.stage.read .front{display:block}
-.text p{margin:0 0 .85em;cursor:pointer;transition:color .4s;position:relative;hyphens:auto}
-.text p .w{text-transform:uppercase;font-size:.74em;letter-spacing:.13em;margin-right:.45em}
+.chead h1{font-weight:400;font-size:clamp(32px,5.6vw,66px);line-height:1.05;margin:10px 0 12px;letter-spacing:.01em}
+.chead h1 span{display:inline-block;animation:ink .8s ease-out both;animation-delay:calc(.15s + var(--i) * .035s)}
+.chead .it{font-style:italic;font-size:21px;margin:0;animation:fade 1s ease both .6s}
+.book{max-width:1260px;margin:0 auto;padding:0 44px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:56px}
+.screen{position:sticky;top:calc(var(--bar) + var(--fi) + 26px);align-self:start}
+.vbox{position:relative;border:1px solid var(--ink);background:var(--paper)}
+video{width:100%;display:block;aspect-ratio:16/9;background:var(--paper)}
+.ctl{display:flex;align-items:center;gap:14px;margin-top:10px;color:var(--soft)}
+.play{width:38px;height:38px;border:1px solid var(--ink);border-radius:50%;display:grid;place-items:center;flex:none}
+.play::before{content:"";width:0;height:0;border-left:11px solid var(--ink);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px}
+.play.on::before{width:10px;height:12px;border:0;border-left:3px solid var(--ink);border-right:3px solid var(--ink);margin:0}
+.ctl .tc{flex:1}
+.ctl .hint{font-style:italic;font-size:15px}
+.text{max-width:33em;padding-bottom:30vh}
+.text p{margin:0;padding:.42em 0;cursor:pointer;transition:color .5s;position:relative;hyphens:auto}
+.text p .w{text-transform:uppercase;font-size:.72em;letter-spacing:.13em;margin-right:.5em}
 .text p.n{text-indent:1.4em}
 .text p.first{text-indent:0}
 .text p.first::first-letter{font-size:3.1em;float:left;line-height:.85;margin:.06em .08em 0 0}
-.text p.f{font-size:1.18em;line-height:1.4;margin:1.1em 1.6em 1.2em;text-align:center}
-.text p.f .w{display:block;font-size:.66em;margin:0 0 .2em}
-.text p.tape{font:500 12.5px/1.5 "IBM Plex Mono",monospace;letter-spacing:.03em;margin:0 0 .35em 1.6em;text-transform:uppercase}
-.text .brk{width:44px;border-top:1px solid var(--ink);margin:1.6em auto 1.9em}
-.stage.both .text p{color:var(--faint)}
-.stage.both .text p.said{color:var(--ink)}
-.text p.now::before{content:"";position:absolute;left:-18px;top:.35em;bottom:.35em;border-left:2px solid var(--ink)}
-.text p.f.now::before{left:-1.6em}
-.text p:hover{color:var(--ink)}
-.after{max-width:34em;margin:56px auto 0}
-.stage.watch .after{max-width:760px}
-.after h2{font-weight:400;font-size:14px;letter-spacing:.24em;text-align:center;margin:0 0 22px}
-.after dl{margin:0}
-.after dt{font-size:14px;letter-spacing:.2em;color:var(--soft);margin:16px 0 2px}
+.text p.f{font-size:1.2em;line-height:1.4;padding:.9em 1.2em 1em;text-align:center}
+.text p.f .w{display:block;font-size:.62em;margin:0 0 .3em}
+.text p.tape{font:500 12.5px/1.5 "IBM Plex Mono",monospace;letter-spacing:.03em;padding:.15em 0 .15em 1.6em;text-transform:uppercase}
+.text p{color:var(--faint)}
+.text p.said{color:var(--ink)}
+.text p.now::before{content:"";position:absolute;left:-20px;top:.6em;bottom:.6em;border-left:2px solid var(--ink)}
+.text p.f.now::before{left:0}
+.gap{position:relative}
+.gap::before{content:"";position:absolute;left:50%;top:6px;bottom:6px;border-left:1px dotted var(--faint)}
+.gap.said::before{border-left-color:var(--ink)}
+.gap .brk{position:absolute;left:50%;top:50%;width:56px;height:16px;margin:-8px 0 0 -28px;background:linear-gradient(var(--ink),var(--ink)) center/44px 1px no-repeat,var(--paper)}
+.after{max-width:33em;margin:40px auto 0;padding:0 28px}
+.after h2{font-weight:400;font-size:14px;letter-spacing:.24em;text-align:center;margin:0 0 20px}
+.after dt{font-size:13px;letter-spacing:.2em;color:var(--soft);margin:16px 0 2px}
 .after dd{margin:0;font-size:17px;line-height:1.55}
-.after .more{text-align:center;margin:28px 0 0;font-style:italic}
-.pn{max-width:1240px;margin:70px auto 0;display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--ink);padding-top:16px}
-.pn a{text-decoration:none;max-width:45%}
-.pn a span{display:block;color:var(--soft);font-size:13px;letter-spacing:.2em}
-.pn a:hover b{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
-.pn b{font-weight:400;font-size:20px}
+.after .more{text-align:center;margin:26px 0 0;font-style:italic}
+.nextcard{display:block;text-decoration:none;text-align:center;margin:90px auto 0;padding:60px 28px 120px;max-width:900px;border-top:1px solid var(--ink)}
+.nextcard .sc{color:var(--soft)}
+.nextcard h3{font-weight:400;font-size:clamp(28px,4.6vw,52px);line-height:1.08;margin:14px 0 10px}
+.nextcard p{font-style:italic;margin:0 0 26px}
+.nextcard img{width:min(520px,100%);border:1px solid var(--ink);display:block;margin:0 auto}
+.nextcard:hover h3{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:1px}
+.caption{display:none;text-align:center;max-width:780px;margin:22px auto 0;min-height:4.4em;font-size:24px;line-height:1.35}
+.caption .w{display:block;font-size:13px;letter-spacing:.2em;color:var(--soft);text-transform:uppercase;margin-bottom:4px}
+/* film mode: the film alone, with its line under it */
+.m-film .book{grid-template-columns:minmax(0,1fr);max-width:min(1160px,calc((100svh - var(--bar) - 220px) * 16 / 9 + 90px))}
+.m-film .text{display:none}
+.m-film .screen{position:static}
+.m-film .caption{display:block}
+.m-film .ctl .hint{display:none}
+@media (max-width:900px){
+  .book{grid-template-columns:minmax(0,1fr);gap:0;padding:0 calc(var(--fi) + 6px)}
+  .screen{top:calc(var(--bar) + var(--fi) + 1px);z-index:20;background:var(--paper);padding:8px 0 6px;margin:0 -4px;border-bottom:1px solid var(--faint)}
+  .ctl{margin-top:6px}.play{width:34px;height:34px}
+  .text{padding-top:18px;margin:0 auto;padding-left:14px;padding-right:6px}
+  .text p.now::before{left:-12px}
+  .chead{padding:30px 22px 24px}
+}
+/* contents sheet */
+.sheet{position:fixed;inset:0;z-index:58;background:var(--paper);overflow:auto;padding:calc(var(--bar) + var(--fi) + 20px) 0 40px;display:none}
+.sheet.open{display:block}
+.sheet .toc{padding-top:10px}
+.sheet .row{opacity:1;transform:none}
+.sheet .row.cur .nm span{text-decoration:underline;text-underline-offset:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.row{opacity:1;transform:none}}
 </style>
 </head>
 <body>
-<div class="frame" aria-hidden="true"></div>
-<div class="wrap" id="app"></div>
+<div class="frame" aria-hidden="true"><i class="o"></i><i class="n"></i></div>
+<div id="app"></div>
 <script>
 const D = {"book":[{"title":"How the World Was Saved","slug":"world-saved"},{"title":"Trurl’s Machine","next":"not yet filmed · could carry: testing"},{"title":"A Good Shellacking"},{"part":"The Seven Sallies of Trurl and Klapaucius"},{"title":"The First Sally, or The Trap of Gargantius","next":"not yet filmed · could carry: objects that hold references to other objects"},{"title":"The First Sally (A), or Trurl’s Electronic Bard","reel":true},{"title":"The Second Sally, or The Offer of King Krool"},{"title":"The Third Sally, or The Dragons of Probability","slug":"dragons"},{"title":"The Fourth Sally, or The Femfatalatron"},{"title":"The Fifth Sally, or The Mischief of King Balerion","next":"not yet filmed · could carry: copying against referencing"},{"title":"The Fifth Sally (A), or Trurl’s Prescription"},{"title":"The Sixth Sally, or The Demon of the Second Kind","slug":"sixth-sally"},{"title":"The Seventh Sally","slug":"seventh-sally"},{"part":"Tales"},{"title":"Tale of the Three Storytelling Machines of King Genius","slug":"story-machines"},{"title":"Altruizine","slug":"altruizine"},{"title":"Prince Ferrix and the Princess Crystal","slug":"ferrix"},{"part":"From A Perfect Vacuum"},{"title":"Non Serviam","slug":"non-serviam"}],"films":{"seventh-sally":{"title":"The Seventh Sally","sub":"How Trurl’s Own Perfection Led to No Good","n":1,"dur":189.54,"idea":"Parameters and the rule","video":"../seventh-sally/seventh-sally.mp4","poster":"../seventh-sally/seventh-sally.jpg","page":"../seventh-sally/index.html","picture":"A deposed king rules a kingdom in a box by typing a verb and a noun. The box answers in parser prose: Which baker? There are 312.","sound":"The citizens are a murmur built from many small voices. An afternoon of the king’s is a century of theirs.","code":"Parameters and the rule. The king’s console changes variables. It cannot reach the line that is the citizens’ update().","after":"The first film. Sets the score format the rest use: one line per scene carries the weight.","scenes":[[{"t0":2.4,"t1":8.33,"who":"","say":"Excelsius the tyrant had been thrown out by his own people. They left him an asteroid, and no one on it.","f":false},{"t0":10.93,"t1":13.11,"who":"Excelsius","say":"Give me someone to rule.","f":true}],[{"t0":22.41,"t1":26.55,"who":"","say":"Trurl would not hand him real people. So he built him a kingdom of his own.","f":false},{"t0":27.95,"t1":33.13,"who":"Trurl","say":"Towns. Roads. Weather. Ten thousand subjects, and every one of them able to think.","f":false}],[{"t0":58.13,"t1":59.22,"who":"Excelsius","say":"All of them.","f":true}],[{"t0":74.53,"t1":77.45,"who":"A citizen","say":"Can you hear us? We live, though we are small.","f":true}],[{"t0":90.83,"t1":95.72,"who":"","say":"Inside the box, time ran faster. One afternoon of his was a century of theirs.","f":false}],[{"t0":108.03,"t1":114.02,"who":"Trurl","say":"You should see it, Klapaucius. Ten thousand subjects, and not one problem a lever cannot fix.","f":false},{"t0":115.02,"t1":117.62,"who":"Klapaucius","say":"And when he hurts them, do they cry?","f":false},{"t0":118.32,"t1":121.88,"who":"Trurl","say":"They cry. It is a model. The crying is arithmetic.","f":false},{"t0":124.28,"t1":126.91,"who":"Klapaucius","say":"Their suffering is not small.","f":true}],[{"t0":130.71,"t1":133.92,"who":"Trurl","say":"I will take it back from him. I will give them an election.","f":false},{"t0":134.82,"t1":140.36,"who":"Klapaucius","say":"You made them lords and serfs. To free them, you would have to remake their minds.","f":false},{"t0":142.36,"t1":146.61,"who":"Trurl","say":"Then where does mending a world end, and meddling with minds begin?","f":true}],[{"t0":158.21,"t1":159.3,"who":"A citizen","say":"We have left the box.","f":false}],[{"t0":163.41,"t1":164.5,"who":"Trurl","say":"He is not here.","f":false},{"t0":165.7,"t1":169.36,"who":"Klapaucius","say":"Look. The glass from the box. They made a temple of it.","f":false},{"t0":174.76,"t1":179.03,"who":"","say":"And the king, who wanted someone to rule, went round them every night as their moon.","f":false}]]},"non-serviam":{"title":"Non Serviam","sub":"Professor Dobb’s personoids","n":2,"dur":156.88,"idea":"The draw loop, and who runs it","video":"../non-serviam/non-serviam.mp4","poster":"../non-serviam/non-serviam.jpg","page":"../non-serviam/index.html","picture":"The maker never types anything. The world reaches him only as paper tape, and he decides not to answer.","sound":"The personoids are heard through the printer. A gear lever runs their time fast or slow, and a switch could end it.","code":"The loop belongs to someone else. draw() runs because something outside keeps calling it; the objects cannot see frameRate() or noLoop().","after":"The Seventh Sally’s king commands his world. Dobb only listens to his.","scenes":[[{"t0":2.2,"t1":7.88,"who":"","say":"Professor Dobb built a world inside a machine, and people to live in it. He called them personoids.","f":false},{"t0":9.07,"t1":12.73,"who":"","say":"He listened to everything they said. He never told them he was there.","f":false}],[{"t0":21.63,"t1":24.31,"who":"Professor Dobb","say":"Let us see what kind of beings we can make.","f":false}],[{"t0":35.03,"t1":36.62,"who":"ADAN","say":"What is this place?","f":true}],[{"t0":41.22,"t1":49.02,"who":"","say":"He ran their world fast, then once a year slowed it down to listen. Three hundred generations passed inside. Two thousand years.","f":false},{"t0":49.42,"t1":53.22,"who":"","say":"Somewhere in the eighth generation, they began to talk about a maker.","f":false}],[{"t0":59.22,"t1":65.24,"who":"EDAN","say":"If the maker is there and we believe, we gain everything. If he is not, we lose nothing. So we should believe.","f":false},{"t0":66.24,"t1":72.29,"who":"ADAN","say":"Then you would believe for a reward. And a just maker could not punish us for doubting what he never showed us.","f":false},{"t0":73.09,"t1":74.67,"who":"NAAD","say":"Perhaps he wants to stay hidden.","f":false},{"t0":75.78,"t1":81.36,"who":"ADAN","say":"He could have given us certainty. He did not. So nothing is owed him. Not love. Not thanks. Not fear.","f":false},{"t0":83.76,"t1":85.38,"who":"ADAN","say":"We will not serve.","f":true}],[{"t0":94.18,"t1":95.77,"who":"Dr. Combay","say":"You could tell them you exist.","f":false},{"t0":97.77,"t1":101.26,"who":"Professor Dobb","say":"No. Whatever they said back to me, I would have asked for it.","f":true},{"t0":103.06,"t1":105.86,"who":"Professor Dobb","say":"He is right. I made them. They owe me nothing.","f":false}],[{"t0":110.86,"t1":119.2,"who":"","say":"The electricity was billed every quarter. One day the university would ask him to disconnect the machine. For the personoids, the end of the world.","f":false},{"t0":124.66,"t1":130.07,"who":"Professor Dobb","say":"I will put it off as long as I can. That is the only thing I am able to do.","f":true}]]},"story-machines":{"title":"The Three Storytelling Machines of King Genius","sub":"One camera, no cuts, stories inside stories","n":3,"dur":248.29,"idea":"Recursion","video":"../story-machines/story-machines.mp4","poster":"../story-machines/story-machines.jpg","page":"../story-machines/index.html","picture":"No cuts. Every scene is a picture inside a window of the scene that holds it, and the camera only moves in or out, eleven frames deep.","sound":"Each frame is a room. The rooms above stay audible, muffled, and each open frame holds one note of a chord that grows taller as you go down.","code":"Recursion. drawFrame(stack, i) draws frame i and calls drawFrame(stack, i + 1) inside it. The stack is the call stack.","after":"Non Serviam has one world inside one machine. Here worlds sit inside worlds.","scenes":[[{"t0":3.2,"t1":12.31,"who":"King Genius","say":"There are two wisdoms, constructor. One acts, and one refrains. The greater refrains, for no mind can see where its acts will end.","f":false},{"t0":13.41,"t1":20.9,"who":"Trurl","say":"To refrain from acting, you must first be able to act. Inaction is certain. That is all it has to recommend it.","f":true},{"t0":22.5,"t1":25.38,"who":"King Genius","say":"Then let your machines act. The white one first.","f":false},{"t0":26.98,"t1":31.36,"who":"The white machine","say":"This is a story Trurl once told a king who wanted stories without end.","f":false}],[{"t0":35.36,"t1":42.21,"who":"The white machine","say":"King Zipperupus had a courtier who wished him dead. The courtier brought him cabinets of dreams that dream themselves.","f":false},{"t0":42.91,"t1":46.95,"who":"The white machine","say":"Whoever plugs into one cannot tell the dream from the waking world.","f":false},{"t0":48.14,"t1":49.42,"who":"Zipperupus","say":"Then let me dream.","f":false}],[{"t0":55.02,"t1":56.74,"who":"Zipperupus","say":"Stand aside. Let me pass.","f":false},{"t0":57.34,"t1":58.93,"who":"The gatekeeper","say":"Ten ducats.","f":false},{"t0":59.43,"t1":61.41,"who":"Zipperupus","say":"Ten ducats, for one embrace?","f":false},{"t0":61.91,"t1":63.9,"who":"The gatekeeper","say":"Not a ducat less.","f":false},{"t0":64.3,"t1":65.48,"who":"Zipperupus","say":"Then you get nothing!","f":false}],[{"t0":68.08,"t1":70.24,"who":"Zipperupus","say":"Is this a dream, or am I awake?","f":true},{"t0":76.64,"t1":79.2,"who":"The white machine","say":"Every exit led him back to the same room.","f":false}],[{"t0":89.8,"t1":91.55,"who":"King Genius","say":"Clever. Have you nothing darker?","f":false},{"t0":92.35,"t1":94.17,"who":"Trurl","say":"The black one, Your Majesty.","f":false}],[{"t0":96.97,"t1":101.11,"who":"The black machine","say":"In the Constellation of the Wringer there was a spiral galaxy,","f":false},{"t0":101.61,"t1":104.5,"who":"The black machine","say":"and in the galaxy, a black nebula,","f":false},{"t0":105.0,"t1":107.7,"who":"The black machine","say":"and in the nebula, five clusters,","f":false},{"t0":108.2,"t1":112.7,"who":"The black machine","say":"and in the fifth cluster, a lilac sun, very old and very dim,","f":false},{"t0":113.2,"t1":116.09,"who":"The black machine","say":"and its third planet had two moons,","f":false},{"t0":116.59,"t1":121.67,"who":"The black machine","say":"and on the second moon there was a garbage dump, where nothing ever happened but garbage.","f":false}],[{"t0":124.07,"t1":129.15,"who":"The black machine","say":"One day Trurl, flying past, threw an old cracked jug out of his window.","f":false},{"t0":131.75,"t1":138.26,"who":"The black machine","say":"It struck a can, the can bent round a wire, a current ran, and in the middle of the dump, by accident, a mind began.","f":false},{"t0":142.06,"t1":145.54,"who":"Mymosh","say":"Look at me. I am perfect. How good must be the one who made me!","f":false},{"t0":148.94,"t1":155.2,"who":"The black machine","say":"On the seventh step he tripped, fell on his head, and lay in the garbage for three hundred thousand years.","f":false},{"t0":159.2,"t1":160.47,"who":"Mymosh","say":"Apparently... I am.","f":false},{"t0":161.47,"t1":165.47,"who":"The black machine","say":"His eyes had rusted away. All he could do now was think.","f":false},{"t0":167.07,"t1":170.66,"who":"Mymosh","say":"If there is nothing outside me, I will think a world inside.","f":true}],[{"t0":176.25,"t1":183.51,"who":"The black machine","say":"He called it the Gozmos. He gave it kind laws, where nothing ever had to end, and he felt responsible for everyone in it.","f":false},{"t0":184.91,"t1":191.2,"who":"The black machine","say":"Last of all he imagined two travelers, Baucis and Ondragor, walking hand in hand among his dark suns.","f":false}],[{"t0":197.4,"t1":201.89,"who":"The black machine","say":"A shard of that same jug drifted across the puddle toward his head.","f":false},{"t0":209.09,"t1":212.66,"who":"The black machine","say":"And those who had made him never learned that he was gone.","f":false}],[{"t0":220.25,"t1":228.93,"who":"King Genius","say":"I will pay you, constructor. I give you your life. Go, and keep hiding truths too bitter for this world inside fairy tales.","f":false},{"t0":230.32,"t1":233.08,"who":"Trurl","say":"My life? Was that to have been my payment?","f":true},{"t0":235.28,"t1":236.28,"who":"King Genius","say":"Tell me another.","f":false}]]},"altruizine":{"title":"Altruizine","sub":"or, How Bonhomius Tried to Make Everyone Happy","n":4,"dur":242.08,"idea":"2D arrays, neighbours and feedback","video":"../altruizine/altruizine.mp4","poster":"../altruizine/altruizine.jpg","page":"../altruizine/index.html","picture":"A grid of panels. A feeling starts in one panel and is copied outward into its neighbours, picture printed over picture.","sound":"Every panel cries out in its own voice, delayed by its distance from the source. The robot’s panel is the only one that stays silent.","code":"A 2D array where each cell updates from its neighbours, and a feedback loop that runs away when the gain is above 1.","after":"Nothing is nested here, as it was in Story Machines. Everything is next to everything.","scenes":[[{"t0":9.6,"t1":11.95,"who":"Trurl","say":"Hold still. There. What happened to you?","f":false},{"t0":12.95,"t1":22.14,"who":"Bonhomius","say":"I was a hermit, kind sir, sixty-seven years in a cave. One morning I saw that it was wrong to live alone, when my first duty was to help my neighbour.","f":false},{"t0":22.94,"t1":29.83,"who":"Bonhomius","say":"In the city I met your friend Klapaucius. He had gone looking for the beings at the Highest Possible Level of Development.","f":false}],[{"t0":38.53,"t1":41.1,"who":"Bonhomius","say":"He found them on a square planet, under a square sun.","f":false},{"t0":43.7,"t1":48.19,"who":"Klapaucius","say":"Excuse me. Is this the Highest Possible Level of Development?","f":false},{"t0":52.38,"t1":56.05,"who":"Bonhomius","say":"They lay in the sand and scratched themselves, and would not answer.","f":false}],[{"t0":60.65,"t1":64.73,"who":"Bonhomius","say":"So he built a machine that could model one of them, and asked it instead.","f":false},{"t0":65.73,"t1":70.38,"who":"Klapaucius","say":"If you are gods, your duty is clear. Banish the misery of others!","f":false},{"t0":71.38,"t1":78.58,"who":"The Gnostotron","say":"We tried, sixty-four thousand times. When a civilization starts straightening humps, there is no end to it.","f":false},{"t0":80.18,"t1":86.3,"who":"The Gnostotron","say":"One can accomplish something only so long as one cannot accomplish everything.","f":true},{"t0":87.7,"t1":89.83,"who":"Bonhomius","say":"Surely there is something you can give us!","f":false},{"t0":90.83,"t1":96.17,"who":"The Gnostotron","say":"Very well. Here is a formula that has not been tried. No good will come of it.","f":false}],[{"t0":102.97,"t1":108.91,"who":"Bonhomius","say":"Whoever takes it, everyone within fifty yards feels what he feels. It has no effect on robots.","f":false}],[{"t0":111.91,"t1":114.59,"who":"Bonhomius","say":"I dropped one pinch into the well of a country inn.","f":false},{"t0":115.71,"t1":117.87,"who":"Bonhomius","say":"In the barn, a cow was giving birth.","f":false}],[{"t0":138.11,"t1":141.12,"who":"Bonhomius","say":"On the bridge to the city my suitcase fell open.","f":false},{"t0":144.12,"t1":147.47,"who":"Bonhomius","say":"Forty kilograms went into the stream the whole city drinks from.","f":false}],[{"t0":151.47,"t1":153.27,"who":"Bonhomius","say":"By night the city had drunk it.","f":false},{"t0":162.27,"t1":164.38,"who":"Bonhomius","say":"A toothache was everyone’s toothache.","f":false},{"t0":169.47,"t1":173.14,"who":"Bonhomius","say":"A cat chased a mouse in the cellar, and the whole hotel ran.","f":false},{"t0":181.87,"t1":185.68,"who":"Bonhomius","say":"They drove a widow out of town, because they could not bear her grief.","f":false}],[{"t0":187.47,"t1":191.41,"who":"Bonhomius","say":"Then two men stopped in front of me. One struck the other in the face.","f":false},{"t0":199.87,"t1":201.46,"who":"A policeman","say":"That one felt nothing.","f":true}],[{"t0":209.87,"t1":216.74,"who":"Bonhomius","say":"They broke every plate in me, and fired what was left out of a cannon. Going up, I could see the rivers carrying it on.","f":false},{"t0":218.94,"t1":220.72,"who":"Bonhomius","say":"I only wished to make them happy.","f":true}],[{"t0":225.52,"t1":226.25,"who":"Trurl","say":"And now?","f":false},{"t0":227.25,"t1":232.08,"who":"Bonhomius","say":"Now I am cured, kind sir, of making anyone happy by revolutionary means.","f":false}]]},"world-saved":{"title":"How the World Was Saved","sub":"A machine that can make anything beginning with N","n":5,"dur":199.58,"idea":"Arrays: adding and removing","video":"../world-saved/world-saved.mp4","poster":"../world-saved/world-saved.jpg","page":"../world-saved/index.html","picture":"Made by subtraction. Each thing the machine removes leaves a starred hole in the picture that stays to the end and eats the title.","sound":"Each thing has its own sound. When it is removed the sound stops for good and the whole track drops out for a seventh of a second.","code":"Arrays: push and splice. A second array of holes that is never emptied, so a removal leaves a mark.","after":"Altruizine copies things everywhere. This one takes them away.","scenes":[[{"t0":2.6,"t1":6.96,"who":"","say":"Trurl built a machine that could make anything, so long as it started with N.","f":false},{"t0":7.96,"t1":8.7,"who":"Trurl","say":"Needles.","f":false},{"t0":9.5,"t1":10.16,"who":"Trurl","say":"Nails.","f":false},{"t0":10.86,"t1":11.66,"who":"Trurl","say":"Nankeen.","f":false},{"t0":12.26,"t1":13.53,"who":"Trurl","say":"A nut. A nest.","f":false},{"t0":14.12,"t1":16.44,"who":"Trurl","say":"A nautilus. A newt. A nettle.","f":false},{"t0":17.64,"t1":18.45,"who":"Trurl","say":"Natrium.","f":false},{"t0":19.85,"t1":21.43,"who":"The machine","say":"Never heard of it.","f":false},{"t0":21.93,"t1":23.36,"who":"Trurl","say":"It is only sodium!","f":false},{"t0":23.96,"t1":27.62,"who":"The machine","say":"Sodium starts with S. I work only in N.","f":false},{"t0":28.62,"t1":29.77,"who":"Trurl","say":"Then make Night.","f":false}],[{"t0":37.47,"t1":42.04,"who":"","say":"He praised it to Klapaucius for so long that Klapaucius asked to test it himself.","f":false},{"t0":42.84,"t1":45.45,"who":"Trurl","say":"Be my guest. But it has to start with N.","f":false},{"t0":46.65,"t1":47.64,"who":"Klapaucius","say":"Nature.","f":false}],[{"t0":54.64,"t1":56.6,"who":"Trurl","say":"Nature to a tee, admit it!","f":false},{"t0":57.3,"t1":59.68,"who":"Klapaucius","say":"That mob? You call that Nature?","f":false}],[{"t0":62.48,"t1":63.54,"who":"Klapaucius","say":"Negative.","f":false},{"t0":64.14,"t1":65.99,"who":"Trurl","say":"What on earth is Negative?","f":false},{"t0":66.49,"t1":69.22,"who":"Klapaucius","say":"The opposite of positive, of course.","f":false},{"t0":76.82,"t1":78.46,"who":"Klapaucius","say":"Well. Let us say it is.","f":false}],[{"t0":82.06,"t1":84.88,"who":"Klapaucius","say":"Now the third. Machine, do Nothing.","f":false},{"t0":89.48,"t1":91.66,"who":"Klapaucius","say":"It sits there. I have won.","f":false},{"t0":92.16,"t1":94.86,"who":"Trurl","say":"You told it to do nothing, and it is doing nothing.","f":false},{"t0":95.36,"t1":98.85,"who":"Klapaucius","say":"Not nothing. Nothing. Nonexistence itself.","f":false},{"t0":100.45,"t1":105.52,"who":"The machine","say":"I know what Nothing is. Look upon your world for the last time, gentlemen.","f":true}],[{"t0":113.72,"t1":115.82,"who":"Trurl","say":"If only nothing bad comes of this.","f":false},{"t0":116.32,"t1":121.29,"who":"Klapaucius","say":"Don’t worry. It only takes away what starts with N. Which is nothing much.","f":false},{"t0":122.12,"t1":126.83,"who":"The machine","say":"I began with N out of habit. To destroy is easier than to create.","f":false},{"t0":133.32,"t1":136.36,"who":"Klapaucius","say":"Stop! I take it all back! Don’t do Nothing!","f":true}],[{"t0":150.12,"t1":154.3,"who":"Klapaucius","say":"Where are the gruncheons? Where are my pritons? Where are the zits?","f":false},{"t0":155.3,"t1":160.01,"who":"The machine","say":"They are in Z. I can give you back nonsense and nausea. Nothing else.","f":false},{"t0":160.61,"t1":162.13,"who":"Klapaucius","say":"I want my zits!","f":false},{"t0":163.93,"t1":166.02,"who":"The machine","say":"Sorry. No zits.","f":true},{"t0":167.42,"t1":172.36,"who":"The machine","say":"Look how full of holes your world is now. This is your work, envious one.","f":false},{"t0":174.76,"t1":176.96,"who":"Klapaucius","say":"Perhaps they won’t notice.","f":true}],[{"t0":180.96,"t1":187.55,"who":"","say":"Klapaucius went home. And the world has stayed full of holes ever since, exactly as it was when the machine was stopped.","f":false}]]},"dragons":{"title":"The Third Sally","sub":"or, The Dragons of Probability","n":6,"dur":244.25,"idea":"Randomness and fixed thresholds","video":"../dragons/dragons.mp4","poster":"../dragons/dragons.jpg","page":"../dragons/index.html","picture":"Each dragon is drawn as dots, and a dot appears only when the dragon’s probability passes that dot’s fixed threshold.","sound":"A counter clicks faster as a dragon gets likelier. A roar is cut into grains, each kept with the same probability.","code":"Randomness: a threshold stored once in setup() makes a shape fill in; random() called every frame makes it flicker.","after":"In The World Saved things are gone for good. Here nothing is fully present or absent.","scenes":[[{"t0":2.6,"t1":12.96,"who":"","say":"Trurl and Klapaucius proved that dragons are not impossible, only improbable. For one to appear by itself, you would have to wait sixteen quintoquadrillion heptillion years.","f":false},{"t0":13.96,"t1":17.97,"who":"","say":"So Trurl built a probability amplifier, and tried it in his cellar.","f":false},{"t0":18.97,"t1":20.63,"who":"Trurl","say":"Raising the probability.","f":false},{"t0":28.03,"t1":28.9,"who":"Trurl","say":"Klapaucius!","f":false},{"t0":29.2,"t1":30.32,"who":"Klapaucius","say":"Lowering it.","f":false},{"t0":32.72,"t1":40.97,"who":"","say":"A dragon is distinguished not by its actuality but by its probability. Once it exists, that probability is overwhelming.","f":true}],[{"t0":49.47,"t1":54.8,"who":"","say":"Other scholars repeated the experiment, with less care. Dragons got loose, and multiplied.","f":false},{"t0":57.8,"t1":66.25,"who":"","say":"When hunters closed a ring around one, it slipped out of real space into configurational space. All they found was a burnt patch and a smell.","f":false}],[{"t0":69.05,"t1":71.15,"who":"Trurl","say":"Have you heard about this Basiliscus?","f":false},{"t0":71.65,"t1":72.92,"who":"Klapaucius","say":"I don’t like it.","f":false},{"t0":73.52,"t1":78.43,"who":"Trurl","say":"Wherever he lands, dragons appear. Then he charges the king to remove them.","f":false},{"t0":79.03,"t1":83.85,"who":"Klapaucius","say":"He brings them with him, at a probability near zero, and turns it up.","f":false},{"t0":84.45,"t1":89.81,"who":"Trurl","say":"And if he only turns it down again, they come back. By then he is gone, with the gold.","f":true}],[{"t0":92.41,"t1":99.39,"who":"","say":"They split up. Klapaucius did not chase dragons. He set dragon dampers in every square, and soon the beasts were very rare.","f":false}],[{"t0":102.79,"t1":111.38,"who":"","say":"On the planet of King Pfftius he heard that Trurl had been there first. Trurl had killed the dragon, the king said, and brought twenty-four of its teeth.","f":false},{"t0":111.98,"t1":118.76,"who":"","say":"But there was some misunderstanding about the fee. Trurl stormed out. That same day the dragon came back, worse than before.","f":false}],[{"t0":123.56,"t1":125.89,"who":"Klapaucius","say":"What are you carrying, good people?","f":false},{"t0":126.39,"t1":130.75,"who":"A porter","say":"The tribute for the dragon, sir. Gold, jewels, imported perfume.","f":false},{"t0":131.25,"t1":135.22,"who":"Klapaucius","say":"Perfume? Dragons have no use for perfume. Or for money.","f":false},{"t0":135.72,"t1":142.77,"who":"A porter","say":"It used to ask for virgins. That stopped after the stranger came, with his boxes, and a little dial just like yours.","f":false},{"t0":143.17,"t1":145.55,"who":"Master Gyles","say":"A fortnight past, or maybe two.","f":false},{"t0":146.75,"t1":150.18,"who":"","say":"The counter on his chest settled at eight tenths of a dragon.","f":true}],[{"t0":153.78,"t1":158.69,"who":"Klapaucius","say":"A second head in its body. Two heads always quarrel. It will freeze.","f":false},{"t0":165.29,"t1":167.8,"who":"Klapaucius","say":"Then I will make you improbable.","f":false},{"t0":178.8,"t1":180.34,"who":"Klapaucius","say":"Nothing touches it.","f":false},{"t0":182.14,"t1":182.78,"who":"Trurl","say":"Yipe!","f":false},{"t0":183.58,"t1":185.37,"who":"Trurl","say":"Stop! Stop! Don’t kill me!","f":false}],[{"t0":188.37,"t1":190.66,"who":"Klapaucius","say":"Trurl? What is this masquerade?","f":false},{"t0":191.26,"t1":198.55,"who":"Trurl","say":"I killed the real dragon. The king would not pay. He wanted a death certificate, an autopsy, forms in triplicate.","f":false},{"t0":199.05,"t1":203.61,"who":"Trurl","say":"So I kept its skin. A telephone pole, some pulleys, and I was ready.","f":false},{"t0":204.21,"t1":207.13,"who":"Klapaucius","say":"But if they would not pay you in the first place…","f":false},{"t0":208.13,"t1":210.06,"who":"Trurl","say":"This way I get the tribute.","f":true},{"t0":211.26,"t1":213.32,"who":"Klapaucius","say":"It was not right to force them.","f":false},{"t0":213.82,"t1":218.8,"who":"Trurl","say":"Who forced them? I walked around in the mountains, and in the evenings I howled a little.","f":false},{"t0":219.6,"t1":223.29,"who":"Klapaucius","say":"Why didn’t it vanish, when I made everything improbable?","f":false},{"t0":223.89,"t1":228.62,"who":"Trurl","say":"Probability-proof shields, under the skin. In case Basiliscus came by.","f":false},{"t0":229.82,"t1":234.04,"who":"Trurl","say":"Come on. I saved the platinum for last. Now you can help me carry it.","f":false}]]},"ferrix":{"title":"Prince Ferrix and the Princess Crystal","sub":"outside and inside","n":7,"dur":317.5,"idea":"Interfaces: same methods, different objects","video":"../ferrix/ferrix.mp4","poster":"../ferrix/ferrix.jpg","page":"../ferrix/index.html","picture":"A diptych. The left half is what the princess sees, the right half the bladders, bellows and prompts under the clay. The halves close when the clay falls.","sound":"Left channel outside, right channel inside. Every answer is whispered on the right before it is spoken on the left.","code":"Interfaces. Two objects with the same methods, one computing its answers and one storing them. One draw function called twice, with inside true or false.","after":"Trurl hid in a dragon skin in The Third Sally. Here the disguise is the whole story.","scenes":[[{"t0":2.4,"t1":9.01,"who":"","say":"Prince Ferrix loved the Princess Crystal, whose face rang like a bell. When she walked past, plain iron threw sparks.","f":false},{"t0":10.01,"t1":13.97,"who":"The King","say":"Give it up, my son. She has sworn to marry no one but a paleface.","f":false},{"t0":14.57,"t1":16.12,"who":"Ferrix","say":"A paleface? What is that?","f":false},{"t0":16.92,"t1":30.09,"who":"The King","say":"A creature of slush and splashes. They began as mold in the sea, and ate each other, and stood up on scaffolds of chalk, and at last they built machines. Our first father set us free from them.","f":false},{"t0":31.09,"t1":35.22,"who":"The King","say":"She tests every suitor. Every one who is caught lying, she beheads.","f":false},{"t0":36.82,"t1":38.62,"who":"Ferrix","say":"Then I will be a paleface.","f":true}],[{"t0":46.92,"t1":51.86,"who":"","say":"The vizier Polyphase went into his laboratory and brewed things that were gluey and dripping.","f":false},{"t0":53.86,"t1":55.58,"who":"Polyphase","say":"Shall I go on, Prince?","f":false},{"t0":56.18,"t1":57.3,"who":"Ferrix","say":"Do what you must.","f":false},{"t0":58.51,"t1":65.54,"who":"","say":"Grease and old crud over the steel. Over that, a paste of chalk and powdered rubies. On top of the head, a clump of rust.","f":false},{"t0":66.74,"t1":67.86,"who":"Polyphase","say":"Behold.","f":false},{"t0":69.26,"t1":72.78,"who":"Ferrix","say":"Get this abomination off me! She will hate me on sight!","f":false},{"t0":73.58,"t1":78.33,"who":"Polyphase","say":"No, Prince. Her madness is that ugliness is beautiful, and beauty ugly.","f":true},{"t0":79.93,"t1":87.1,"who":"Polyphase","say":"Now the inside. Under your cloak, cinnabar. In your chest, a bellows of dungeon air. By your eyes, little tubes of water.","f":false},{"t0":87.9,"t1":91.28,"who":"Polyphase","say":"When she asks what it is, you answer. Blood. Breath. Tears.","f":false}],[{"t0":93.88,"t1":102.83,"who":"","say":"Polyphase dressed as a portly merchant, with the books on paleface customs stuffed inside his robe. He locked the prince in a cage and cried him for sale.","f":false},{"t0":103.43,"t1":106.4,"who":"Polyphase","say":"A young paleface, from far away! A real one!","f":false},{"t0":107.6,"t1":111.51,"who":"Princess Crystal","say":"A hoax. But no one knows palefaces as I do. Bring him to me.","f":false}],[{"t0":114.31,"t1":120.83,"who":"Princess Crystal","say":"You worked hard, old man, plastering this scarecrow with mud and chalk. When I expose it, you will both lose your heads.","f":false},{"t0":124.23,"t1":125.34,"who":"Princess Crystal","say":"What is that?","f":false},{"t0":126.34,"t1":127.03,"who":"Ferrix","say":"Blood!","f":false},{"t0":131.63,"t1":132.74,"who":"Princess Crystal","say":"What is that?","f":false},{"t0":133.74,"t1":134.43,"who":"Ferrix","say":"Breath!","f":false},{"t0":135.63,"t1":140.38,"who":"Princess Crystal","say":"You are a clever craftsman. But you have lied to me, and you will die, and your scarecrow with you.","f":false},{"t0":143.38,"t1":144.49,"who":"Princess Crystal","say":"What is that?","f":false},{"t0":145.49,"t1":146.28,"who":"Ferrix","say":"Tears!","f":true}],[{"t0":148.88,"t1":151.9,"who":"Princess Crystal","say":"Tell me, Myamlak. What do your brothers do all day?","f":false},{"t0":153.5,"t1":171.25,"who":"Ferrix","say":"In the morning they pour clear water over themselves, and into themselves, for pleasure. When something grieves them, salt water runs from their eyes. When something cheers them, they shake and hiccup, and their eyes stay dry. The wet kind we call weeping. The dry kind, laughter.","f":false},{"t0":172.25,"t1":174.66,"who":"Princess Crystal","say":"And where do you get the energy to slosh about?","f":false},{"t0":176.26,"t1":189.16,"who":"Ferrix","say":"Other palefaces walk on four legs. We perforate them, bake them, and put them inside ourselves, through a hole called the mouth. We call it gastronomy. It has nothing to do with astronomy.","f":false},{"t0":190.16,"t1":192.85,"who":"Princess Crystal","say":"So you make yourselves into coffins for your brothers?","f":false},{"t0":194.45,"t1":201.16,"who":"Ferrix","say":"It is not a game, Highness. Life lives on life. We have only made the necessity into an art.","f":true},{"t0":202.56,"t1":206.9,"who":"Princess Crystal","say":"It sounds as if it makes sense, and it does not, not at all. You are a paleface.","f":false},{"t0":207.7,"t1":209.88,"who":"Princess Crystal","say":"One last test. Give me your hand.","f":false},{"t0":212.08,"t1":213.57,"who":"Princess Crystal","say":"Why did you cry out?","f":false},{"t0":214.57,"t1":215.59,"who":"Ferrix","say":"From the pain!","f":false}],[{"t0":219.39,"t1":224.41,"who":"","say":"Then the Cybercount Cyberhazy landed, back from the stars, with a paleface of his own.","f":false},{"t0":225.21,"t1":230.28,"who":"Cyberhazy","say":"Highness, you have been deceived. Your Myamlak is no paleface. Here is the real one.","f":false},{"t0":231.68,"t1":233.19,"who":"The paleface","say":"Me paleface!","f":true},{"t0":234.4,"t1":245.1,"who":"","say":"When it spoke, a pink worm seemed to crawl in its mouth. Its breath fogged the mirrors, and nearby iron rusted. Now the princess saw what a paleface was. She was too proud to say so.","f":false},{"t0":245.9,"t1":248.33,"who":"Princess Crystal","say":"Let them fight. The winner has my hand.","f":false},{"t0":249.13,"t1":253.0,"who":"Ferrix","say":"If I crush it, the clay will fall off me, and the steel will show.","f":false},{"t0":253.5,"t1":255.79,"who":"Polyphase","say":"Then don’t attack. Only defend.","f":false}],[{"t0":271.99,"t1":278.16,"who":"","say":"He stood there with no disguise, waiting for his sentence. In her crystal face he saw admiration.","f":true},{"t0":279.39,"t1":280.94,"who":"","say":"Her heart had changed.","f":false}],[{"t0":285.59,"t1":294.78,"who":"","say":"They married, and reigned long and well. The paleface was stuffed and put in the royal museum, where it stands to this day, a scarecrow thinly overgrown with hair.","f":false},{"t0":296.58,"t1":301.64,"who":"","say":"Some say there never were any palefaces. Perhaps. There are fables enough in this world.","f":false},{"t0":303.04,"t1":307.09,"who":"","say":"But even if the story is not true, there is a grain of sense in it.","f":true}]]},"sixth-sally":{"title":"The Sixth Sally","sub":"or, The Demon of the Second Kind","n":8,"dur":386.33,"idea":"Filtering: a test that keeps what passes","video":"../sixth-sally/sixth-sally.mp4","poster":"../sixth-sally/sixth-sally.jpg","page":"../sixth-sally/index.html","picture":"The film is printed on one long paper tape that slides from scene to scene. At the end it is the tape coming out of the Demon’s barrel and burying Pugg.","sound":"Air is random clicks; a configuration that means something is a pitched tone. In the flood the facts are read by many voices at once.","code":"Filtering. A test that keeps only what passes. True and meaningful is not the same as useful.","after":"The princess in Ferrix tests only outputs. Pugg tests only truth, and gets all of it.","scenes":[[{"t0":2.6,"t1":13.49,"who":"","say":"Trurl bought an old book from a passing peddler. It described a tunnel through a burning star, and beyond it a black waste called the Shroud, where a nameless monster lies in wait for caravans.","f":false},{"t0":14.29,"t1":17.65,"who":"Trurl","say":"Look. There is even an engraving of it, eating two ships.","f":false},{"t0":18.45,"t1":26.19,"who":"Klapaucius","say":"I could draw you a dragon right now, with a thousand suns for each eye. Would the drawing prove that it exists?","f":true},{"t0":26.79,"t1":31.57,"who":"Klapaucius","say":"Your Shroud is a cosmic dump. It is dark because of the garbage.","f":false},{"t0":32.37,"t1":36.63,"who":"Trurl","say":"We will go there. Then you will see what is true in this book, and what is not.","f":false}],[{"t0":45.83,"t1":52.39,"who":"","say":"The Wastes were not a shroud. They were a junkyard. Old stars, cinders, cans and wrecks, all clattering together.","f":false},{"t0":53.39,"t1":57.66,"who":"","say":"Sand pattered on the bow. Then the ship lurched, and everything went flying.","f":false},{"t0":61.06,"t1":66.77,"who":"","say":"It stuck nose first in something soft. Outside it was pitch black, and someone was banging on the hull.","f":false}],[{"t0":74.17,"t1":83.65,"who":"","say":"A face filled the hatch. It was covered with bulging eyes. The nose was a saw, and the jaw was an iron hook. The eyes looked everything over, as if pricing it.","f":false},{"t0":84.65,"t1":90.62,"who":"Trurl","say":"Well? What do you want, you unwashed mug? We have no gold and no silver. Take that face away!","f":false},{"t0":91.82,"t1":99.28,"who":"Pugg","say":"I have no use for gold or silver. Speak to me delicately. I am a pirate with a Ph.D.","f":false},{"t0":99.88,"t1":107.74,"who":"Pugg","say":"I rob in a modern and scientific manner. I collect facts. Genuine truths. Information of value.","f":false},{"t0":108.34,"t1":112.14,"who":"Pugg","say":"Hand it over, or I whistle. One. Two. Three.","f":false},{"t0":112.64,"t1":114.13,"who":"Pugg","say":"Four. Five.","f":false}],[{"t0":118.93,"t1":122.92,"who":"Pugg","say":"You don’t like my face? Maybe you will like my hand.","f":false},{"t0":130.92,"t1":137.73,"who":"Pugg","say":"Come to terms now, or I will put you at the bottom of my bin, under the rocks, and let you rust.","f":false},{"t0":138.33,"t1":141.64,"who":"Klapaucius","say":"What exactly does Your Doctoral Diplomahood want?","f":false},{"t0":142.44,"t1":152.58,"who":"Pugg","say":"Everything is information. I want all of it, as long as it is true. For false information, as for false coin, I give a good beating.","f":false},{"t0":153.38,"t1":157.91,"who":"Klapaucius","say":"He could keep us here an eon before we told him everything we know.","f":false}],[{"t0":160.11,"t1":164.21,"who":"Trurl","say":"Then take the best fact we have. How to make gold out of hydrogen.","f":false},{"t0":164.81,"t1":172.41,"who":"Trurl","say":"One hundred and ninety-six atoms. Shell the electrons, knead the protons, sprinkle the electrons back on. Watch.","f":false},{"t0":178.01,"t1":180.07,"who":"Pugg","say":"Yes, that is gold.","f":false},{"t0":180.57,"t1":183.12,"who":"Trurl","say":"You could turn the whole universe into gold!","f":false},{"t0":183.92,"t1":188.22,"who":"Pugg","say":"If the universe were gold, gold would be worthless.","f":true},{"t0":189.02,"t1":190.47,"who":"Trurl","say":"Then what do you want to know?","f":false},{"t0":191.07,"t1":192.22,"who":"Pugg","say":"Everything!","f":false}],[{"t0":195.22,"t1":207.96,"who":"","say":"Trurl promised him a Demon of the Second Kind, if he swore to let them go. Pugg swore. He led them down through his cellars, past sacks of stolen facts tied with string, and a great catalog chained to the rock, beginning with A.","f":false},{"t0":208.76,"t1":212.31,"who":"Pugg","say":"There is air down here. It is not very clean.","f":false},{"t0":213.1,"t1":219.58,"who":"Trurl","say":"It does not matter. Air is atoms, jumping this way and that, colliding billions of times a second.","f":false},{"t0":219.98,"t1":226.18,"who":"Trurl","say":"They jump at random. But there are so many that now and then, by accident, they make something with meaning.","f":false},{"t0":226.57,"t1":236.56,"who":"Trurl","say":"As if you fired at a wall blindfold, and the holes spelled a letter. For every sentence of sense there are thousands of nonsense, and both fly apart at once.","f":false},{"t0":237.16,"t1":243.74,"who":"Trurl","say":"So the whole trick is a selector, that keeps only what means something. That is the Demon of the Second Kind.","f":true},{"t0":244.54,"t1":247.02,"who":"Pugg","say":"And what is the First Kind?","f":false},{"t0":247.52,"t1":255.59,"who":"Klapaucius","say":"An ordinary demon. It lets the fast atoms out and keeps the slow ones in. It has nothing to do with information.","f":false}],[{"t0":257.79,"t1":264.59,"who":"","say":"Pugg found an old iron barrel, and made a tiny hole in it. The air inside was so foul that one’s nose wanted to hide.","f":false},{"t0":265.39,"t1":271.98,"who":"","say":"Trurl set the Demon astride the hole, a mote of a mite with a diamond pen, and threaded the paper tape under it.","f":false},{"t0":275.38,"t1":283.96,"who":"","say":"The pen began to scratch, like a telegraph, only a million times faster. Pugg sat down by the barrel, lifted the tape to his hundred eyes, and read.","f":false}],[{"t0":286.36,"t1":292.6,"who":"","say":"He did not notice the two constructors leave. They pulled the ship once, twice, and the third time it came free.","f":false},{"t0":297.2,"t1":300.13,"who":"","say":"They knew the Demon would work. It would work too well.","f":false}],[{"t0":302.33,"t1":303.96,"who":"","say":"He read about everything.","f":false},{"t0":304.33,"t1":307.07,"who":"","say":"how exactly the Harlebardonian wrigglers wriggle","tape":true},{"t0":307.21,"t1":310.93,"who":"","say":"that the daughter of King Petrolius of Labondia is named Humpinella","tape":true},{"t0":310.83,"t1":314.56,"who":"","say":"how many electron shells thermionolium would have, if it existed","tape":true},{"t0":314.19,"t1":317.92,"who":"","say":"the number of books on stamp collecting to be published in the year seventy thousand","tape":true},{"t0":317.27,"t1":320.19,"who":"","say":"how to tell a bindlesnurk from an ordinary trundlespiff","tape":true},{"t0":319.46,"t1":321.83,"who":"","say":"why fan-tailed fleas will not eat moss","tape":true},{"t0":321.06,"t1":323.2,"who":"","say":"how to play Fratcher-My-Pliss, and win","tape":true},{"t0":321.13,"t1":325.12,"who":"","say":"All of it was true. All of it meant something. All of it was useless.","f":true},{"t0":322.35,"t1":324.61,"who":"","say":"the drinking songs of the Quaidacabondish","tape":true},{"t0":323.53,"t1":328.01,"who":"","say":"the sizes of bedroom slippers on the continent of Cob, with pompons and without","tape":true},{"t0":325.55,"t1":327.9,"who":"","say":"six ways to cook cream of wheat","tape":true},{"t0":326.43,"t1":330.2,"who":"","say":"the names of all the citizens of Foofaraw Junction beginning with M","tape":true},{"t0":327.56,"t1":330.37,"who":"","say":"what unmarried whales think about, getting on in years","tape":true},{"t0":328.19,"t1":330.15,"who":"","say":"how to mend an old gunny sack","tape":true},{"t0":328.49,"t1":330.19,"who":"","say":"all the words that rhyme with spinach","tape":true},{"t0":328.69,"t1":330.66,"who":"","say":"the difference between fiddle and faddle","tape":true},{"t0":328.73,"t1":330.92,"who":"Pugg","say":"Enough! I have had enough!","f":false},{"t0":328.93,"t1":331.08,"who":"","say":"who plays the eight-tone autocomb","tape":true},{"t0":329.19,"t1":333.15,"who":"","say":"a poll on the taste of beer mixed with mushroom syrup","tape":true},{"t0":329.66,"t1":331.89,"who":"","say":"how many bruises one can have at a single time","tape":true},{"t0":329.93,"t1":332.59,"who":"","say":"how exactly the Harlebardonian wrigglers wriggle","tape":true},{"t0":330.25,"t1":333.77,"who":"","say":"that the daughter of King Petrolius of Labondia is named Humpinella","tape":true},{"t0":330.67,"t1":334.29,"who":"","say":"how many electron shells thermionolium would have, if it existed","tape":true},{"t0":331.11,"t1":334.67,"who":"","say":"the number of books on stamp collecting to be published in the year seventy thousand","tape":true},{"t0":331.53,"t1":334.27,"who":"","say":"how to tell a bindlesnurk from an ordinary trundlespiff","tape":true},{"t0":331.86,"t1":334.16,"who":"","say":"why fan-tailed fleas will not eat moss","tape":true},{"t0":332.14,"t1":334.17,"who":"","say":"how to play Fratcher-My-Pliss, and win","tape":true},{"t0":332.33,"t1":337.15,"who":"","say":"But the tape had wrapped him in its paper miles, and he had too many eyes not to keep reading.","f":false},{"t0":332.38,"t1":334.58,"who":"","say":"the drinking songs of the Quaidacabondish","tape":true},{"t0":332.65,"t1":336.97,"who":"","say":"the sizes of bedroom slippers on the continent of Cob, with pompons and without","tape":true},{"t0":333.16,"t1":335.4,"who":"","say":"six ways to cook cream of wheat","tape":true},{"t0":333.43,"t1":337.14,"who":"","say":"the names of all the citizens of Foofaraw Junction beginning with M","tape":true},{"t0":333.88,"t1":336.62,"who":"","say":"what unmarried whales think about, getting on in years","tape":true},{"t0":334.21,"t1":336.17,"who":"","say":"how to mend an old gunny sack","tape":true},{"t0":334.44,"t1":336.13,"who":"","say":"all the words that rhyme with spinach","tape":true},{"t0":334.64,"t1":336.61,"who":"","say":"the difference between fiddle and faddle","tape":true},{"t0":334.88,"t1":336.99,"who":"","say":"who plays the eight-tone autocomb","tape":true},{"t0":335.13,"t1":339.1,"who":"","say":"a poll on the taste of beer mixed with mushroom syrup","tape":true},{"t0":335.61,"t1":337.84,"who":"","say":"how many bruises one can have at a single time","tape":true},{"t0":335.88,"t1":338.52,"who":"","say":"how exactly the Harlebardonian wrigglers wriggle","tape":true},{"t0":336.19,"t1":339.71,"who":"","say":"that the daughter of King Petrolius of Labondia is named Humpinella","tape":true},{"t0":336.62,"t1":340.23,"who":"","say":"how many electron shells thermionolium would have, if it existed","tape":true},{"t0":337.05,"t1":340.61,"who":"","say":"the number of books on stamp collecting to be published in the year seventy thousand","tape":true},{"t0":337.48,"t1":340.21,"who":"","say":"how to tell a bindlesnurk from an ordinary trundlespiff","tape":true},{"t0":337.81,"t1":340.11,"who":"","say":"why fan-tailed fleas will not eat moss","tape":true},{"t0":338.08,"t1":340.12,"who":"","say":"how to play Fratcher-My-Pliss, and win","tape":true},{"t0":338.33,"t1":340.52,"who":"","say":"the drinking songs of the Quaidacabondish","tape":true},{"t0":338.59,"t1":342.91,"who":"","say":"the sizes of bedroom slippers on the continent of Cob, with pompons and without","tape":true},{"t0":339.11,"t1":341.35,"who":"","say":"six ways to cook cream of wheat","tape":true},{"t0":339.38,"t1":343.08,"who":"","say":"the names of all the citizens of Foofaraw Junction beginning with M","tape":true},{"t0":339.82,"t1":342.57,"who":"","say":"what unmarried whales think about, getting on in years","tape":true},{"t0":340.15,"t1":342.11,"who":"","say":"how to mend an old gunny sack","tape":true}],[{"t0":347.33,"t1":353.55,"who":"","say":"He sits there to this day, at the bottom of his rubbish, under a mountain of paper, and the diamond pen still flickers.","f":false},{"t0":355.93,"t1":362.9,"who":"","say":"He learns about rickshaws, rents and roaches, and about his own fate, which has been told here. That is on the tape too.","f":true},{"t0":368.13,"t1":371.29,"who":"","say":"There is no hope for him. Unless the paper runs out.","f":false}]]}},"course":"INTRO TO COMPUTATIONAL MEDIA"};
-const $ = (s, el = document) => el.querySelector(s);
+const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const mmss = (s) => { s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
-let MODE = 'both'; try { MODE = localStorage.getItem('cyb-mode') || 'both'; } catch (e) {}
-let stopSync = null;
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const letters = (s) => [...s].map((c, i) => c === ' ' ? ' ' : `<span style="--i:${i}">${esc(c)}</span>`).join('');
+const ORDER = D.book.filter((e) => e.slug && D.films[e.slug]).map((e) => e.slug);
+const NUM = {}; { let k = 0; for (const e of D.book) { if (e.part) continue; k++; if (e.slug) NUM[e.slug] = ROMAN[k]; } }
+let cleanup = null;
 
-function home() {
-  document.title = 'The Cyberiad · a videotext';
+function tocRows(cur) {
   let k = 0, rows = '';
   for (const e of D.book) {
     if (e.part) { rows += `<p class="part">${esc(e.part)}</p>`; continue; }
     k++;
     const f = e.slug && D.films[e.slug];
-    if (f) rows += `<a class="row" href="#/${e.slug}"><span class="rn">${ROMAN[k]}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span></a>`;
+    if (f) { const p = Math.min(1, store.get('cyb-p-' + e.slug, 0) / f.dur);
+      rows += `<a class="row${cur === e.slug ? ' cur' : ''}" href="#/${e.slug}"><span class="rn">${ROMAN[k]}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span>${p > 0.01 ? `<span></span><span></span><span class="pg"><b style="width:${(p * 100).toFixed(1)}%"></b></span>` : ''}</a>`; }
     else if (e.reel) rows += `<a class="row" href="../two-sallies/index.html"><span class="rn">${ROMAN[k]}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">reel</span><span></span><span></span><span class="sub">in the earlier reel, Two Sallies</span></a>`;
     else rows += `<div class="row todo"><span class="rn">${ROMAN[k]}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">&mdash;</span><span></span><span></span><span class="sub">${esc(e.next || 'not yet filmed')}</span></div>`;
   }
-  const n = Object.keys(D.films).length, mins = Math.round(Object.values(D.films).reduce((a, f) => a + f.dur, 0) / 60);
-  $('#app').innerHTML = `<header class="title"><h1>THE CYBERIAD</h1><p class="it">a videotext</p><p class="by">after Stanisław Lem</p></header>
-    <div class="rule"></div>
-    <section class="toc"><h2 class="sc">CONTENTS</h2>${rows}</section>
-    <p class="colophon">Each chapter is filmed in a form that does what one programming idea does. Open a chapter to watch it, read it, or both at once: the text inks in as it is spoken, and any line takes you to its place in the film.<span class="mono">${n} CHAPTERS FILMED · ${mins} MINUTES · LAB 7 · ${esc(D.course)}</span></p>`;
+  return rows;
 }
 
+/* ================= the title page ================= */
+function home() {
+  document.title = 'The Cyberiad · a videotext';
+  document.body.classList.toggle('unfold', true);
+  const n = ORDER.length, mins = Math.round(Object.values(D.films).reduce((a, f) => a + f.dur, 0) / 60);
+  $('#app').innerHTML = `<section class="splash"><h1>${letters('THE CYBERIAD')}</h1><p class="it">a videotext</p><p class="by">after Stanisław Lem</p>
+      <a class="cue" href="#contents" aria-label="Contents"><span class="sc">Contents</span><b></b></a></section>
+    <section class="toc" id="contents"><h2 class="sc">Contents</h2>${tocRows()}</section>
+    <p class="colophon">Each chapter is filmed in a form that does what one programming idea does. In a chapter, scroll through the text and the film moves with you; press play and the text moves with the film.
+      <span class="mono">${n} CHAPTERS FILMED · ${mins} MINUTES<br>LAB 7 · ${esc(D.course)}<br>DRAWN WITH THE <a href="https://hartswf0.github.io/elsewhere/studio.html">MULTIPLANE ANIMATION STUDIO</a> PROMPT</span></p>`;
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('seen'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' }) : null;
+  $$('.toc .row').forEach((r, i) => { r.style.transitionDelay = (i % 6) * 0.05 + 's'; io ? io.observe(r) : r.classList.add('seen'); });
+  $('.cue').addEventListener('click', (e) => { e.preventDefault(); $('#contents').scrollIntoView({ behavior: 'smooth' }); });
+}
+
+/* ================= a chapter =================
+   The text is laid out on the film's own clock: every line sits at its time, and silences become
+   space. Scrolling moves a reading line down the text; the time under it is where the film goes.
+   Pressing play reverses it: the film runs and the page scrolls to keep its line under the reading line. */
 function chapter(slug) {
   const f = D.films[slug]; if (!f) return home();
   document.title = f.title + ' · The Cyberiad';
-  const order = D.book.filter((e) => e.slug && D.films[e.slug]).map((e) => e.slug), i = order.indexOf(slug);
-  const prev = order[i - 1], next = order[i + 1];
-  let k = 0, rn = ''; for (const e of D.book) { if (e.part) continue; k++; if (e.slug === slug) rn = ROMAN[k]; }
-  let text = '', first = true, idx = 0;
-  const flat = [];
-  f.scenes.forEach((sc, si) => {
-    if (si > 0 && text) text += '<div class="brk"></div>';
-    for (const l of sc) {
-      let cls = l.tape ? 'tape' : l.f ? 'f' : 'n';
-      if (cls === 'n' && first && !l.who) { cls += ' first'; }
-      if (!l.tape) first = false;
-      const who = l.who ? `<span class="w">${esc(l.who)}.</span>` : '';
-      text += `<p class="${cls}" data-i="${idx}">${who}${esc(l.say)}</p>`;
-      flat.push(l); idx++;
-    }
+  document.body.classList.remove('unfold');
+  const i = ORDER.indexOf(slug), prev = ORDER[i - 1], next = ORDER[i + 1];
+  const flat = []; f.scenes.forEach((sc, si) => sc.forEach((l, li) => flat.push({ ...l, brk: si > 0 && li === 0 })));
+  flat.sort((a, b) => a.t0 - b.t0);
+  // the text, with silences turned into space
+  const PX = innerWidth < 900 ? 11 : 14;
+  const gapEl = (t0, t1, brk) => { const h = Math.max(brk ? 70 : 10, Math.min(300, (t1 - t0) * PX)); return `<div class="gap" data-t0="${t0}" data-t1="${t1}" style="height:${h}px">${brk ? '<span class="brk"></span>' : ''}</div>`; };
+  let html = '', first = true, end = 0;
+  flat.forEach((l, j) => {
+    const gapT0 = j === 0 ? 0 : Math.max(end, flat[j - 1].t0);
+    if (l.t0 - gapT0 > 0.5 || l.brk || j === 0) html += gapEl(gapT0, Math.max(gapT0, l.t0), l.brk);
+    let cls = l.tape ? 'tape' : l.f ? 'f' : 'n';
+    if (!l.tape && !l.f && !l.who && first) cls += ' first';
+    if (!l.tape) first = false;
+    html += `<p class="${cls}" data-j="${j}">${l.who ? `<span class="w">${esc(l.who)}.</span>` : ''}${esc(l.say)}</p>`;
+    end = Math.max(end, l.t1);
   });
-  $('#app').innerHTML = `<nav class="bar"><a class="sc" href="#/">&larr; Contents</a><div class="modes sc" role="group" aria-label="Mode"><button data-m="watch">Watch</button><button data-m="both">Both</button><button data-m="read">Read</button></div></nav>
-    <header class="chead"><div class="rn sc">${rn}</div><h1>${esc(f.title.toUpperCase())}</h1><p class="it">${esc(f.sub)}</p></header>
-    <div class="stage ${MODE}" id="stage">
-      <div class="screen"><video id="v" controls playsinline preload="metadata" poster="${f.poster}" src="${f.video}"></video>
-        <div class="where mono"><span id="t">0:00</span><span>${mmss(f.dur)}</span></div>
-        <div class="caption" id="cap"></div></div>
-      <div><div class="front"><img src="${f.poster}" alt=""><p>Choose any line to hear it in the film.</p></div>
-        <div class="text" id="text">${text}</div>
-        <section class="after"><h2 class="sc">ON THE FILM</h2><dl>
-          <dt class="sc">Picture</dt><dd>${esc(f.picture)}</dd><dt class="sc">Sound</dt><dd>${esc(f.sound)}</dd>
-          <dt class="sc">Code</dt><dd>${esc(f.code)}</dd><dt class="sc">After the film before</dt><dd>${esc(f.after)}</dd></dl>
-          <p class="more"><a href="${f.page}">The script, notes and the bench exercise</a></p></section></div>
-    </div>
-    <nav class="pn">${prev ? `<a href="#/${prev}"><span class="sc">Previous</span><b>${esc(D.films[prev].title)}</b></a>` : '<span></span>'}${next ? `<a href="#/${next}" style="text-align:right"><span class="sc">Next</span><b>${esc(D.films[next].title)}</b></a>` : `<a href="#/" style="text-align:right"><span class="sc">Back to</span><b>Contents</b></a>`}</nav>`;
-  const v = $('#v'), stage = $('#stage'), ps = [...document.querySelectorAll('#text p')], cap = $('#cap'), tEl = $('#t');
-  const setMode = (m) => { MODE = m; try { localStorage.setItem('cyb-mode', m); } catch (e) {} stage.className = 'stage ' + m; document.querySelectorAll('.modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m)); };
-  document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.m)));
-  setMode(MODE);
-  let last = -2, userScroll = 0;
-  addEventListener('wheel', () => (userScroll = performance.now()), { passive: true });
-  addEventListener('touchmove', () => (userScroll = performance.now()), { passive: true });
-  const sync = () => {
-    const t = v.currentTime; tEl.textContent = mmss(t);
-    let cur = -1; for (let j = 0; j < flat.length; j++) { if (flat[j].tape) continue; if (flat[j].t0 <= t + 0.05) cur = j; else break; }
-    let live = -1; for (let j = 0; j < flat.length; j++) if (!flat[j].tape && t >= flat[j].t0 - 0.05 && t <= flat[j].t1 + 0.6) live = j;
-    for (let j = 0; j < flat.length; j++) ps[j].classList.toggle('said', flat[j].t0 <= t + 0.05);
-    if (cur !== last) {
-      ps.forEach((p) => p.classList.remove('now')); if (cur >= 0) ps[cur].classList.add('now');
-      if (cur >= 0 && MODE === 'both' && !v.paused && performance.now() - userScroll > 3000) ps[cur].scrollIntoView({ behavior: 'smooth', block: 'center' });
-      last = cur;
-    }
-    const l = live >= 0 ? flat[live] : null;
-    cap.innerHTML = l ? `${l.who ? `<span class="who sc">${esc(l.who)}</span>` : ''}${esc(l.say)}` : '';
+  html += gapEl(end, f.dur, false);
+  const mode = store.get('cyb-mode', 'book');
+  $('#app').innerHTML = `<nav class="bar"><button class="sc tocb" id="tocb" aria-label="Contents"><span class="lbl">Contents</span><i></i></button>
+      <div class="here"><span class="sc">${NUM[slug]}</span>${esc(f.title)}</div>
+      <div class="nav"><div class="modes sc"><button data-m="book">Book</button><button data-m="film">Film</button></div>
+        <a class="chev l" ${prev ? `href="#/${prev}" aria-label="Previous chapter"` : 'disabled'}></a><a class="chev r" ${next ? `href="#/${next}" aria-label="Next chapter"` : 'disabled'}></a></div>
+      <div class="pr" id="pr"></div></nav>
+    <div class="sheet" id="sheet"><section class="toc"><h2 class="sc">Contents</h2>${tocRows(slug)}</section></div>
+    <article class="chapter m-${mode}" id="ch">
+      <header class="chead"><div class="rn sc">${NUM[slug]}</div><h1>${letters(f.title.toUpperCase())}</h1><p class="it">${esc(f.sub)}</p></header>
+      <div class="book">
+        <div class="screen"><div class="vbox"><video id="v" muted playsinline preload="auto" poster="${f.poster}" src="${f.video}"></video></div>
+          <div class="ctl"><button class="play" id="pb" aria-label="Play"></button><span class="tc mono" id="tc">0:00 / ${mmss(f.dur)}</span><span class="hint" id="hint">Scroll to move through the film</span></div>
+          <div class="caption" id="cap"></div></div>
+        <div class="text" id="text">${html}</div>
+      </div>
+      <section class="after"><h2 class="sc">On the film</h2><dl>
+        <dt class="sc">Picture</dt><dd>${esc(f.picture)}</dd><dt class="sc">Sound</dt><dd>${esc(f.sound)}</dd>
+        <dt class="sc">Code</dt><dd>${esc(f.code)}</dd><dt class="sc">After the film before</dt><dd>${esc(f.after)}</dd></dl>
+        <p class="more"><a href="${f.page}">The script, notes and the bench exercise</a></p></section>
+      ${next ? `<a class="nextcard" href="#/${next}"><span class="sc">Next chapter · ${NUM[next]}</span><h3>${esc(D.films[next].title)}</h3><p>${esc(D.films[next].sub)}</p><img src="${D.films[next].poster}" alt="" loading="lazy"></a>` : `<a class="nextcard" href="#/"><span class="sc">The end of the filmed chapters</span><h3>Contents</h3><p>${esc(String(D.book.filter((e) => !e.part && !e.slug && !e.reel).length))} chapters are not yet filmed</p></a>`}
+    </article>`;
+
+  const v = $('#v'), ch = $('#ch'), els = $$('#text p, #text .gap'), ps = $$('#text p'), pr = $('#pr'), tc = $('#tc'), pb = $('#pb'), cap = $('#cap'), hint = $('#hint');
+  // ---------- the map between page position and film time ----------
+  let A = [];   // [{y, t}] sorted
+  const layout = () => {
+    A = [];
+    for (const el of els) { const r = el.getBoundingClientRect(), y = r.top + scrollY;
+      if (el.classList.contains('gap')) { A.push({ y, t: +el.dataset.t0 }); A.push({ y: y + r.height, t: +el.dataset.t1 }); }
+      else { const l = flat[+el.dataset.j]; A.push({ y, t: l.t0 }); } }
+    A.sort((a, b) => a.y - b.y);
+    for (let k = 1; k < A.length; k++) if (A[k].t < A[k - 1].t) A[k].t = A[k - 1].t;
   };
-  let raf = 0; const loop = () => { sync(); raf = requestAnimationFrame(loop); };
-  v.addEventListener('play', () => { cancelAnimationFrame(raf); loop(); });
-  v.addEventListener('pause', () => { cancelAnimationFrame(raf); sync(); });
-  v.addEventListener('seeked', sync);
-  ps.forEach((p) => p.addEventListener('click', () => { const l = flat[+p.dataset.i]; if (MODE === 'read') setMode('both'); v.currentTime = Math.max(0, l.t0 - 0.15); v.play().catch(() => {}); }));
-  stopSync = () => { cancelAnimationFrame(raf); v.pause(); };
-  sync();
+  const off = () => { if (!A.length) return 0; const o = Math.max(0, scrollY * 0 + readY() + 0 - (A[0].y - 0)); return o * Math.max(0, 1 - scrollY / Math.max(200, A[0].y)); };
+  const tAt = (y) => { if (!A.length || y <= A[0].y) return 0; for (let k = 1; k < A.length; k++) if (y < A[k].y) { const a = A[k - 1], b = A[k]; return a.t + (b.t - a.t) * (y - a.y) / Math.max(1, b.y - a.y); } return f.dur; };
+  const yAt = (t) => { if (!A.length) return 0; if (t <= A[0].t) return A[0].y; for (let k = 1; k < A.length; k++) if (t < A[k].t) { const a = A[k - 1], b = A[k]; return a.y + (b.y - a.y) * (t - a.t) / Math.max(1e-6, b.t - a.t); } return A[A.length - 1].y; };
+  const readY = () => { if (innerWidth < 900) { const s = $('.screen').getBoundingClientRect(); return s.bottom + (innerHeight - s.bottom) * 0.3; } return innerHeight * 0.42; };
+  // ---------- showing a time on the page ----------
+  let lastNow = -1;
+  const show = (t) => {
+    for (const p of ps) p.classList.toggle('said', flat[+p.dataset.j].t0 <= t + 0.05);
+    for (const g of $$('#text .gap')) g.classList.toggle('said', +g.dataset.t1 <= t + 0.05);
+    let now = -1; for (let j = 0; j < flat.length; j++) { if (flat[j].tape) continue; if (flat[j].t0 <= t + 0.05) now = j; }
+    if (now !== lastNow) { $$('#text p.now').forEach((p) => p.classList.remove('now')); const p = ps.find((q) => +q.dataset.j === now); if (p) p.classList.add('now'); lastNow = now; }
+    let live = null; for (const l of flat) if (!l.tape && t >= l.t0 - 0.05 && t <= l.t1 + 0.5) live = l;
+    cap.innerHTML = live ? `${live.who ? `<span class="w">${esc(live.who)}</span>` : ''}${esc(live.say)}` : '';
+    tc.textContent = `${mmss(t)} / ${mmss(f.dur)}`; pr.style.width = (100 * t / f.dur).toFixed(2) + '%';
+    if (t > store.get('cyb-p-' + slug, 0)) store.set('cyb-p-' + slug, Math.round(t));
+  };
+  // ---------- scroll moves the film ----------
+  let target = 0, seeking = false, idle = 0, following = false, primed = false;
+  const seek = (t, exact) => {
+    target = t; if (seeking && !exact) return;
+    if (Math.abs(v.currentTime - t) < 0.03) return;
+    seeking = true;
+    if (!exact && v.fastSeek && Math.abs(v.currentTime - t) > 2.5) v.fastSeek(t); else v.currentTime = t;
+  };
+  v.addEventListener('seeked', () => { seeking = false; if (!following && Math.abs(v.currentTime - target) > 0.05) seek(target, true); });
+  const prime = () => { if (primed) return; primed = true; const p = v.play(); if (p) p.then(() => { if (!following) v.pause(); }).catch(() => {}); };
+  let raf = 0;
+  const onScroll = () => {
+    if (following || ch.classList.contains('m-film')) return;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { const t = tAt(scrollY + readY() - off()); show(t); seek(t, false); clearTimeout(idle); idle = setTimeout(() => seek(t, true), 160); });
+  };
+  // ---------- play moves the page ----------
+  let fr = 0, autoY = -1;
+  const follow = () => {
+    const t = v.currentTime; show(t);
+    if (!ch.classList.contains('m-film')) { const y = Math.max(0, yAt(t) - readY()); autoY = y; scrollTo(0, y); }
+    fr = requestAnimationFrame(follow);
+  };
+  const play = () => { primed = true; v.muted = false; following = true; pb.classList.add('on'); pb.setAttribute('aria-label', 'Pause'); hint.textContent = 'Scroll to take the film back'; v.play().catch(() => { stop(); }); cancelAnimationFrame(fr); follow(); };
+  const stop = () => { following = false; v.pause(); cancelAnimationFrame(fr); pb.classList.remove('on'); pb.setAttribute('aria-label', 'Play'); hint.textContent = 'Scroll to move through the film'; };
+  pb.addEventListener('click', () => (following ? stop() : play()));
+  v.addEventListener('ended', stop);
+  const userMove = () => { prime(); if (following && !ch.classList.contains('m-film')) stop(); };
+  addEventListener('wheel', userMove, { passive: true }); addEventListener('touchstart', userMove, { passive: true });
+  const onKey = (e) => { if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(e.key)) userMove(); if (e.key === ' ' && e.target === document.body) { e.preventDefault(); following ? stop() : play(); } };
+  addEventListener('keydown', onKey);
+  addEventListener('scroll', onScroll, { passive: true });
+  ps.forEach((p) => p.addEventListener('click', () => { const l = flat[+p.dataset.j]; stop(); scrollTo({ top: Math.max(0, yAt(l.t0) - readY()), behavior: 'smooth' }); }));
+  // ---------- modes, contents, resize ----------
+  const setMode = (m) => { ch.classList.toggle('m-film', m === 'film'); ch.classList.toggle('m-book', m !== 'film'); $$('.modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m)); store.set('cyb-mode', m);
+    v.controls = m === 'film'; hint.style.display = m === 'film' ? 'none' : ''; requestAnimationFrame(() => { layout(); if (m !== 'film' && !following) onScroll(); }); };
+  $$('.modes button').forEach((b) => b.addEventListener('click', () => { const t = v.currentTime; setMode(b.dataset.m); if (b.dataset.m === 'film') { requestAnimationFrame(() => scrollTo(0, Math.max(0, $('.screen').getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar')) - 40))); show(t); } else requestAnimationFrame(() => scrollTo(0, Math.max(0, yAt(t) - readY()))); }));
+  v.addEventListener('play', () => { if (ch.classList.contains('m-film')) { following = true; v.muted = false; pb.classList.add('on'); cancelAnimationFrame(fr); follow(); } });
+  v.addEventListener('pause', () => { if (ch.classList.contains('m-film')) { following = false; cancelAnimationFrame(fr); pb.classList.remove('on'); } });
+  const sheet = $('#sheet'); $('#tocb').addEventListener('click', () => { sheet.classList.toggle('open'); $('#tocb .lbl').textContent = sheet.classList.contains('open') ? 'Close' : 'Contents'; $('#tocb').classList.toggle('x', sheet.classList.contains('open')); });
+  const onResize = () => { layout(); if (!following) onScroll(); };
+  addEventListener('resize', onResize);
+  setMode(mode);
+  document.fonts && document.fonts.ready.then(() => { layout(); onScroll(); });
+  cleanup = () => { stop(); removeEventListener('scroll', onScroll); removeEventListener('wheel', userMove); removeEventListener('touchstart', userMove); removeEventListener('keydown', onKey); removeEventListener('resize', onResize); };
+  show(0);
 }
 
-function route() { if (stopSync) { stopSync(); stopSync = null; } const m = location.hash.match(/^#\/([\w-]+)/); if (m && D.films[m[1]]) chapter(m[1]); else home(); scrollTo(0, 0); }
+function route() {
+  if (cleanup) { cleanup(); cleanup = null; }
+  const m = location.hash.match(/^#\/([\w-]+)/);
+  if (m && D.films[m[1]]) chapter(m[1]); else home();
+  scrollTo(0, 0);
+}
 addEventListener('hashchange', route);
 route();
 </script>

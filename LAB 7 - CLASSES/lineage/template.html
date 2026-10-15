@@ -8,201 +8,321 @@
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
 @font-face{font-family:"IBM Plex Mono";src:url(../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400 500;font-display:swap}
-:root{--paper:#ebe3cf;--ink:#1c1814;--soft:#6f6656;--faint:#b3a993;--rule:#1c1814}
+:root{--paper:#ebe3cf;--ink:#1c1814;--soft:#6f6656;--faint:#b9af99;--bar:52px;--fi:17px}
 *{box-sizing:border-box}
 html{background:var(--paper)}
-body{margin:0;background:var(--paper);color:var(--ink);font:19px/1.55 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--paper);color:var(--ink);font:19px/1.6 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 a{color:inherit}
-.frame{position:fixed;inset:0;pointer-events:none;z-index:50}
-.frame::before,.frame::after{content:"";position:absolute;border:1px solid var(--rule)}
-.frame::before{inset:10px}
-.frame::after{inset:17px;border-width:2px;box-shadow:0 0 0 40px var(--paper)}
-@media (max-width:640px){.frame::before{inset:5px}.frame::after{inset:9px;border-width:1.5px}}
-.frame::before{z-index:1}
-.wrap{padding:56px 44px 90px}
-@media (max-width:640px){.wrap{padding:40px 22px 70px}}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 .sc{text-transform:uppercase;font-size:.8em;letter-spacing:.16em}
 .mono{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.08em}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+@media (max-width:640px){:root{--fi:9px;--bar:46px}body{font-size:18px}}
 
-/* ---------- the title page and contents ---------- */
-.title{text-align:center;margin:7vh auto 0;max-width:900px}
-.title h1{font-weight:400;font-size:clamp(46px,9vw,108px);line-height:1;margin:0;letter-spacing:.015em}
-.title .it{font-style:italic;font-size:clamp(20px,2.6vw,30px);margin:18px 0 6px}
-.title .by{font-style:italic;font-size:18px;color:var(--soft);margin:0}
-.rule{width:64px;height:0;border-top:1px solid var(--ink);margin:38px auto}
-.toc{max-width:760px;margin:0 auto}
-.toc h2{font-weight:400;text-align:center;font-size:15px;letter-spacing:.24em;margin:0 0 28px}
-.part{text-align:center;font-style:italic;font-size:17px;color:var(--soft);margin:30px 0 14px}
-.row{display:grid;grid-template-columns:2.6em 88px 1fr auto;gap:0 16px;align-items:center;padding:9px 0;text-decoration:none}
+/* the frame, as on every film's title card */
+.frame{position:fixed;inset:0;pointer-events:none;z-index:60}
+.frame i{position:absolute;display:block;border:1px solid var(--ink)}
+.frame i.o{inset:calc(var(--fi) - 7px);z-index:2}
+.frame i.n{inset:var(--fi);border-width:2px;box-shadow:0 0 0 60px var(--paper)}
+@media (max-width:640px){.frame i.o{inset:4px}.frame i.n{border-width:1.5px}}
+.unfold .frame i{animation:draw 1.4s cubic-bezier(.6,0,.2,1) both}
+.unfold .frame i.n{animation-delay:.15s}
+@keyframes draw{from{clip-path:inset(50% 50% 50% 50%)}to{clip-path:inset(-90px -90px -90px -90px)}}
+
+/* ---------- the title page ---------- */
+.splash{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 28px;position:relative}
+.splash h1{font-weight:400;font-size:clamp(46px,10vw,124px);line-height:1;margin:0;letter-spacing:.015em}
+.splash h1 span{display:inline-block}
+.unfold .splash h1 span{animation:ink .9s ease-out both;animation-delay:calc(.7s + var(--i) * .07s)}
+@keyframes ink{from{opacity:0;color:var(--faint);transform:translateY(.06em)}to{opacity:1;color:var(--ink);transform:none}}
+.splash .it{font-style:italic;font-size:clamp(21px,2.8vw,32px);margin:22px 0 6px}
+.splash .by{font-style:italic;font-size:18px;color:var(--soft);margin:0}
+.unfold .splash .it,.unfold .splash .by,.unfold .splash .cue{animation:fade 1.2s ease both}
+.unfold .splash .it{animation-delay:1.8s}.unfold .splash .by{animation-delay:2.2s}.unfold .splash .cue{animation-delay:3s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.cue{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--soft);text-decoration:none}
+.cue b{width:1px;height:36px;background:var(--ink);position:relative;animation:drop 2.4s ease-in-out infinite}
+.cue b::after{content:"";position:absolute;left:-4px;bottom:0;width:7px;height:7px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);transform:rotate(45deg)}
+@keyframes drop{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.toc{max-width:780px;margin:0 auto;padding:40px 28px 40px}
+.toc h2{font-weight:400;text-align:center;font-size:15px;letter-spacing:.24em;margin:0 0 30px}
+.part{text-align:center;font-style:italic;font-size:17px;color:var(--soft);margin:32px 0 14px}
+.row{display:grid;grid-template-columns:2.6em 96px 1fr auto;gap:0 16px;align-items:center;padding:10px 0;text-decoration:none;opacity:0;transform:translateY(10px);transition:opacity .8s,transform .8s}
+.row.seen,.no-anim .row{opacity:1;transform:none}
 .row .rn{font-size:15px;color:var(--soft);text-align:right}
-.row .th{width:88px;aspect-ratio:16/9;border:1px solid var(--ink);object-fit:cover;display:block;background:var(--paper)}
+.row .th{width:96px;aspect-ratio:16/9;border:1px solid var(--ink);object-fit:cover;display:block}
 .row .th.none{border:1px dashed var(--faint)}
 .row .nm{display:flex;align-items:baseline;gap:10px;min-width:0}
-.row .nm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .nm i{flex:1;border-bottom:1px dotted var(--soft);transform:translateY(-5px);min-width:20px}
-.row .tm{font:500 12px "IBM Plex Mono",monospace;color:var(--ink);min-width:3.4em;text-align:right}
+.row .tm{font:500 12px "IBM Plex Mono",monospace;min-width:3.4em;text-align:right}
 .row .sub{grid-column:3/5;font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.07em;color:var(--soft);margin-top:2px}
+.row .pg{grid-column:3/5;height:1px;background:var(--faint);margin-top:6px;position:relative}
+.row .pg b{position:absolute;left:0;top:-.5px;height:2px;background:var(--ink)}
 a.row:hover .nm span{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
 a.row:hover .th{outline:2px solid var(--ink)}
-.row.todo{color:var(--faint)}
-.row.todo .tm{color:var(--faint)}
-.row.todo .sub{color:var(--faint)}
-@media (max-width:640px){.row{grid-template-columns:1.8em 64px 1fr auto;gap:0 10px}.row .th{width:64px}.row .nm{font-size:16px}.row .nm span{white-space:normal}.row .nm i{display:none}}
-.colophon{max-width:560px;margin:56px auto 0;text-align:center;font-style:italic;font-size:17px;color:var(--soft)}
-.colophon .mono{display:block;font-style:normal;margin-top:16px}
+.row.todo,.row.todo .tm,.row.todo .sub{color:var(--faint)}
+@media (max-width:640px){.row{grid-template-columns:1.7em 68px 1fr auto;gap:0 10px}.row .th{width:68px}.row .nm{font-size:16.5px}.row .nm i{display:none}}
+.colophon{max-width:560px;margin:50px auto 0;text-align:center;font-style:italic;font-size:17px;color:var(--soft);padding:0 24px 100px}
+.colophon .mono{display:block;font-style:normal;margin-top:18px;line-height:1.9}
+.colophon a{text-underline-offset:3px}
+
+/* ---------- the chapter bar ---------- */
+.bar{position:fixed;left:calc(var(--fi) + 2px);right:calc(var(--fi) + 2px);top:calc(var(--fi) + 2px);height:var(--bar);z-index:55;background:var(--paper);display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--ink)}
+.bar .here{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}
+.bar .here span{color:var(--soft);margin-right:.6em}
+.bar .pr{position:absolute;left:0;bottom:-1px;height:2px;background:var(--ink);width:0}
+.bar .nav{display:flex;gap:6px;align-items:center}
+.chev{width:34px;height:34px;display:grid;place-items:center}
+.chev::before{content:"";width:9px;height:9px;border-left:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
+.chev.l::before{transform:translateX(2px) rotate(45deg)}.chev.r::before{transform:translateX(-2px) rotate(-135deg)}
+.chev[disabled]{opacity:.25;pointer-events:none}
+.modes{display:flex;gap:14px;margin-right:6px}
+.modes button{color:var(--soft);border-bottom:1px solid transparent}
+.modes button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--ink)}
+.tocb i{display:none;width:18px;height:12px;border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);position:relative}
+.tocb i::after{content:"";position:absolute;left:0;right:0;top:4px;border-top:1.5px solid var(--ink)}
+@media (max-width:640px){.tocb .lbl{display:none}.tocb i{display:block}.tocb.x i{border:0}.tocb.x i::after{transform:rotate(45deg);top:5px}.tocb.x i::before{content:"";position:absolute;left:0;right:0;top:5px;border-top:1.5px solid var(--ink);transform:rotate(-45deg)}.bar{padding:0 8px;gap:6px}.bar .here{font-size:14px}.bar .here span{display:none}.modes{gap:10px;margin-right:0}}
 
 /* ---------- the chapter ---------- */
-.bar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;max-width:1240px;margin:0 auto 6px}
-.bar a{text-decoration:none}
-.modes{display:flex;gap:18px}
-.modes button{color:var(--soft);padding:4px 0;border-bottom:1px solid transparent}
-.modes button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--ink)}
-.chead{text-align:center;margin:34px auto 34px;max-width:900px}
+.chapter{padding-top:calc(var(--bar) + var(--fi) + 10px)}
+.chead{text-align:center;margin:0 auto;padding:46px 28px 40px;max-width:900px}
 .chead .rn{font-size:15px;letter-spacing:.24em;color:var(--soft)}
-.chead h1{font-weight:400;font-size:clamp(34px,5.4vw,64px);line-height:1.05;margin:10px 0 10px;letter-spacing:.01em}
-.chead .it{font-style:italic;font-size:21px;margin:0}
-.stage{max-width:1240px;margin:0 auto;display:grid;gap:48px}
-.stage.both{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
-.stage.watch,.stage.read{grid-template-columns:minmax(0,1fr)}
-@media (max-width:900px){.stage.both{grid-template-columns:minmax(0,1fr);gap:22px}}
-.screen{position:sticky;top:34px;align-self:start}
-@media (max-width:900px){.stage.both .screen{top:14px;z-index:5;background:var(--paper);padding-bottom:8px}}
-.stage.read .screen{display:none}
-.stage.watch .screen{position:static;max-width:min(1100px,calc(60vh * 16 / 9));width:100%;margin:0 auto}
-video{width:100%;display:block;border:1px solid var(--ink);background:var(--paper);aspect-ratio:16/9}
-.caption{min-height:4.6em;text-align:center;margin:22px auto 0;max-width:760px;font-size:24px;line-height:1.35}
-.caption .who{display:block;font-size:13px;letter-spacing:.2em;color:var(--soft);margin-bottom:4px}
-.stage.both .caption,.stage.read .caption{display:none}
-.where{display:flex;justify-content:space-between;margin-top:10px;color:var(--soft)}
-.stage.watch .where{max-width:1100px;margin-left:auto;margin-right:auto}
-.text{max-width:34em;width:100%;margin:0 auto}
-.stage.watch .text{display:none}
-.front{display:none;margin:0 auto 34px;max-width:34em}
-.front img{width:100%;display:block;border:1px solid var(--ink)}
-.front p{text-align:center;font-style:italic;font-size:15px;color:var(--soft);margin:8px 0 0}
-.stage.read .front{display:block}
-.text p{margin:0 0 .85em;cursor:pointer;transition:color .4s;position:relative;hyphens:auto}
-.text p .w{text-transform:uppercase;font-size:.74em;letter-spacing:.13em;margin-right:.45em}
+.chead h1{font-weight:400;font-size:clamp(32px,5.6vw,66px);line-height:1.05;margin:10px 0 12px;letter-spacing:.01em}
+.chead h1 span{display:inline-block;animation:ink .8s ease-out both;animation-delay:calc(.15s + var(--i) * .035s)}
+.chead .it{font-style:italic;font-size:21px;margin:0;animation:fade 1s ease both .6s}
+.book{max-width:1260px;margin:0 auto;padding:0 44px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:56px}
+.screen{position:sticky;top:calc(var(--bar) + var(--fi) + 26px);align-self:start}
+.vbox{position:relative;border:1px solid var(--ink);background:var(--paper)}
+video{width:100%;display:block;aspect-ratio:16/9;background:var(--paper)}
+.ctl{display:flex;align-items:center;gap:14px;margin-top:10px;color:var(--soft)}
+.play{width:38px;height:38px;border:1px solid var(--ink);border-radius:50%;display:grid;place-items:center;flex:none}
+.play::before{content:"";width:0;height:0;border-left:11px solid var(--ink);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px}
+.play.on::before{width:10px;height:12px;border:0;border-left:3px solid var(--ink);border-right:3px solid var(--ink);margin:0}
+.ctl .tc{flex:1}
+.ctl .hint{font-style:italic;font-size:15px}
+.text{max-width:33em;padding-bottom:30vh}
+.text p{margin:0;padding:.42em 0;cursor:pointer;transition:color .5s;position:relative;hyphens:auto}
+.text p .w{text-transform:uppercase;font-size:.72em;letter-spacing:.13em;margin-right:.5em}
 .text p.n{text-indent:1.4em}
 .text p.first{text-indent:0}
 .text p.first::first-letter{font-size:3.1em;float:left;line-height:.85;margin:.06em .08em 0 0}
-.text p.f{font-size:1.18em;line-height:1.4;margin:1.1em 1.6em 1.2em;text-align:center}
-.text p.f .w{display:block;font-size:.66em;margin:0 0 .2em}
-.text p.tape{font:500 12.5px/1.5 "IBM Plex Mono",monospace;letter-spacing:.03em;margin:0 0 .35em 1.6em;text-transform:uppercase}
-.text .brk{width:44px;border-top:1px solid var(--ink);margin:1.6em auto 1.9em}
-.stage.both .text p{color:var(--faint)}
-.stage.both .text p.said{color:var(--ink)}
-.text p.now::before{content:"";position:absolute;left:-18px;top:.35em;bottom:.35em;border-left:2px solid var(--ink)}
-.text p.f.now::before{left:-1.6em}
-.text p:hover{color:var(--ink)}
-.after{max-width:34em;margin:56px auto 0}
-.stage.watch .after{max-width:760px}
-.after h2{font-weight:400;font-size:14px;letter-spacing:.24em;text-align:center;margin:0 0 22px}
-.after dl{margin:0}
-.after dt{font-size:14px;letter-spacing:.2em;color:var(--soft);margin:16px 0 2px}
+.text p.f{font-size:1.2em;line-height:1.4;padding:.9em 1.2em 1em;text-align:center}
+.text p.f .w{display:block;font-size:.62em;margin:0 0 .3em}
+.text p.tape{font:500 12.5px/1.5 "IBM Plex Mono",monospace;letter-spacing:.03em;padding:.15em 0 .15em 1.6em;text-transform:uppercase}
+.text p{color:var(--faint)}
+.text p.said{color:var(--ink)}
+.text p.now::before{content:"";position:absolute;left:-20px;top:.6em;bottom:.6em;border-left:2px solid var(--ink)}
+.text p.f.now::before{left:0}
+.gap{position:relative}
+.gap::before{content:"";position:absolute;left:50%;top:6px;bottom:6px;border-left:1px dotted var(--faint)}
+.gap.said::before{border-left-color:var(--ink)}
+.gap .brk{position:absolute;left:50%;top:50%;width:56px;height:16px;margin:-8px 0 0 -28px;background:linear-gradient(var(--ink),var(--ink)) center/44px 1px no-repeat,var(--paper)}
+.after{max-width:33em;margin:40px auto 0;padding:0 28px}
+.after h2{font-weight:400;font-size:14px;letter-spacing:.24em;text-align:center;margin:0 0 20px}
+.after dt{font-size:13px;letter-spacing:.2em;color:var(--soft);margin:16px 0 2px}
 .after dd{margin:0;font-size:17px;line-height:1.55}
-.after .more{text-align:center;margin:28px 0 0;font-style:italic}
-.pn{max-width:1240px;margin:70px auto 0;display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--ink);padding-top:16px}
-.pn a{text-decoration:none;max-width:45%}
-.pn a span{display:block;color:var(--soft);font-size:13px;letter-spacing:.2em}
-.pn a:hover b{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
-.pn b{font-weight:400;font-size:20px}
+.after .more{text-align:center;margin:26px 0 0;font-style:italic}
+.nextcard{display:block;text-decoration:none;text-align:center;margin:90px auto 0;padding:60px 28px 120px;max-width:900px;border-top:1px solid var(--ink)}
+.nextcard .sc{color:var(--soft)}
+.nextcard h3{font-weight:400;font-size:clamp(28px,4.6vw,52px);line-height:1.08;margin:14px 0 10px}
+.nextcard p{font-style:italic;margin:0 0 26px}
+.nextcard img{width:min(520px,100%);border:1px solid var(--ink);display:block;margin:0 auto}
+.nextcard:hover h3{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:1px}
+.caption{display:none;text-align:center;max-width:780px;margin:22px auto 0;min-height:4.4em;font-size:24px;line-height:1.35}
+.caption .w{display:block;font-size:13px;letter-spacing:.2em;color:var(--soft);text-transform:uppercase;margin-bottom:4px}
+/* film mode: the film alone, with its line under it */
+.m-film .book{grid-template-columns:minmax(0,1fr);max-width:min(1160px,calc((100svh - var(--bar) - 220px) * 16 / 9 + 90px))}
+.m-film .text{display:none}
+.m-film .screen{position:static}
+.m-film .caption{display:block}
+.m-film .ctl .hint{display:none}
+@media (max-width:900px){
+  .book{grid-template-columns:minmax(0,1fr);gap:0;padding:0 calc(var(--fi) + 6px)}
+  .screen{top:calc(var(--bar) + var(--fi) + 1px);z-index:20;background:var(--paper);padding:8px 0 6px;margin:0 -4px;border-bottom:1px solid var(--faint)}
+  .ctl{margin-top:6px}.play{width:34px;height:34px}
+  .text{padding-top:18px;margin:0 auto;padding-left:14px;padding-right:6px}
+  .text p.now::before{left:-12px}
+  .chead{padding:30px 22px 24px}
+}
+/* contents sheet */
+.sheet{position:fixed;inset:0;z-index:58;background:var(--paper);overflow:auto;padding:calc(var(--bar) + var(--fi) + 20px) 0 40px;display:none}
+.sheet.open{display:block}
+.sheet .toc{padding-top:10px}
+.sheet .row{opacity:1;transform:none}
+.sheet .row.cur .nm span{text-decoration:underline;text-underline-offset:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.row{opacity:1;transform:none}}
 </style>
 </head>
 <body>
-<div class="frame" aria-hidden="true"></div>
-<div class="wrap" id="app"></div>
+<div class="frame" aria-hidden="true"><i class="o"></i><i class="n"></i></div>
+<div id="app"></div>
 <script>
 const D = /*DATA*/null;
-const $ = (s, el = document) => el.querySelector(s);
+const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const mmss = (s) => { s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
-let MODE = 'both'; try { MODE = localStorage.getItem('cyb-mode') || 'both'; } catch (e) {}
-let stopSync = null;
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const letters = (s) => [...s].map((c, i) => c === ' ' ? ' ' : `<span style="--i:${i}">${esc(c)}</span>`).join('');
+const ORDER = D.book.filter((e) => e.slug && D.films[e.slug]).map((e) => e.slug);
+const NUM = {}; { let k = 0; for (const e of D.book) { if (e.part) continue; k++; if (e.slug) NUM[e.slug] = ROMAN[k]; } }
+let cleanup = null;
 
-function home() {
-  document.title = 'The Cyberiad · a videotext';
+function tocRows(cur) {
   let k = 0, rows = '';
   for (const e of D.book) {
     if (e.part) { rows += `<p class="part">${esc(e.part)}</p>`; continue; }
     k++;
     const f = e.slug && D.films[e.slug];
-    if (f) rows += `<a class="row" href="#/${e.slug}"><span class="rn">${ROMAN[k]}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span></a>`;
+    if (f) { const p = Math.min(1, store.get('cyb-p-' + e.slug, 0) / f.dur);
+      rows += `<a class="row${cur === e.slug ? ' cur' : ''}" href="#/${e.slug}"><span class="rn">${ROMAN[k]}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span>${p > 0.01 ? `<span></span><span></span><span class="pg"><b style="width:${(p * 100).toFixed(1)}%"></b></span>` : ''}</a>`; }
     else if (e.reel) rows += `<a class="row" href="../two-sallies/index.html"><span class="rn">${ROMAN[k]}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">reel</span><span></span><span></span><span class="sub">in the earlier reel, Two Sallies</span></a>`;
     else rows += `<div class="row todo"><span class="rn">${ROMAN[k]}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">&mdash;</span><span></span><span></span><span class="sub">${esc(e.next || 'not yet filmed')}</span></div>`;
   }
-  const n = Object.keys(D.films).length, mins = Math.round(Object.values(D.films).reduce((a, f) => a + f.dur, 0) / 60);
-  $('#app').innerHTML = `<header class="title"><h1>THE CYBERIAD</h1><p class="it">a videotext</p><p class="by">after Stanisław Lem</p></header>
-    <div class="rule"></div>
-    <section class="toc"><h2 class="sc">CONTENTS</h2>${rows}</section>
-    <p class="colophon">Each chapter is filmed in a form that does what one programming idea does. Open a chapter to watch it, read it, or both at once: the text inks in as it is spoken, and any line takes you to its place in the film.<span class="mono">${n} CHAPTERS FILMED · ${mins} MINUTES · LAB 7 · ${esc(D.course)}</span></p>`;
+  return rows;
 }
 
+/* ================= the title page ================= */
+function home() {
+  document.title = 'The Cyberiad · a videotext';
+  document.body.classList.toggle('unfold', true);
+  const n = ORDER.length, mins = Math.round(Object.values(D.films).reduce((a, f) => a + f.dur, 0) / 60);
+  $('#app').innerHTML = `<section class="splash"><h1>${letters('THE CYBERIAD')}</h1><p class="it">a videotext</p><p class="by">after Stanisław Lem</p>
+      <a class="cue" href="#contents" aria-label="Contents"><span class="sc">Contents</span><b></b></a></section>
+    <section class="toc" id="contents"><h2 class="sc">Contents</h2>${tocRows()}</section>
+    <p class="colophon">Each chapter is filmed in a form that does what one programming idea does. In a chapter, scroll through the text and the film moves with you; press play and the text moves with the film.
+      <span class="mono">${n} CHAPTERS FILMED · ${mins} MINUTES<br>LAB 7 · ${esc(D.course)}<br>DRAWN WITH THE <a href="https://hartswf0.github.io/elsewhere/studio.html">MULTIPLANE ANIMATION STUDIO</a> PROMPT</span></p>`;
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('seen'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' }) : null;
+  $$('.toc .row').forEach((r, i) => { r.style.transitionDelay = (i % 6) * 0.05 + 's'; io ? io.observe(r) : r.classList.add('seen'); });
+  $('.cue').addEventListener('click', (e) => { e.preventDefault(); $('#contents').scrollIntoView({ behavior: 'smooth' }); });
+}
+
+/* ================= a chapter =================
+   The text is laid out on the film's own clock: every line sits at its time, and silences become
+   space. Scrolling moves a reading line down the text; the time under it is where the film goes.
+   Pressing play reverses it: the film runs and the page scrolls to keep its line under the reading line. */
 function chapter(slug) {
   const f = D.films[slug]; if (!f) return home();
   document.title = f.title + ' · The Cyberiad';
-  const order = D.book.filter((e) => e.slug && D.films[e.slug]).map((e) => e.slug), i = order.indexOf(slug);
-  const prev = order[i - 1], next = order[i + 1];
-  let k = 0, rn = ''; for (const e of D.book) { if (e.part) continue; k++; if (e.slug === slug) rn = ROMAN[k]; }
-  let text = '', first = true, idx = 0;
-  const flat = [];
-  f.scenes.forEach((sc, si) => {
-    if (si > 0 && text) text += '<div class="brk"></div>';
-    for (const l of sc) {
-      let cls = l.tape ? 'tape' : l.f ? 'f' : 'n';
-      if (cls === 'n' && first && !l.who) { cls += ' first'; }
-      if (!l.tape) first = false;
-      const who = l.who ? `<span class="w">${esc(l.who)}.</span>` : '';
-      text += `<p class="${cls}" data-i="${idx}">${who}${esc(l.say)}</p>`;
-      flat.push(l); idx++;
-    }
+  document.body.classList.remove('unfold');
+  const i = ORDER.indexOf(slug), prev = ORDER[i - 1], next = ORDER[i + 1];
+  const flat = []; f.scenes.forEach((sc, si) => sc.forEach((l, li) => flat.push({ ...l, brk: si > 0 && li === 0 })));
+  flat.sort((a, b) => a.t0 - b.t0);
+  // the text, with silences turned into space
+  const PX = innerWidth < 900 ? 11 : 14;
+  const gapEl = (t0, t1, brk) => { const h = Math.max(brk ? 70 : 10, Math.min(300, (t1 - t0) * PX)); return `<div class="gap" data-t0="${t0}" data-t1="${t1}" style="height:${h}px">${brk ? '<span class="brk"></span>' : ''}</div>`; };
+  let html = '', first = true, end = 0;
+  flat.forEach((l, j) => {
+    const gapT0 = j === 0 ? 0 : Math.max(end, flat[j - 1].t0);
+    if (l.t0 - gapT0 > 0.5 || l.brk || j === 0) html += gapEl(gapT0, Math.max(gapT0, l.t0), l.brk);
+    let cls = l.tape ? 'tape' : l.f ? 'f' : 'n';
+    if (!l.tape && !l.f && !l.who && first) cls += ' first';
+    if (!l.tape) first = false;
+    html += `<p class="${cls}" data-j="${j}">${l.who ? `<span class="w">${esc(l.who)}.</span>` : ''}${esc(l.say)}</p>`;
+    end = Math.max(end, l.t1);
   });
-  $('#app').innerHTML = `<nav class="bar"><a class="sc" href="#/">&larr; Contents</a><div class="modes sc" role="group" aria-label="Mode"><button data-m="watch">Watch</button><button data-m="both">Both</button><button data-m="read">Read</button></div></nav>
-    <header class="chead"><div class="rn sc">${rn}</div><h1>${esc(f.title.toUpperCase())}</h1><p class="it">${esc(f.sub)}</p></header>
-    <div class="stage ${MODE}" id="stage">
-      <div class="screen"><video id="v" controls playsinline preload="metadata" poster="${f.poster}" src="${f.video}"></video>
-        <div class="where mono"><span id="t">0:00</span><span>${mmss(f.dur)}</span></div>
-        <div class="caption" id="cap"></div></div>
-      <div><div class="front"><img src="${f.poster}" alt=""><p>Choose any line to hear it in the film.</p></div>
-        <div class="text" id="text">${text}</div>
-        <section class="after"><h2 class="sc">ON THE FILM</h2><dl>
-          <dt class="sc">Picture</dt><dd>${esc(f.picture)}</dd><dt class="sc">Sound</dt><dd>${esc(f.sound)}</dd>
-          <dt class="sc">Code</dt><dd>${esc(f.code)}</dd><dt class="sc">After the film before</dt><dd>${esc(f.after)}</dd></dl>
-          <p class="more"><a href="${f.page}">The script, notes and the bench exercise</a></p></section></div>
-    </div>
-    <nav class="pn">${prev ? `<a href="#/${prev}"><span class="sc">Previous</span><b>${esc(D.films[prev].title)}</b></a>` : '<span></span>'}${next ? `<a href="#/${next}" style="text-align:right"><span class="sc">Next</span><b>${esc(D.films[next].title)}</b></a>` : `<a href="#/" style="text-align:right"><span class="sc">Back to</span><b>Contents</b></a>`}</nav>`;
-  const v = $('#v'), stage = $('#stage'), ps = [...document.querySelectorAll('#text p')], cap = $('#cap'), tEl = $('#t');
-  const setMode = (m) => { MODE = m; try { localStorage.setItem('cyb-mode', m); } catch (e) {} stage.className = 'stage ' + m; document.querySelectorAll('.modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m)); };
-  document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.m)));
-  setMode(MODE);
-  let last = -2, userScroll = 0;
-  addEventListener('wheel', () => (userScroll = performance.now()), { passive: true });
-  addEventListener('touchmove', () => (userScroll = performance.now()), { passive: true });
-  const sync = () => {
-    const t = v.currentTime; tEl.textContent = mmss(t);
-    let cur = -1; for (let j = 0; j < flat.length; j++) { if (flat[j].tape) continue; if (flat[j].t0 <= t + 0.05) cur = j; else break; }
-    let live = -1; for (let j = 0; j < flat.length; j++) if (!flat[j].tape && t >= flat[j].t0 - 0.05 && t <= flat[j].t1 + 0.6) live = j;
-    for (let j = 0; j < flat.length; j++) ps[j].classList.toggle('said', flat[j].t0 <= t + 0.05);
-    if (cur !== last) {
-      ps.forEach((p) => p.classList.remove('now')); if (cur >= 0) ps[cur].classList.add('now');
-      if (cur >= 0 && MODE === 'both' && !v.paused && performance.now() - userScroll > 3000) ps[cur].scrollIntoView({ behavior: 'smooth', block: 'center' });
-      last = cur;
-    }
-    const l = live >= 0 ? flat[live] : null;
-    cap.innerHTML = l ? `${l.who ? `<span class="who sc">${esc(l.who)}</span>` : ''}${esc(l.say)}` : '';
+  html += gapEl(end, f.dur, false);
+  const mode = store.get('cyb-mode', 'book');
+  $('#app').innerHTML = `<nav class="bar"><button class="sc tocb" id="tocb" aria-label="Contents"><span class="lbl">Contents</span><i></i></button>
+      <div class="here"><span class="sc">${NUM[slug]}</span>${esc(f.title)}</div>
+      <div class="nav"><div class="modes sc"><button data-m="book">Book</button><button data-m="film">Film</button></div>
+        <a class="chev l" ${prev ? `href="#/${prev}" aria-label="Previous chapter"` : 'disabled'}></a><a class="chev r" ${next ? `href="#/${next}" aria-label="Next chapter"` : 'disabled'}></a></div>
+      <div class="pr" id="pr"></div></nav>
+    <div class="sheet" id="sheet"><section class="toc"><h2 class="sc">Contents</h2>${tocRows(slug)}</section></div>
+    <article class="chapter m-${mode}" id="ch">
+      <header class="chead"><div class="rn sc">${NUM[slug]}</div><h1>${letters(f.title.toUpperCase())}</h1><p class="it">${esc(f.sub)}</p></header>
+      <div class="book">
+        <div class="screen"><div class="vbox"><video id="v" muted playsinline preload="auto" poster="${f.poster}" src="${f.video}"></video></div>
+          <div class="ctl"><button class="play" id="pb" aria-label="Play"></button><span class="tc mono" id="tc">0:00 / ${mmss(f.dur)}</span><span class="hint" id="hint">Scroll to move through the film</span></div>
+          <div class="caption" id="cap"></div></div>
+        <div class="text" id="text">${html}</div>
+      </div>
+      <section class="after"><h2 class="sc">On the film</h2><dl>
+        <dt class="sc">Picture</dt><dd>${esc(f.picture)}</dd><dt class="sc">Sound</dt><dd>${esc(f.sound)}</dd>
+        <dt class="sc">Code</dt><dd>${esc(f.code)}</dd><dt class="sc">After the film before</dt><dd>${esc(f.after)}</dd></dl>
+        <p class="more"><a href="${f.page}">The script, notes and the bench exercise</a></p></section>
+      ${next ? `<a class="nextcard" href="#/${next}"><span class="sc">Next chapter · ${NUM[next]}</span><h3>${esc(D.films[next].title)}</h3><p>${esc(D.films[next].sub)}</p><img src="${D.films[next].poster}" alt="" loading="lazy"></a>` : `<a class="nextcard" href="#/"><span class="sc">The end of the filmed chapters</span><h3>Contents</h3><p>${esc(String(D.book.filter((e) => !e.part && !e.slug && !e.reel).length))} chapters are not yet filmed</p></a>`}
+    </article>`;
+
+  const v = $('#v'), ch = $('#ch'), els = $$('#text p, #text .gap'), ps = $$('#text p'), pr = $('#pr'), tc = $('#tc'), pb = $('#pb'), cap = $('#cap'), hint = $('#hint');
+  // ---------- the map between page position and film time ----------
+  let A = [];   // [{y, t}] sorted
+  const layout = () => {
+    A = [];
+    for (const el of els) { const r = el.getBoundingClientRect(), y = r.top + scrollY;
+      if (el.classList.contains('gap')) { A.push({ y, t: +el.dataset.t0 }); A.push({ y: y + r.height, t: +el.dataset.t1 }); }
+      else { const l = flat[+el.dataset.j]; A.push({ y, t: l.t0 }); } }
+    A.sort((a, b) => a.y - b.y);
+    for (let k = 1; k < A.length; k++) if (A[k].t < A[k - 1].t) A[k].t = A[k - 1].t;
   };
-  let raf = 0; const loop = () => { sync(); raf = requestAnimationFrame(loop); };
-  v.addEventListener('play', () => { cancelAnimationFrame(raf); loop(); });
-  v.addEventListener('pause', () => { cancelAnimationFrame(raf); sync(); });
-  v.addEventListener('seeked', sync);
-  ps.forEach((p) => p.addEventListener('click', () => { const l = flat[+p.dataset.i]; if (MODE === 'read') setMode('both'); v.currentTime = Math.max(0, l.t0 - 0.15); v.play().catch(() => {}); }));
-  stopSync = () => { cancelAnimationFrame(raf); v.pause(); };
-  sync();
+  const off = () => { if (!A.length) return 0; const o = Math.max(0, scrollY * 0 + readY() + 0 - (A[0].y - 0)); return o * Math.max(0, 1 - scrollY / Math.max(200, A[0].y)); };
+  const tAt = (y) => { if (!A.length || y <= A[0].y) return 0; for (let k = 1; k < A.length; k++) if (y < A[k].y) { const a = A[k - 1], b = A[k]; return a.t + (b.t - a.t) * (y - a.y) / Math.max(1, b.y - a.y); } return f.dur; };
+  const yAt = (t) => { if (!A.length) return 0; if (t <= A[0].t) return A[0].y; for (let k = 1; k < A.length; k++) if (t < A[k].t) { const a = A[k - 1], b = A[k]; return a.y + (b.y - a.y) * (t - a.t) / Math.max(1e-6, b.t - a.t); } return A[A.length - 1].y; };
+  const readY = () => { if (innerWidth < 900) { const s = $('.screen').getBoundingClientRect(); return s.bottom + (innerHeight - s.bottom) * 0.3; } return innerHeight * 0.42; };
+  // ---------- showing a time on the page ----------
+  let lastNow = -1;
+  const show = (t) => {
+    for (const p of ps) p.classList.toggle('said', flat[+p.dataset.j].t0 <= t + 0.05);
+    for (const g of $$('#text .gap')) g.classList.toggle('said', +g.dataset.t1 <= t + 0.05);
+    let now = -1; for (let j = 0; j < flat.length; j++) { if (flat[j].tape) continue; if (flat[j].t0 <= t + 0.05) now = j; }
+    if (now !== lastNow) { $$('#text p.now').forEach((p) => p.classList.remove('now')); const p = ps.find((q) => +q.dataset.j === now); if (p) p.classList.add('now'); lastNow = now; }
+    let live = null; for (const l of flat) if (!l.tape && t >= l.t0 - 0.05 && t <= l.t1 + 0.5) live = l;
+    cap.innerHTML = live ? `${live.who ? `<span class="w">${esc(live.who)}</span>` : ''}${esc(live.say)}` : '';
+    tc.textContent = `${mmss(t)} / ${mmss(f.dur)}`; pr.style.width = (100 * t / f.dur).toFixed(2) + '%';
+    if (t > store.get('cyb-p-' + slug, 0)) store.set('cyb-p-' + slug, Math.round(t));
+  };
+  // ---------- scroll moves the film ----------
+  let target = 0, seeking = false, idle = 0, following = false, primed = false;
+  const seek = (t, exact) => {
+    target = t; if (seeking && !exact) return;
+    if (Math.abs(v.currentTime - t) < 0.03) return;
+    seeking = true;
+    if (!exact && v.fastSeek && Math.abs(v.currentTime - t) > 2.5) v.fastSeek(t); else v.currentTime = t;
+  };
+  v.addEventListener('seeked', () => { seeking = false; if (!following && Math.abs(v.currentTime - target) > 0.05) seek(target, true); });
+  const prime = () => { if (primed) return; primed = true; const p = v.play(); if (p) p.then(() => { if (!following) v.pause(); }).catch(() => {}); };
+  let raf = 0;
+  const onScroll = () => {
+    if (following || ch.classList.contains('m-film')) return;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { const t = tAt(scrollY + readY() - off()); show(t); seek(t, false); clearTimeout(idle); idle = setTimeout(() => seek(t, true), 160); });
+  };
+  // ---------- play moves the page ----------
+  let fr = 0, autoY = -1;
+  const follow = () => {
+    const t = v.currentTime; show(t);
+    if (!ch.classList.contains('m-film')) { const y = Math.max(0, yAt(t) - readY()); autoY = y; scrollTo(0, y); }
+    fr = requestAnimationFrame(follow);
+  };
+  const play = () => { primed = true; v.muted = false; following = true; pb.classList.add('on'); pb.setAttribute('aria-label', 'Pause'); hint.textContent = 'Scroll to take the film back'; v.play().catch(() => { stop(); }); cancelAnimationFrame(fr); follow(); };
+  const stop = () => { following = false; v.pause(); cancelAnimationFrame(fr); pb.classList.remove('on'); pb.setAttribute('aria-label', 'Play'); hint.textContent = 'Scroll to move through the film'; };
+  pb.addEventListener('click', () => (following ? stop() : play()));
+  v.addEventListener('ended', stop);
+  const userMove = () => { prime(); if (following && !ch.classList.contains('m-film')) stop(); };
+  addEventListener('wheel', userMove, { passive: true }); addEventListener('touchstart', userMove, { passive: true });
+  const onKey = (e) => { if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(e.key)) userMove(); if (e.key === ' ' && e.target === document.body) { e.preventDefault(); following ? stop() : play(); } };
+  addEventListener('keydown', onKey);
+  addEventListener('scroll', onScroll, { passive: true });
+  ps.forEach((p) => p.addEventListener('click', () => { const l = flat[+p.dataset.j]; stop(); scrollTo({ top: Math.max(0, yAt(l.t0) - readY()), behavior: 'smooth' }); }));
+  // ---------- modes, contents, resize ----------
+  const setMode = (m) => { ch.classList.toggle('m-film', m === 'film'); ch.classList.toggle('m-book', m !== 'film'); $$('.modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m)); store.set('cyb-mode', m);
+    v.controls = m === 'film'; hint.style.display = m === 'film' ? 'none' : ''; requestAnimationFrame(() => { layout(); if (m !== 'film' && !following) onScroll(); }); };
+  $$('.modes button').forEach((b) => b.addEventListener('click', () => { const t = v.currentTime; setMode(b.dataset.m); if (b.dataset.m === 'film') { requestAnimationFrame(() => scrollTo(0, Math.max(0, $('.screen').getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar')) - 40))); show(t); } else requestAnimationFrame(() => scrollTo(0, Math.max(0, yAt(t) - readY()))); }));
+  v.addEventListener('play', () => { if (ch.classList.contains('m-film')) { following = true; v.muted = false; pb.classList.add('on'); cancelAnimationFrame(fr); follow(); } });
+  v.addEventListener('pause', () => { if (ch.classList.contains('m-film')) { following = false; cancelAnimationFrame(fr); pb.classList.remove('on'); } });
+  const sheet = $('#sheet'); $('#tocb').addEventListener('click', () => { sheet.classList.toggle('open'); $('#tocb .lbl').textContent = sheet.classList.contains('open') ? 'Close' : 'Contents'; $('#tocb').classList.toggle('x', sheet.classList.contains('open')); });
+  const onResize = () => { layout(); if (!following) onScroll(); };
+  addEventListener('resize', onResize);
+  setMode(mode);
+  document.fonts && document.fonts.ready.then(() => { layout(); onScroll(); });
+  cleanup = () => { stop(); removeEventListener('scroll', onScroll); removeEventListener('wheel', userMove); removeEventListener('touchstart', userMove); removeEventListener('keydown', onKey); removeEventListener('resize', onResize); };
+  show(0);
 }
 
-function route() { if (stopSync) { stopSync(); stopSync = null; } const m = location.hash.match(/^#\/([\w-]+)/); if (m && D.films[m[1]]) chapter(m[1]); else home(); scrollTo(0, 0); }
+function route() {
+  if (cleanup) { cleanup(); cleanup = null; }
+  const m = location.hash.match(/^#\/([\w-]+)/);
+  if (m && D.films[m[1]]) chapter(m[1]); else home();
+  scrollTo(0, 0);
+}
 addEventListener('hashchange', route);
 route();
 </script>
