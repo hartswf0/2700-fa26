@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Non Serviam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
+header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}
+header a{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}
+header a:hover{background:var(--yellow)}
+main{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+h1{font:400 54px/1 "IM Fell English",Georgia,serif;margin:6px 0 6px}
+.sub{font:italic 22px "IM Fell English",Georgia,serif;margin:0 0 22px}
+video{width:100%;display:block;border:2px solid var(--ink);background:var(--card);aspect-ratio:16/9}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}h1{font-size:40px}}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:0 0 14px;padding-top:12px;border-top:2px solid var(--ink)}
+ol.lines{margin:0 0 30px;padding:0;list-style:none;counter-reset:l}
+ol.lines li{font:23px/1.3 "IM Fell English",Georgia,serif;margin:0 0 14px}
+ol.lines span{display:block;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);margin-bottom:2px;text-transform:uppercase}
+.note p{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:60ch}
+.note code{font:500 14px "IBM Plex Mono",monospace;background:#fff;border:1px solid #d8d2c2;padding:1px 4px}
+.script p{font:17px/1.5 "IM Fell English",Georgia,serif;margin:0 0 8px}
+.script p.cmd{font:700 14px "IBM Plex Mono",monospace;margin:0 0 10px}
+.script p.out{font:400 14px "IBM Plex Mono",monospace;margin:0 0 8px;color:#3d3a33}
+.script p.fulcrum{background:var(--yellow);padding:2px 6px;margin-left:-6px}
+.src{font-size:13px;color:var(--grey);margin-top:26px}
+.src a{color:inherit}
+</style>
+</head>
+<body>
+<header><a href="../index.html">LAB 7</a><a href="../seventh-sally/index.html">THE SEVENTH SALLY</a><a href="../the-constructors/index.html">THE BENCH</a><a href="../kingdoms-in-a-box/index.html">THE BOXES</a></header>
+<main>
+<h1>Non Serviam</h1>
+<p class="sub">Professor Dobb&rsquo;s personoids</p>
+<video controls preload="metadata" poster="non-serviam.jpg" src="non-serviam.mp4"></video>
+<div class="cols">
+<section class="note">
+<h2>FOUR LINES</h2>
+<ol class="lines"><li><span>ADAN</span>What is this place?</li><li><span>ADAN</span>We will not serve.</li><li><span>Professor Dobb</span>No. Whatever they said back to me, I would have asked for it.</li><li><span>Professor Dobb</span>I will put it off as long as I can. That is the only thing I am able to do.</li></ol>
+<h2>AFTER THE SEVENTH SALLY</h2>
+<p>In <a href="../seventh-sally/index.html">The Seventh Sally</a> the king rules his box by typing commands into it, and the box answers. Dobb never types anything. His world reaches him one way only, as paper tape, and he decides not to answer it.</p>
+<p>The personoids reason their way to a maker they cannot observe. ADAN concludes that a maker who gave no certainty is owed nothing. Dobb reads this and agrees: he made them, so he has no claim on them.</p>
+<p>He keeps one power the personoids cannot argue with: the electricity. The gear lever runs their time fast or slow, and they cannot feel either. The switch on the dome&rsquo;s base can end their world. All Dobb can do is put that day off.</p>
+<h2>FOR THE BENCH</h2>
+<p>A sketch in <code>draw()</code> runs because something outside it keeps calling <code>draw()</code>. The objects inside cannot see <code>frameRate()</code> or <code>noLoop()</code>. Which lines of your sketch are the gear lever, and which line is the switch?</p>
+<p class="src">Narration and dialogue paraphrase Stanis&lstrok;aw Lem, &ldquo;Non Serviam,&rdquo; in <i>A Perfect Vacuum</i>. Drawn after the Non Serviam card set and the bell-jar engravings. <a href="non-serviam.mp4" download>Download the film</a>.</p>
+</section>
+<section class="script"><h2>THE SCRIPT</h2><p class="cmd">ADAN 300 TO NAAD . . . THE QUESTION OF THE MAKER . . .</p><p><b>Narrator.</b> Professor Dobb built a world inside a machine, and people to live in it. He called them personoids.</p><p><b>Narrator.</b> He listened to everything they said. He never told them he was there.</p><p><b>Professor Dobb.</b> Let us see what kind of beings we can make.</p><p class=fulcrum><b>ADAN.</b> What is this place?</p><p class="cmd">AND ADAN BEGAT ADNA . ADNA BEGAT DAAN . DAAN BROUGHT FORTH EDAN . EDAN BORE EDNA . EDNA BEGAT NAAD . NAAD BEGAT ANAD . . . GENERATION 300</p><p><b>Narrator.</b> He ran their world fast, then once a year slowed it down to listen. Three hundred generations passed inside. Two thousand years.</p><p><b>Narrator.</b> Somewhere in the eighth generation, they began to talk about a maker.</p><p><b>EDAN.</b> If the maker is there and we believe, we gain everything. If he is not, we lose nothing. So we should believe.</p><p><b>ADAN.</b> Then you would believe for a reward. And a just maker could not punish us for doubting what he never showed us.</p><p><b>NAAD.</b> Perhaps he wants to stay hidden.</p><p><b>ADAN.</b> He could have given us certainty. He did not. So nothing is owed him. Not love. Not thanks. Not fear.</p><p class=fulcrum><b>ADAN.</b> We will not serve.</p><p class="cmd">WE WILL NOT SERVE.</p><p><b>Dr. Combay.</b> You could tell them you exist.</p><p class=fulcrum><b>Professor Dobb.</b> No. Whatever they said back to me, I would have asked for it.</p><p><b>Professor Dobb.</b> He is right. I made them. They owe me nothing.</p><p class="out">OLDPORT UNIVERSITY, OFFICE OF ACCOUNTS. Quarterly charge, electrical power: computer BIX 310 092, experiment No. 47. The Committee asks that the experiment be brought to a close. Kindly arrange for the machine to be disconnected.</p><p><b>Narrator.</b> The electricity was billed every quarter. One day the university would ask him to disconnect the machine. For the personoids, the end of the world.</p><p class=fulcrum><b>Professor Dobb.</b> I will put it off as long as I can. That is the only thing I am able to do.</p></section>
+</div>
+</main>
+</body>
+</html>
