@@ -45,7 +45,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes drop{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 .toc{max-width:780px;margin:0 auto;padding:40px 28px 40px}
 .toc h2{font-weight:400;text-align:center;font-size:15px;letter-spacing:.24em;margin:0 0 30px}
-.part{text-align:center;font-style:italic;font-size:17px;color:var(--soft);margin:32px 0 14px}
+.gh{text-align:center;margin:54px 0 18px}.gh:first-child{margin-top:0}.gh .sc{color:var(--soft)}.gh h3{font-weight:400;font-size:clamp(24px,4vw,34px);margin:8px 0 6px;letter-spacing:.02em}.gh p{font-style:italic;font-size:16.5px;color:var(--soft);margin:0 auto;max-width:34em;line-height:1.45}
 .row{display:grid;grid-template-columns:2.6em 96px 1fr auto;gap:0 16px;align-items:center;padding:10px 0;text-decoration:none;opacity:0;transform:translateY(10px);transition:opacity .8s,transform .8s}
 .row.seen,.no-anim .row{opacity:1;transform:none}
 .row .rn{font-size:15px;color:var(--soft);text-align:right}
@@ -163,21 +163,24 @@ const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 6
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 const letters = (s) => [...s].map((c, i) => c === ' ' ? ' ' : `<span style="--i:${i}">${esc(c)}</span>`).join('');
-const ORDER = D.book.filter((e) => e.slug && D.films[e.slug]).map((e) => e.slug);
-const NUM = {}; { let k = 0; for (const e of D.book) { if (e.part) continue; k++; if (e.slug) NUM[e.slug] = ROMAN[k]; } }
+const GROUPS = D.groups;
+const ORDER = []; GROUPS.forEach((g) => g.items.forEach((e) => { if (e.slug && D.films[e.slug]) ORDER.push(e.slug); }));
+const NUM = {}; GROUPS.forEach((g, gi) => g.items.forEach((e, k) => { if (e.slug) NUM[e.slug] = gi < 3 ? ROMAN[gi + 1] + '.' + (k + 1) : '+' + (k + 1); }));
 let cleanup = null;
 
 function tocRows(cur) {
-  let k = 0, rows = '';
-  for (const e of D.book) {
-    if (e.part) { rows += `<p class="part">${esc(e.part)}</p>`; continue; }
-    k++;
-    const f = e.slug && D.films[e.slug];
-    if (f) { const p = Math.min(1, store.get('cyb-p-' + e.slug, 0) / f.dur);
-      rows += `<a class="row${cur === e.slug ? ' cur' : ''}" href="#/${e.slug}"><span class="rn">${ROMAN[k]}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span>${p > 0.01 ? `<span></span><span></span><span class="pg"><b style="width:${(p * 100).toFixed(1)}%"></b></span>` : ''}</a>`; }
-    else if (e.reel) rows += `<a class="row" href="../two-sallies/index.html"><span class="rn">${ROMAN[k]}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">reel</span><span></span><span></span><span class="sub">in the earlier reel, Two Sallies</span></a>`;
-    else rows += `<div class="row todo"><span class="rn">${ROMAN[k]}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">&mdash;</span><span></span><span></span><span class="sub">${esc(e.next || 'not yet filmed')}</span></div>`;
-  }
+  let rows = '';
+  GROUPS.forEach((g, gi) => {
+    rows += `<header class="gh"><span class="sc">${esc(g.label)}</span>${g.title ? `<h3>${esc(g.title)}</h3>` : ''}<p>${esc(g.blurb)}</p></header>`;
+    g.items.forEach((e, k) => {
+      const rn = gi < 3 ? ROMAN[gi + 1] + '.' + (k + 1) : '';
+      const f = e.slug && D.films[e.slug];
+      if (f) { const p = Math.min(1, store.get('cyb-p-' + e.slug, 0) / f.dur);
+        rows += `<a class="row${cur === e.slug ? ' cur' : ''}" href="#/${e.slug}"><span class="rn">${rn}</span><img class="th" src="${f.poster}" alt="" loading="lazy"><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">${mmss(f.dur)}</span><span></span><span></span><span class="sub">${esc(f.idea)}</span>${p > 0.01 ? `<span></span><span></span><span class="pg"><b style="width:${(p * 100).toFixed(1)}%"></b></span>` : ''}</a>`; }
+      else if (e.reel) rows += `<a class="row" href="../two-sallies/index.html"><span class="rn">${rn}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">reel</span><span></span><span></span><span class="sub">in the earlier reel, Two Sallies</span></a>`;
+      else rows += `<div class="row todo"><span class="rn">${rn}</span><span class="th none"></span><span class="nm"><span>${esc(e.title)}</span><i></i></span><span class="tm">&mdash;</span><span></span><span></span><span class="sub">${esc(e.next || 'not yet filmed')}</span></div>`;
+    });
+  });
   return rows;
 }
 
@@ -240,7 +243,7 @@ function chapter(slug) {
         <dt class="sc">Picture</dt><dd>${esc(f.picture)}</dd><dt class="sc">Sound</dt><dd>${esc(f.sound)}</dd>
         <dt class="sc">Code</dt><dd>${esc(f.code)}</dd><dt class="sc">After the film before</dt><dd>${esc(f.after)}</dd></dl>
         <p class="more"><a href="${f.page}">The script, notes and the bench exercise</a></p></section>
-      ${next ? `<a class="nextcard" href="#/${next}"><span class="sc">Next chapter · ${NUM[next]}</span><h3>${esc(D.films[next].title)}</h3><p>${esc(D.films[next].sub)}</p><img src="${D.films[next].poster}" alt="" loading="lazy"></a>` : `<a class="nextcard" href="#/"><span class="sc">The end of the filmed chapters</span><h3>Contents</h3><p>${esc(String(D.book.filter((e) => !e.part && !e.slug && !e.reel).length))} chapters are not yet filmed</p></a>`}
+      ${next ? `<a class="nextcard" href="#/${next}"><span class="sc">Next chapter · ${NUM[next]}</span><h3>${esc(D.films[next].title)}</h3><p>${esc(D.films[next].sub)}</p><img src="${D.films[next].poster}" alt="" loading="lazy"></a>` : `<a class="nextcard" href="#/"><span class="sc">The end of the filmed chapters</span><h3>Contents</h3><p>${esc(String(GROUPS[4 - 1].items.length))} chapters are not yet filmed</p></a>`}
     </article>`;
 
   const v = $('#v'), ch = $('#ch'), els = $$('#text p, #text .gap'), ps = $$('#text p'), pr = $('#pr'), tc = $('#tc'), pb = $('#pb'), cap = $('#cap'), hint = $('#hint');

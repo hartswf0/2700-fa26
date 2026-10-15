@@ -118,7 +118,27 @@ for title, d, nxt in BOOK:
     elif d: e['slug'] = d
     elif nxt: e['next'] = 'not yet filmed · could carry: ' + nxt[1].split(':')[0].lower()
     book.append(e)
-data = json.dumps(dict(book=book, films=films, course='INTRO TO COMPUTATIONAL MEDIA'), ensure_ascii=False, separators=(',', ':'))
+# the three experiments (the course's grouping). Each item is a substring of a BOOK title.
+EXPERIMENTS = [
+  ('EXPERIMENT I', 'When Words Operate', 'Investigate how descriptions become actions, creative artifacts, or enforceable rules.',
+   ['How the World Was Saved', 'Prescription', 'Electronic Bard']),
+  ('EXPERIMENT II', 'When Models Become Worlds', 'Investigate how textual specifications generate coherent worlds, possible entities, and nested realities.',
+   ['The Seventh Sally', 'Dragons of Probability', 'Three Storytelling Machines']),
+  ('EXPERIMENT III', 'When Description Exceeds Understanding', 'Investigate information overload, collective interactions, and consequences not reducible to individual instructions.',
+   ['Demon of the Second Kind', 'Altruizine', 'Trap of Gargantius']),
+]
+ents = [(t, e) for (t, _, _), e in zip([b for b in BOOK], [x for x in book if 'part' not in x])]
+def find(key):
+    m = [e for t, e in ents if key in t]; assert len(m) == 1, key; return m[0]
+groups = []; used = set()
+for lab, ttl, blurb, keys in EXPERIMENTS:
+    its = [find(k) for k in keys]; used.update(id(i) for i in its)
+    groups.append(dict(label=lab, title=ttl, blurb=blurb, items=its))
+also = [e for t, e in ents if e.get('slug') and id(e) not in used]; used.update(id(i) for i in also)
+groups.append(dict(label='ALSO FILMED', title='', blurb='Chapters filmed that the three experiments do not name.', items=also))
+rest = [e for t, e in ents if id(e) not in used]
+groups.append(dict(label='ELSEWHERE IN THE BOOK', title='', blurb='Not yet filmed.', items=rest))
+data = json.dumps(dict(book=book, groups=groups, films=films, course='INTRO TO COMPUTATIONAL MEDIA'), ensure_ascii=False, separators=(',', ':'))
 page = open(os.path.join(HERE, 'template.html')).read().replace('/*DATA*/null', data)
 total = sum(f['sec'] for f in FILMS)
 made = sum(1 for b in BOOK if b[1] and b[1] != 'reel')
