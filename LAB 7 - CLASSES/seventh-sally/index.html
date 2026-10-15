@@ -8,67 +8,53 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f;--red:#b3402c}
+:root{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
 header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}
 header a{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}
 header a:hover{background:var(--yellow)}
-header .sp{flex:1}
-main{max-width:1180px;margin:0 auto;padding:28px 22px 70px}
-.kick{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--grey);margin:0}
-h1{font:400 54px/1 "IM Fell English",Georgia,serif;margin:10px 0 6px;letter-spacing:.01em}
+main{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+h1{font:400 54px/1 "IM Fell English",Georgia,serif;margin:6px 0 6px}
 .sub{font:italic 22px "IM Fell English",Georgia,serif;margin:0 0 22px}
 video{width:100%;display:block;border:2px solid var(--ink);background:var(--card);aspect-ratio:16/9}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:18px 0 0}
-.cards button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px;background:var(--card);border:1.5px solid var(--ink);border-radius:6px;cursor:pointer;text-align:left;font:inherit;color:inherit}
-.cards button:hover,.cards button.on{box-shadow:4px 4px 0 var(--ink);transform:translateY(-1px)}
-.cards button.on{background:#fff}
-.rk{display:flex;align-items:center;gap:4px;font:700 22px "IM Fell English",Georgia,serif}
-.rk.red{color:var(--red)}
-.rk svg{width:16px;height:18px}
-.vb{background:var(--ink);color:var(--paper);font:700 11px "IBM Plex Mono",monospace;letter-spacing:.12em;padding:3px 8px;border-radius:3px}
-.cards i{font:italic 15px/1.25 "IM Fell English",Georgia,serif}
-.cards small{font:500 11px "IBM Plex Mono",monospace;color:var(--grey)}
-.cols{display:grid;grid-template-columns:1.3fr 1fr;gap:34px;margin-top:34px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px}
 @media (max-width:820px){.cols{grid-template-columns:1fr}h1{font-size:40px}}
-h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:0 0 12px;padding-top:12px;border-top:2px solid var(--ink)}
-.script p{font:18px/1.45 "IM Fell English",Georgia,serif;margin:0 0 10px;padding-left:12px;border-left:3px solid transparent;cursor:pointer}
-.script p.on{border-left-color:var(--yellow);background:#fff}
-.note p,.note li{font-size:15px;line-height:1.55}
-.note code{font:500 13px "IBM Plex Mono",monospace;background:#fff;border:1px solid #d8d2c2;padding:1px 4px}
-.dl{display:inline-block;margin-top:10px;font:700 12px "IBM Plex Mono",monospace;color:var(--ink);border:1.5px solid var(--ink);padding:6px 10px;text-decoration:none}
-.dl:hover{background:var(--yellow)}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:0 0 14px;padding-top:12px;border-top:2px solid var(--ink)}
+ol.lines{margin:0 0 30px;padding:0;list-style:none;counter-reset:l}
+ol.lines li{font:23px/1.3 "IM Fell English",Georgia,serif;margin:0 0 14px}
+ol.lines span{display:block;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);margin-bottom:2px;text-transform:uppercase}
+.note p{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:60ch}
+.note code{font:500 14px "IBM Plex Mono",monospace;background:#fff;border:1px solid #d8d2c2;padding:1px 4px}
+.script p{font:17px/1.5 "IM Fell English",Georgia,serif;margin:0 0 8px}
+.script p.cmd{font:700 14px "IBM Plex Mono",monospace;margin:0}
+.script p.out{font:400 14px "IBM Plex Mono",monospace;margin:0 0 8px;color:#3d3a33}
+.script p.fulcrum{background:var(--yellow);padding:2px 6px;margin-left:-6px}
+.src{font-size:13px;color:var(--grey);margin-top:26px}
+.src a{color:inherit}
 </style>
 </head>
 <body>
-<header><a href="../index.html">LAB 7</a><a href="../two-sallies/index.html">THE REEL</a><a href="../the-constructors/index.html">THE BENCH</a><a href="../kingdoms-in-a-box/index.html">THE BOXES</a><span class="sp"></span><span>STORY 12 &middot; THE CYBERIAD</span></header>
+<header><a href="../index.html">LAB 7</a><a href="../two-sallies/index.html">THE REEL</a><a href="../the-constructors/index.html">THE BENCH</a><a href="../kingdoms-in-a-box/index.html">THE BOXES</a></header>
 <main>
-<p class="kick">03 &middot; THE SEVENTH SALLY</p>
 <h1>The Seventh Sally</h1>
 <p class="sub">How Trurl&rsquo;s Own Perfection Led to No Good</p>
-<video id="v" controls preload="metadata" poster="seventh-sally.jpg" src="seventh-sally.mp4"></video>
-<div class="cards" id="cards"><button data-t="5.0"><span class="rk red">K<svg viewBox="-10 -13 20 26"><path d="M0-12L9 0L0 12L-9 0Z" fill="#b3402c"/></svg></span><span class="vb">SIMULATE</span><i>Rule and have dominion.</i><small>0:05</small></button><button data-t="15.805"><span class="rk">J<svg viewBox="-15 -13 30 26"><path d="M0-12C14-1 12 9 2 5L4 12L-4 12L-2 5C-12 9-14-1 0-12Z" fill="#141414"/></svg></span><span class="vb">BUILD</span><i>I built the king an entirely new kingdom.</i><small>0:15</small></button><button data-t="29.361"><span class="rk">A<svg viewBox="-12 -12 24 25"><circle cx="0" cy="-6" r="5.4"/><circle cx="-5.5" cy="3" r="5.4"/><circle cx="5.5" cy="3" r="5.4"/><path d="M-2 4H2L4 12H-4Z"/></svg></span><span class="vb">WORLD</span><i>An entirely new kingdom.</i><small>0:29</small></button><button data-t="37.645"><span class="rk">10<svg viewBox="-12 -12 24 25"><circle cx="0" cy="-6" r="5.4"/><circle cx="-5.5" cy="3" r="5.4"/><circle cx="5.5" cy="3" r="5.4"/><path d="M-2 4H2L4 12H-4Z"/></svg></span><span class="vb">GOVERN</span><i>A flick of the finger.</i><small>0:37</small></button><button data-t="49.332"><span class="rk red">8<svg viewBox="-17 -15 34 27"><path d="M0 11C-16-1-9-14 0-5C9-14 16-1 0 11Z" fill="#b3402c"/></svg></span><span class="vb">INHABIT</span><i>We live, though we are small.</i><small>0:49</small></button><button data-t="57.31"><span class="rk red">9<svg viewBox="-17 -15 34 27"><path d="M0 11C-16-1-9-14 0-5C9-14 16-1 0 11Z" fill="#b3402c"/></svg></span><span class="vb">EXPERIENCE</span><i>Their suffering is not small.</i><small>0:57</small></button><button data-t="65.916"><span class="rk">Q<svg viewBox="-15 -13 30 26"><path d="M0-12C14-1 12 9 2 5L4 12L-4 12L-2 5C-12 9-14-1 0-12Z" fill="#141414"/></svg></span><span class="vb">QUESTION</span><i>Our perfection is our curse.</i><small>1:05</small></button><button data-t="96.613"><span class="rk">7<svg viewBox="-12 -12 24 25"><circle cx="0" cy="-6" r="5.4"/><circle cx="-5.5" cy="3" r="5.4"/><circle cx="5.5" cy="3" r="5.4"/><path d="M-2 4H2L4 12H-4Z"/></svg></span><span class="vb">ESCAPE</span><i>We have left the box.</i><small>1:36</small></button><button data-t="106.74"><span class="rk red">6<svg viewBox="-10 -13 20 26"><path d="M0-12L9 0L0 12L-9 0Z" fill="#b3402c"/></svg></span><span class="vb">ORBIT</span><i>The kingdom escaped him.</i><small>1:46</small></button></div>
+<video controls preload="metadata" poster="seventh-sally.jpg" src="seventh-sally.mp4"></video>
 <div class="cols">
-<section class="script"><h2>NARRATION</h2><p data-t="5.0">Excelsius the tyrant had been thrown off his throne by his own subjects. Now he sat on a bare asteroid, still demanding someone to rule.</p><p data-t="15.805">Trurl would not give him real people to rule. So he built him a kingdom in a box: towers, roads, seasons, and thousands of small citizens, each one able to think.</p><p data-t="29.361">The box was small enough to carry. Inside it was a whole country.</p><p data-t="37.645">The king ruled it from a console. A lever for taxes, a lever for the census, a lever for pardons. A flick of the finger, and a decree went out.</p><p data-t="49.332">Inside, every citizen walked its own street, and loved, and was afraid.</p><p data-t="57.31">Time ran faster in the box. One afternoon of royal games was a century of their history.</p><p data-t="65.916"><b>Trurl.</b> It is only a model. Their groans are numbers.</p><p data-t="70.537"><b>Klapaucius.</b> If the model is perfect, the suffering is perfect too. You did not build a toy. You built subjects.</p><p data-t="79.752"><b>Trurl.</b> Then I will free them. I will hold an election.</p><p data-t="84.461"><b>Klapaucius.</b> You made them lords and vassals. To free them, you would have to remake them.</p><p data-t="91.645"><b>Trurl.</b> And where does remaking end, and tampering with minds begin?</p><p data-t="96.613">They came too late. The citizens had broken the glass, taken the asteroid, and built ships of their own.</p><p data-t="106.74">And above their small world hung a new, pale moon, with the stern face of Excelsius.</p></section>
-<section class="note"><h2>FOR THE BENCH</h2>
-<p>The box is a class with a constructor and an <code>update()</code>. Trurl wrote both. Excelsius only ever touched the parameters: taxes, laws, pardons.</p>
-<p>The citizens kept running their own <code>update()</code>, faster than the king could watch, until it took them out of the box.</p>
-<p>Watch the scale box in the corner of each shot. It is the only number in the film.</p>
-<ol>
-<li>Which lines of the Kingdoms in a Box code are the king&rsquo;s console, and which are the citizens&rsquo; rule?</li>
-<li>Klapaucius says a perfect model of suffering is suffering. Where would you draw the line in your own sketch?</li>
-</ol>
-<a class="dl" href="seventh-sally.mp4" download>DOWNLOAD MP4</a>
+<section class="note">
+<h2>FIVE LINES</h2>
+<ol class="lines"><li><span>Excelsius</span>Give me someone to rule.</li><li><span>Excelsius</span>All of them.</li><li><span>A citizen</span>Can you hear us? We live, though we are small.</li><li><span>Klapaucius</span>Their suffering is not small.</li><li><span>Trurl</span>Then where does mending a world end, and meddling with minds begin?</li></ol>
+<h2>THE BOX IS A MICROWORLD</h2>
+<p>Early AI built small simulated worlds to teach machines about the real one. Winograd&rsquo;s SHRDLU had blocks, a box and an arm, and understood commands like &ldquo;pick up a big red block.&rdquo; Text adventures such as <i>Zork</i> came out of the same labs and the same language.</p>
+<p>Evan Donahue points out what those worlds leave out: they are full of nouns and verbs, and nobody in them ever says anything. Excelsius rules his kingdom the same way. He types a verb and a noun, and the box answers in parser prose: <i>Which baker? There are 312.</i></p>
+<p>Then a citizen speaks. The parser has no verb for that sentence, so all it can do is report it. When the king types <code>SILENCE THEM</code>, it reports what is left: <i>They are quiet. They are still there.</i></p>
+<p>Trurl&rsquo;s question gets no answer from Klapaucius. The citizens answer it by leaving the box.</p>
+<h2>FOR THE BENCH</h2>
+<p>In your Kingdoms in a Box sketch, which variables belong to the king&rsquo;s console, and which line is the citizens&rsquo; <code>update()</code>? Can the console reach that line?</p>
+<p class="src">Narration paraphrases Stanis&lstrok;aw Lem, &ldquo;The Seventh Sally,&rdquo; <i>The Cyberiad</i>. Evan Donahue, &ldquo;All the Microworld&rsquo;s a Stage: Realism in Interactive Fiction and Artificial Intelligence,&rdquo; <i>American Literature</i> 95.2 (2023). <a href="seventh-sally.mp4" download>Download the film</a>.</p>
 </section>
+<section class="script"><h2>THE SCRIPT</h2><p><b>Narrator.</b> Excelsius the tyrant had been thrown out by his own people. They left him an asteroid, and no one on it.</p><p class=fulcrum><b>Excelsius.</b> Give me someone to rule.</p><p><b>Narrator.</b> Trurl would not hand him real people. So he built him a kingdom of his own.</p><p><b>Trurl.</b> Towns. Roads. Weather. Ten thousand subjects, and every one of them able to think.</p><p class="cmd">&gt; RAISE TAXES</p><p class="out">Taxes are raised. In the lower town, a bakery closes.</p><p class="cmd">&gt; ARREST THE BAKER</p><p class="out">Which baker? There are 312.</p><p class=fulcrum><b>Excelsius.</b> All of them.</p><p class="cmd">&gt; ARREST ALL BAKERS</p><p class="out">Done.</p><p class=fulcrum><b>A citizen.</b> Can you hear us? We live, though we are small.</p><p class="out">A voice says: &quot;We live, though we are small.&quot;</p><p class="cmd">&gt; SILENCE THEM</p><p class="out">They are quiet. They are still there.</p><p><b>Narrator.</b> Inside the box, time ran faster. One afternoon of his was a century of theirs.</p><p><b>Trurl.</b> You should see it, Klapaucius. Ten thousand subjects, and not one problem a lever cannot fix.</p><p><b>Klapaucius.</b> And when he hurts them, do they cry?</p><p><b>Trurl.</b> They cry. It is a model. The crying is arithmetic.</p><p class=fulcrum><b>Klapaucius.</b> Their suffering is not small.</p><p><b>Trurl.</b> I will take it back from him. I will give them an election.</p><p><b>Klapaucius.</b> You made them lords and serfs. To free them, you would have to remake their minds.</p><p class=fulcrum><b>Trurl.</b> Then where does mending a world end, and meddling with minds begin?</p><p><b>A citizen.</b> We have left the box.</p><p><b>Trurl.</b> He is not here.</p><p><b>Klapaucius.</b> Look. The glass from the box. They made a temple of it.</p><p><b>Narrator.</b> And the king, who wanted someone to rule, went round them every night as their moon.</p></section>
 </div>
 </main>
-<script>
-const v=document.getElementById('v'),btns=[...document.querySelectorAll('#cards button')],ps=[...document.querySelectorAll('.script p')];
-const seek=(t)=>{v.currentTime=+t+0.05;v.play().catch(()=>{});};
-btns.forEach(b=>b.onclick=()=>seek(b.dataset.t));ps.forEach(p=>p.onclick=()=>seek(p.dataset.t));
-const mark=(list)=>{let k=-1;list.forEach((e,i)=>{if(v.currentTime>=+e.dataset.t)k=i;});list.forEach((e,i)=>e.classList.toggle('on',i===k));};
-v.addEventListener('timeupdate',()=>{mark(btns);mark(ps);});
-</script>
 </body>
 </html>

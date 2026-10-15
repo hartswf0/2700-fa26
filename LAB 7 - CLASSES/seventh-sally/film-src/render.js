@@ -22,7 +22,7 @@ const OUT = path.resolve(__dirname, '..');
   } else {
     const t0 = Date.now();
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '24', '-c:v', 'mjpeg', '-i', '-', '-i', path.join(__dirname, 'audio', 'sally.m4a'),
-      '-map', '0:v', '-map', '1:a', '-c:a', 'copy', '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '21', '-preset', 'medium', '-movflags', '+faststart', path.join(OUT, 'seventh-sally.mp4')]);
+      '-map', '0:v', '-map', '1:a', '-c:a', 'copy', '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '25', '-preset', 'medium', '-movflags', '+faststart', path.join(OUT, 'seventh-sally.mp4')]);
     ff.stderr.on('data', (d) => process.stderr.write(d));
     for (let f = 0; f < NF; f++) {
       const buf = await grab(f);

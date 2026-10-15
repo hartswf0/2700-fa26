@@ -1,7 +1,8 @@
 /* The Seventh Sally: an engraved multiplane film after the Story 12 cards.
    Scale is the subject: the king is drawn huge, the citizens tiny, and the camera
    keeps crossing that gap. Every shot is built from depth planes. */
-const W = 1280, H = 720, PX0 = 22, PY0 = 22, PX1 = 1258, PY1 = 606, CX = 640, CY = 314;
+const W = 1280, H = 720, PX0 = 22, PY0 = 22, PX1 = 1258, PY1 = 698, CX = 640, CY = 360;
+let KEYROT = 0;
 const DARK = '#2a241d';
 let T = null;
 
@@ -81,7 +82,7 @@ function boxHead(x, y, s, id, o = {}) {
     X.beginPath(); p.forEach(([a, b], i) => (i ? X.lineTo(a, b) : X.moveTo(a, b))); X.lineWidth = 3.6; X.lineCap = 'round'; X.strokeStyle = P.ink; X.stroke(); X.lineCap = 'butt';
     X.beginPath(); X.arc(d * 19, 3, 2.6, 0, 6.283); X.lineWidth = 1.6; X.stroke();
   }
-  shape(R(-9, 23, 18, 4.5), { fill: P.ink, lw: 0.8, id: id + 12 });
+  { const mo = o.mouth || 0; shape(R(-9, 24 - mo * 3, 18, 4.5 + mo * 8), { fill: P.ink, lw: 0.8, id: id + 12 }); }
   X.restore();
 }
 /* Microminian: a small box robot with an antenna */
@@ -102,7 +103,7 @@ function micro(x, y, s, id, o = {}) {
   X.save(); X.translate(0, hy); X.rotate(tl);
   shape(R(-8, -7, 16, 13), { lw: 1.4, id: id + 2 });
   for (const k of [-1, 1]) { X.beginPath(); X.arc(k * 3.6, -1, 2.6, 0, 6.283); X.fillStyle = P.paper; X.fill(); X.lineWidth = 0.9; X.strokeStyle = P.ink; X.stroke(); X.fillStyle = P.ink; X.fillRect(k * 3.6 - 0.9 + (o.look || 0), -2 + (o.lookY || 0), 1.9, 1.9); }
-  line([-3, 4], [3, 4], 0.9, id + 3, 0.05);
+  if ((o.mouth || 0) > 0.05) { X.fillStyle = P.ink; X.fillRect(-3, 3, 6, 1 + o.mouth * 3); } else line([-3, 4], [3, 4], 0.9, id + 3, 0.05);
   line([0, -7], [o.ant || 0, -15], 1.1, id + 4, 0.1); ball(o.ant || 0, -16, 2, id + 6, PAT.f, 0.8);
   X.restore(); X.restore();
 }
@@ -166,7 +167,7 @@ function excelsius(x, y, s, id, o = {}) {
   else { cap(66, -212, -42, -238, 15, id + 40); hand(-48, -238, Math.PI + 0.3, 9, id + 41); }
   ball(0, -306, 9, id + 44, PAT.f, 1.3);
   X.restore();
-  boxHead(x + (o.hx || 0) * s, y - 352 * s, 1.15 * s, id + 60, { stern: true, look: o.look || 0, tilt: o.tilt || 0, sway: o.sway || 0 });
+  boxHead(x + (o.hx || 0) * s, y - 352 * s, 1.15 * s, id + 60, { stern: true, look: o.look || 0, tilt: o.tilt || 0, sway: o.sway || 0, mouth: o.mouth || 0 });
 }
 /* Trurl and Klapaucius: jointed wooden mannequins with the same box heads */
 function constructor_(x, y, s, id, o = {}) {
@@ -191,7 +192,7 @@ function constructor_(x, y, s, id, o = {}) {
   cap(0, -228, 0, -244, 10, id + 38);
   const [, , hx, hy] = limb(30, -214, ra[0], 62, ra[1], 58, 15, id + 60); hand(hx, hy, ra[1], 8, id + 63, o.open || 0);
   X.restore();
-  boxHead(x + (o.hx || 0) * s * (o.f || 1), y - 286 * s, 0.95 * s, id + 80, { f: o.f, look: o.look || 0, tilt: o.tilt || 0, closed: o.closed, sway: o.sway || 0, lookY: o.lookY || 0 });
+  boxHead(x + (o.hx || 0) * s * (o.f || 1), y - 286 * s, 0.95 * s, id + 80, { f: o.f, look: o.look || 0, tilt: o.tilt || 0, closed: o.closed, sway: o.sway || 0, lookY: o.lookY || 0, mouth: o.mouth || 0 });
 }
 
 /* ---------- the box ---------- */
@@ -210,7 +211,7 @@ function glassCase(cx, cy, w, h, id, o = {}) {
       for (const [u, ww] of [[0.18, 18], [0.27, 6], [0.72, 12]]) { const gx = x0 + u * w; X.beginPath(); X.moveTo(gx, y0); X.lineTo(gx + ww, y0); X.lineTo(gx + ww - h * 0.5, y1); X.lineTo(gx - h * 0.5, y1); X.fillStyle = P.paper; X.fill(); }
       X.restore(); X.globalAlpha = 1;
       for (const fx of [x0, x1, x1 + dx]) ball(fx, (fx > x1 ? y1 + dy : y1) + 9, 9, id + 10 + fx | 0, PAT.m, 1.4);
-      if (o.key !== false) { line([x1 + dx * 0.5, cy], [x1 + dx * 0.5 + 22, cy], 3, id + 20, 0.2); shape([[x1 + dx * 0.5 + 22, cy - 16], [x1 + dx * 0.5 + 34, cy - 8], [x1 + dx * 0.5 + 34, cy + 8], [x1 + dx * 0.5 + 22, cy + 16]], { lw: 1.6, id: id + 21, h: [0.4, 2.4, 0.6] }); }
+      if (o.key !== false) { line([x1 + dx * 0.5, cy], [x1 + dx * 0.5 + 22, cy], 3, id + 20, 0.2); X.save(); X.translate(x1 + dx * 0.5 + 28, cy); X.scale(1, Math.cos(KEYROT) * 0.85 + (Math.cos(KEYROT) >= 0 ? 0.15 : -0.15)); shape([[-6, -16], [6, -8], [6, 8], [-6, 16]], { lw: 1.6, id: id + 21, h: [0.4, 2.4, 0.6] }); X.restore(); }
     },
   };
 }
@@ -267,258 +268,219 @@ function plane(cam, d, fn) {
 }
 const lerp = (a, b, u) => a + (b - a) * u;
 
-/* ---------- card furniture ---------- */
-function suit(kind, x, y, s) {
-  X.save(); X.translate(x, y); X.scale(s, s); X.fillStyle = kind === 'h' || kind === 'd' ? P.red : P.ink; X.beginPath();
-  if (kind === 'd') { X.moveTo(0, -12); X.lineTo(9, 0); X.lineTo(0, 12); X.lineTo(-9, 0); }
-  else if (kind === 'h') { X.moveTo(0, 11); X.bezierCurveTo(-16, -1, -9, -14, 0, -5); X.bezierCurveTo(9, -14, 16, -1, 0, 11); }
-  else if (kind === 's') { X.moveTo(0, -12); X.bezierCurveTo(14, -1, 12, 9, 2, 5); X.lineTo(4, 12); X.lineTo(-4, 12); X.lineTo(-2, 5); X.bezierCurveTo(-12, 9, -14, -1, 0, -12); }
-  else { X.arc(0, -6, 5.4, 0, 6.283); X.moveTo(-5, 3); X.arc(-5.5, 3, 5.4, 0, 6.283); X.moveTo(11, 3); X.arc(5.5, 3, 5.4, 0, 6.283); X.moveTo(-2, 4); X.lineTo(2, 4); X.lineTo(4, 12); X.lineTo(-4, 12); }
-  X.fill(); X.restore();
-}
-function cardTab(card, a) {
-  if (!card || a <= 0) return; X.save(); X.globalAlpha = a;
-  const w = card[0].length > 1 ? 104 : 86;
-  shape(R(PX0 + 12, PY0 + 12, w, 54), { lw: 1.6, id: 9001 });
-  const red = card[1] === 'h' || card[1] === 'd';
-  txt(card[0], PX0 + 26 + (card[0].length > 1 ? 14 : 4), PY0 + 41, 36, { col: red ? P.red : P.ink, bold: true });
-  suit(card[1], PX0 + w - 12, PY0 + 40, 1.25);
-  X.restore();
-}
-let RULE = 1;
-function ruler(v, a) {
-  if (a <= 0) return; X.save(); X.globalAlpha = a;
-  const x = PX1 - 214, y = PY1 - 52; shape(R(x, y, 196, 40), { lw: 1.2, id: 9100 });
-  const n = Math.round(v), lab = n >= 1000 ? '1 : 1 000' : n > 1 ? '1 : ' + (n > 99 ? Math.round(n / 10) * 10 : n) : '1 : 1';
-  txt('SCALE', x + 14, y + 13, 10, { mono: true, align: 'left', col: '#5a5246' }); txt(lab, x + 14, y + 28, 15, { mono: true, align: 'left', bold: true });
-  const L = 70, bx = x + 112; line([bx, y + 30], [bx + L, y + 30], 1.2, 9101, 0.1);
-  for (let i = 0; i <= 10; i++) line([bx + i * L / 10, y + 30], [bx + i * L / 10, y + (i % 5 ? 26 : 22)], 0.8, 9102 + i, 0.05);
-  const fh = 22 / Math.pow(v, 0.33); X.fillStyle = P.ink; X.fillRect(bx + L - 6, y + 30 - fh, 3, fh);
-  X.restore();
-}
-function band(b, a) {
-  X.fillStyle = P.paper; X.fillRect(0, PY1, W, H - PY1);
-  if (!b || !b.verb || a <= 0) return; X.save(); X.globalAlpha = a;
-  txt('“' + b.quote + '”', CX, PY1 + 30, 23, { italic: true });
-  X.font = `bold 17px ${FONT}`; X.letterSpacing = '3px'; const tw = X.measureText(b.verb).width + 70;
-  X.beginPath(); X.roundRect(CX - tw / 2, PY1 + 52, tw, 32, 5); X.fillStyle = P.ink; X.fill();
-  X.textAlign = 'center'; X.textBaseline = 'middle'; X.fillStyle = P.paper; X.fillText(b.verb, CX + 1.5, PY1 + 69); X.letterSpacing = '0px';
-  X.restore();
-}
+/* ---------- the score, read from timing/sally.json ---------- */
+function sayAt(sh, who, lt) { for (const l of sh.lines) if (l.who === who && lt >= l.t0 && lt < l.t1) return l.env[Math.min(l.env.length - 1, Math.floor((lt - l.t0) * 24))] || 0; return 0; }
+function talking(sh, who, lt) { return sh.lines.some((l) => l.who === who && lt >= l.t0 - 0.1 && lt < l.t1 + 0.2); }
+/* the fulcrum line: a hard cut in before it starts, a hard cut out after it ends */
+function onLine(sh, lt, pre = 0.6, post = 1.3) { const l = sh.lines.find((x) => x.line); return !!l && lt >= l.t0 - pre && lt < l.t1 + post; }
+const cue = (sh, k, i = 0) => sh.cues.filter((c) => c.k === k)[i];
+const shotNamed = (n) => T.shots.find((s) => s.shot === n);
 
-/* ---------- shots: (lt = seconds into shot, sd = shot length, b = current beat) ---------- */
 const SHOTS = {};
 
-SHOTS.title = (lt, sd) => {
-  X.fillStyle = P.paper; X.fillRect(0, 0, W, H);
-  X.save(); path(R(PX0, PY0, PX1 - PX0, PY1 - PY0)); X.clip();
-  // rays behind the king, as on the chapter card
-  const kx = 640, ky = 560;
-  for (let i = 0; i < 70; i++) { const a = -Math.PI * (0.03 + 0.94 * i / 69); line([kx + Math.cos(a) * 250, ky - 300 + Math.sin(a) * 120], [kx + Math.cos(a) * 1200, ky - 300 + Math.sin(a) * 900], 0.8, 2000 + i, 0.3); }
-  X.restore();
-  txt('THE SEVENTH SALLY', CX, 92, 60, {});
-  txt("How Trurl’s Own Perfection Led to No Good", CX, 146, 26, { italic: true });
-  excelsius(kx, ky, 0.92 + lt * 0.01, 5000, { look: 0 });
-  band({ verb: 'CHAPTER CARD', quote: 'Our perfection is our curse.' }, seg(lt, 1.2, 2.2));
-  txt('STORY 12 • THE CYBERIAD', PX0 + 30, H - 30, 11, { mono: true, align: 'left', col: '#5a5246' });
-};
-
-SHOTS.exile = (lt, sd) => {
-  const u = seg(lt, 0.4, sd - 1.2), cam = { z: lerp(1, 2.3, u), x: 0, y: lerp(40, -60, u) };
-  space(cam, 100, lt * 6);
+SHOTS.cold = (lt, sd, sh) => {
+  const tight = onLine(sh, lt, 0.7, 2.0), u = seg(lt, 0.3, sd, E.io);
+  const cam = tight ? { z: 5.2 + (lt - 10) * 0.03, x: 4, y: -118 } : { z: lerp(1, 1.8, u), x: 0, y: lerp(70, -10, u) };
+  space(cam, 100, lt * 5);
   plane(cam, 4, () => { planet(1040, 150, 46, 101, true); planet(210, 120, 22, 102); });
   plane(cam, 1, () => {
-    const ax = 640, ay = 420;
-    // the king's shadow-rays: his idea of himself, drawn in paper on the dark
-    X.save(); X.globalAlpha = 0.35 * seg(lt, 3, 6); for (let i = 0; i < 46; i++) { const a = -Math.PI * (0.05 + 0.9 * i / 45); line([ax + Math.cos(a) * 60, ay - 140 + Math.sin(a) * 60], [ax + Math.cos(a) * 520, ay - 140 + Math.sin(a) * 520], 0.8, 110 + i, 0.3, P.paper); } X.restore();
+    const ax = 640, ay = 420, ln = sh.lines.find((l) => l.line);
+    X.save(); X.globalAlpha = 0.3 * seg(lt, 4, 8); for (let i = 0; i < 46; i++) { const a = -Math.PI * (0.05 + 0.9 * i / 45); line([ax + Math.cos(a) * 60, ay - 160 + Math.sin(a) * 60], [ax + Math.cos(a) * 560, ay - 160 + Math.sin(a) * 560], 0.8, 110 + i, 0.3, P.paper); } X.restore();
     const rk = rock(ax, ay + 70, 150, 120);
     shape(rk, { lw: 2, id: 121, h: [0.9, 5, 0.5], sh: [[ax - 20, ay - 200], [ax + 260, ay - 200], [ax + 260, ay + 300], [ax - 20, ay + 300]], sh2: [[0.9, 2.2, 0.8]] });
     for (let i = 0; i < 7; i++) { const cx = ax - 110 + hash(122, i) * 220, cy = ay + 30 + hash(123, i) * 110, r = 6 + hash(124, i) * 14; X.beginPath(); X.ellipse(cx, cy, r, r * 0.55, 0, 0, 6.283); X.fillStyle = PAT.d; X.fill(); X.lineWidth = 1; X.strokeStyle = P.ink; X.stroke(); }
-    const pt = seg(lt, sd * 0.55, sd * 0.55 + 1.2) - seg(lt, sd - 1.6, sd - 0.6);
-    excelsius(ax, ay - 64, 0.34, 130, { point: pt, look: pt * 1.2, sway: Math.sin(lt * 1.1) * 0.6, hx: pt * 6 });
+    const pt = seg(lt, ln.t0 + 0.3, ln.t0 + 1.0) - seg(lt, ln.t1 + 0.9, ln.t1 + 1.8);
+    excelsius(ax, ay - 64, 0.34, 130, { point: pt, look: tight ? 0 : 0.8, sway: Math.sin(lt * 0.9) * 0.6, hx: pt * 6, mouth: sayAt(sh, 'E', lt) });
   });
 };
 
-SHOTS.build = (lt, sd, b) => {
-  const u = seg(lt, 0, sd), cam = { z: lerp(1, 1.18, u), x: lerp(-20, 110, u), y: lerp(0, 10, u) };
+SHOTS.title = (lt) => {
+  X.fillStyle = P.paper; X.fillRect(0, 0, W, H);
+  X.save(); path(R(PX0, PY0, PX1 - PX0, PY1 - PY0)); X.clip();
+  const kx = 640, ky = 650;
+  for (let i = 0; i < 70; i++) { const a = -Math.PI * (0.03 + 0.94 * i / 69); line([kx + Math.cos(a) * 250, ky - 300 + Math.sin(a) * 120], [kx + Math.cos(a) * 1200, ky - 300 + Math.sin(a) * 900], 0.8, 2000 + i, 0.3); }
+  X.restore();
+  txt('THE SEVENTH SALLY', CX, 110, 64, {});
+  txt("How Trurl’s Own Perfection Led to No Good", CX, 170, 28, { italic: true });
+  excelsius(kx, ky, 1.0, 5000, { look: 0 });
+};
+
+SHOTS.build = (lt, sd, sh) => {
+  const u = seg(lt, 0, sd), cam = { z: lerp(1, 1.18, u), x: lerp(-20, 110, u), y: lerp(-40, -30, u) };
   plane(cam, 3, () => {
-    X.fillStyle = P.paper; X.fillRect(-200, -200, 1700, 1100);
-    X.save(); path(R(-200, -200, 1700, 700)); X.clip(); hatch(Math.PI / 2, 4, 0.5, [-200, -200, 1500, 520]); X.restore();
+    X.fillStyle = P.paper; X.fillRect(-200, -200, 1700, 1200);
+    X.save(); path(R(-200, -200, 1700, 720)); X.clip(); hatch(Math.PI / 2, 4, 0.5, [-200, -200, 1500, 520]); X.restore();
     for (const [sx, sy, k] of [[150, 90, 0], [300, 70, 1]]) { shape(R(sx, sy, 120, 150), { lw: 1.3, id: 200 + k }); X.save(); X.translate(sx + 60, sy + 120); X.scale(0.42, 0.42); X.globalAlpha = 0.85; castle(0, 0, 1, 210 + k * 40, { t: 0 }); X.restore(); ball(sx + 60, sy + 6, 4, 230 + k, PAT.f, 1); }
-    // shelves
     for (let i = 0; i < 3; i++) { shape(R(1060, 120 + i * 110, 240, 10), { lw: 1.2, id: 240 + i, h: [0, 2.5, 0.6] }); for (let j = 0; j < 5; j++) shape(R(1070 + j * 44, 76 + i * 110, 30, 44), { lw: 1, id: 250 + i * 9 + j, h: [j % 2 ? 0.8 : 1.57, 2.6, 0.6] }); }
-    ball(1150, 30, 30, 290, PAT.m, 1.4); line([1150, 60], [1150, 82], 2, 291);
   });
   plane(cam, 1.5, () => {
-    shape([[-200, 520], [1600, 520], [1600, 900], [-200, 900]], { lw: 1.6, id: 300, h: [0.03, 5, 0.5] });
-    // bench
-    shape(R(520, 430, 700, 22), { lw: 1.8, id: 301, h: [0, 2.6, 0.7] }); shape(R(540, 452, 24, 160), { lw: 1.4, id: 302, h: [1.57, 3, 0.6] }); shape(R(1170, 452, 24, 160), { lw: 1.4, id: 303, h: [1.57, 3, 0.6] });
-    // lamp
+    shape([[-200, 520], [1600, 520], [1600, 1000], [-200, 1000]], { lw: 1.6, id: 300, h: [0.03, 5, 0.5] });
+    shape(R(520, 430, 700, 22), { lw: 1.8, id: 301, h: [0, 2.6, 0.7] }); shape(R(540, 452, 24, 260), { lw: 1.4, id: 302, h: [1.57, 3, 0.6] }); shape(R(1170, 452, 24, 260), { lw: 1.4, id: 303, h: [1.57, 3, 0.6] });
     line([600, 430], [640, 300], 2.4, 304); line([640, 300], [720, 250], 2.4, 305); shape([[700, 236], [756, 230], [770, 270], [716, 280]], { lw: 1.6, id: 306, h: [0.5, 2.4, 0.7] });
-    // the case, filling up
     const gc = glassCase(900, 352, 330, 150, 320, { key: false });
-    gc.back();
-    X.save(); path(gc.front); X.clip();
-    const grow = seg(lt, 2, sd - 2.5, E.lin);
+    gc.back(); X.save(); path(gc.front); X.clip();
+    const grow = seg(lt, 1.4, sd - 2.6, E.lin);
     castle(900, 410, 0.62, 330, { grow, t: lt });
     for (let i = 0; i < 26; i++) { const ap = clamp((grow - 0.55 - i * 0.012) * 8); if (ap > 0) tinyMicro(760 + hash(340, i) * 280, 420 + hash(341, i) * 8, 0.32 * ap, 342 + i); }
     X.restore(); gc.frame();
   });
   plane(cam, 1.5, () => {
-    // Trurl: only the reaching arm works; the head follows once
-    const cyc = (lt % 3.2) / 3.2, reach = Math.sin(cyc * Math.PI), look = seg(lt, 1, 2);
-    constructor_(470, 610, 1.04, 400, { ra: [-0.25 - reach * 0.25, -0.15 + reach * 0.35], la: [1.45, 1.75], look: look * 1.2, tilt: 0.06 * look });
+    const cyc = (lt % 3.2) / 3.2, reach = Math.sin(cyc * Math.PI), tk = talking(sh, 'T', lt);
+    constructor_(470, 610, 1.04, 400, { ra: [-0.25 - reach * 0.25, -0.15 + reach * 0.35], la: [1.45, 1.75], look: tk ? 0.4 : 1.2, tilt: tk ? -0.03 : 0.06, mouth: sayAt(sh, 'T', lt) });
   });
-  plane(cam, 0.75, () => { // foreground occluder: rolled plans in a cup
-    shape([[30, 560], [140, 560], [130, 720], [40, 720]], { lw: 2, id: 450, h: [1.57, 3, 0.8] });
+  plane(cam, 0.75, () => {
+    shape([[30, 560], [140, 560], [130, 760], [40, 760]], { lw: 2, id: 450, h: [1.57, 3, 0.8] });
     for (let i = 0; i < 5; i++) shape(R(42 + i * 18, 440 + hash(451, i) * 40, 16, 140), { lw: 1.3, id: 452 + i, h: [0.1, 4, 0.5] });
   });
 };
 
-SHOTS.world = (lt, sd) => {
-  const u = seg(lt, 1.2, sd - 0.4, E.in), z = lerp(1, 9, u), cam = { z, x: lerp(0, 20, u), y: lerp(0, -70, u) };
-  RULE = Math.pow(1000, u);
+SHOTS.world = (lt, sd, sh) => {
+  const u = seg(lt, 1.2, sd - 0.4, E.in), cam = { z: lerp(1, 9, u), x: lerp(0, 20, u), y: lerp(-20, -70, u) };
+  const w = cue(sh, 'wind'); KEYROT = clamp((lt - w.at) / (w.to - w.at)) * 6.283 * 3.5;
   X.fillStyle = P.paper; X.fillRect(0, 0, W, H);
-  plane(cam, 1.05, () => { X.save(); path(R(-200, -200, 1700, 700)); X.clip(); hatch(0.78, 6, 0.4, [-200, -200, 1500, 900]); X.restore(); shape(R(-200, 560, 1700, 300), { lw: 1.4, id: 600, h: [0.02, 4, 0.5] }); });
-  const gc = glassCase(640, 320, 680, 400, 610), x0 = 300, y0 = 120, w = 680, h = 400;
+  plane(cam, 1.05, () => { X.save(); path(R(-200, -200, 1700, 700)); X.clip(); hatch(0.78, 6, 0.4, [-200, -200, 1500, 900]); X.restore(); shape(R(-200, 560, 1700, 400), { lw: 1.4, id: 600, h: [0.02, 4, 0.5] }); });
+  const gc = glassCase(640, 320, 680, 400, 610), x0 = 300, y0 = 120, w2 = 680, h = 400;
   plane(cam, 1, () => gc.back());
-  X.save(); plane(cam, 1, () => { path(gc.front); }); // build clip in screen space
-  { const k = cam.z; X.save(); X.setTransform(k, 0, 0, k, CX - k * (CX + cam.x), CY - k * (CY + cam.y)); path(gc.front); X.restore(); X.clip(); }
+  X.save(); { const k = cam.z; X.save(); X.setTransform(k, 0, 0, k, CX - k * (CX + cam.x), CY - k * (CY + cam.y)); path(gc.front); X.restore(); X.clip(); }
   X.fillStyle = P.paper; X.fillRect(0, 0, W, H);
-  plane(cam, 7, () => landscape(x0, y0, w, h, 620, lt, 'sky'));
-  plane(cam, 2.3, () => landscape(x0, y0, w, h, 620, lt, 'far'));
-  plane(cam, 1.55, () => landscape(x0, y0, w, h, 620, lt, 'mid'));
-  plane(cam, 1.15, () => landscape(x0, y0, w, h, 620, lt, 'near'));
+  plane(cam, 7, () => landscape(x0, y0, w2, h, 620, lt, 'sky'));
+  plane(cam, 2.3, () => landscape(x0, y0, w2, h, 620, lt, 'far'));
+  plane(cam, 1.55, () => landscape(x0, y0, w2, h, 620, lt, 'mid'));
+  plane(cam, 1.15, () => landscape(x0, y0, w2, h, 620, lt, 'near'));
   X.restore();
   plane(cam, 1, () => gc.frame());
 };
 
-SHOTS.govern = (lt, sd) => {
-  const u = seg(lt, 0, sd), cam = { z: lerp(1.0, 1.1, u), x: 0, y: lerp(10, -10, u) };
-  const pulls = [[3.0, 4.2], [6.4, 7.4], [9.0, 10.0]];
-  let flick = 0, which = -1; pulls.forEach(([a, c], i) => { const v = seg(lt, a, a + 0.25) - seg(lt, c - 0.3, c); if (v > flick) { flick = v; which = i; } });
-  const fired = pulls.filter(([a]) => lt > a + 0.25).length;
+/* the king's console is a parser: he types verbs and nouns, the box answers in prose */
+function wrapText(s, n) { const out = []; let cur = ''; for (const w of s.split(' ')) { if ((cur + ' ' + w).trim().length > n) { out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); } if (cur) out.push(cur); return out; }
+function parserLog(sh, lt) {
+  const out = [];
+  for (const c of sh.cues) {
+    if (lt < c.at) continue;
+    if (c.k === 'type') { const n = Math.min(c.text.length, Math.floor((lt - c.at) * 9) + 1); out.push({ s: '> ' + c.text.slice(0, n), cmd: true, live: lt < c.at + c.text.length / 9 + 0.15 }); }
+    if (c.k === 'reply') { const full = wrapText(c.text, 34); let n = Math.floor((lt - c.at) * 24) + 1; for (const l of full) { if (n <= 0) break; out.push({ s: l.slice(0, n) }); n -= l.length + 1; } }
+  }
+  return out;
+}
+function consoleRoom(lt, sd, sh, prior) {
+  const tight = onLine(sh, lt, 0.5, 1.2);
+  const cam = tight ? { z: 1.8, x: 0, y: -60 } : { z: lerp(1.0, 1.07, seg(lt, 0, sd)), x: 0, y: lerp(-10, -30, seg(lt, 0, sd)) };
+  const log = prior.concat(parserLog(sh, lt));
+  const typing = sh.cues.find((c) => c.k === 'type' && lt >= c.at && lt < c.at + c.text.length / 9 + 0.15);
+  const ci = typing ? Math.floor((lt - typing.at) * 9) : -1;
   plane(cam, 3, () => {
-    X.fillStyle = P.paper; X.fillRect(-200, -200, 1700, 1100);
-    X.save(); path(R(-200, -200, 1700, 900)); X.clip(); hatch(Math.PI / 2, 3.4, 0.5, [-200, -200, 1500, 700]); X.restore();
-    // the window on the kingdom
-    const sx = 430, sy = 60, sw = 420, sh = 210;
-    shape(R(sx - 10, sy - 10, sw + 20, sh + 20), { lw: 2.2, id: 700, h: [0.78, 3, 0.6] }); shape(R(sx, sy, sw, sh), { lw: 1.6, id: 701 });
-    X.save(); path(R(sx, sy, sw, sh)); X.clip(); X.globalAlpha = 0.5; skyLines(sy, sy + sh, sy + 500); X.globalAlpha = 1;
-    castle(sx + sw / 2, sy + sh - 20, 0.72, 710, { t: lt });
-    for (let i = 0; i < fired; i++) { const fx = sx + 80 + i * 130, k = clamp((lt - pulls[i][0] - 0.25) / 1.4); X.save(); X.globalAlpha = 1 - k * 0.7; star(fx, sy + sh - 40, 8 + k * 30, 720 + i * 13, P.ink, 12); X.restore(); }
+    X.fillStyle = P.paper; X.fillRect(-300, -300, 1900, 1400);
+    X.save(); path(R(-300, -300, 1900, 1000)); X.clip(); hatch(Math.PI / 2, 3.4, 0.5, [-300, -300, 1600, 700]); X.restore();
+    const sx = 330, sy = 24, sw = 620, shh = 214;
+    shape(R(sx - 16, sy - 16, sw + 32, shh + 32), { lw: 2.4, id: 700, h: [0.78, 3, 0.6] });
+    shape(R(sx, sy, sw, shh), { lw: 1.8, id: 701 });
+    X.save(); path(R(sx, sy, sw, shh)); X.clip(); X.globalAlpha = 0.1; skyLines(sy, sy + shh, sy + 900); X.globalAlpha = 1;
+    const lines = log.slice(typing ? -6 : -5);
+    lines.forEach((l, i) => { txt(l.s, sx + 26, sy + 26 + i * 31, 21, { mono: true, align: 'left', bold: l.cmd }); });
+    const last = lines[lines.length - 1];
+    if (!typing && Math.floor(lt * 2) % 2 === 0) { const y = sy + 26 + lines.length * 31; txt('> _', sx + 26, Math.min(y, sy + shh - 20), 21, { mono: true, align: 'left', bold: true }); }
+    else if (typing && last) { X.font = `bold 21px "IBM Plex Mono",monospace`; const wdt = X.measureText(last.s).width; X.fillStyle = P.ink; X.fillRect(sx + 28 + wdt, sy + 16 + (lines.length - 1) * 31, 11, 20); }
     X.restore();
-    // proclamations hung either side
-    for (const [px, words, id] of [[150, ['DECREES', 'TAXES', 'CENSUS', 'WORKS', 'DISTRIBUTE'], 740], [960, ['SUBJECTS', 'COMPLAINTS', 'REBELLION', 'PARDONS', 'STABILITY'], 760]]) {
-      shape([[px, 70], [px + 160, 70], [px + 156, 300], [px + 4, 300]], { lw: 1.4, id }); words.forEach((w2, i) => txt(w2, px + 80, 120 + i * 30, 13, { mono: true })); ball(px - 4, 68, 7, id + 1, PAT.f, 1); ball(px + 164, 68, 7, id + 2, PAT.f, 1);
-    }
+    for (const [dx2, id] of [[200, 810], [1080, 820]]) { ball(dx2, 250, 46, id, PAT.f, 1.8); X.beginPath(); X.arc(dx2, 250, 38, 0, 6.283); X.fillStyle = P.paper; X.fill(); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; line([dx2 + Math.cos(a) * 30, 250 + Math.sin(a) * 30], [dx2 + Math.cos(a) * 36, 250 + Math.sin(a) * 36], 1, id + 1 + i, 0.05); } const na = -1.4 + log.length * 0.35 + (id === 820 ? 1.2 : 0); line([dx2, 250], [dx2 + Math.cos(na) * 30, 250 + Math.sin(na) * 30], 2, id + 20, 0.05); }
   });
   plane(cam, 1.6, () => {
-    // console
-    shape([[60, 330], [1220, 330], [1260, 470], [20, 470]], { lw: 2, id: 800, h: [0.03, 3.4, 0.5] });
-    shape(R(20, 470, 1240, 250), { lw: 2, id: 801, h: [1.57, 3, 0.6] });
-    for (const [dx2, id] of [[330, 810], [880, 820]]) { ball(dx2, 300, 36, id, PAT.f, 1.8); X.beginPath(); X.arc(dx2, 300, 30, 0, 6.283); X.fillStyle = P.paper; X.fill(); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; line([dx2 + Math.cos(a) * 24, 300 + Math.sin(a) * 24], [dx2 + Math.cos(a) * 29, 300 + Math.sin(a) * 29], 1, id + 1 + i, 0.05); } const na = -1.2 + fired * 0.7 + flick * 0.3 + (id === 820 ? 1 : 0); line([dx2, 300], [dx2 + Math.cos(na) * 24, 300 + Math.sin(na) * 24], 2, id + 20, 0.05); }
-    const labels = ['TAXES', 'LAWS', 'ORDER', 'REWARD', 'PUNISH', 'PARDON'];
-    labels.forEach((lab, i) => {
-      const lx = 380 + i * 105 + (i > 2 ? 30 : 0), ly = 420, pulled = i === [0, 4, 5][which] ? flick : 0, done = [0, 4, 5].slice(0, fired).includes(i) ? 1 : 0;
-      const a = -Math.PI / 2 + 0.35 - (Math.max(pulled, done * 0.85)) * 0.7;
-      shape(R(lx - 20, ly - 10, 40, 22), { lw: 1.2, id: 840 + i, h: [0, 2.4, 0.5] });
-      line([lx, ly], [lx + Math.cos(a) * 70, ly + Math.sin(a) * 70], 4, 850 + i, 0.2); ball(lx + Math.cos(a) * 74, ly + Math.sin(a) * 74, 9, 860 + i, PAT.f, 1.4);
-      shape(R(lx - 32, ly + 22, 64, 18), { lw: 1, id: 870 + i }); txt(lab, lx, ly + 31, 11, { mono: true });
-    });
-    // the proclamation unrolls from the console
-    const un = seg(lt, 3.4, 9);
-    if (un > 0) { const ph = 260 * un; shape([[130, 470], [280, 470], [284, 470 + ph], [126, 470 + ph]], { lw: 1.3, id: 880 });
-      const lines2 = ['BY ROYAL', 'PROCLAMATION:', '1. MORE', '2. BETTER', '3. OBEDIENCE', '4. PROSPERITY', '5. ETC.'];
-      X.save(); path(R(120, 470, 180, ph)); X.clip(); lines2.forEach((l, i) => txt(l, 146, 494 + i * 24, 12, { mono: true, align: 'left' })); X.restore(); }
+    shape([[40, 380], [1240, 380], [1290, 500], [-10, 500]], { lw: 2, id: 800, h: [0.03, 3.4, 0.5] });
+    shape(R(-10, 500, 1300, 300), { lw: 2, id: 801, h: [1.57, 3, 0.6] });
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 15; c++) { const kx = 330 + c * 42 + r * 10, ky = 404 + r * 28, down = typing && (c * 3 + r) % 7 === ci % 7 ? 2 : 0; shape(R(kx, ky + down, 32, 20), { lw: 1, id: 830 + r * 20 + c, sh: R(kx, ky + down + 14, 32, 6), sh2: [0, 1.6, 0.5] }); }
   });
-  plane(cam, 1.15, () => {
-    // the king from behind: robe across the shoulders, wire locks, a tall chair; one hand works the levers
-    const tx = which >= 0 ? [380, 0, 0, 0, 380 + 4 * 105 + 30, 380 + 5 * 105 + 30][[0, 4, 5][which]] : 900;
-    const hx2 = lerp(900, tx, flick), hy2 = lerp(500, 360, flick);
-    shape([[380, 760], [400, 470], [470, 420], [810, 420], [880, 470], [900, 760]], { lw: 2.2, id: 905, h: [1.95, 5, 0.5], sh: [[700, 400], [920, 400], [920, 760], [700, 760]], sh2: [1.7, 2.4, 0.8] });
-    cap(850, 470, (850 + hx2) / 2 + 20, (470 + hy2) / 2 + 50, 17, 920); cap((850 + hx2) / 2 + 20, (470 + hy2) / 2 + 50, hx2, hy2, 15, 921); hand(hx2, hy2, -1.6, 10, 922, 0);
-    cap(430, 470, 360, 500, 17, 930); hand(354, 500, 3, 10, 931);
-    X.save(); X.translate(640, 330); X.scale(2.1, 2.1);
+  plane(cam, 1.0, () => {
+    const nod = tight ? sayAt(sh, 'E', lt) * 0.06 : 0;
+    const lb = typing && ci % 2 === 0 ? 7 : 0, rb = typing && ci % 2 === 1 ? 7 : 0;
+    shape([[380, 760], [400, 480], [470, 430], [810, 430], [880, 480], [900, 760]], { lw: 2.2, id: 905, h: [1.95, 5, 0.5], sh: [[700, 400], [920, 400], [920, 760], [700, 760]], sh2: [1.7, 2.4, 0.8] });
+    cap(430, 480, 400, 450 + lb, 17, 930); hand(400, 446 + lb, -1.4, 10, 931);
+    cap(850, 480, 880, 450 + rb, 17, 920); hand(880, 446 + rb, -1.7, 10, 922);
+    X.save(); X.translate(640, 418); X.rotate(nod); X.scale(1.9, 1.9);
     for (let i = 0; i < 18; i++) { const d = i < 9 ? -1 : 1, k = i % 9; const p = []; for (let j = 0; j <= 8; j++) { const v = j / 8; p.push([d * (2 + k * 2.6) + d * v * (14 + k * 2.4) + Math.sin(v * 8 + i) * 1.4 + Math.sin(lt * 0.8 + i) * v * 1.2, -42 - Math.sin(v * 3) * 12 + v * (30 + hash(950, i) * 24)]); } coil(p, 4.2); }
     shape([[-24, -40], [24, -40], [22, 34], [-22, 34]], { lw: 2, id: 960, sh: [[6, -42], [26, -42], [26, 36], [6, 36]], sh2: [1.57, 2.4, 0.7] });
     shape(R(-29, -6, 6, 15), { lw: 1.2, id: 961 }); shape(R(23, -6, 6, 15), { lw: 1.2, id: 962 });
     X.restore();
-    shape([[520, 760], [540, 440], [740, 440], [760, 760]], { lw: 2.6, id: 900, h: [1.57, 3.6, 0.6], sh: [[640, 430], [770, 430], [770, 760], [640, 760]], sh2: [1.57, 2.2, 0.8] });
-    for (let i = 0; i < 3; i++) line([580 + i * 60, 470], [576 + i * 62, 750], 2, 901 + i, 0.4);
-    ball(540, 440, 12, 908, PAT.f, 1.6); ball(740, 440, 12, 909, PAT.f, 1.6);
+    shape([[520, 760], [540, 450], [740, 450], [760, 760]], { lw: 2.6, id: 900, h: [1.57, 3.6, 0.6], sh: [[640, 440], [770, 440], [770, 760], [640, 760]], sh2: [1.57, 2.2, 0.8] });
+    for (let i = 0; i < 3; i++) line([580 + i * 60, 480], [576 + i * 62, 750], 2, 901 + i, 0.4);
+    ball(540, 450, 12, 908, PAT.f, 1.6); ball(740, 450, 12, 909, PAT.f, 1.6);
   });
-};
+}
+SHOTS.govern = (lt, sd, sh) => consoleRoom(lt, sd, sh, []);
+SHOTS.govern2 = (lt, sd, sh) => consoleRoom(lt, sd, sh, parserLog(shotNamed('govern'), 1e9));
 
-SHOTS.inhabit = (lt, sd) => {
-  const u = seg(lt, 0, sd), cam = { z: lerp(1, 1.16, u), x: 0, y: lerp(0, -20, u) };
-  RULE = 1000; const vx = 640, vy = 230;
-  plane(cam, 6, () => { X.fillStyle = P.paper; X.fillRect(-200, -200, 1700, 1100); X.save(); X.globalAlpha = 0.55; skyLines(-200, 330, 700); X.restore();
+SHOTS.inhabit = (lt, sd, sh) => {
+  const tight = onLine(sh, lt, 0.6, 1.6);
+  const stopT = 5.4, pos = Math.min(lt, stopT) / stopT, sc = lerp(1.2, 3.4, E.out(pos)), cy0 = lerp(400, 640, E.out(pos)), cx0 = 620;
+  const headY = cy0 - 46 * sc;
+  const cam = tight ? { z: 2.3, x: cx0 - CX, y: headY - CY + 20 } : { z: lerp(1, 1.12, seg(lt, 0, sd)), x: 0, y: lerp(0, -20, seg(lt, 0, sd)) };
+  const vx = 640;
+  plane(cam, 6, () => { X.fillStyle = P.paper; X.fillRect(-300, -300, 1900, 1400); X.save(); X.globalAlpha = 0.55; skyLines(-300, 330, 700); X.restore();
     for (let i = 0; i < 7; i++) tower(470 + i * 55, 300, 18 + hash(1000, i) * 14, 80 + hash(1001, i) * 120, 1010 + i * 10, { t: lt, flag: i % 2 === 0, red: i === 3 }); });
-  plane(cam, 2.4, () => { // the arched bridge across the alley
+  plane(cam, 2.4, () => {
     shape([[380, 170], [900, 170], [900, 300], [820, 300], [820, 240], [460, 240], [460, 300], [380, 300]], { lw: 1.6, id: 1100, h: [1.57, 3, 0.5] });
     X.beginPath(); X.ellipse(640, 300, 180, 70, 0, Math.PI, 0); X.fillStyle = P.paper; X.fill(); X.lineWidth = 1.4; X.strokeStyle = P.ink; X.stroke();
     for (let i = 0; i < 12; i++) shape(R(380 + i * 44, 158, 22, 12), { lw: 0.8, id: 1110 + i });
   });
   plane(cam, 1.4, () => {
-    // street and walls in one-point perspective
-    shape([[0, 720], [1280, 720], [vx + 130, 330], [vx - 130, 330]], { lw: 1.4, id: 1200 });
-    for (let i = 0; i < 16; i++) { const k = Math.pow(i / 15, 1.8), y = 330 + k * 390, hw = 130 + k * 510; line([vx - hw, y], [vx + hw, y], 0.8, 1201 + i, 0.4); }
-    for (let i = -6; i <= 6; i++) line([vx + i * 20, 330], [vx + i * 104, 720], 0.6, 1220 + i, 0.4);
+    shape([[-100, 800], [1380, 800], [vx + 130, 330], [vx - 130, 330]], { lw: 1.4, id: 1200 });
+    for (let i = 0; i < 16; i++) { const k = Math.pow(i / 15, 1.8), y = 330 + k * 470, hw = 130 + k * 640; line([vx - hw, y], [vx + hw, y], 0.8, 1201 + i, 0.4); }
+    for (let i = -6; i <= 6; i++) line([vx + i * 20, 330], [vx + i * 128, 800], 0.6, 1220 + i, 0.4);
     for (const d of [-1, 1]) {
-      const near = vx + d * 640, far = vx + d * 130;
-      shape([[near, -60], [far, 120], [far, 330], [near, 760]], { lw: 1.8, id: 1240 + d, h: [d > 0 ? 1.4 : 1.74, 4, 0.55], sh: d > 0 ? [[far, 0], [near + 20, 0], [near + 20, 760], [far, 760]] : null, sh2: [0.3, 3, 0.6] });
+      const near = vx + d * 660, far = vx + d * 130;
+      shape([[near, -80], [far, 120], [far, 330], [near, 860]], { lw: 1.8, id: 1240 + d, h: [d > 0 ? 1.4 : 1.74, 4, 0.55], sh: d > 0 ? [[far, 0], [near + 20, 0], [near + 20, 860], [far, 860]] : null, sh2: [0.3, 3, 0.6] });
       for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const k = c / 3, x1 = lerp(near, far, k + 0.08), x2 = lerp(near, far, k + 0.16), yt = lerp(-10, 150, k + 0.08) + r * lerp(150, 46, k), yb = yt + lerp(56, 20, k); shape([[x1, yt], [x2, yt + (x2 - x1) * 0.18 * d], [x2, yb], [x1, yb]], { fill: PAT.d, lw: 0.8, id: 1260 + r * 9 + c + d * 50 }); }
     }
-    // banners
     for (const [bx, d, cube] of [[300, -1, true], [1010, 1, false]]) {
       line([bx, 130], [bx - d * 70, 130], 3, 1300 + d, 0.2);
-      shape([[bx - d * 66, 130], [bx - d * 6, 130], [bx - d * 6, 300], [bx - d * 36, 270], [bx - d * 66, 300]], { lw: 1.6, id: 1310 + d, fill: d > 0 ? P.paper : P.paper });
+      shape([[bx - d * 66, 130], [bx - d * 6, 130], [bx - d * 6, 300], [bx - d * 36, 270], [bx - d * 66, 300]], { lw: 1.6, id: 1310 + d });
       const mx = bx - d * 36; if (cube) { shape([[mx, 180], [mx + 18, 190], [mx, 200], [mx - 18, 190]], { lw: 1.2, id: 1320 }); shape([[mx - 18, 190], [mx, 200], [mx, 226], [mx - 18, 214]], { lw: 1.2, id: 1321, h: [1.57, 2.4, 0.6] }); shape([[mx, 200], [mx + 18, 190], [mx + 18, 214], [mx, 226]], { lw: 1.2, id: 1322 }); }
       else for (let r = 0; r < 6; r++) for (let c = 0; c < 2; c++) if ((r + c) % 2) X.fillStyle = P.ink, X.fillRect(mx - 22 + c * 22, 150 + r * 18, 22, 18);
     }
-    // the citizen walks forward, stops, and looks up
-    const wk = 1 - seg(lt, sd * 0.55, sd * 0.55 + 0.4), pos = Math.min(lt, sd * 0.55 + 0.2) / (sd * 0.55 + 0.2), up = seg(lt, sd * 0.62, sd * 0.62 + 0.8);
-    const sc = lerp(1.2, 3.4, E.out(pos)), y = lerp(380, 610, E.out(pos));
-    X.save(); X.globalAlpha = 0.3; X.beginPath(); X.ellipse(vx - 20, y, 22 * sc, 5 * sc, 0, 0, 6.283); X.fillStyle = P.ink; X.fill(); X.restore();
-    micro(vx - 20, y, sc, 1400, { walk: wk, ph: lt * 6, tilt: -0.25 * up, lookY: -1.5 * up, ant: -2 * up, bob: Math.abs(Math.sin(lt * 6)) * wk * 1.2 });
     for (let i = 0; i < 4; i++) micro(vx - 60 + i * 40, 372 - i * 4, 0.55, 1450 + i * 20, { walk: 1, ph: lt * 7 + i, f: i % 2 ? 1 : -1 });
   });
-  plane(cam, 0.8, () => { // foreground: the sign bracket
+  plane(cam, 1, () => {
+    // the decree falls out of the sky; he walks to it, picks it up, reads it, looks up, speaks
+    const pa = cue(sh, 'paper').at, pu = cue(sh, 'pickup').at, lu = cue(sh, 'lookup').at;
+    const px = cx0 + 34 * 3.4, py = 640;
+    const fall = seg(lt, pa, pa + 2.9, E.lin);
+    const wk = 1 - seg(lt, stopT - 0.2, stopT + 0.2), read = seg(lt, pu + 0.2, pu + 0.8) - seg(lt, lu, lu + 0.6), up = seg(lt, lu, lu + 0.9);
+    X.save(); X.globalAlpha = 0.3; X.beginPath(); X.ellipse(cx0, cy0, 22 * sc, 5 * sc, 0, 0, 6.283); X.fillStyle = P.ink; X.fill(); X.restore();
+    micro(cx0, cy0, sc, 1400, { walk: wk, ph: lt * 6, wave: lt > pu ? -0.2 : 0, tilt: 0.18 * read - 0.28 * up, lookY: 1.4 * read - 1.6 * up, ant: -2 * up, bob: Math.abs(Math.sin(lt * 6)) * wk * 1.2, mouth: sayAt(sh, 'C', lt) });
+    if (lt > pa && lt < pu) { const fx = lerp(px + 80, px, fall) + Math.sin(lt * 4.2) * 40 * (1 - fall), fy = lerp(-40, py, fall); X.save(); X.translate(fx, fy); X.rotate(Math.sin(lt * 3.1) * 0.7 * (1 - fall) + fall * 1.35); X.scale(1, fall >= 1 ? 0.35 : 1); paperDecree(); X.restore(); }
+    if (lt >= pu) { const hx = cx0 + 14 * sc, hy = cy0 - 26 * sc; X.save(); X.translate(hx, hy - read * 8); X.scale(0.9, 0.9); paperDecree(); X.restore(); }
+  });
+  plane(cam, 0.8, () => {
     line([-10, 90], [190, 90], 5, 1500, 0.2); line([20, 90], [140, 40], 3, 1501, 0.3);
     shape([[120, 98], [200, 98], [200, 190], [120, 190]], { lw: 2, id: 1502, h: [0.7, 3.4, 0.6] }); line([140, 90], [140, 98], 2, 1503); line([180, 90], [180, 98], 2, 1504);
   });
-  // the glass ceiling appears, and the shadow of the king
-  const g = seg(lt, sd - 3, sd - 0.6);
-  if (g > 0) { X.save(); X.globalAlpha = g * 0.7; for (const [gx, gw] of [[200, 24], [260, 8], [880, 16]]) { X.beginPath(); X.moveTo(gx, PY0); X.lineTo(gx + gw, PY0); X.lineTo(gx + gw - 200, 330); X.lineTo(gx - 200, 330); X.fillStyle = P.paper; X.fill(); } X.restore(); }
+  const g = seg(lt, sd - 2.6, sd - 0.4);
+  if (g > 0 && !tight) { X.save(); X.globalAlpha = g * 0.7; for (const [gx, gw] of [[200, 24], [260, 8], [880, 16]]) { X.beginPath(); X.moveTo(gx, PY0); X.lineTo(gx + gw, PY0); X.lineTo(gx + gw - 200, 330); X.lineTo(gx - 200, 330); X.fillStyle = P.paper; X.fill(); } X.restore(); }
 };
+function paperDecree() { shape(R(-22, -28, 44, 56), { lw: 1.4, id: 1600 }); for (let i = 0; i < 6; i++) line([-15, -18 + i * 7], [15 - (i % 3) * 5, -18 + i * 7], 0.9, 1601 + i, 0.2); X.beginPath(); X.arc(10, 20, 5, 0, 6.283); X.fillStyle = P.red; X.fill(); }
 
-SHOTS.crowd = (lt, sd) => {
-  const u = seg(lt, 0, sd), cam = { z: lerp(1.05, 1.0, u), x: 0, y: 0 };
-  RULE = 1000;
-  // the sun crosses again and again: afternoons are centuries in here
-  const days = lt * 1.1, sunA = (days % 1) * Math.PI;
-  plane(cam, 8, () => { X.fillStyle = P.paper; X.fillRect(-200, -200, 1700, 1100); X.save(); X.globalAlpha = 0.5; skyLines(-200, 300, 600); X.restore();
-    const sxp = 640 - Math.cos(sunA) * 560, syp = 300 - Math.sin(sunA) * 220; X.beginPath(); X.arc(sxp, syp, 26, 0, 6.283); X.fillStyle = P.paper; X.fill(); X.lineWidth = 1.4; X.strokeStyle = P.ink; X.stroke(); star(sxp, syp, 44, 1600 + (days | 0), P.ink, 12);
-    txt('YEAR ' + (Math.floor(days * 37) + 112), 1180, 60, 12, { mono: true, col: '#5a5246' });
-  });
+SHOTS.crowd = (lt, sd, sh) => {
+  const lap = cue(sh, 'lapse'), hc = cue(sh, 'hand');
+  const a = lap.at, b = lap.to, el = clamp(lt - a, 0, b - a), D = b - a;
+  const elapsed = Math.min(lt, a) + el + 7 * el * el * el / (3 * D * D) + Math.max(0, lt - b); // integral of the tape speed
+  const days = elapsed * 0.22, sunA = (days % 1) * Math.PI;
+  const cam = { z: lerp(1.04, 1.0, seg(lt, 0, sd)), x: 0, y: -20 };
+  const hd = seg(lt, hc.at, hc.to, E.io), hx = 760, hy = lerp(-460, 160, hd), still = lt > hc.to;
+  plane(cam, 8, () => { X.fillStyle = P.paper; X.fillRect(-300, -300, 1900, 1400); X.save(); X.globalAlpha = 0.5; skyLines(-300, 300, 600); X.restore();
+    const sxp = 640 - Math.cos(sunA) * 560, syp = 300 - Math.sin(sunA) * 220; X.beginPath(); X.arc(sxp, syp, 26, 0, 6.283); X.fillStyle = P.paper; X.fill(); X.lineWidth = 1.4; X.strokeStyle = P.ink; X.stroke(); star(sxp, syp, 44, 1600 + (days | 0), P.ink, 12); });
   plane(cam, 2.5, () => {
-    for (let i = 0; i < 6; i++) tower(110 + i * 210, 330, 70, 160 + hash(1700, i) * 90, 1710 + i * 10, { t: lt, crenel: i % 2 === 1, red: i === 2 });
+    for (let i = 0; i < 6; i++) tower(110 + i * 210, 330, 70, 160 + hash(1700, i) * 90, 1710 + i * 10, { t: elapsed, crenel: i % 2 === 1, red: i === 2 });
     shape(R(40, 250, 1200, 90), { lw: 1.6, id: 1780, h: [1.57, 3.2, 0.5] });
     for (let i = 0; i < 9; i++) { X.beginPath(); X.ellipse(110 + i * 132, 340, 40, 60, 0, Math.PI, 0); X.fillStyle = P.ink; X.fill(); }
-    for (let i = 0; i < 4; i++) { const bx = 280 + i * 240; shape([[bx, 180], [bx + 46, 180], [bx + 46, 290], [bx + 23, 270], [bx, 290]], { lw: 1.3, id: 1790 + i }); shape(R(bx + 12, 208, 22, 14), { fill: P.ink, lw: 0.6, id: 1795 + i }); }
+    for (let i = 0; i < 4; i++) { const bx = 280 + i * 240; shape([[bx, 180], [bx + 46, 180], [bx + 46, 290], [bx + 23, 270], [bx, 290]], { lw: 1.3, id: 1790 + i + ((days | 0) % 3) * 10 }); shape(R(bx + 12, 208, 22, 14), { fill: P.ink, lw: 0.6, id: 1795 + i }); }
   });
-  plane(cam, 1.6, () => { // the platform
+  plane(cam, 1.6, () => {
     shape([[470, 300], [810, 300], [840, 430], [440, 430]], { lw: 2, id: 1800, h: [1.57, 3.4, 0.6] });
-    for (let i = 0; i < 4; i++) { const bx = 480 + i * 84; shape([[bx, 320], [bx + 50, 320], [bx + 50, 420], [bx + 25, 400], [bx, 420]], { lw: 1.3, id: 1810 + i, fill: P.ink }); shape([[bx + 13, 350], [bx + 37, 350], [bx + 37, 366], [bx + 13, 366]], { lw: 0.8, id: 1820 + i, col: P.paper }); }
+    for (let i = 0; i < 4; i++) { const bx = 480 + i * 84; shape([[bx, 320], [bx + 50, 320], [bx + 50, 420], [bx + 25, 400], [bx, 420]], { lw: 1.3, id: 1810 + i, fill: P.ink }); }
     tinyMicro(640, 300, 0.9, 1830);
   });
-  // the hand of the king comes down through the glass
-  const hd = seg(lt, sd * 0.45, sd - 0.8, E.io), hx = 760, hy = lerp(-420, 120, hd);
   plane(cam, 1.15, () => {
-    for (let r = 0; r < 9; r++) { const k = r / 8, y = lerp(440, 640, k), s = lerp(0.55, 1.35, k), n = Math.round(lerp(38, 16, k));
-      for (let i = 0; i < n; i++) { let x = lerp(-20, 1300, (i + (r % 2) * 0.5) / n) + J(r * 100 + i, 0) * 0; const dx = x - hx, push = hd * 90 * Math.exp(-(dx * dx) / 40000) * Math.sign(dx || 1); x += push; tinyMicro(x, y + hash(r, i) * 6, s, 1900 + r * 60 + i); } }
-    if (hd > 0) { X.save(); X.globalAlpha = 0.28 * hd; X.beginPath(); X.ellipse(hx, 560, 160 * hd + 40, 34 * hd + 8, 0, 0, 6.283); X.fillStyle = P.ink; X.fill(); X.restore(); }
+    for (let r = 0; r < 11; r++) { const k = r / 10, y = lerp(440, 720, k), s = lerp(0.55, 1.55, k), n = Math.round(lerp(38, 14, k));
+      for (let i = 0; i < n; i++) { let x = lerp(-20, 1300, (i + (r % 2) * 0.5) / n); const sh2 = still ? 0 : Math.sin(elapsed * 3 + i * 1.7 + r) * 4 * s; const dx = x - hx; x += hd * 90 * Math.exp(-(dx * dx) / 40000) * Math.sign(dx || 1) + sh2; tinyMicro(x, y + hash(r, i) * 6, s, 1900 + r * 60 + i); } }
+    if (hd > 0) { X.save(); X.globalAlpha = 0.3 * hd; X.beginPath(); X.ellipse(hx, 600, 170 * hd + 40, 36 * hd + 8, 0, 0, 6.283); X.fillStyle = P.ink; X.fill(); X.restore(); }
   });
   plane(cam, 0.7, () => {
     if (hd <= 0) return; X.save(); X.translate(hx, hy); X.scale(2.4, 2.4);
@@ -530,65 +492,66 @@ SHOTS.crowd = (lt, sd) => {
   X.save(); X.globalAlpha = 0.6; for (const [gx, gw] of [[160, 20], [215, 8], [940, 14]]) { X.beginPath(); X.moveTo(gx, PY0); X.lineTo(gx + gw, PY0); X.lineTo(gx + gw - 140, 250); X.lineTo(gx - 140, 250); X.fillStyle = P.paper; X.fill(); } X.restore();
 };
 
-SHOTS.question = (lt, sd, b) => {
-  const u = seg(lt, 0, sd), cam = { z: lerp(1, 1.08, u), x: lerp(0, -30, u), y: 0 };
-  const tTalk = b.voice === 'T' ? 1 : 0, talk = (T.now > b.vt0 && T.now < b.vt1) ? 1 : 0;
+SHOTS.question = (lt, sd, sh) => {
+  const tight = onLine(sh, lt, 0.6, 1.4), ln = sh.lines.find((l) => l.line), after = lt > ln.t1 + 1.4;
+  const cam = tight ? { z: 2.9, x: 330 - CX + 8, y: 324 - CY + 14 } : { z: lerp(1, 1.06, seg(lt, 0, sd)), x: lerp(0, -30, seg(lt, 0, sd)), y: -30 };
+  const kSpeak = talking(sh, 'K', lt), tSpeak = talking(sh, 'T', lt);
   plane(cam, 3, () => {
-    X.fillStyle = P.paper; X.fillRect(-200, -200, 1700, 1100);
-    // bookshelves
+    X.fillStyle = P.paper; X.fillRect(-300, -300, 1900, 1400);
     shape(R(-60, 0, 440, 560), { lw: 2, id: 2200, h: [1.57, 3, 0.5] });
     for (let r = 0; r < 5; r++) { shape(R(-50, 30 + r * 104, 420, 92), { lw: 1.2, id: 2210 + r }); let x = -44; for (let i = 0; x < 360; i++) { const bw = 12 + hash(2220 + r, i) * 18, bh = 60 + hash(2230 + r, i) * 28; shape(R(x, 30 + r * 104 + 92 - bh, bw, bh), { lw: 0.9, id: 2240 + r * 40 + i, h: [Math.PI / 2, i % 3 ? 2.4 : 1.6, 0.6] }); x += bw + 2; } }
-    // window with moon
     shape(R(900, 40, 260, 330), { lw: 2.2, id: 2400 }); X.save(); path(R(900, 40, 260, 330)); X.clip(); X.globalAlpha = 0.7; skyLines(40, 370, 600); X.restore();
     line([1030, 40], [1030, 370], 3, 2401); line([900, 200], [1160, 200], 3, 2402); ball(1090, 110, 28, 2403, PAT.f, 1.4);
-    shape(R(-200, 560, 1700, 300), { lw: 1.4, id: 2410, h: [0.02, 4, 0.45] });
+    shape(R(-300, 560, 1900, 500), { lw: 1.4, id: 2410, h: [0.02, 4, 0.45] });
   });
   plane(cam, 1.6, () => {
-    // side table with a model city
-    shape(R(700, 420, 200, 16), { lw: 1.6, id: 2500, h: [0, 2.4, 0.6] }); line([720, 436], [720, 600], 3, 2501); line([880, 436], [880, 600], 3, 2502);
+    shape(R(700, 420, 200, 16), { lw: 1.6, id: 2500, h: [0, 2.4, 0.6] }); line([720, 436], [720, 640], 3, 2501); line([880, 436], [880, 640], 3, 2502);
     X.save(); X.translate(800, 420); X.scale(0.4, 0.4); castle(0, 0, 1, 2510, { t: lt }); X.restore();
-    // armchair
+  });
+  plane(cam, 1, () => {
     shape([[180, 620], [470, 620], [470, 380], [430, 300], [220, 300], [180, 380]], { lw: 2, id: 2600, h: [1.57, 3.4, 0.5] });
-    // Klapaucius seated: hand at chin while listening, the other hand opens when he speaks
-    const kOpen = (1 - tTalk) * talk;
-    constructor_(330, 610, 1.0, 2700, { seated: true, robe: true, la: [0.4, -1.83], ra: [0.1 - kOpen * 0.7, -0.4 - kOpen * 0.5], open: kOpen, look: tTalk ? 1 : 0.3, tilt: tTalk ? 0.05 : -0.03, sway: Math.sin(lt * 0.7) * 0.4 });
-    // Trurl standing, arguing
-    const tOpen = tTalk * talk;
-    constructor_(1040, 610, 1.0, 2800, { f: -1, la: [1.3, 1.6], ra: [1.75 - tOpen * 1.6, 1.6 - tOpen * 1.6], open: tOpen, look: 0.6, tilt: -0.04 * tOpen });
+    // Klapaucius: hand at his chin; it opens only when he asks; on the line he does not move
+    const kOpen = kSpeak && !onLine(sh, lt, 0.6, 1.4) ? seg(lt, 0, 1) * 0.9 : 0;
+    constructor_(330, 610, 1.0, 2700, { seated: true, robe: true, la: [0.4, -1.83], ra: [1.25 - kOpen * 1.4, 0.1 - kOpen * 0.7], open: kOpen, look: tight ? 0 : (tSpeak ? 1 : 0.4), tilt: tSpeak ? 0.05 : -0.02, sway: Math.sin(lt * 0.7) * 0.4, mouth: sayAt(sh, 'K', lt) });
+    const tOpen = tSpeak ? 0.6 + 0.4 * sayAt(sh, 'T', lt) : 0;
+    constructor_(1040, 610, 1.0, 2800, { f: -1, la: [1.3, 1.6], ra: [1.75 - tOpen * 1.6, 1.6 - tOpen * 1.6], open: tOpen, look: after ? 0 : 0.6, lookY: after ? 1.4 : 0, tilt: after ? 0.12 : -0.04 * tOpen, mouth: sayAt(sh, 'T', lt) });
   });
 };
 
-SHOTS.flight = (lt, sd, b) => {
-  const cam = { z: 1, x: 0, y: 0 };
+SHOTS.flight = (lt, sd, sh) => {
+  const tight = onLine(sh, lt, 0.6, 99);
+  const bob = Math.sin(lt * 1.3) * 8, sx = 640, sy = 360 + bob;
+  const cam = tight ? { z: 6.2, x: 80, y: -4 + bob } : { z: 1, x: 0, y: 0 };
   space(cam, 3000, lt * 140);
-  plane(cam, 5, () => planet(260 - lt * 6, 520, 120, 3001, false));
-  const bob = Math.sin(lt * 1.3) * 8, sx = 640, sy = 330 + bob, speaking = (T.now > b.vt0 && T.now < b.vt1) ? b.voice : '';
+  plane(cam, 5, () => planet(260 - lt * 6, 560, 120, 3001, false));
   plane(cam, 1, () => {
-    // flame ribbon
     for (let i = 0; i < 9; i++) { const k = i / 8, fx = sx - 230 - k * 300, w = 34 * (1 - k) + 4, wob = Math.sin(lt * 14 + i) * 6 * k; X.beginPath(); X.ellipse(fx, sy + wob, 40, w, 0, 0, 6.283); X.fillStyle = i % 2 ? P.paper : 'rgba(235,227,207,.6)'; X.fill(); }
     shape([[sx - 240, sy - 40], [sx + 120, sy - 60], [sx + 230, sy - 20], [sx + 250, sy], [sx + 230, sy + 20], [sx + 120, sy + 60], [sx - 240, sy + 40]], { lw: 2.4, id: 3010, h: [0.04, 6, 0.5], sh: [[sx - 260, sy + 10], [sx + 260, sy + 10], [sx + 260, sy + 70], [sx - 260, sy + 70]], sh2: [0.04, 2.2, 0.8] });
     shape([[sx - 200, sy - 42], [sx - 260, sy - 110], [sx - 140, sy - 50]], { lw: 1.8, id: 3011, h: [1.2, 3, 0.6] }); shape([[sx - 200, sy + 42], [sx - 260, sy + 110], [sx - 140, sy + 50]], { lw: 1.8, id: 3012, h: [1.2, 2, 0.7] });
     for (let i = 0; i < 9; i++) ball(sx - 180 + i * 40, sy + 34, 3, 3020 + i, PAT.f, 0.8);
+    const ln = sh.lines.find((l) => l.line), quiet = lt > ln.t1;
     for (const [px, who, id] of [[sx - 40, 'K', 3100], [sx + 80, 'T', 3200]]) {
       ball(px, sy - 8, 36, id, PAT.f, 2.2); X.beginPath(); X.arc(px, sy - 8, 29, 0, 6.283); X.fillStyle = P.paper; X.fill();
       X.save(); X.beginPath(); X.arc(px, sy - 8, 29, 0, 6.283); X.clip();
-      boxHead(px, sy + 8 - (speaking === who ? Math.abs(Math.sin(lt * 9)) * 2 : 0), 0.42, id + 10, { f: who === 'K' ? 1 : -1, look: 1, tilt: speaking === who ? Math.sin(lt * 3) * 0.08 : 0 });
+      const sp = sayAt(sh, who, lt);
+      boxHead(px, sy + 8 - sp * 1.5, 0.42, id + 10, { f: who === 'K' ? 1 : -1, look: who === 'T' && quiet ? -1 : 1, lookY: who === 'T' && quiet ? 1 : 0, tilt: who === 'T' && quiet ? 0.1 : 0, mouth: sp });
       X.restore();
     }
   });
 };
 
-SHOTS.escape = (lt, sd) => {
-  const u = seg(lt, 0.6, sd - 0.4, E.io), cam = { z: lerp(1.0, 1.12, u), x: lerp(-40, 60, u), y: lerp(40, -30, u) };
-  RULE = Math.pow(1000, 1 - u);
+SHOTS.escape = (lt, sd, sh) => {
+  const ca = cue(sh, 'crack').at, la = cue(sh, 'launch').at;
+  const u = seg(lt, la, sd - 0.3, E.io), cam = { z: lerp(1.0, 1.12, u), x: lerp(-40, 60, u), y: lerp(40, -30, u) };
   space(cam, 4000, lt * 8);
-  plane(cam, 4, () => { planet(1060, 470, 70, 4001, true); planet(300, 90, 16, 4002); });
-  const cx = lerp(300, 880, u), cy = lerp(520, 170, u), s = lerp(0.35, 1.25, u);
-  plane(cam, 1.4, () => { // smoke from the climb
-    for (let i = 0; i < 26; i++) { const k = i / 25, tt = clamp(u - k * 0.5); if (tt <= 0) continue; const px = lerp(300, 880, tt) - 60 * s, py = lerp(520, 170, tt) + 40 * s, r = 10 + k * 30 + (u - tt) * 50;
+  plane(cam, 4, () => { planet(1060, 500, 70, 4001, true); planet(300, 90, 16, 4002); });
+  const cx = lerp(300, 880, u), cy = lerp(560, 190, u), s = lerp(0.35, 1.25, u);
+  plane(cam, 1.4, () => {
+    for (let i = 0; i < 26; i++) { const k = i / 25, tt = clamp(u - k * 0.5); if (tt <= 0) continue; const px = lerp(300, 880, tt) - 60 * s, py = lerp(560, 190, tt) + 40 * s, r = 10 + k * 30 + (u - tt) * 50;
       X.beginPath(); X.arc(px + J(4100 + i, 0) * 4, py, r, 0, 6.283); X.fillStyle = 'rgba(235,227,207,.55)'; X.fill(); X.lineWidth = 0.8; X.strokeStyle = 'rgba(28,24,20,.6)'; X.stroke(); }
   });
-  plane(cam, 1.15, () => { // the craft: boiler, funnel sail, crew waving
+  plane(cam, 1.15, () => {
+    if (lt < la - 0.3) return;
     X.save(); X.translate(cx, cy); X.rotate(-0.55); X.scale(s, s);
     shape(R(-130, -42, 220, 84), { lw: 2.2, id: 4200, h: [1.57, 4, 0.5], sh: R(-130, 10, 220, 32), sh2: [0, 2.2, 0.8] });
     for (let i = 0; i < 6; i++) line([-110 + i * 36, -42], [-110 + i * 36, 42], 1.2, 4201 + i, 0.2);
@@ -599,77 +562,69 @@ SHOTS.escape = (lt, sd) => {
     for (let i = 0; i < 4; i++) micro(-90 + i * 50, -42, 0.85, 4300 + i * 20, { wave: i % 2 ? 0.5 + 0.5 * Math.sin(lt * 7 + i) : 0, look: 1, f: 1 });
     X.restore();
   });
-  plane(cam, 0.85, () => { // the broken box in the corner, lid thrown back, citizens on the rim
-    const bx = -40, by = 500;
-    shape([[bx, by], [bx + 380, by], [bx + 420, by + 40], [bx + 420, 800], [bx, 800]], { lw: 2.6, id: 4400, h: [1.57, 4, 0.5], sh: [[bx + 380, by], [bx + 430, by], [bx + 430, 800], [bx + 380, 800]], sh2: [1.57, 2, 0.8] });
-    shape([[bx + 380, by], [bx + 420, by + 40], [bx + 420, 800], [bx + 380, 800]], { fill: null, lw: 2, id: 4401 });
-    const lid = seg(lt, 0, 1.2); shape([[bx, by], [bx + 380, by], [bx + 380 - lid * 120, by - 260], [bx - lid * 80, by - 230]], { fill: 'rgba(235,227,207,.12)', lw: 2.4, id: 4402, col: P.paper });
-    for (let i = 0; i < 3; i++) micro(bx + 120 + i * 80, by, 1.1, 4500 + i * 20, { wave: 0.6 + 0.4 * Math.sin(lt * 5 + i * 2), look: 1, lookY: -1, ant: 2 });
+  plane(cam, 0.85, () => {
+    const bx = -40, by = 540;
+    shape([[bx, by], [bx + 380, by], [bx + 420, by + 40], [bx + 420, 900], [bx, 900]], { lw: 2.6, id: 4400, h: [1.57, 4, 0.5], sh: [[bx + 380, by], [bx + 430, by], [bx + 430, 900], [bx + 380, 900]], sh2: [1.57, 2, 0.8] });
+    const lid = seg(lt, ca, ca + 0.5, E.out), lp = [[bx, by], [bx + 380, by], [bx + 380 - lid * 120, by - 260], [bx - lid * 80, by - 230]];
+    shape(lp, { fill: 'rgba(235,227,207,.1)', lw: 2.4, id: 4402, col: P.paper });
+    if (lt > ca) { const ox = bx + 230 - lid * 60, oy = by - 120; for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283 + hash(4403, i); const L1 = 40 + hash(4404, i) * 90; ink([[ox, oy], [ox + Math.cos(a) * L1 * 0.5 + J(4405, i) * 8, oy + Math.sin(a) * L1 * 0.5], [ox + Math.cos(a) * L1, oy + Math.sin(a) * L1]], 1.2, 4406 + i, 0.6, P.paper); }
+      const fly = lt - ca; for (let i = 0; i < 16; i++) { const a = hash(4420, i) * 6.283, sp = 80 + hash(4421, i) * 220, fx = ox + Math.cos(a) * sp * fly, fy = oy + Math.sin(a) * sp * fly + 120 * fly * fly; if (fly < 2.5) { X.save(); X.translate(fx, fy); X.rotate(fly * 6 + i); shape([[-6, -2], [5, -5], [3, 4]], { fill: 'rgba(235,227,207,.7)', lw: 0.8, id: 4430 + i, col: P.paper }); X.restore(); } } }
+    for (let i = 0; i < 3; i++) micro(bx + 120 + i * 80, by, 1.1, 4500 + i * 20, { wave: lt > la ? 0.6 + 0.4 * Math.sin(lt * 5 + i * 2) : 0, look: 1, lookY: -1, ant: 2, mouth: i === 1 ? sayAt(sh, 'C', lt) : 0 });
   });
 };
 
-SHOTS.orbit = (lt, sd) => {
-  const u = seg(lt, 0, sd), cam = { z: lerp(1.18, 1, E.out(u)), x: lerp(-60, 0, u), y: 0 };
-  RULE = 1;
+SHOTS.orbit = (lt, sd, sh) => {
+  const bu = cue(sh, 'bump').at, mo = cue(sh, 'moon').at;
+  const shake = lt > bu ? Math.sin(lt * 70) * 7 * Math.exp(-(lt - bu) * 4) : 0;
+  const u = seg(lt, 0, sd), cam = { z: lerp(1.18, 1, E.out(u)), x: lerp(-60, 0, u) + shake, y: shake * 0.6 };
   space(cam, 5000, lt * 4);
-  // the moon rises from behind the planet
-  const mu = seg(lt, 2.2, sd - 1.6), ma = lerp(2.6, 3.9, mu), mx = 540 + Math.cos(ma) * -560, my = 380 + Math.sin(ma) * 300;
+  const mu = seg(lt, mo, sd - 1), ma = lerp(2.6, 3.9, mu), mx = 540 + Math.cos(ma) * -560, my = 420 + Math.sin(ma) * 300;
   plane(cam, 3, () => {
     if (mu <= 0) return;
     ball(mx, my, 92, 5100, PAT.f, 2); for (let i = 0; i < 9; i++) { const a = hash(5101, i) * 6.283, r = hash(5102, i) * 78; X.beginPath(); X.ellipse(mx + Math.cos(a) * r, my + Math.sin(a) * r, 6 + hash(5103, i) * 8, 4 + hash(5104, i) * 5, 0, 0, 6.283); X.lineWidth = 1; X.strokeStyle = P.ink; X.stroke(); }
-    X.save(); X.globalAlpha = 0.9; boxHead(mx, my + 8, 1.05, 5110, { stern: true, glasses: true, closed: false, look: -1, sway: Math.sin(lt) * 0.5 }); X.restore();
+    boxHead(mx, my + 8, 1.05, 5110, { stern: true, look: -1, sway: Math.sin(lt) * 0.5 });
   });
   plane(cam, 1.6, () => {
-    const px = 540, py = 400, r = 190;
+    const px = 540, py = 440, r = 190;
     ball(px, py, r, 5200, PAT.f, 2.4);
     X.save(); X.beginPath(); X.arc(px, py, r - 1, 0, 6.283); X.clip();
     X.save(); X.beginPath(); X.arc(px + 150, py + 60, r * 1.05, 0, 6.283); X.clip(); hatch(0.7, 2.4, 0.9, [px - r, py - r, px + r, py + r]); X.restore();
     for (let i = 0; i < 9; i++) { const a = hash(5210, i) * 6.283, rr = Math.sqrt(hash(5211, i)) * r * 0.8; X.beginPath(); X.ellipse(px + Math.cos(a) * rr, py + Math.sin(a) * rr, 8 + hash(5212, i) * 14, 5 + hash(5213, i) * 7, 0, 0, 6.283); X.lineWidth = 1; X.strokeStyle = P.ink; X.stroke(); }
-    // night-side lights
     for (let i = 0; i < 60; i++) { const a = hash(5230, i) * 6.283, rr = Math.sqrt(hash(5231, i)) * r; const x = px + Math.cos(a) * rr, y = py + Math.sin(a) * rr; if ((x - px - 150) ** 2 + (y - py - 60) ** 2 < (r * 1.05) ** 2) { X.fillStyle = P.paper; X.globalAlpha = 0.5 + 0.5 * hash(i, BOIL >> 1); X.fillRect(x, y, 2.2, 2.2); X.globalAlpha = 1; } }
     X.restore();
-    // cities standing on the rim
     for (let i = 0; i < 22; i++) { const a = -Math.PI * (0.08 + 0.84 * i / 21) + hash(5250, i) * 0.04; X.save(); X.translate(px + Math.cos(a) * r, py + Math.sin(a) * r); X.rotate(a + Math.PI / 2); tower(0, 2, 8 + hash(5251, i) * 8, 14 + hash(5252, i) * 30, 5260 + i * 10, { t: lt, roof: 1.2, flag: i % 3 === 0 }); X.restore(); }
-    // the shard of glass they kept, now a temple
-    X.save(); X.translate(px - 40, py - r + 6); shape([[-14, 0], [-4, -40], [6, -46], [14, 0]], { fill: 'rgba(235,227,207,.8)', lw: 1.4, id: 5400 }); X.restore();
+    X.save(); X.translate(px - 40, py - r + 6); shape([[-14, 0], [-4, -40], [6, -46], [14, 0]], { fill: 'rgba(235,227,207,.8)', lw: 1.4, id: 5400 });
+    const kl = sh.lines.find((l) => l.who === 'K'); const gl = seg(lt, kl.t0 + 0.6, kl.t0 + 1.2) - seg(lt, kl.t1, kl.t1 + 0.8); if (gl > 0) { X.globalAlpha = gl; star(0, -30, 26, 5401 + (BOIL % 3), P.paper, 10); } X.restore();
   });
-  plane(cam, 1.1, () => { // the boot-shaped ship grazes past
-    const bu = seg(lt, 1, sd - 2.5, E.lin), bx = lerp(1300, -120, bu), by = lerp(140, 260, bu);
+  plane(cam, 1.1, () => {
+    const b2 = seg(lt, bu - 2.6, bu + 2.4, E.lin), bx = lerp(1350, -150, b2), by = lerp(150, 280, b2);
     X.save(); X.translate(bx, by); X.rotate(0.15); X.scale(-1, 1); boot(0, 0, 1, 2.2, 5500); X.restore();
     for (let i = 0; i < 8; i++) { X.beginPath(); X.ellipse(bx + 50 + i * 14, by - 16 + Math.sin(lt * 20 + i) * 2, 8, 4 * (1 - i / 8) + 1, 0, 0, 6.283); X.fillStyle = P.paper; X.fill(); }
   });
 };
 
-SHOTS.end = (lt, sd) => {
+SHOTS.end = (lt) => {
   X.fillStyle = P.paper; X.fillRect(0, 0, W, H);
-  const a = seg(lt, 0.3, 1.5);
+  const a = seg(lt, 0.4, 1.6);
   X.save(); X.globalAlpha = a;
-  txt('“Our perfection is our curse.”', CX, 250, 50, { italic: true });
-  txt('THE SEVENTH SALLY', CX, 350, 26, {});
-  txt('after Stanisław Lem, The Cyberiad', CX, 392, 20, { italic: true });
-  txt('LAB 7 · CLASSES', CX, 470, 14, { mono: true, col: '#5a5246' });
+  txt('THE SEVENTH SALLY', CX, 300, 40, {});
+  txt('after Stanisław Lem, The Cyberiad', CX, 356, 24, { italic: true });
   X.restore();
-  for (let i = 0; i < 7; i++) micro(470 + i * 56, 560, 0.9, 6000 + i * 20, { walk: 1, ph: lt * 7 + i, f: 1 });
+  const ph = 7 * (1 - Math.exp(-0.42 * lt)) / 0.42, wk = Math.exp(-0.42 * lt);
+  for (let i = 0; i < 7; i++) micro(470 + i * 56, 520, 0.9, 6000 + i * 20, { walk: wk, ph: ph + i, f: 1 });
 };
 
 /* ---------- frame loop ---------- */
-function runOf(i) { let a = i; while (a > 0 && T.beats[a - 1].shot === T.beats[i].shot) a--; let z = i; while (z < T.beats.length - 1 && T.beats[z + 1].shot === T.beats[i].shot) z++; return [a, z]; }
-function scaleAt(b, k) { if (!b.scale) return 1; return Math.pow(b.scale[0], 1 - k) * Math.pow(b.scale[1], k); }
 window.__render = async (f) => {
-  const t = f / 24; T.now = t; BOIL = Math.floor(f / 2);
-  let i = 0; for (let j = 0; j < T.beats.length; j++) if (t >= T.beats[j].t0) i = j;
-  const b = T.beats[i], [a, z] = runOf(i), s0 = T.beats[a].t0, sd = T.beats[z].t0 + T.beats[z].d - s0, lt = t - s0;
+  const t = f / 24; BOIL = Math.floor(f / 2);
+  let i = 0; for (let j = 0; j < T.shots.length; j++) if (t >= T.shots[j].t0) i = j;
+  const sh = T.shots[i], lt = t - sh.t0, sd = sh.d;
   X.setTransform(1, 0, 0, 1, 0, 0); X.fillStyle = P.paper; X.fillRect(0, 0, W, H);
-  RULE = scaleAt(b, seg(lt, 0, sd));
-  if (b.shot === 'title' || b.shot === 'end') { SHOTS[b.shot](lt, sd, b); border(); return; }
   X.save(); path(R(PX0, PY0, PX1 - PX0, PY1 - PY0)); X.clip();
-  SHOTS[b.shot](lt, sd, b);
+  SHOTS[sh.shot](lt, sd, sh);
   X.restore();
-  const veil = 1 - seg(lt, 0, 0.55), out = seg(lt, sd - 0.35, sd);
-  if (veil > 0 || out > 0) { X.fillStyle = P.paper; X.globalAlpha = Math.max(veil, out); X.fillRect(PX0, PY0, PX1 - PX0, PY1 - PY0); X.globalAlpha = 1; }
-  ink([[PX0, PY1], [PX1, PY1]], 2, 9200, 0.4);
-  const ca = seg(lt, 0.3, 1.0);
-  band(b, ca); cardTab(b.card, ca); ruler(RULE, ca);
+  const fade = sh.shot === 'title' ? Math.max(1 - seg(lt, 0, 0.8), seg(lt, sd - 0.8, sd)) : sh.shot === 'end' ? 0 : 0;
+  if (fade > 0) { X.fillStyle = P.paper; X.globalAlpha = fade; X.fillRect(PX0, PY0, PX1 - PX0, PY1 - PY0); X.globalAlpha = 1; }
   border();
 };
 (async () => {
