@@ -230,7 +230,7 @@ open(os.path.join(HERE, 'index.html'), 'w').write(page)
 # ---------------- the Cyberiad page: a cinema, every film in book order ----------------
 # Works from a plain folder or drive: no fetch, no server, fonts and films by relative path.
 byd = {f['dir']: f for f in FILMS}
-BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None)]
+BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None), ('The Theory of Possibilities', 'theory-of-possibilities', None)]
 reel, part = [], ''
 for title, d, nxt in BOOK_PLUS:
     if title.startswith('How the World'): part = 'Three Early Stories'
@@ -238,10 +238,13 @@ for title, d, nxt in BOOK_PLUS:
     if title.startswith('Tale of'): part = 'Tales'
     if title.startswith('Non Serviam'): part = 'From A Perfect Vacuum'; title = 'Non Serviam'
     if title.startswith('A History of Bitic'): part = 'From Imaginary Magnitude'
+    if d == 'theory-of-possibilities': part = 'Afterword'
     if d == 'bitic-literature': title = 'A History of Bitic Literature, after the premise'
     f = byd.get(d)
     if f and os.path.exists(os.path.join(ROOT, d, d + '.mp4')):
-        reel.append(dict(d=d, t=title, s='' if f['sub'].lower().startswith('or,') else f['sub'], p=part, n=round(f['sec'])))
+        reel.append(dict(d=d, t=title, s='' if f['sub'].lower().startswith('or,') else f['sub'], p=part, n=round(f['sec'], 2),
+                         sp=os.path.exists(os.path.join(ROOT, d, 'thumbs', 'sprite.jpg'))))
+INTRO = 'cyberiad-titles/cyberiad-titles.mp4' if os.path.exists(os.path.join(ROOT, 'cyberiad-titles', 'cyberiad-titles.mp4')) else ''
 tot = sum(r['n'] for r in reel)
 hm = lambda s: (f"{int(s // 3600)} hr {int(s % 3600 // 60)} min" if s >= 3600 else f"{int(s // 60)} min")
 groups = []
@@ -249,6 +252,9 @@ for i, r in enumerate(reel):
     if not groups or groups[-1][0] != r['p']: groups.append((r['p'], []))
     groups[-1][1].append(f'<li><button data-i="{i}"><span class="no">{i+1:02d}</span><span class="tt">{E(r["t"])}</span><span class="du">{mmss(r["n"])}</span></button></li>')
 rows = ''.join(f'<li class="grp"><p class="pt">{E(p)}</p><ul>{"".join(items)}</ul></li>' for p, items in groups)
+nb = sum(r['p'] == 'From Imaginary Magnitude' for r in reel)
+extra = ('<i>Non Serviam</i>, and ' + ['', 'one film', 'two films', 'three films', 'four films', 'five films', 'six films'][nb] + ' from <i>A History of Bitic Literature</i>') if nb else '<i>Non Serviam</i>'
+after = any(r['p'] == 'Afterword' for r in reel)
 cy = """<!doctype html>
 <html lang="en">
 <head>
@@ -283,16 +289,35 @@ video{width:100%;height:100%;object-fit:contain;background:var(--dark);display:b
 .end p{color:var(--soft);font-style:italic;margin:0 auto .5em;max-width:40em}
 .end .again{margin-top:2em}
 .end a{color:var(--soft)}
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:4;padding:28px 26px 18px;display:flex;align-items:center;gap:18px;background:linear-gradient(transparent,rgba(19,17,14,.85));transition:opacity .5s}
+.skip{position:fixed;right:26px;bottom:26px;z-index:5;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--soft);border:1px solid var(--faint);padding:7px 10px}
+.skip:hover{color:var(--paper);border-color:var(--paper)}
+/* the control bar: title row, film scrubber, program strip */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:4;padding:40px 26px 16px;background:linear-gradient(transparent,rgba(19,17,14,.92) 45%);transition:opacity .5s}
 .bar.hide{opacity:0;pointer-events:none}
-.bar .now{flex:1;min-width:0}
-.bar .now b{font-weight:400;font-size:19px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar .now i{font-size:15px;color:var(--soft)}
-.bar .k{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--soft)}
-.bar button.ic{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--paper);padding:6px 4px;opacity:.8}
-.bar button.ic:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
-.prog{position:fixed;left:0;right:0;bottom:0;height:2px;z-index:5;background:rgba(235,227,207,.12)}
-.prog i{display:block;height:100%;width:0;background:var(--paper);opacity:.55}
+.row{display:flex;align-items:baseline;gap:18px}
+.row .now{flex:1;min-width:0}
+.row .now b{font-weight:400;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .now i{font-size:15px;color:var(--soft);margin-left:10px}
+.row .k{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--soft);white-space:nowrap}
+.row button.ic{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--paper);padding:6px 4px;opacity:.8}
+.row button.ic:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
+.scrub{position:relative;height:26px;margin:8px 0 2px;cursor:pointer;touch-action:none}
+.scrub .tr{position:absolute;left:0;right:0;top:11px;height:4px;background:rgba(235,227,207,.18);transition:height .15s,top .15s}
+.scrub:hover .tr,.scrub.drag .tr{top:9px;height:8px}
+.scrub .bf{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(235,227,207,.18)}
+.scrub .pl{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--paper)}
+.scrub .hd{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--paper);left:0;transform:scale(0);transition:transform .15s}
+.scrub:hover .hd,.scrub.drag .hd{transform:scale(1)}
+.strip{display:flex;gap:2px;height:18px;align-items:flex-end;cursor:pointer}
+.strip span{display:block;height:4px;background:rgba(235,227,207,.22);transition:height .12s,background .12s}
+.strip span.pt{margin-left:7px}
+.strip span.done{background:rgba(235,227,207,.5)}
+.strip span.on{background:var(--paper);height:6px}
+.strip span:hover{height:12px;background:var(--paper)}
+.tip{position:fixed;z-index:7;pointer-events:none;transform:translate(-50%,-100%);display:none;text-align:center}
+.tip .im{width:192px;height:108px;border:1px solid var(--paper);background-color:var(--dark);background-repeat:no-repeat;margin:0 auto 6px;display:none}
+.tip .tx{display:inline-block;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.06em;background:var(--dark);border:1px solid var(--faint);padding:5px 9px;white-space:nowrap}
+.tip .tt{display:block;font:15px "IM Fell English",Georgia,serif;letter-spacing:0;margin-bottom:1px}
 .list{position:fixed;inset:0;z-index:6;background:rgba(19,17,14,.96);overflow:auto;padding:60px 26px;transition:opacity .4s}
 .list.off{opacity:0;pointer-events:none}
 .list ol{list-style:none;margin:0 auto;padding:0;max-width:1000px;columns:2 340px;column-gap:56px}
@@ -306,11 +331,14 @@ video{width:100%;height:100%;object-fit:contain;background:var(--dark);display:b
 .list li button:hover .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 .list li button.on .tt{font-style:italic}.list li button.on .no{color:var(--paper)}
 .list .close{position:fixed;top:20px;right:26px;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--soft)}
+.list .keys{max-width:1000px;margin:10px auto 0;font:500 11px/2 "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--faint)}
+.hair{position:fixed;left:0;right:0;bottom:0;height:2px;z-index:3;background:rgba(235,227,207,.1)}
+.hair i{display:block;height:100%;width:0;background:var(--paper);opacity:.45}
 body.idle{cursor:none}
-@media (max-width:640px){.keys{display:none}.bar{flex-wrap:wrap;gap:10px}.bar .now{flex-basis:100%}}
+@media (max-width:640px){.keys-hint{display:none}.row{flex-wrap:wrap;gap:8px}.row .now{flex-basis:100%}.row .now i{display:none}.bar{padding:30px 14px 12px}}
 </style>
 </head>
-<body class="">
+<body>
 <div class="screen" id="stage"><video id="v" playsinline preload="auto"></video></div>
 
 <div class="screen card title" id="title">
@@ -318,88 +346,165 @@ body.idle{cursor:none}
   <p class="by">Stanis&lstrok;aw Lem, filmed</p>
   <div class="intro">
     <p>Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.</p>
-    <p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: __EXTRA__.</p>
+    <p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: __EXTRA__.__AFTER__</p>
   </div>
   <button class="begin" id="begin"><div class="ring"></div><span>BEGIN</span></button>
-  <p class="meta">__N__ FILMS &middot; __HM__<span class="keys"> &middot; F FOR FULL SCREEN &middot; C FOR CONTENTS</span></p>
+  <p class="meta">__N__ FILMS &middot; __HM__<span class="keys-hint"> &middot; F FULL SCREEN &middot; C CONTENTS &middot; ARROWS SCRUB</span></p>
 </div>
 
 <div class="screen card inter off" id="inter"><p class="pt" id="ip"></p><p class="nm" id="in"></p></div>
 
 <div class="screen card end off" id="end">
   <h2>THE END</h2>
-  <p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>__BITIC__.</p>
-  <p>Narration and dialogue paraphrase Lem. Drawn in ink in the browser, voiced with Kokoro, the sound made in code.</p>
+  <p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>__BITIC__.__AFTEREND__</p>
+  <p>Narration and dialogue paraphrase their sources. Drawn in ink in the browser, voiced with Kokoro, the sound made in code.</p>
   <p class="again"><button class="begin" id="again"><div class="ring"></div><span>FROM THE BEGINNING</span></button></p>
   <p style="margin-top:2em;font-style:normal"><a href="../index.html">Lab 7</a> &middot; <a href="../lineage/index.html">The videotext</a></p>
 </div>
 
-<div class="bar hide" id="bar">
-  <div class="now"><b id="nt"></b><i id="ns"></i></div>
-  <span class="k" id="nk"></span>
-  <button class="ic" id="prev">PREV</button><button class="ic" id="pp">PAUSE</button><button class="ic" id="next">NEXT</button>
-  <button class="ic" id="ct">CONTENTS</button><button class="ic" id="fs">FULL SCREEN</button>
-</div>
-<div class="prog"><i id="pb"></i></div>
+<button class="skip off" id="skip" hidden>SKIP TITLES</button>
 
-<div class="list off" id="list"><button class="close" id="lx">CLOSE</button><ol>__ROWS__</ol></div>
+<div class="bar hide" id="bar">
+  <div class="row">
+    <div class="now"><b id="nt"></b><i id="ns"></i></div>
+    <span class="k" id="nk"></span>
+    <button class="ic" id="prev">PREV</button><button class="ic" id="pp">PAUSE</button><button class="ic" id="next">NEXT</button>
+    <button class="ic" id="ct">CONTENTS</button><button class="ic" id="fs">FULL SCREEN</button>
+  </div>
+  <div class="scrub" id="scrub"><div class="tr"><i class="bf" id="bf"></i><i class="pl" id="pl"></i></div><i class="hd" id="hd"></i></div>
+  <div class="strip" id="strip"></div>
+</div>
+<div class="hair"><i id="hair"></i></div>
+<div class="tip" id="tip"><div class="im" id="tim"></div><span class="tx" id="ttx"></span></div>
+
+<div class="list off" id="list"><button class="close" id="lx">CLOSE</button><ol>__ROWS__</ol>
+<p class="keys">SPACE PLAY OR PAUSE &middot; LEFT AND RIGHT 10 SECONDS &middot; SHIFT 60 SECONDS &middot; [ AND ] PREVIOUS AND NEXT FILM &middot; 0 TO 9 JUMP WITHIN THE FILM &middot; F FULL SCREEN &middot; C CONTENTS</p></div>
 
 <script>
-const R = __DATA__;
+const R = __DATA__, INTRO = __INTRO__;
 const $ = (id) => document.getElementById(id);
 const v = $('v'), btns = [...document.querySelectorAll('#list button[data-i]')];
 const TOT = R.reduce((a, r) => a + r.n, 0), BEFORE = R.map((_, i) => R.slice(0, i).reduce((a, r) => a + r.n, 0));
-let cur = -1, started = false, timer = 0;
+const mm = (s) => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + x : m + ':' + x; };
+let cur = 0, started = false, timer = 0, inIntro = false, pendingSeek = null, dragging = false;
 const show = (el, on) => el.classList.toggle('off', !on);
+const src = (i) => '../' + R[i].d + '/' + R[i].d + '.mp4';
+const dur = () => (isFinite(v.duration) && v.duration > 0 ? v.duration : R[cur].n);
+
+// program strip: one segment per film, width by length, a gap before each new part
+const strip = $('strip');
+R.forEach((r, i) => { const s = document.createElement('span'); s.style.flex = r.n + ' 1 0'; if (i && R[i - 1].p !== r.p) s.className = 'pt'; s.dataset.i = i; strip.appendChild(s); });
+const segs = [...strip.children];
+
 function setNow() {
-  const r = R[cur]; $('nt').textContent = r.t; $('ns').textContent = r.s; $('nk').textContent = String(cur + 1).padStart(2, '0') + ' / ' + R.length;
+  const r = R[cur]; $('nt').textContent = r.t; $('ns').textContent = r.s;
   btns.forEach((b, j) => b.classList.toggle('on', j === cur));
+  segs.forEach((s, j) => { s.classList.toggle('on', j === cur); s.classList.toggle('done', j < cur); });
   try { history.replaceState(null, '', '#' + r.d); } catch (e) {}
 }
-function go(i, withInter) {
-  cur = Math.max(0, Math.min(R.length - 1, i)); const r = R[cur];
-  v.pause(); v.src = '../' + r.d + '/' + r.d + '.mp4'; setNow();
-  const newPart = withInter && (cur === 0 || R[cur - 1].p !== r.p);
-  if (newPart) {
-    const parts = [...new Set(R.map((x) => x.p))], pi = parts.indexOf(r.p); $('ip').textContent = 'PART ' + ['I','II','III','IV','V','VI'][pi]; $('in').textContent = r.p; show($('inter'), true);
-    setTimeout(() => { show($('inter'), false); v.play().catch(() => {}); }, 3800);
-  } else v.play().catch(() => {});
+let lastHash = 0;
+function tick() {
+  if (inIntro) return;
+  const t = v.currentTime, d = dur();
+  if (!dragging) { $('pl').style.width = (100 * t / d) + '%'; $('hd').style.left = (100 * t / d) + '%'; }
+  try { const b = v.buffered; if (b.length) $('bf').style.width = (100 * b.end(b.length - 1) / d) + '%'; } catch (e) {}
+  $('nk').textContent = mm(t) + ' / ' + mm(d) + '   ' + String(cur + 1).padStart(2, '0') + ' / ' + R.length;
+  $('hair').style.width = (100 * (BEFORE[cur] + t) / TOT) + '%';
+  if (Math.abs(t - lastHash) > 5) { lastHash = t; try { history.replaceState(null, '', '#' + R[cur].d + (t > 5 ? '@' + Math.floor(t) : '')); } catch (e) {} }
 }
-v.addEventListener('ended', () => { if (cur < R.length - 1) go(cur + 1, true); else { show($('end'), true); $('bar').classList.add('hide'); } });
-v.addEventListener('timeupdate', () => { if (cur >= 0) $('pb').style.width = (100 * (BEFORE[cur] + v.currentTime) / TOT) + '%'; });
+function go(i, opts = {}) {
+  const at = opts.at || 0;
+  i = Math.max(0, Math.min(R.length - 1, i));
+  if (i === cur && v.src && !inIntro && v.src.endsWith(R[i].d + '.mp4')) { v.currentTime = at; if (opts.play !== false) v.play().catch(() => {}); return; }
+  cur = i; inIntro = false; $('skip').hidden = true; v.pause(); pendingSeek = at || null; v.src = src(i); setNow(); tick();
+  const r = R[cur], newPart = opts.inter && (cur === 0 || R[cur - 1].p !== r.p);
+  if (newPart) {
+    const parts = [...new Set(R.map((x) => x.p))], pi = parts.indexOf(r.p);
+    $('ip').textContent = r.p === 'Afterword' ? 'AFTERWORD' : 'PART ' + ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][pi]; $('in').textContent = r.p === 'Afterword' ? '' : r.p; show($('inter'), true);
+    setTimeout(() => { show($('inter'), false); v.play().catch(() => {}); }, 3800);
+  } else if (opts.play !== false) v.play().catch(() => {});
+}
+v.addEventListener('loadedmetadata', () => { if (pendingSeek) { v.currentTime = Math.min(pendingSeek, v.duration - 0.5); pendingSeek = null; } tick(); });
+v.addEventListener('ended', () => {
+  if (inIntro) { go(0, { inter: true }); return; }
+  if (cur < R.length - 1) go(cur + 1, { inter: true }); else { show($('end'), true); $('bar').classList.add('hide'); }
+});
+v.addEventListener('timeupdate', tick); v.addEventListener('progress', tick);
 v.addEventListener('play', () => { $('pp').textContent = 'PAUSE'; });
-v.addEventListener('pause', () => { $('pp').textContent = 'PLAY'; });
-v.addEventListener('click', () => { v.paused ? v.play() : v.pause(); poke(); });
-function begin(i) { started = true; show($('title'), false); show($('end'), false); go(i, true); fullscreen(true); }
-$('begin').addEventListener('click', () => begin(cur > 0 ? cur : 0));
+v.addEventListener('pause', () => { $('pp').textContent = 'PLAY'; poke(); });
+v.addEventListener('click', () => { if (inIntro) return; v.paused ? v.play() : v.pause(); poke(); });
+
+function begin(i, at) {
+  started = true; show($('title'), false); show($('end'), false); fullscreen(true);
+  if (INTRO && i === 0 && !at) { inIntro = true; v.src = '../' + INTRO; v.play().catch(() => {}); $('skip').hidden = false; return; }
+  go(i, { inter: true, at });
+}
+$('skip').addEventListener('click', () => go(0, { inter: true }));
+$('begin').addEventListener('click', () => begin(cur, pendingSeek || 0));
 $('again').addEventListener('click', () => begin(0));
-$('prev').addEventListener('click', () => go(cur - 1, false));
-$('next').addEventListener('click', () => go(cur + 1, true));
+$('prev').addEventListener('click', () => (v.currentTime > 4 ? go(cur, { at: 0 }) : go(cur - 1)));
+$('next').addEventListener('click', () => go(cur + 1, { inter: true }));
 $('pp').addEventListener('click', () => { v.paused ? v.play() : v.pause(); });
 $('ct').addEventListener('click', () => show($('list'), true));
 $('lx').addEventListener('click', () => show($('list'), false));
 $('fs').addEventListener('click', () => fullscreen(!document.fullscreenElement));
-btns.forEach((b, j) => b.addEventListener('click', () => { show($('list'), false); if (!started) { started = true; show($('title'), false); } show($('end'), false); go(j, true); }));
+btns.forEach((b, j) => b.addEventListener('click', () => { show($('list'), false); if (!started) { started = true; show($('title'), false); } show($('end'), false); go(j, { inter: true }); }));
+
+// hover preview: a frame every 5 s from thumbs/sprite.jpg (10 per row, 160x90)
+const tip = $('tip'), tim = $('tim'), ttx = $('ttx');
+function preview(i, t, x, y, label) {
+  const r = R[i]; tip.style.display = 'block'; tip.style.left = Math.max(110, Math.min(innerWidth - 110, x)) + 'px'; tip.style.top = ($('bar').getBoundingClientRect().top + 24) + 'px';
+  if (r.sp) { const k = Math.floor(t / 5), c = k % 10, rw = Math.floor(k / 10); tim.style.display = 'block'; tim.style.backgroundImage = 'url(../' + r.d + '/thumbs/sprite.jpg)'; tim.style.backgroundSize = '1920px auto'; tim.style.backgroundPosition = (-c * 192) + 'px ' + (-rw * 108) + 'px'; }
+  else tim.style.display = 'none';
+  ttx.innerHTML = label;
+}
+const hideTip = () => { tip.style.display = 'none'; };
+
+// film scrubber: click or drag anywhere on the line
+const sc = $('scrub');
+const frac = (e) => { const b = sc.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)); };
+sc.addEventListener('pointermove', (e) => { const t = frac(e) * dur(); preview(cur, t, e.clientX, sc.getBoundingClientRect().top, mm(t)); if (dragging) { $('pl').style.width = $('hd').style.left = (100 * frac(e)) + '%'; v.currentTime = t; } poke(); });
+sc.addEventListener('pointerleave', () => { if (!dragging) hideTip(); });
+sc.addEventListener('pointerdown', (e) => { dragging = true; sc.classList.add('drag'); sc.setPointerCapture(e.pointerId); v.currentTime = frac(e) * dur(); $('pl').style.width = $('hd').style.left = (100 * frac(e)) + '%'; });
+const endDrag = () => { if (!dragging) return; dragging = false; sc.classList.remove('drag'); hideTip(); tick(); };
+sc.addEventListener('pointerup', endDrag); sc.addEventListener('pointercancel', endDrag);
+
+// program strip: hover shows film and time, click jumps to that point in that film
+const segAt = (e) => { const s = e.target.closest('span[data-i]'); if (!s) return null; const b = s.getBoundingClientRect(); const i = +s.dataset.i; return { i, t: Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)) * R[i].n, top: strip.getBoundingClientRect().top }; };
+strip.addEventListener('pointermove', (e) => { const h = segAt(e); if (!h) return; preview(h.i, h.t, e.clientX, h.top, '<span class="tt">' + String(h.i + 1).padStart(2, '0') + ' &middot; ' + R[h.i].t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span>' + mm(h.t) + ' of ' + mm(R[h.i].n)); poke(); });
+strip.addEventListener('pointerleave', hideTip);
+strip.addEventListener('click', (e) => { const h = segAt(e); if (!h) return; if (!started) { started = true; show($('title'), false); } go(h.i, { at: h.t < 4 ? 0 : h.t, inter: h.t < 4 }); });
+
 function fullscreen(on) { try { if (on && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
-function poke() { if (!started) return; $('bar').classList.remove('hide'); document.body.classList.remove('idle'); clearTimeout(timer); timer = setTimeout(() => { if (!v.paused) { $('bar').classList.add('hide'); document.body.classList.add('idle'); } }, 2600); }
-document.addEventListener('mousemove', poke); document.addEventListener('touchstart', poke);
+function poke() { if (!started || inIntro) return; $('bar').classList.remove('hide'); document.body.classList.remove('idle'); clearTimeout(timer); timer = setTimeout(() => { if (!v.paused && !dragging) { $('bar').classList.add('hide'); document.body.classList.add('idle'); hideTip(); } }, 2800); }
+document.addEventListener('mousemove', poke); document.addEventListener('touchstart', poke, { passive: true });
 document.addEventListener('keydown', (e) => {
-  const k = e.key.toLowerCase();
+  const k = e.key;
   if (k === ' ') { e.preventDefault(); if (!started) begin(0); else v.paused ? v.play() : v.pause(); }
-  else if (k === 'f') fullscreen(!document.fullscreenElement);
-  else if (k === 'c') show($('list'), $('list').classList.contains('off'));
-  else if (k === 'escape') show($('list'), false);
-  else if (k === 'arrowright' && e.shiftKey) go(cur + 1, true);
-  else if (k === 'arrowleft' && e.shiftKey) go(cur - 1, false);
+  else if (k === 'f' || k === 'F') fullscreen(!document.fullscreenElement);
+  else if (k === 'c' || k === 'C') show($('list'), $('list').classList.contains('off'));
+  else if (k === 'Escape') show($('list'), false);
+  else if (!started || inIntro) return;
+  else if (k === 'ArrowRight') v.currentTime = Math.min(dur() - 0.2, v.currentTime + (e.shiftKey ? 60 : 10));
+  else if (k === 'ArrowLeft') v.currentTime = Math.max(0, v.currentTime - (e.shiftKey ? 60 : 10));
+  else if (k === ']') go(cur + 1, { inter: true });
+  else if (k === '[') go(cur - 1);
+  else if (/^[0-9]$/.test(k)) v.currentTime = dur() * (+k) / 10;
   poke();
 });
-const h = location.hash.slice(1), hi = R.findIndex((r) => r.d === h);
-cur = hi < 0 ? 0 : hi; setNow();
+// a link like #gargantius or #gargantius@125 opens at that film and second
+const h = location.hash.slice(1).split('@'), hi = R.findIndex((r) => r.d === h[0]);
+cur = hi < 0 ? 0 : hi; if (h[1]) pendingSeek = +h[1]; setNow();
 </script>
 </body>
 </html>
 """
-cy = cy.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__ROWS__', rows).replace('__BITIC__', ' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>' if any(r['d'] == 'bitic-literature' for r in reel) else '').replace('__EXTRA__', ('<i>Non Serviam</i>, and ' + ['', 'one film', 'two films', 'three films', 'four films', 'five films'][sum(r['p'] == 'From Imaginary Magnitude' for r in reel)] + ' from <i>A History of Bitic Literature</i>') if any(r['p'] == 'From Imaginary Magnitude' for r in reel) else '<i>Non Serviam</i>').replace('__N__', str(len(reel)).upper()).replace('__HM__', hm(tot).upper())
+bit = (' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>, translated by Marc E. Heine' if nb else '')
+cy = (cy.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__INTRO__', json.dumps(INTRO)).replace('__ROWS__', rows)
+        .replace('__EXTRA__', extra).replace('__BITIC__', bit)
+        .replace('__AFTER__', ' An afterword reads them through an essay on the theory of possibilities.' if after else '')
+        .replace('__AFTEREND__', ' The afterword follows Ewelina Wo&zacute;niak-Czech, <i>The Possibilities of Theory &ndash; the Theory of Possibilities</i> (2024).' if after else '')
+        .replace('__N__', str(len(reel))).replace('__HM__', hm(tot).upper()))
 open(os.path.join(ROOT, 'cyberiad', 'index.html'), 'w', encoding='utf-8').write(cy)
 
 # ---------------- one header for every film page ----------------
