@@ -129,6 +129,12 @@ FILMS = [
        sound='A chess clock for the intellect that does not think, a rising tone at the speed of light, and silence after the Lampoon closes.',
        code='The Turing test as two programs: one that answers and one that judges, and what the judge can actually measure.',
        builds='Grounded in Lem’s text. After the machines imitate authors, they turn on philosophy, then on the question of whether their human readers think at all.'),
+  dict(dir='bitic-introduction', title='A History of Bitic Literature: The Introduction', sub='what bitistics is, and the five volumes', source='Imaginary Magnitude',
+       line=('Rambellais', "Given freedom without rules, the machines' writing slowly turned away from us."),
+       picture='Five volumes come off the shelf and open to one page: a technical page, the classification of Homotropia, Intertropia and Heterotropia, then drifting text and marks no one can read, while the reader at the desk shrinks.',
+       sound='A typewriter turns into a data rhythm. The reader breathes and writes in pencil, a small reading machine chimes, and the machines speak as a bit-reduced chorus.',
+       code='Machine-readable output: one program writes a sentence, a second summarises only that string, and you compare what is lost.',
+       builds='Grounded in Lem’s text. It opens the four grounded bitic films: what bitic literature is, how the field is divided, and how the machines’ writing turned away from human readers.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -156,7 +162,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -166,7 +172,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
