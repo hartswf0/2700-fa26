@@ -81,6 +81,12 @@ FILMS = [
        sound='Each mind has its own voice, and the voice goes with the mind, not the body. Every swap is the same two-note exchange, left to right and back. A heavy low hum plays whenever the horns are in someone’s hands, and a ticking turns into the cuckoo at the end.',
        code='Copying against referencing. Swapping two references takes a third variable, and a body only holds what it points to. The horns are a third object that someone has to be holding.',
        builds='The Trap of Gargantius links many soldiers by reference. Trurl’s Prescription is an object that keeps what it has accepted. Here the object is handed from body to body, and the plot is about who is holding what.'),
+  dict(dir='femfatalatron', title='The Femfatalatron', sub='a machine turned all the way up, and a war fought with babies', source='The Fourth Sally',
+       line=('Trurl', 'Every dial measured the prince. The trouble was never inside the prince.'),
+       picture='The machine is a temple of cables, screens, rose petals and perfume, with a glass case of dials in front: power, efficiency, and the rapturometer. In the first half the dials are the main picture, and every needle climbs to its stop without changing the prince. In the second half the same kind of dial hangs on the Emperor’s wall as an economy gauge, and it sinks while soft parachuting bundles land and crawl.',
+       sound='A hum that rises with the needles, a chatter that becomes a rattle at the stops, and breaking glass when the rapturometer bursts; the iron machine is lower and fails the same way. Then cauldrons, coos, cushioned cannon thumps and a growing chorus of babble, and at the end the hum winds down to nothing.',
+       code='Measurement. A gauge reads only the variable it is wired to; turning every input to its maximum does nothing if the result depends on a variable none of them touch.',
+       builds='Trurl’s Prescription beats a thing by changing what it has accepted. The Mischief of King Balerion moves a mind between bodies. Here nothing inside the prince moves at all, and the plot turns when Trurl changes the world around him instead.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -93,7 +99,7 @@ BOOK = [
   ('The First Sally (A), or Trurl’s Electronic Bard', 'electronic-bard', ('The poetry machine already appears in the reel. An engraved version could build each poem under the constraint Klapaucius sets.', 'Strings and generative text: a grammar, a rule, and output that has to obey it.')),
   ('The Second Sally, or The Offer of King Krool', None, None),
   ('The Third Sally, or The Dragons of Probability', 'dragons', None),
-  ('The Fourth Sally, or The Femfatalatron', None, None),
+  ('The Fourth Sally, or The Femfatalatron', 'femfatalatron', None),
   ('The Fifth Sally, or The Mischief of King Balerion', 'mischief-of-balerion', None),
   ('The Fifth Sally (A), or Trurl’s Prescription', 'trurls-prescription', None),
   ('The Sixth Sally, or The Demon of the Second Kind', 'sixth-sally', None),
@@ -108,7 +114,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -118,7 +124,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
