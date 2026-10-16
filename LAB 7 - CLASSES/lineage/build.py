@@ -197,26 +197,27 @@ total = sum(f['sec'] for f in FILMS)
 made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 open(os.path.join(HERE, 'index.html'), 'w').write(page)
 
-# ---------------- the Cyberiad page: one player, every film in book order ----------------
+# ---------------- the Cyberiad page: a cinema, every film in book order ----------------
 # Works from a plain folder or drive: no fetch, no server, fonts and films by relative path.
 byd = {f['dir']: f for f in FILMS}
+BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None)]
 reel, part = [], ''
-for title, d, nxt in BOOK:
-    if title.startswith('How the World'): part = 'Three early stories'
+for title, d, nxt in BOOK_PLUS:
+    if title.startswith('How the World'): part = 'Three Early Stories'
     if title.startswith('The First Sally, or'): part = 'The Seven Sallies'
     if title.startswith('Tale of'): part = 'Tales'
     if title.startswith('Non Serviam'): part = 'From A Perfect Vacuum'; title = 'Non Serviam'
+    if title.startswith('A History of Bitic'): part = 'From Imaginary Magnitude'
     f = byd.get(d)
-    if f: reel.append(dict(d=d, t=title, s='' if f['sub'].lower().startswith('or,') else f['sub'], p=part, n=round(f['sec'])))
-LATER = [dict(t='A History of Bitic Literature', p='From Imaginary Magnitude', s='Lem’s 1973 introduction to an imaginary five-volume history of books written by machines')]
-cyd = json.dumps(reel, ensure_ascii=False)
+    if f and os.path.exists(os.path.join(ROOT, d, d + '.mp4')):
+        reel.append(dict(d=d, t=title, s='' if f['sub'].lower().startswith('or,') else f['sub'], p=part, n=round(f['sec'])))
+tot = sum(r['n'] for r in reel)
+hm = lambda s: (f"{int(s // 3600)} hr {int(s % 3600 // 60)} min" if s >= 3600 else f"{int(s // 60)} min")
 groups = []
 for i, r in enumerate(reel):
     if not groups or groups[-1][0] != r['p']: groups.append((r['p'], []))
     groups[-1][1].append(f'<li><button data-i="{i}"><span class="no">{i+1:02d}</span><span class="tt">{E(r["t"])}</span><span class="du">{mmss(r["n"])}</span></button></li>')
-for x in LATER:
-    groups.append((x['p'], [f'<li class="later"><span class="no">&middot;</span><span class="tt">{E(x["t"])}<em>{E(x["s"])}. Not yet filmed.</em></span></li>']))
-rows = [f'<li class="grp"><p class="pt">{E(p)}</p><ul>{"".join(items)}</ul></li>' for p, items in groups]
+rows = ''.join(f'<li class="grp"><p class="pt">{E(p)}</p><ul>{"".join(items)}</ul></li>' for p, items in groups)
 cy = """<!doctype html>
 <html lang="en">
 <head>
@@ -227,88 +228,147 @@ cy = """<!doctype html>
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
 @font-face{font-family:"IBM Plex Mono";src:url(../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400 500;font-display:swap}
-:root{--paper:#ebe3cf;--ink:#1c1814;--soft:#6f6656;--faint:#b9af99}
+:root{--dark:#13110e;--paper:#ebe3cf;--soft:#9b917d;--faint:#5a5246}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font:19px/1.5 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased}
+html,body{margin:0;height:100%;background:var(--dark);color:var(--paper);font:19px/1.5 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased;overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
-.page{max-width:1080px;margin:0 auto;padding:44px 22px 80px}
-.mast{display:flex;justify-content:space-between;align-items:baseline;gap:20px;margin-bottom:22px}
-h1{font-weight:400;font-size:clamp(34px,5vw,56px);letter-spacing:.04em;line-height:1;margin:0;text-transform:uppercase}
-.by{font-style:italic;color:var(--soft);font-size:17px;margin:0}
-.stage{position:relative;border:1px solid var(--ink);padding:7px;background:var(--paper)}
-.stage:before{content:"";position:absolute;inset:3px;border:2px solid var(--ink);pointer-events:none}
-video{display:block;width:100%;aspect-ratio:16/9;background:#e3dac3;cursor:pointer}
-.start{position:absolute;inset:7px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:rgba(235,227,207,.55)}
-.start .ring{width:84px;height:84px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--paper)}
-.start .ring:after{content:"";border-left:22px solid var(--ink);border-top:14px solid transparent;border-bottom:14px solid transparent;margin-left:6px}
-.start span{font-style:italic;font-size:18px}
-.now{display:flex;justify-content:space-between;align-items:baseline;gap:18px;margin:16px 2px 0;min-height:56px}
-.now .t{font-size:24px;line-height:1.2}
-.now .s{display:block;font-style:italic;color:var(--soft);font-size:17px}
-.now .k{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--soft);white-space:nowrap}
-.bar{height:1px;background:var(--faint);margin:14px 0 0;position:relative}
-.bar i{position:absolute;left:0;top:-1px;height:3px;background:var(--ink);width:0}
-ol{list-style:none;margin:44px 0 0;padding:0;columns:2 340px;column-gap:48px}
-li.grp{break-inside:avoid;margin:0 0 22px}
-ul{list-style:none;margin:0;padding:0}
-.pt{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);margin:0 0 6px}
-li button,li.later{display:flex;gap:12px;width:100%;padding:4px 0;align-items:baseline}
-.no{font:500 12px "IBM Plex Mono",monospace;color:var(--soft);width:22px;flex:none}
-.tt{flex:1}
-.du{font:500 12px "IBM Plex Mono",monospace;color:var(--faint)}
-li button:hover .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
-li button.on .tt{font-style:italic}
-li button.on .no:before{content:"\\25B8";position:absolute;margin-left:-14px;color:var(--ink)}
-li button.on .du{color:var(--ink)}
-li.later{color:var(--soft)}
-li.later em{display:block;font-size:15px;line-height:1.35;margin-top:2px}
-.foot{margin-top:48px;font-size:15px;color:var(--soft);font-style:italic;max-width:60ch}
-.foot a{color:inherit}
-@media (max-width:640px){.mast{flex-direction:column;gap:6px}.page{padding-top:28px}.now{flex-direction:column;gap:4px}}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity 1.2s ease}
+.screen.off{opacity:0;pointer-events:none}
+video{width:100%;height:100%;object-fit:contain;background:var(--dark);display:block}
+.card{flex-direction:column;text-align:center;padding:24px;background:var(--dark);z-index:3}
+.title h1{font-weight:400;font-size:clamp(44px,9vw,120px);letter-spacing:.08em;line-height:1;margin:0 0 .25em;text-transform:uppercase}
+.title .by{font-style:italic;font-size:clamp(18px,2.4vw,26px);color:var(--soft);margin:0 0 2.2em}
+.title .intro{max-width:34em;margin:0 auto 2.4em;font-size:clamp(16px,1.9vw,20px);line-height:1.6}
+.title .intro p{margin:0 0 .8em}
+.begin{display:inline-flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.begin .ring{width:76px;height:76px;border:1.5px solid var(--paper);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.begin .ring:after{content:"";border-left:20px solid var(--paper);border-top:13px solid transparent;border-bottom:13px solid transparent;margin-left:6px;transition:border-color .2s}
+.begin:hover .ring{background:var(--paper)}.begin:hover .ring:after{border-left-color:var(--dark)}
+.begin span{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.18em;color:var(--soft)}
+.title .meta{position:absolute;bottom:28px;left:0;right:0;font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;color:var(--faint)}
+.inter .pt{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.3em;color:var(--soft);margin:0 0 22px}
+.inter .nm{font-size:clamp(30px,5vw,58px);letter-spacing:.06em;text-transform:uppercase;margin:0}
+.end h2{font-weight:400;font-size:clamp(36px,6vw,72px);letter-spacing:.12em;margin:0 0 .6em}
+.end p{color:var(--soft);font-style:italic;margin:0 auto .5em;max-width:40em}
+.end .again{margin-top:2em}
+.end a{color:var(--soft)}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:4;padding:28px 26px 18px;display:flex;align-items:center;gap:18px;background:linear-gradient(transparent,rgba(19,17,14,.85));transition:opacity .5s}
+.bar.hide{opacity:0;pointer-events:none}
+.bar .now{flex:1;min-width:0}
+.bar .now b{font-weight:400;font-size:19px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .now i{font-size:15px;color:var(--soft)}
+.bar .k{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--soft)}
+.bar button.ic{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--paper);padding:6px 4px;opacity:.8}
+.bar button.ic:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
+.prog{position:fixed;left:0;right:0;bottom:0;height:2px;z-index:5;background:rgba(235,227,207,.12)}
+.prog i{display:block;height:100%;width:0;background:var(--paper);opacity:.55}
+.list{position:fixed;inset:0;z-index:6;background:rgba(19,17,14,.96);overflow:auto;padding:60px 26px;transition:opacity .4s}
+.list.off{opacity:0;pointer-events:none}
+.list ol{list-style:none;margin:0 auto;padding:0;max-width:1000px;columns:2 340px;column-gap:56px}
+.list .grp{break-inside:avoid;margin:0 0 26px}
+.list ul{list-style:none;margin:0;padding:0}
+.list .pt{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);margin:0 0 6px}
+.list li button{display:flex;gap:12px;width:100%;padding:4px 0;align-items:baseline}
+.list .no{font:500 12px "IBM Plex Mono",monospace;color:var(--faint);width:22px;flex:none}
+.list .tt{flex:1}
+.list .du{font:500 12px "IBM Plex Mono",monospace;color:var(--faint)}
+.list li button:hover .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.list li button.on .tt{font-style:italic}.list li button.on .no{color:var(--paper)}
+.list .close{position:fixed;top:20px;right:26px;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--soft)}
+body.idle{cursor:none}
+@media (max-width:640px){.keys{display:none}.bar{flex-wrap:wrap;gap:10px}.bar .now{flex-basis:100%}}
 </style>
 </head>
-<body>
-<div class="page">
-  <div class="mast"><h1>The Cyberiad</h1><p class="by">Stanis&lstrok;aw Lem, filmed in book order &middot; __N__ films, __T__</p></div>
-  <div class="stage">
-    <video id="v" playsinline preload="metadata"></video>
-    <button class="start" id="go"><div class="ring"></div><span>Play all, from the beginning</span></button>
+<body class="">
+<div class="screen" id="stage"><video id="v" playsinline preload="auto"></video></div>
+
+<div class="screen card title" id="title">
+  <h1>The Cyberiad</h1>
+  <p class="by">Stanis&lstrok;aw Lem, filmed</p>
+  <div class="intro">
+    <p>Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.</p>
+    <p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another, with __EXTRA__ at the end from his books about imaginary books.</p>
   </div>
-  <div class="now"><div><span class="t" id="nt"></span><span class="s" id="ns"></span></div><span class="k" id="nk"></span></div>
-  <div class="bar"><i id="pb"></i></div>
-  <ol id="list">__ROWS__</ol>
-  <p class="foot">The films play one after another without stopping. Click a title to jump to it. Narration and dialogue paraphrase Lem, <i>The Cyberiad</i>, translated by Michael Kandel. <a href="../index.html">Lab 7</a> &middot; <a href="../lineage/index.html">The videotext</a></p>
+  <button class="begin" id="begin"><div class="ring"></div><span>BEGIN</span></button>
+  <p class="meta">__N__ FILMS &middot; __HM__<span class="keys"> &middot; F FOR FULL SCREEN &middot; C FOR CONTENTS</span></p>
 </div>
+
+<div class="screen card inter off" id="inter"><p class="pt" id="ip"></p><p class="nm" id="in"></p></div>
+
+<div class="screen card end off" id="end">
+  <h2>THE END</h2>
+  <p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>__BITIC__.</p>
+  <p>Narration and dialogue paraphrase Lem. Drawn in ink in the browser, voiced with Kokoro, the sound made in code.</p>
+  <p class="again"><button class="begin" id="again"><div class="ring"></div><span>FROM THE BEGINNING</span></button></p>
+  <p style="margin-top:2em;font-style:normal"><a href="../index.html">Lab 7</a> &middot; <a href="../lineage/index.html">The videotext</a></p>
+</div>
+
+<div class="bar hide" id="bar">
+  <div class="now"><b id="nt"></b><i id="ns"></i></div>
+  <span class="k" id="nk"></span>
+  <button class="ic" id="prev">PREV</button><button class="ic" id="pp">PAUSE</button><button class="ic" id="next">NEXT</button>
+  <button class="ic" id="ct">CONTENTS</button><button class="ic" id="fs">FULL SCREEN</button>
+</div>
+<div class="prog"><i id="pb"></i></div>
+
+<div class="list off" id="list"><button class="close" id="lx">CLOSE</button><ol>__ROWS__</ol></div>
+
 <script>
 const R = __DATA__;
-const v = document.getElementById('v'), go = document.getElementById('go'), btns = [...document.querySelectorAll('#list button')];
-const nt = document.getElementById('nt'), ns = document.getElementById('ns'), nk = document.getElementById('nk'), pb = document.getElementById('pb');
+const $ = (id) => document.getElementById(id);
+const v = $('v'), btns = [...document.querySelectorAll('#list button[data-i]')];
 const TOT = R.reduce((a, r) => a + r.n, 0), BEFORE = R.map((_, i) => R.slice(0, i).reduce((a, r) => a + r.n, 0));
-const mm = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-let cur = -1;
-function load(i, play) {
-  cur = (i + R.length) % R.length; const r = R[cur];
-  v.src = '../' + r.d + '/' + r.d + '.mp4'; v.poster = '../' + r.d + '/' + r.d + '.jpg';
-  nt.textContent = r.t; ns.textContent = r.s; nk.textContent = String(cur + 1).padStart(2, '0') + ' / ' + R.length;
+let cur = -1, started = false, timer = 0;
+const show = (el, on) => el.classList.toggle('off', !on);
+function setNow() {
+  const r = R[cur]; $('nt').textContent = r.t; $('ns').textContent = r.s; $('nk').textContent = String(cur + 1).padStart(2, '0') + ' / ' + R.length;
   btns.forEach((b, j) => b.classList.toggle('on', j === cur));
   try { history.replaceState(null, '', '#' + r.d); } catch (e) {}
-  if (play) { go.hidden = true; v.play().catch(() => { go.hidden = false; }); }
 }
-v.addEventListener('ended', () => load(cur + 1, true));
-v.addEventListener('timeupdate', () => { pb.style.width = (100 * (BEFORE[cur] + v.currentTime) / TOT) + '%'; });
-v.addEventListener('click', () => { v.paused ? v.play() : v.pause(); });
-v.addEventListener('pause', () => { if (!v.ended) v.controls = true; });
-v.addEventListener('play', () => { go.hidden = true; });
-go.addEventListener('click', () => load(cur < 0 ? 0 : cur, true));
-btns.forEach((b, j) => b.addEventListener('click', () => { load(j, true); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
-document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' && e.shiftKey) load(cur + 1, true); if (e.key === 'ArrowLeft' && e.shiftKey) load(cur - 1, true); if (e.key === ' ' && e.target === document.body) { e.preventDefault(); v.paused ? v.play() : v.pause(); } });
+function go(i, withInter) {
+  cur = Math.max(0, Math.min(R.length - 1, i)); const r = R[cur];
+  v.pause(); v.src = '../' + r.d + '/' + r.d + '.mp4'; setNow();
+  const newPart = withInter && (cur === 0 || R[cur - 1].p !== r.p);
+  if (newPart) {
+    const parts = [...new Set(R.map((x) => x.p))], pi = parts.indexOf(r.p); $('ip').textContent = 'PART ' + ['I','II','III','IV','V','VI'][pi]; $('in').textContent = r.p; show($('inter'), true);
+    setTimeout(() => { show($('inter'), false); v.play().catch(() => {}); }, 3800);
+  } else v.play().catch(() => {});
+}
+v.addEventListener('ended', () => { if (cur < R.length - 1) go(cur + 1, true); else { show($('end'), true); $('bar').classList.add('hide'); } });
+v.addEventListener('timeupdate', () => { if (cur >= 0) $('pb').style.width = (100 * (BEFORE[cur] + v.currentTime) / TOT) + '%'; });
+v.addEventListener('play', () => { $('pp').textContent = 'PAUSE'; });
+v.addEventListener('pause', () => { $('pp').textContent = 'PLAY'; });
+v.addEventListener('click', () => { v.paused ? v.play() : v.pause(); poke(); });
+function begin(i) { started = true; show($('title'), false); show($('end'), false); go(i, true); fullscreen(true); }
+$('begin').addEventListener('click', () => begin(cur > 0 ? cur : 0));
+$('again').addEventListener('click', () => begin(0));
+$('prev').addEventListener('click', () => go(cur - 1, false));
+$('next').addEventListener('click', () => go(cur + 1, true));
+$('pp').addEventListener('click', () => { v.paused ? v.play() : v.pause(); });
+$('ct').addEventListener('click', () => show($('list'), true));
+$('lx').addEventListener('click', () => show($('list'), false));
+$('fs').addEventListener('click', () => fullscreen(!document.fullscreenElement));
+btns.forEach((b, j) => b.addEventListener('click', () => { show($('list'), false); if (!started) { started = true; show($('title'), false); } show($('end'), false); go(j, true); }));
+function fullscreen(on) { try { if (on && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
+function poke() { if (!started) return; $('bar').classList.remove('hide'); document.body.classList.remove('idle'); clearTimeout(timer); timer = setTimeout(() => { if (!v.paused) { $('bar').classList.add('hide'); document.body.classList.add('idle'); } }, 2600); }
+document.addEventListener('mousemove', poke); document.addEventListener('touchstart', poke);
+document.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); if (!started) begin(0); else v.paused ? v.play() : v.pause(); }
+  else if (k === 'f') fullscreen(!document.fullscreenElement);
+  else if (k === 'c') show($('list'), $('list').classList.contains('off'));
+  else if (k === 'escape') show($('list'), false);
+  else if (k === 'arrowright' && e.shiftKey) go(cur + 1, true);
+  else if (k === 'arrowleft' && e.shiftKey) go(cur - 1, false);
+  poke();
+});
 const h = location.hash.slice(1), hi = R.findIndex((r) => r.d === h);
-load(hi < 0 ? 0 : hi, false);
+cur = hi < 0 ? 0 : hi; setNow();
 </script>
 </body>
 </html>
 """
-cy = cy.replace('__DATA__', cyd).replace('__ROWS__', ''.join(rows)).replace('__N__', str(len(reel))).replace('__T__', mmss(sum(r['n'] for r in reel)))
+cy = cy.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__ROWS__', rows).replace('__BITIC__', ' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>' if any(r['d'] == 'bitic-literature' for r in reel) else '').replace('__EXTRA__', 'two pieces' if any(r['d'] == 'bitic-literature' for r in reel) else 'one piece').replace('__N__', str(len(reel)).upper()).replace('__HM__', hm(tot).upper())
 open(os.path.join(ROOT, 'cyberiad', 'index.html'), 'w', encoding='utf-8').write(cy)
 
 # ---------------- one header for every film page ----------------
