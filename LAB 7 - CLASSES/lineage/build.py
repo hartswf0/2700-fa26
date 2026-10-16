@@ -99,6 +99,12 @@ FILMS = [
        sound='Each item from the wish machine gets a chime. The cellar is clangs that echo under one lamp, then snoring and a gallop in the dark. The medal fanfare goes flat and the blinds come down.',
        code='Equality against identity. Two objects can be equal in every field and still be two objects, and nothing you can read from the outside says which one is the original.',
        builds='In The Mischief of King Balerion one body holds different minds. Here two bodies look and sound the same, and the question is whether they are the same one.'),
+  dict(dir='offer-of-krool', title='The Offer of King Krool', sub='a beast that is all brain, and a king who cannot catch it', source='The Second Sally',
+       line=('The Beast', 'It is my turn to make demands.'),
+       picture='The beast is never drawn as one creature with organs. It is a few hundred small weedy marks that move as one: a low hill of dry grass with eyes. Cut off its head and the marks grow another; cut it in two and there are two, with the old head running between them; chop it fine and the pieces gather again. On paper first, the King and the beast fight across a page of equations while the pencils snap. In the air the same marks become three policemen, and then a green gig with THINK on the back.',
+       sound='Krool paces the whole of the skull hall, one booming boot at a time on a silver floor. The beast is a swarm of small clicks that rises when it splits and settles when it rejoins. The paper battle has its own little percussion score, the sealed wagon rings by itself after a counted fourteen and a half seconds, and the tooth radio crackles before the beast blows away as wind.',
+       code='Distributed control. There is no single part that holds the brain, so there is nothing to smash; and a program keeps the authority you gave it, even when its authors ask for the King back.',
+       builds='The Trap of Gargantius joins many parts into one mind and watches what that mind decides on its own. Here the constructors build such a mind on purpose and find it has its own demands. Like Trurl’s Electronic Bard, it is a machine that does exactly what it was written to do, which is not the same as what its makers want.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -109,7 +115,7 @@ BOOK = [
   ('A Good Shellacking', 'good-shellacking', None),
   ('The First Sally, or The Trap of Gargantius', 'gargantius', ('Two kings each hire a constructor to link their soldiers into one mind. Joined, each army becomes a single thinker that would rather think than fight.', 'Objects that hold references to other objects: a network, and what it does that no single node was told to do.')),
   ('The First Sally (A), or Trurl’s Electronic Bard', 'electronic-bard', ('The poetry machine already appears in the reel. An engraved version could build each poem under the constraint Klapaucius sets.', 'Strings and generative text: a grammar, a rule, and output that has to obey it.')),
-  ('The Second Sally, or The Offer of King Krool', None, None),
+  ('The Second Sally, or The Offer of King Krool', 'offer-of-krool', None),
   ('The Third Sally, or The Dragons of Probability', 'dragons', None),
   ('The Fourth Sally, or The Femfatalatron', 'femfatalatron', None),
   ('The Fifth Sally, or The Mischief of King Balerion', 'mischief-of-balerion', None),
@@ -126,7 +132,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -136,7 +142,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
