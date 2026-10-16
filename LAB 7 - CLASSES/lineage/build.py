@@ -159,6 +159,12 @@ FILMS = [
        sound='A floorboard that tries three creaks before it is right, a church clock striking four before the late sun, and a kettle in one kitchen heard through the shared wall.',
        code='Provenance: store each fact about a room with its source, and write a view that never merges two sources silently.',
        builds='Film four of The House That Language Built. A more convincing reconstruction is not a more trustworthy one: the archive keeps SHOWN and REMEMBERED apart, and leaves ESTABLISHED empty.'),
+  dict(dir='architect-never-built', title='The Architect Who Never Built Anything', sub='seven million houses, and one wall', source='The House That Language Built',
+       line=('Narrator', 'Did he build the wall, or did the wall build him?'),
+       picture='Every described house is drawn out of its own sentence, letters as bricks and a red brass plate; the explanation is an annex that opens into smaller annexes down to a room marked as a footnote; the last wall is the only thing made of real bricks, and its plate is blank.',
+       sound='Typewriter keys, a wooden knock for each wall, the Edifier’s hum, annexes that echo less as they shrink, rain on the strike, and at the end a trowel and one knock per brick.',
+       code='Programming as theory building (Naur, 1985): change one requirement in a program you did not write, and write down what you had to understand before the change would work.',
+       builds='Film three of The House That Language Built. A theorist who has generated seven million houses learns, by building one wall, that producing a thing and understanding it are different.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -186,7 +192,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source', 'Theory building: what you understand, not what you produced']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -196,7 +202,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er', 'architect-never-built': 'an'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
