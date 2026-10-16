@@ -111,6 +111,12 @@ FILMS = [
        sound='Page turns and a typewriter that becomes a fast data rhythm. The reader breathes and writes in pencil, and a small reading machine chimes each time it hands over a summary.',
        code='Machine-readable output: text written by one program for another, and what is lost when a person can only read the summary.',
        builds='Built on Lem’s premise only, before his text was at hand; all wording is new. The Electronic Bard writes poems for people. Here the machines stop writing for people at all.'),
+  dict(dir='bitic-mimesis', title='A History of Bitic Literature: Monoetics and Mimesis', sub='machines that make words, and a novel Dostoevsky could not write', source='Imaginary Magnitude',
+       line=('The Scholar', 'If he left something unsaid, because he died too soon or did not dare, mimesis can supply it.'),
+       picture='The same study as the first bitic film. A dictionary whose old meanings are struck through and replaced by machine meanings, a woven many-shelled body grown from a page, a spine titled The Girl dropping into the gap in Dostoevsky’s shelf, and a press stamping out numbered spines.',
+       sound='A soft typewriter types the machine meanings and evens out into a steady machine rhythm. The woven body hums, the rule of mimesis is bells and echoes, and the press stamps, slows and stops.',
+       code='Generative text from a corpus: a word-pair generator that continues one author’s text, and why it can only recombine what the author already wrote.',
+       builds='Grounded in Lem’s text. It follows the Introduction and turns from machines that coin words to machines that write the missing book of a real author.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -138,7 +144,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -148,7 +154,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
@@ -206,7 +212,7 @@ open(os.path.join(HERE, 'index.html'), 'w').write(page)
 # ---------------- the Cyberiad page: a cinema, every film in book order ----------------
 # Works from a plain folder or drive: no fetch, no server, fonts and films by relative path.
 byd = {f['dir']: f for f in FILMS}
-BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None)]
+BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None)]
 reel, part = [], ''
 for title, d, nxt in BOOK_PLUS:
     if title.startswith('How the World'): part = 'Three Early Stories'
@@ -214,6 +220,7 @@ for title, d, nxt in BOOK_PLUS:
     if title.startswith('Tale of'): part = 'Tales'
     if title.startswith('Non Serviam'): part = 'From A Perfect Vacuum'; title = 'Non Serviam'
     if title.startswith('A History of Bitic'): part = 'From Imaginary Magnitude'
+    if d == 'bitic-literature': title = 'A History of Bitic Literature, after the premise'
     f = byd.get(d)
     if f and os.path.exists(os.path.join(ROOT, d, d + '.mp4')):
         reel.append(dict(d=d, t=title, s='' if f['sub'].lower().startswith('or,') else f['sub'], p=part, n=round(f['sec'])))
@@ -293,7 +300,7 @@ body.idle{cursor:none}
   <p class="by">Stanis&lstrok;aw Lem, filmed</p>
   <div class="intro">
     <p>Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.</p>
-    <p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another, with __EXTRA__ at the end from his books about imaginary books.</p>
+    <p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: __EXTRA__.</p>
   </div>
   <button class="begin" id="begin"><div class="ring"></div><span>BEGIN</span></button>
   <p class="meta">__N__ FILMS &middot; __HM__<span class="keys"> &middot; F FOR FULL SCREEN &middot; C FOR CONTENTS</span></p>
@@ -374,7 +381,7 @@ cur = hi < 0 ? 0 : hi; setNow();
 </body>
 </html>
 """
-cy = cy.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__ROWS__', rows).replace('__BITIC__', ' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>' if any(r['d'] == 'bitic-literature' for r in reel) else '').replace('__EXTRA__', 'two pieces' if any(r['d'] == 'bitic-literature' for r in reel) else 'one piece').replace('__N__', str(len(reel)).upper()).replace('__HM__', hm(tot).upper())
+cy = cy.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__ROWS__', rows).replace('__BITIC__', ' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>' if any(r['d'] == 'bitic-literature' for r in reel) else '').replace('__EXTRA__', ('<i>Non Serviam</i>, and ' + ['', 'one film', 'two films', 'three films', 'four films', 'five films'][sum(r['p'] == 'From Imaginary Magnitude' for r in reel)] + ' from <i>A History of Bitic Literature</i>') if any(r['p'] == 'From Imaginary Magnitude' for r in reel) else '<i>Non Serviam</i>').replace('__N__', str(len(reel)).upper()).replace('__HM__', hm(tot).upper())
 open(os.path.join(ROOT, 'cyberiad', 'index.html'), 'w', encoding='utf-8').write(cy)
 
 # ---------------- one header for every film page ----------------
