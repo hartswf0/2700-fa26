@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The House That Language Built</title>
+<style>
+@font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
+@font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url(../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400 500;font-display:swap}
+:root{--dark:#13110e;--paper:#ebe3cf;--soft:#9b917d;--faint:#5a5246}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--dark);color:var(--paper);font:19px/1.5 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity 1.2s ease}
+.screen.off{opacity:0;pointer-events:none}
+video{width:100%;height:100%;object-fit:contain;background:var(--dark);display:block}
+.card{flex-direction:column;text-align:center;padding:24px;background:var(--dark);z-index:3}
+.title h1{font-weight:400;font-size:clamp(44px,9vw,120px);letter-spacing:.08em;line-height:1;margin:0 0 .25em;text-transform:uppercase}
+.title .by{font-style:italic;font-size:clamp(18px,2.4vw,26px);color:var(--soft);margin:0 0 2.2em}
+.title .intro{max-width:34em;margin:0 auto 2.4em;font-size:clamp(16px,1.9vw,20px);line-height:1.6}
+.title .intro p{margin:0 0 .8em}
+.begin{display:inline-flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.begin .ring{width:76px;height:76px;border:1.5px solid var(--paper);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.begin .ring:after{content:"";border-left:20px solid var(--paper);border-top:13px solid transparent;border-bottom:13px solid transparent;margin-left:6px;transition:border-color .2s}
+.begin:hover .ring{background:var(--paper)}.begin:hover .ring:after{border-left-color:var(--dark)}
+.begin span{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.18em;color:var(--soft)}
+.title .meta{position:absolute;bottom:28px;left:0;right:0;font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;color:var(--faint)}
+.inter .pt{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.3em;color:var(--soft);margin:0 0 22px}
+.inter .nm{font-size:clamp(30px,5vw,58px);letter-spacing:.06em;text-transform:uppercase;margin:0}
+.end h2{font-weight:400;font-size:clamp(36px,6vw,72px);letter-spacing:.12em;margin:0 0 .6em}
+.end p{color:var(--soft);font-style:italic;margin:0 auto .5em;max-width:40em}
+.end .again{margin-top:2em}
+.end a{color:var(--soft)}
+.skip{position:fixed;right:26px;bottom:26px;z-index:5;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--soft);border:1px solid var(--faint);padding:7px 10px}
+.skip:hover{color:var(--paper);border-color:var(--paper)}
+/* the control bar: title row, film scrubber, program strip */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:4;padding:40px 26px 16px;background:linear-gradient(transparent,rgba(19,17,14,.92) 45%);transition:opacity .5s}
+.bar.hide{opacity:0;pointer-events:none}
+.row{display:flex;align-items:baseline;gap:18px}
+.row .now{flex:1;min-width:0}
+.row .now b{font-weight:400;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .now i{font-size:15px;color:var(--soft);margin-left:10px}
+.row .k{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--soft);white-space:nowrap}
+.row button.ic{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--paper);padding:6px 4px;opacity:.8}
+.row button.ic:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
+.scrub{position:relative;height:26px;margin:8px 0 2px;cursor:pointer;touch-action:none}
+.scrub .tr{position:absolute;left:0;right:0;top:11px;height:4px;background:rgba(235,227,207,.18);transition:height .15s,top .15s}
+.scrub:hover .tr,.scrub.drag .tr{top:9px;height:8px}
+.scrub .bf{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(235,227,207,.18)}
+.scrub .pl{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--paper)}
+.scrub .hd{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--paper);left:0;transform:scale(0);transition:transform .15s}
+.scrub:hover .hd,.scrub.drag .hd{transform:scale(1)}
+.strip{display:flex;gap:2px;height:18px;align-items:flex-end;cursor:pointer}
+.strip span{display:block;height:4px;background:rgba(235,227,207,.22);transition:height .12s,background .12s}
+.strip span.pt{margin-left:7px}
+.strip span.done{background:rgba(235,227,207,.5)}
+.strip span.on{background:var(--paper);height:6px}
+.strip span:hover{height:12px;background:var(--paper)}
+.tip{position:fixed;z-index:7;pointer-events:none;transform:translate(-50%,-100%);display:none;text-align:center}
+.tip .im{width:192px;height:108px;border:1px solid var(--paper);background-color:var(--dark);background-repeat:no-repeat;margin:0 auto 6px;display:none}
+.tip .tx{display:inline-block;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.06em;background:var(--dark);border:1px solid var(--faint);padding:5px 9px;white-space:nowrap}
+.tip .tt{display:block;font:15px "IM Fell English",Georgia,serif;letter-spacing:0;margin-bottom:1px}
+.list{position:fixed;inset:0;z-index:6;background:rgba(19,17,14,.96);overflow:auto;padding:60px 26px;transition:opacity .4s}
+.list.off{opacity:0;pointer-events:none}
+.list ol{list-style:none;margin:0 auto;padding:0;max-width:1000px;columns:2 340px;column-gap:56px}
+.list .grp{break-inside:avoid;margin:0 0 26px}
+.list ul{list-style:none;margin:0;padding:0}
+.list .pt{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);margin:0 0 6px}
+.list li button{display:flex;gap:12px;width:100%;padding:4px 0;align-items:baseline}
+.list .no{font:500 12px "IBM Plex Mono",monospace;color:var(--faint);width:22px;flex:none}
+.list .tt{flex:1}
+.list .du{font:500 12px "IBM Plex Mono",monospace;color:var(--faint)}
+.list li button:hover .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.list li button.on .tt{font-style:italic}.list li button.on .no{color:var(--paper)}
+.list .close{position:fixed;top:20px;right:26px;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--soft)}
+.list .keys{max-width:1000px;margin:10px auto 0;font:500 11px/2 "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--faint)}
+.hair{position:fixed;left:0;right:0;bottom:0;height:2px;z-index:3;background:rgba(235,227,207,.1)}
+.hair i{display:block;height:100%;width:0;background:var(--paper);opacity:.45}
+body.idle{cursor:none}
+@media (max-width:640px){.keys-hint{display:none}.row{flex-wrap:wrap;gap:8px}.row .now{flex-basis:100%}.row .now i{display:none}.bar{padding:30px 14px 12px}}
+</style>
+</head>
+<body>
+<div class="screen" id="stage"><video id="v" playsinline preload="auto"></video></div>
+
+<div class="screen card title" id="title">
+  <h1>The House That Language Built</h1>
+  <p class="by">four fables of Edifiction</p>
+  <div class="intro"><p>A machine builds whatever is described to it. The Ministry of Constructive Semantics has cut its motto over the door: everything that can be said can be built.</p>
+    <p>These fables follow what happens next: houses too perfect to live in, a congress that cannot leave its hall, an architect who has never been inside a building, and a street rebuilt from photographs and from memory.</p></div>
+  <button class="begin" id="begin"><div class="ring"></div><span>BEGIN</span></button>
+  <p class="meta">1 FILMS &middot; 5 MIN<span class="keys-hint"> &middot; F FULL SCREEN &middot; C CONTENTS &middot; ARROWS SCRUB</span></p>
+</div>
+
+<div class="screen card inter off" id="inter"><p class="pt" id="ip"></p><p class="nm" id="in"></p></div>
+
+<div class="screen card end off" id="end">
+  <h2>THE END</h2>
+  <p>Original fables from notes by Watson Hartsoe, <i>The House That Language Built</i>, written in the manner of Stanis&lstrok;aw Lem.</p>
+  <p>Drawn in ink in the browser, voiced with Kokoro, the sound made in code. Also: <a href="../cyberiad/index.html">The Cyberiad, filmed</a>.</p>
+  <p class="again"><button class="begin" id="again"><div class="ring"></div><span>FROM THE BEGINNING</span></button></p>
+  <p style="margin-top:2em;font-style:normal"><a href="../index.html">Lab 7</a> &middot; <a href="../lineage/index.html">The videotext</a></p>
+</div>
+
+<button class="skip off" id="skip" hidden>SKIP TITLES</button>
+
+<div class="bar hide" id="bar">
+  <div class="row">
+    <div class="now"><b id="nt"></b><i id="ns"></i></div>
+    <span class="k" id="nk"></span>
+    <button class="ic" id="prev">PREV</button><button class="ic" id="pp">PAUSE</button><button class="ic" id="next">NEXT</button>
+    <button class="ic" id="ct">CONTENTS</button><button class="ic" id="fs">FULL SCREEN</button>
+  </div>
+  <div class="scrub" id="scrub"><div class="tr"><i class="bf" id="bf"></i><i class="pl" id="pl"></i></div><i class="hd" id="hd"></i></div>
+  <div class="strip" id="strip"></div>
+</div>
+<div class="hair"><i id="hair"></i></div>
+<div class="tip" id="tip"><div class="im" id="tim"></div><span class="tx" id="ttx"></span></div>
+
+<div class="list off" id="list"><button class="close" id="lx">CLOSE</button><ol><li class="grp"><p class="pt">The Great International Congress of Doors</p><ul><li><button data-i="0"><span class="no">01</span><span class="tt">The Great International Congress of Doors</span><span class="du">5:56</span></button></li></ul></li></ol>
+<p class="keys">SPACE PLAY OR PAUSE &middot; LEFT AND RIGHT 10 SECONDS &middot; SHIFT 60 SECONDS &middot; [ AND ] PREVIOUS AND NEXT FILM &middot; 0 TO 9 JUMP WITHIN THE FILM &middot; F FULL SCREEN &middot; C CONTENTS</p></div>
+
+<script>
+const R = [{"d": "congress-of-doors", "t": "The Great International Congress of Doors", "s": "four definitions, and no way out", "p": "The Great International Congress of Doors", "n": 355.54, "sp": true}], INTRO = "";
+const $ = (id) => document.getElementById(id);
+const v = $('v'), btns = [...document.querySelectorAll('#list button[data-i]')];
+const TOT = R.reduce((a, r) => a + r.n, 0), BEFORE = R.map((_, i) => R.slice(0, i).reduce((a, r) => a + r.n, 0));
+const mm = (s) => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + x : m + ':' + x; };
+let cur = 0, started = false, timer = 0, inIntro = false, pendingSeek = null, dragging = false;
+const show = (el, on) => el.classList.toggle('off', !on);
+const src = (i) => '../' + R[i].d + '/' + R[i].d + '.mp4';
+const dur = () => (isFinite(v.duration) && v.duration > 0 ? v.duration : R[cur].n);
+
+// program strip: one segment per film, width by length, a gap before each new part
+const strip = $('strip');
+R.forEach((r, i) => { const s = document.createElement('span'); s.style.flex = r.n + ' 1 0'; if (i && R[i - 1].p !== r.p) s.className = 'pt'; s.dataset.i = i; strip.appendChild(s); });
+const segs = [...strip.children];
+
+function setNow() {
+  const r = R[cur]; $('nt').textContent = r.t; $('ns').textContent = r.s;
+  btns.forEach((b, j) => b.classList.toggle('on', j === cur));
+  segs.forEach((s, j) => { s.classList.toggle('on', j === cur); s.classList.toggle('done', j < cur); });
+  try { history.replaceState(null, '', '#' + r.d); } catch (e) {}
+}
+let lastHash = 0;
+function tick() {
+  if (inIntro) return;
+  const t = v.currentTime, d = dur();
+  if (!dragging) { $('pl').style.width = (100 * t / d) + '%'; $('hd').style.left = (100 * t / d) + '%'; }
+  try { const b = v.buffered; if (b.length) $('bf').style.width = (100 * b.end(b.length - 1) / d) + '%'; } catch (e) {}
+  $('nk').textContent = mm(t) + ' / ' + mm(d) + '   ' + String(cur + 1).padStart(2, '0') + ' / ' + R.length;
+  $('hair').style.width = (100 * (BEFORE[cur] + t) / TOT) + '%';
+  if (Math.abs(t - lastHash) > 5) { lastHash = t; try { history.replaceState(null, '', '#' + R[cur].d + (t > 5 ? '@' + Math.floor(t) : '')); } catch (e) {} }
+}
+function go(i, opts = {}) {
+  const at = opts.at || 0;
+  i = Math.max(0, Math.min(R.length - 1, i));
+  if (i === cur && v.src && !inIntro && v.src.endsWith(R[i].d + '.mp4')) { v.currentTime = at; if (opts.play !== false) v.play().catch(() => {}); return; }
+  cur = i; inIntro = false; $('skip').hidden = true; v.pause(); pendingSeek = at || null; v.src = src(i); setNow(); tick();
+  const r = R[cur], newPart = opts.inter && (cur === 0 || R[cur - 1].p !== r.p);
+  if (newPart) {
+    const parts = [...new Set(R.map((x) => x.p))], pi = parts.indexOf(r.p);
+    $('ip').textContent = r.p === 'Afterword' ? 'AFTERWORD' : 'PART ' + ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][pi]; $('in').textContent = r.p === 'Afterword' ? '' : r.p; show($('inter'), true);
+    setTimeout(() => { show($('inter'), false); v.play().catch(() => {}); }, 3800);
+  } else if (opts.play !== false) v.play().catch(() => {});
+}
+v.addEventListener('loadedmetadata', () => { if (pendingSeek) { v.currentTime = Math.min(pendingSeek, v.duration - 0.5); pendingSeek = null; } tick(); });
+v.addEventListener('ended', () => {
+  if (inIntro) { go(0, { inter: true }); return; }
+  if (cur < R.length - 1) go(cur + 1, { inter: true }); else { show($('end'), true); $('bar').classList.add('hide'); }
+});
+v.addEventListener('timeupdate', tick); v.addEventListener('progress', tick);
+v.addEventListener('play', () => { $('pp').textContent = 'PAUSE'; });
+v.addEventListener('pause', () => { $('pp').textContent = 'PLAY'; poke(); });
+v.addEventListener('click', () => { if (inIntro) return; v.paused ? v.play() : v.pause(); poke(); });
+
+function begin(i, at) {
+  started = true; show($('title'), false); show($('end'), false); fullscreen(true);
+  if (INTRO && i === 0 && !at) { inIntro = true; v.src = '../' + INTRO; v.play().catch(() => {}); $('skip').hidden = false; return; }
+  go(i, { inter: true, at });
+}
+$('skip').addEventListener('click', () => go(0, { inter: true }));
+$('begin').addEventListener('click', () => begin(cur, pendingSeek || 0));
+$('again').addEventListener('click', () => begin(0));
+$('prev').addEventListener('click', () => (v.currentTime > 4 ? go(cur, { at: 0 }) : go(cur - 1)));
+$('next').addEventListener('click', () => go(cur + 1, { inter: true }));
+$('pp').addEventListener('click', () => { v.paused ? v.play() : v.pause(); });
+$('ct').addEventListener('click', () => show($('list'), true));
+$('lx').addEventListener('click', () => show($('list'), false));
+$('fs').addEventListener('click', () => fullscreen(!document.fullscreenElement));
+btns.forEach((b, j) => b.addEventListener('click', () => { show($('list'), false); if (!started) { started = true; show($('title'), false); } show($('end'), false); go(j, { inter: true }); }));
+
+// hover preview: a frame every 5 s from thumbs/sprite.jpg (10 per row, 160x90)
+const tip = $('tip'), tim = $('tim'), ttx = $('ttx');
+function preview(i, t, x, y, label) {
+  const r = R[i]; tip.style.display = 'block'; tip.style.left = Math.max(110, Math.min(innerWidth - 110, x)) + 'px'; tip.style.top = ($('bar').getBoundingClientRect().top + 24) + 'px';
+  if (r.sp) { const k = Math.floor(t / 5), c = k % 10, rw = Math.floor(k / 10); tim.style.display = 'block'; tim.style.backgroundImage = 'url(../' + r.d + '/thumbs/sprite.jpg)'; tim.style.backgroundSize = '1920px auto'; tim.style.backgroundPosition = (-c * 192) + 'px ' + (-rw * 108) + 'px'; }
+  else tim.style.display = 'none';
+  ttx.innerHTML = label;
+}
+const hideTip = () => { tip.style.display = 'none'; };
+
+// film scrubber: click or drag anywhere on the line
+const sc = $('scrub');
+const frac = (e) => { const b = sc.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)); };
+sc.addEventListener('pointermove', (e) => { const t = frac(e) * dur(); preview(cur, t, e.clientX, sc.getBoundingClientRect().top, mm(t)); if (dragging) { $('pl').style.width = $('hd').style.left = (100 * frac(e)) + '%'; v.currentTime = t; } poke(); });
+sc.addEventListener('pointerleave', () => { if (!dragging) hideTip(); });
+sc.addEventListener('pointerdown', (e) => { dragging = true; sc.classList.add('drag'); sc.setPointerCapture(e.pointerId); v.currentTime = frac(e) * dur(); $('pl').style.width = $('hd').style.left = (100 * frac(e)) + '%'; });
+const endDrag = () => { if (!dragging) return; dragging = false; sc.classList.remove('drag'); hideTip(); tick(); };
+sc.addEventListener('pointerup', endDrag); sc.addEventListener('pointercancel', endDrag);
+
+// program strip: hover shows film and time, click jumps to that point in that film
+const segAt = (e) => { const s = e.target.closest('span[data-i]'); if (!s) return null; const b = s.getBoundingClientRect(); const i = +s.dataset.i; return { i, t: Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)) * R[i].n, top: strip.getBoundingClientRect().top }; };
+strip.addEventListener('pointermove', (e) => { const h = segAt(e); if (!h) return; preview(h.i, h.t, e.clientX, h.top, '<span class="tt">' + String(h.i + 1).padStart(2, '0') + ' &middot; ' + R[h.i].t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span>' + mm(h.t) + ' of ' + mm(R[h.i].n)); poke(); });
+strip.addEventListener('pointerleave', hideTip);
+strip.addEventListener('click', (e) => { const h = segAt(e); if (!h) return; if (!started) { started = true; show($('title'), false); } go(h.i, { at: h.t < 4 ? 0 : h.t, inter: h.t < 4 }); });
+
+function fullscreen(on) { try { if (on && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
+function poke() { if (!started || inIntro) return; $('bar').classList.remove('hide'); document.body.classList.remove('idle'); clearTimeout(timer); timer = setTimeout(() => { if (!v.paused && !dragging) { $('bar').classList.add('hide'); document.body.classList.add('idle'); hideTip(); } }, 2800); }
+document.addEventListener('mousemove', poke); document.addEventListener('touchstart', poke, { passive: true });
+document.addEventListener('keydown', (e) => {
+  const k = e.key;
+  if (k === ' ') { e.preventDefault(); if (!started) begin(0); else v.paused ? v.play() : v.pause(); }
+  else if (k === 'f' || k === 'F') fullscreen(!document.fullscreenElement);
+  else if (k === 'c' || k === 'C') show($('list'), $('list').classList.contains('off'));
+  else if (k === 'Escape') show($('list'), false);
+  else if (!started || inIntro) return;
+  else if (k === 'ArrowRight') v.currentTime = Math.min(dur() - 0.2, v.currentTime + (e.shiftKey ? 60 : 10));
+  else if (k === 'ArrowLeft') v.currentTime = Math.max(0, v.currentTime - (e.shiftKey ? 60 : 10));
+  else if (k === ']') go(cur + 1, { inter: true });
+  else if (k === '[') go(cur - 1);
+  else if (/^[0-9]$/.test(k)) v.currentTime = dur() * (+k) / 10;
+  poke();
+});
+// a link like #gargantius or #gargantius@125 opens at that film and second
+const h = location.hash.slice(1).split('@'), hi = R.findIndex((r) => r.d === h[0]);
+cur = hi < 0 ? 0 : hi; if (h[1]) pendingSeek = +h[1]; setNow();
+</script>
+</body>
+</html>

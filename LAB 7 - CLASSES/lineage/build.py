@@ -141,6 +141,12 @@ FILMS = [
        sound='Pencil, page turns and breathing from the bitic films, a curtain and footsteps on boards for the stage, and the bitic data rhythm that comes in on the last line and stays to the end.',
        code='Keeping possibilities: a class that holds every reading of a gapped text and switches between them, compared with one that overwrites each reading with the next.',
        builds='An afterword to the collection. It follows Woźniak-Czech’s essay on theory as a field of coexisting possibilities, and ends on her reading of Lem’s books that do not exist and of bitic literature as a theory now being realised.'),
+  dict(dir='congress-of-doors', title='The Great International Congress of Doors', sub='four definitions, and no way out', source='The House That Language Built',
+       line=('Narrator', 'The only door in the building that worked was the one nobody had defined.'),
+       picture='One engraved hall where each delegate’s Edifier builds a door from the letters of its definition, and each door behaves exactly as defined: no hinge, a frameless absence, a credential grille, and a door that appears in front of every exit.',
+       sound='Typewriter keys, letter-brick knocks and the Edifier’s hum, a chairman’s hand bell, and a hall clock heard only in the silences.',
+       code='One interface, Door, with a method pass(person), and four classes that implement it by four definitions; the same delegate run through each.',
+       builds='Film two of The House That Language Built. Original fable from Watson Hartsoe’s notes, in the manner of Lem: a definition that is correct and still leaves no way out.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -168,7 +174,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -178,7 +184,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
@@ -253,20 +259,27 @@ for title, d, nxt in BOOK_PLUS:
 INTRO = 'cyberiad-titles/cyberiad-titles.mp4' if os.path.exists(os.path.join(ROOT, 'cyberiad-titles', 'cyberiad-titles.mp4')) else ''
 tot = sum(r['n'] for r in reel)
 hm = lambda s: (f"{int(s // 3600)} hr {int(s % 3600 // 60)} min" if s >= 3600 else f"{int(s // 60)} min")
-groups = []
-for i, r in enumerate(reel):
-    if not groups or groups[-1][0] != r['p']: groups.append((r['p'], []))
-    groups[-1][1].append(f'<li><button data-i="{i}"><span class="no">{i+1:02d}</span><span class="tt">{E(r["t"])}</span><span class="du">{mmss(r["n"])}</span></button></li>')
-rows = ''.join(f'<li class="grp"><p class="pt">{E(p)}</p><ul>{"".join(items)}</ul></li>' for p, items in groups)
 nb = sum(r['p'] == 'From Imaginary Magnitude' for r in reel)
 extra = ('<i>Non Serviam</i>, and ' + ['', 'one film', 'two films', 'three films', 'four films', 'five films', 'six films'][nb] + ' from <i>A History of Bitic Literature</i>') if nb else '<i>Non Serviam</i>'
 after = any(r['p'] == 'Afterword' for r in reel)
-cy = """<!doctype html>
+def write_cinema(outdir, reel, title, by, intro_html, end_html, intro_file=''):
+    tot = sum(r['n'] for r in reel)
+    groups = []
+    for i, r in enumerate(reel):
+        if not groups or groups[-1][0] != r['p']: groups.append((r['p'], []))
+        groups[-1][1].append(f'<li><button data-i="{i}"><span class="no">{i+1:02d}</span><span class="tt">{E(r["t"])}</span><span class="du">{mmss(r["n"])}</span></button></li>')
+    rows = ''.join(f'<li class="grp"><p class="pt">{E(p)}</p><ul>{"".join(items)}</ul></li>' for p, items in groups)
+    html_ = (CINEMA.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__INTRO__', json.dumps(intro_file)).replace('__ROWS__', rows)
+             .replace('__TITLE__', title).replace('__BY__', by).replace('__INTROHTML__', intro_html).replace('__ENDHTML__', end_html)
+             .replace('__N__', str(len(reel))).replace('__HM__', hm(tot).upper()))
+    os.makedirs(os.path.join(ROOT, outdir), exist_ok=True)
+    open(os.path.join(ROOT, outdir, 'index.html'), 'w', encoding='utf-8').write(html_)
+CINEMA = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>The Cyberiad</title>
+<title>__TITLE__</title>
 <style>
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
 @font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
@@ -348,12 +361,9 @@ body.idle{cursor:none}
 <div class="screen" id="stage"><video id="v" playsinline preload="auto"></video></div>
 
 <div class="screen card title" id="title">
-  <h1>The Cyberiad</h1>
-  <p class="by">Stanis&lstrok;aw Lem, filmed</p>
-  <div class="intro">
-    <p>Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.</p>
-    <p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: __EXTRA__.__AFTER__</p>
-  </div>
+  <h1>__TITLE__</h1>
+  <p class="by">__BY__</p>
+  <div class="intro">__INTROHTML__</div>
   <button class="begin" id="begin"><div class="ring"></div><span>BEGIN</span></button>
   <p class="meta">__N__ FILMS &middot; __HM__<span class="keys-hint"> &middot; F FULL SCREEN &middot; C CONTENTS &middot; ARROWS SCRUB</span></p>
 </div>
@@ -362,8 +372,7 @@ body.idle{cursor:none}
 
 <div class="screen card end off" id="end">
   <h2>THE END</h2>
-  <p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>__BITIC__.__AFTEREND__</p>
-  <p>Narration and dialogue paraphrase their sources. Drawn in ink in the browser, voiced with Kokoro, the sound made in code.</p>
+  __ENDHTML__
   <p class="again"><button class="begin" id="again"><div class="ring"></div><span>FROM THE BEGINNING</span></button></p>
   <p style="margin-top:2em;font-style:normal"><a href="../index.html">Lab 7</a> &middot; <a href="../lineage/index.html">The videotext</a></p>
 </div>
@@ -505,13 +514,30 @@ cur = hi < 0 ? 0 : hi; if (h[1]) pendingSeek = +h[1]; setNow();
 </body>
 </html>
 """
+
+cy_intro = ('<p>Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.</p>\n    '
+            '<p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: ' + extra + '.'
+            + (' An afterword reads them through an essay on the theory of possibilities.' if after else '') + '</p>')
 bit = (' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>, translated by Marc E. Heine' if nb else '')
-cy = (cy.replace('__DATA__', json.dumps(reel, ensure_ascii=False)).replace('__INTRO__', json.dumps(INTRO)).replace('__ROWS__', rows)
-        .replace('__EXTRA__', extra).replace('__BITIC__', bit)
-        .replace('__AFTER__', ' An afterword reads them through an essay on the theory of possibilities.' if after else '')
-        .replace('__AFTEREND__', ' The afterword follows Ewelina Wo&zacute;niak-Czech, <i>The Possibilities of Theory &ndash; the Theory of Possibilities</i> (2024).' if after else '')
-        .replace('__N__', str(len(reel))).replace('__HM__', hm(tot).upper()))
-open(os.path.join(ROOT, 'cyberiad', 'index.html'), 'w', encoding='utf-8').write(cy)
+cy_end = ('<p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>' + bit + '.'
+          + (' The afterword follows Ewelina Wo&zacute;niak-Czech, <i>The Possibilities of Theory &ndash; the Theory of Possibilities</i> (2024).' if after else '') + '</p>\n  '
+          '<p>Narration and dialogue paraphrase their sources. Drawn in ink in the browser, voiced with Kokoro, the sound made in code.</p>')
+write_cinema('cyberiad', reel, 'The Cyberiad', 'Stanis&lstrok;aw Lem, filmed', cy_intro, cy_end, INTRO)
+
+# ---------------- The House That Language Built: four fables of Edifiction ----------------
+E_SERIES = [('edifiction-history', 'A Short History of Edifiction'), ('congress-of-doors', 'The Great International Congress of Doors'),
+            ('architect-never-built', 'The Architect Who Never Built Anything'), ('empty-room', 'The Perfect Description of an Empty Room')]
+ereel = []
+for d, t in E_SERIES:
+    f = byd.get(d)
+    if f and os.path.exists(os.path.join(ROOT, d, d + '.mp4')):
+        ereel.append(dict(d=d, t=t, s=f['sub'], p=t, n=round(f['sec'], 2), sp=os.path.exists(os.path.join(ROOT, d, 'thumbs', 'sprite.jpg'))))
+if ereel:
+    e_intro = ('<p>A machine builds whatever is described to it. The Ministry of Constructive Semantics has cut its motto over the door: everything that can be said can be built.</p>\n    '
+               '<p>These fables follow what happens next: houses too perfect to live in, a congress that cannot leave its hall, an architect who has never been inside a building, and a street rebuilt from photographs and from memory.</p>')
+    e_end = ('<p>Original fables from notes by Watson Hartsoe, <i>The House That Language Built</i>, written in the manner of Stanis&lstrok;aw Lem.</p>\n  '
+             '<p>Drawn in ink in the browser, voiced with Kokoro, the sound made in code. Also: <a href="../cyberiad/index.html">The Cyberiad, filmed</a>.</p>')
+    write_cinema('edifiction', ereel, 'The House That Language Built', 'four fables of Edifiction', e_intro, e_end)
 
 # ---------------- one header for every film page ----------------
 for i, f in enumerate(FILMS):
