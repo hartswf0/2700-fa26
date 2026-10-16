@@ -533,7 +533,7 @@ cy_intro = ('<p>Two constructors, Trurl and Klapaucius, build machines for kings
 bit = (' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>, translated by Marc E. Heine' if nb else '')
 cy_end = ('<p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>' + bit + '.'
           + (' The afterword follows Ewelina Wo&zacute;niak-Czech, <i>The Possibilities of Theory &ndash; the Theory of Possibilities</i> (2024).' if after else '') + '</p>\n  '
-          '<p>Narration and dialogue paraphrase their sources. Drawn in ink in the browser, voiced with Kokoro, the sound made in code.</p>')
+          '<p>Narration and dialogue paraphrase their sources. Drawn in ink in the browser, voiced with Kokoro, the sound made in code. Also: <a href="../edifiction/index.html">The House That Language Built</a>, four fables of Edifiction.</p>')
 write_cinema('cyberiad', reel, 'The Cyberiad', 'Stanis&lstrok;aw Lem, filmed', cy_intro, cy_end, INTRO)
 
 # ---------------- The House That Language Built: four fables of Edifiction ----------------
