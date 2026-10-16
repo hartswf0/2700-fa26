@@ -90,7 +90,7 @@ body.idle{cursor:none}
   <div class="intro"><p>A machine builds whatever is described to it. The Ministry of Constructive Semantics has cut its motto over the door: everything that can be said can be built.</p>
     <p>These fables follow what happens next: houses too perfect to live in, a congress that cannot leave its hall, an architect who has never been inside a building, and a street rebuilt from photographs and from memory.</p></div>
   <button class="begin" id="begin"><div class="ring"></div><span>BEGIN</span></button>
-  <p class="meta">1 FILMS &middot; 5 MIN<span class="keys-hint"> &middot; F FULL SCREEN &middot; C CONTENTS &middot; ARROWS SCRUB</span></p>
+  <p class="meta">3 FILMS &middot; 19 MIN<span class="keys-hint"> &middot; F FULL SCREEN &middot; C CONTENTS &middot; ARROWS SCRUB</span></p>
 </div>
 
 <div class="screen card inter off" id="inter"><p class="pt" id="ip"></p><p class="nm" id="in"></p></div>
@@ -118,11 +118,11 @@ body.idle{cursor:none}
 <div class="hair"><i id="hair"></i></div>
 <div class="tip" id="tip"><div class="im" id="tim"></div><span class="tx" id="ttx"></span></div>
 
-<div class="list off" id="list"><button class="close" id="lx">CLOSE</button><ol><li class="grp"><p class="pt">The Great International Congress of Doors</p><ul><li><button data-i="0"><span class="no">01</span><span class="tt">The Great International Congress of Doors</span><span class="du">5:56</span></button></li></ul></li></ol>
+<div class="list off" id="list"><button class="close" id="lx">CLOSE</button><ol><li class="grp"><p class="pt">A Short History of Edifiction</p><ul><li><button data-i="0"><span class="no">01</span><span class="tt">A Short History of Edifiction</span><span class="du">6:59</span></button></li></ul></li><li class="grp"><p class="pt">The Great International Congress of Doors</p><ul><li><button data-i="1"><span class="no">02</span><span class="tt">The Great International Congress of Doors</span><span class="du">5:56</span></button></li></ul></li><li class="grp"><p class="pt">The Perfect Description of an Empty Room</p><ul><li><button data-i="2"><span class="no">03</span><span class="tt">The Perfect Description of an Empty Room</span><span class="du">6:17</span></button></li></ul></li></ol>
 <p class="keys">SPACE PLAY OR PAUSE &middot; LEFT AND RIGHT 10 SECONDS &middot; SHIFT 60 SECONDS &middot; [ AND ] PREVIOUS AND NEXT FILM &middot; 0 TO 9 JUMP WITHIN THE FILM &middot; F FULL SCREEN &middot; C CONTENTS</p></div>
 
 <script>
-const R = [{"d": "congress-of-doors", "t": "The Great International Congress of Doors", "s": "four definitions, and no way out", "p": "The Great International Congress of Doors", "n": 355.54, "sp": true}], INTRO = "";
+const R = [{"d": "edifiction-history", "t": "A Short History of Edifiction", "s": "the houses that were too perfect to live in", "p": "A Short History of Edifiction", "n": 418.92, "sp": true}, {"d": "congress-of-doors", "t": "The Great International Congress of Doors", "s": "four definitions, and no way out", "p": "The Great International Congress of Doors", "n": 355.54, "sp": true}, {"d": "empty-room", "t": "The Perfect Description of an Empty Room", "s": "a street rebuilt from photographs, and from memory", "p": "The Perfect Description of an Empty Room", "n": 376.79, "sp": true}], INTRO = "";
 const $ = (id) => document.getElementById(id);
 const v = $('v'), btns = [...document.querySelectorAll('#list button[data-i]')];
 const TOT = R.reduce((a, r) => a + r.n, 0), BEFORE = R.map((_, i) => R.slice(0, i).reduce((a, r) => a + r.n, 0));

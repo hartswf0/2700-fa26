@@ -147,6 +147,18 @@ FILMS = [
        sound='Typewriter keys, letter-brick knocks and the Edifier’s hum, a chairman’s hand bell, and a hall clock heard only in the silences.',
        code='One interface, Door, with a method pass(person), and four classes that implement it by four definitions; the same delegate run through each.',
        builds='Film two of The House That Language Built. Original fable from Watson Hartsoe’s notes, in the manner of Lem: a definition that is correct and still leaves no way out.'),
+  dict(dir='edifiction-history', title='A Short History of Edifiction', sub='the houses that were too perfect to live in', source='The House That Language Built',
+       line=('Narrator', 'A missing window is not a philosophical disagreement.'),
+       picture='An open encyclopedia whose engraved plates the camera enters and leaves. Typed sentences fall to the ground and rise as walls of letter-bricks, and red marks only what is wrong: the window missing inside, the stair that does not rise.',
+       sound='Typewriter keys, a wooden knock for each word that lands as a brick, chalk counting windows, and a single stair step at the end.',
+       code='Build from a description twice: once with only what is stated, once with every default filled in, and list what each house cannot do.',
+       builds='Film one of The House That Language Built, from Watson Hartsoe’s drafted preface: a discipline founded to decide what buildings are for, after the buildings were already made.'),
+  dict(dir='empty-room', title='The Perfect Description of an Empty Room', sub='a street rebuilt from photographs, and from memory', source='The House That Language Built',
+       line=('Narrator', 'Both kitchens are correct.'),
+       picture='Halftone archive prints with deckled edges pinned to a board, a street rebuilt from them word by word, red corrections that move from the rooms onto the photographs, and two kitchens on either side of one wall.',
+       sound='A floorboard that tries three creaks before it is right, a church clock striking four before the late sun, and a kettle in one kitchen heard through the shared wall.',
+       code='Provenance: store each fact about a room with its source, and write a view that never merges two sources silently.',
+       builds='Film four of The House That Language Built. A more convincing reconstruction is not a more trustworthy one: the archive keeps SHOWN and REMEMBERED apart, and leaves ESTABLISHED empty.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -174,7 +186,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -184,7 +196,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
