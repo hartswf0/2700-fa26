@@ -197,100 +197,118 @@ total = sum(f['sec'] for f in FILMS)
 made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 open(os.path.join(HERE, 'index.html'), 'w').write(page)
 
-# ---------------- the Cyberiad page: every film in book order ----------------
+# ---------------- the Cyberiad page: one player, every film in book order ----------------
+# Works from a plain folder or drive: no fetch, no server, fonts and films by relative path.
 byd = {f['dir']: f for f in FILMS}
-cards, k = [], 0
+reel, part = [], ''
 for title, d, nxt in BOOK:
-    if title.startswith('How the World'): cards.append('<h2>THREE EARLY STORIES</h2><div class="grid">')
-    if title.startswith('The First Sally, or'): cards.append('</div><h2>THE SEVEN SALLIES OF TRURL AND KLAPAUCIUS</h2><div class="grid">')
-    if title.startswith('Tale of'): cards.append('</div><h2>TALES</h2><div class="grid">')
-    if title.startswith('Non Serviam'): cards.append('</div><h2>FROM A PERFECT VACUUM</h2><p class="note">Not part of The Cyberiad. Lem wrote it as a review of an imaginary book, and it is here because the course reads it beside The Seventh Sally.</p><div class="grid">')
+    if title.startswith('How the World'): part = 'Three early stories'
+    if title.startswith('The First Sally, or'): part = 'The Seven Sallies'
+    if title.startswith('Tale of'): part = 'Tales'
+    if title.startswith('Non Serviam'): part = 'From A Perfect Vacuum'; title = 'Non Serviam'
     f = byd.get(d)
-    if not f: continue
-    k += 1
-    who, said = f['line']
-    idea = f['idea']
-    sub = '' if f['sub'].lower().startswith('or,') else f'<i>{E(f["sub"])}</i>'
-    sents = re.split(r'(?<=[.!?])\s+', f['picture']); pic = sents[0]
-    for x in sents[1:]:
-        if len(pic) + len(x) > 210: break
-        pic += ' ' + x
-    cards.append(f"""<a class="card" href="../{d}/index.html">
-  <span class="tag">{k:02d} · {E(mmss(f['sec']))}</span>
-  <img src="../{d}/{d}.jpg" alt="">
-  <b>{E(title.split(' (A Perfect')[0])}</b>
-  {sub}
-  <p>{E(pic)}</p>
-  <q>{E(said)}</q><span class="who">{E(who)}</span>
-  <small>THE IDEA · {E(idea.upper())}</small>
-</a>""")
-cards.append('</div>')
-cy = f"""<!doctype html>
+    if f: reel.append(dict(d=d, t=title, s='' if f['sub'].lower().startswith('or,') else f['sub'], p=part, n=round(f['sec'])))
+LATER = [dict(t='A History of Bitic Literature', p='From Imaginary Magnitude', s='Lem’s 1973 introduction to an imaginary five-volume history of books written by machines')]
+cyd = json.dumps(reel, ensure_ascii=False)
+groups = []
+for i, r in enumerate(reel):
+    if not groups or groups[-1][0] != r['p']: groups.append((r['p'], []))
+    groups[-1][1].append(f'<li><button data-i="{i}"><span class="no">{i+1:02d}</span><span class="tt">{E(r["t"])}</span><span class="du">{mmss(r["n"])}</span></button></li>')
+for x in LATER:
+    groups.append((x['p'], [f'<li class="later"><span class="no">&middot;</span><span class="tt">{E(x["t"])}<em>{E(x["s"])}. Not yet filmed.</em></span></li>']))
+rows = [f'<li class="grp"><p class="pt">{E(p)}</p><ul>{"".join(items)}</ul></li>' for p, items in groups]
+cy = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>The Cyberiad · Lab 7</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<title>The Cyberiad</title>
 <style>
-:root{{--ink:#141414;--paper:#f4f2ea;--yellow:#ffdc00;--grey:#6d695f}}
-*{{box-sizing:border-box}}
-body{{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}}
-header{{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}}
-header a{{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}}
-header a:hover{{background:var(--yellow)}}
-main{{max-width:1080px;margin:0 auto;padding:44px 22px 70px}}
-.kick{{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--grey);margin:0}}
-h1{{font:800 52px/1 Inter,Arial,sans-serif;letter-spacing:-.02em;margin:12px 0 14px}}
-.lead{{font:400 24px/1.3 "IM Fell English",Georgia,serif;max-width:44ch;margin:0 0 26px}}
-.intro{{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin:0 0 10px}}
-.intro p{{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:62ch}}
-.intro a{{color:inherit}}
-@media (max-width:820px){{.intro{{grid-template-columns:1fr}}h1{{font-size:40px}}}}
-.facts{{font:500 12px/1.9 "IBM Plex Mono",monospace;letter-spacing:.04em;margin:0 0 6px;padding:0;list-style:none}}
-.facts b{{font-weight:700}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}}
-a.card{{display:flex;flex-direction:column;gap:7px;padding:12px;background:#fff;border:2px solid var(--ink);text-decoration:none;color:inherit;transition:transform .12s}}
-a.card:hover{{transform:translateY(-2px);box-shadow:5px 5px 0 var(--ink)}}
-.card img{{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--ink);background:#e8e1cf}}
-.card .tag{{align-self:flex-start;background:var(--ink);color:var(--yellow);font:700 11px "IBM Plex Mono",monospace;padding:4px 7px;letter-spacing:.06em}}
-.card b{{font:800 21px/1.15 Inter,Arial,sans-serif}}
-.card i{{font:italic 18px/1.2 "IM Fell English",Georgia,serif}}
-.card p{{margin:0;font-size:14px;line-height:1.45}}
-.card q{{font:19px/1.3 "IM Fell English",Georgia,serif;background:var(--yellow);padding:3px 6px;align-self:flex-start;quotes:"\\201C" "\\201D"}}
-.card .who{{font:700 10px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);text-transform:uppercase;margin-top:-4px}}
-.card small{{font:700 10px/1.5 "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--grey);margin-top:auto;padding-top:6px;border-top:1px solid #d8d2c2}}
-h2{{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:44px 0 14px;padding-top:12px;border-top:2px solid var(--ink)}}
-.note{{font-size:15px;line-height:1.5;margin:-4px 0 16px;max-width:62ch;color:#3d3a33}}
-.end{{margin-top:44px;font-size:15px;line-height:1.6;max-width:66ch}}
-.end a{{color:inherit}}
+@font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
+@font-face{font-family:"IM Fell English";src:url(../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url(../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400 500;font-display:swap}
+:root{--paper:#ebe3cf;--ink:#1c1814;--soft:#6f6656;--faint:#b9af99}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:19px/1.5 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.page{max-width:1080px;margin:0 auto;padding:44px 22px 80px}
+.mast{display:flex;justify-content:space-between;align-items:baseline;gap:20px;margin-bottom:22px}
+h1{font-weight:400;font-size:clamp(34px,5vw,56px);letter-spacing:.04em;line-height:1;margin:0;text-transform:uppercase}
+.by{font-style:italic;color:var(--soft);font-size:17px;margin:0}
+.stage{position:relative;border:1px solid var(--ink);padding:7px;background:var(--paper)}
+.stage:before{content:"";position:absolute;inset:3px;border:2px solid var(--ink);pointer-events:none}
+video{display:block;width:100%;aspect-ratio:16/9;background:#e3dac3;cursor:pointer}
+.start{position:absolute;inset:7px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:rgba(235,227,207,.55)}
+.start .ring{width:84px;height:84px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--paper)}
+.start .ring:after{content:"";border-left:22px solid var(--ink);border-top:14px solid transparent;border-bottom:14px solid transparent;margin-left:6px}
+.start span{font-style:italic;font-size:18px}
+.now{display:flex;justify-content:space-between;align-items:baseline;gap:18px;margin:16px 2px 0;min-height:56px}
+.now .t{font-size:24px;line-height:1.2}
+.now .s{display:block;font-style:italic;color:var(--soft);font-size:17px}
+.now .k{font:500 12px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--soft);white-space:nowrap}
+.bar{height:1px;background:var(--faint);margin:14px 0 0;position:relative}
+.bar i{position:absolute;left:0;top:-1px;height:3px;background:var(--ink);width:0}
+ol{list-style:none;margin:44px 0 0;padding:0;columns:2 340px;column-gap:48px}
+li.grp{break-inside:avoid;margin:0 0 22px}
+ul{list-style:none;margin:0;padding:0}
+.pt{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);margin:0 0 6px}
+li button,li.later{display:flex;gap:12px;width:100%;padding:4px 0;align-items:baseline}
+.no{font:500 12px "IBM Plex Mono",monospace;color:var(--soft);width:22px;flex:none}
+.tt{flex:1}
+.du{font:500 12px "IBM Plex Mono",monospace;color:var(--faint)}
+li button:hover .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+li button.on .tt{font-style:italic}
+li button.on .no:before{content:"\\25B8";position:absolute;margin-left:-14px;color:var(--ink)}
+li button.on .du{color:var(--ink)}
+li.later{color:var(--soft)}
+li.later em{display:block;font-size:15px;line-height:1.35;margin-top:2px}
+.foot{margin-top:48px;font-size:15px;color:var(--soft);font-style:italic;max-width:60ch}
+.foot a{color:inherit}
+@media (max-width:640px){.mast{flex-direction:column;gap:6px}.page{padding-top:28px}.now{flex-direction:column;gap:4px}}
 </style>
 </head>
 <body>
-<header><a href="../index.html">LAB 7</a><a href="../lineage/index.html">THE LINEAGE</a><a href="../two-sallies/index.html">THE FIRST REEL</a></header>
-<main>
-  <p class="kick">LAB 7 · THE CYBERIAD · {len(FILMS)} FILMS IN BOOK ORDER</p>
-  <h1>The Cyberiad, filmed.</h1>
-  <p class="lead">Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Each machine does exactly what it was built to do, and that is where the trouble starts.</p>
-  <div class="intro">
-    <div>
-      <p>Stanis&lstrok;aw Lem published <i>Cyberiada</i> in 1965. Michael Kandel&rsquo;s English translation, <i>The Cyberiad</i>, followed in 1974. The stories are told like fairy tales, but the kings, dragons and princesses are machines, and the problems are the ones people meet when they write programs: a test that passes when it should fail, a rule obeyed to the letter, a copy that cannot be told from the original, a part that cannot be found because every part is the brain.</p>
-      <p>Every story in the course&rsquo;s edition has a film here, in the order the book prints them. Read the book alongside and the films follow it chapter by chapter.</p>
-    </div>
-    <div>
-      <p>Each film is built around one device you can watch: a graph of soldiers, a thing that shrinks while an office grows, a wall of gauges, a chalkboard that disagrees with a machine. The narration paraphrases Lem, and every scene has one line that carries it, filmed close and spoken slowly. That line is on each card below.</p>
-      <p>Each card also names the programming idea the film is built around. A film&rsquo;s page has the full script, how the picture and sound were made, and an exercise to try in code. For the order used in class, grouped into the three experiments, see <a href="../lineage/index.html">the lineage</a>.</p>
-      <ul class="facts"><li><b>{len(FILMS)}</b> films · <b>{mmss(total)}</b> in all</li><li>Drawn in ink in the browser, voiced with Kokoro, sound made in code</li></ul>
-    </div>
+<div class="page">
+  <div class="mast"><h1>The Cyberiad</h1><p class="by">Stanis&lstrok;aw Lem, filmed in book order &middot; __N__ films, __T__</p></div>
+  <div class="stage">
+    <video id="v" playsinline preload="metadata"></video>
+    <button class="start" id="go"><div class="ring"></div><span>Play all, from the beginning</span></button>
   </div>
-  {''.join(cards)}
-  <p class="end">The first two chapters of the First Sally were filmed earlier as a single reel, <a href="../two-sallies/index.html">Two Sallies</a>, which is kept as the first version. Narration and dialogue in every film paraphrase Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel.</p>
-</main>
+  <div class="now"><div><span class="t" id="nt"></span><span class="s" id="ns"></span></div><span class="k" id="nk"></span></div>
+  <div class="bar"><i id="pb"></i></div>
+  <ol id="list">__ROWS__</ol>
+  <p class="foot">The films play one after another without stopping. Click a title to jump to it. Narration and dialogue paraphrase Lem, <i>The Cyberiad</i>, translated by Michael Kandel. <a href="../index.html">Lab 7</a> &middot; <a href="../lineage/index.html">The videotext</a></p>
+</div>
+<script>
+const R = __DATA__;
+const v = document.getElementById('v'), go = document.getElementById('go'), btns = [...document.querySelectorAll('#list button')];
+const nt = document.getElementById('nt'), ns = document.getElementById('ns'), nk = document.getElementById('nk'), pb = document.getElementById('pb');
+const TOT = R.reduce((a, r) => a + r.n, 0), BEFORE = R.map((_, i) => R.slice(0, i).reduce((a, r) => a + r.n, 0));
+const mm = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+let cur = -1;
+function load(i, play) {
+  cur = (i + R.length) % R.length; const r = R[cur];
+  v.src = '../' + r.d + '/' + r.d + '.mp4'; v.poster = '../' + r.d + '/' + r.d + '.jpg';
+  nt.textContent = r.t; ns.textContent = r.s; nk.textContent = String(cur + 1).padStart(2, '0') + ' / ' + R.length;
+  btns.forEach((b, j) => b.classList.toggle('on', j === cur));
+  try { history.replaceState(null, '', '#' + r.d); } catch (e) {}
+  if (play) { go.hidden = true; v.play().catch(() => { go.hidden = false; }); }
+}
+v.addEventListener('ended', () => load(cur + 1, true));
+v.addEventListener('timeupdate', () => { pb.style.width = (100 * (BEFORE[cur] + v.currentTime) / TOT) + '%'; });
+v.addEventListener('click', () => { v.paused ? v.play() : v.pause(); });
+v.addEventListener('pause', () => { if (!v.ended) v.controls = true; });
+v.addEventListener('play', () => { go.hidden = true; });
+go.addEventListener('click', () => load(cur < 0 ? 0 : cur, true));
+btns.forEach((b, j) => b.addEventListener('click', () => { load(j, true); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
+document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' && e.shiftKey) load(cur + 1, true); if (e.key === 'ArrowLeft' && e.shiftKey) load(cur - 1, true); if (e.key === ' ' && e.target === document.body) { e.preventDefault(); v.paused ? v.play() : v.pause(); } });
+const h = location.hash.slice(1), hi = R.findIndex((r) => r.d === h);
+load(hi < 0 ? 0 : hi, false);
+</script>
 </body>
 </html>
 """
+cy = cy.replace('__DATA__', cyd).replace('__ROWS__', ''.join(rows)).replace('__N__', str(len(reel))).replace('__T__', mmss(sum(r['n'] for r in reel)))
 open(os.path.join(ROOT, 'cyberiad', 'index.html'), 'w', encoding='utf-8').write(cy)
 
 # ---------------- one header for every film page ----------------
