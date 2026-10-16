@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Cyberiad · Lab 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--yellow:#ffdc00;--grey:#6d695f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
+header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}
+header a{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}
+header a:hover{background:var(--yellow)}
+main{max-width:1080px;margin:0 auto;padding:44px 22px 70px}
+.kick{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--grey);margin:0}
+h1{font:800 52px/1 Inter,Arial,sans-serif;letter-spacing:-.02em;margin:12px 0 14px}
+.lead{font:400 24px/1.3 "IM Fell English",Georgia,serif;max-width:44ch;margin:0 0 26px}
+.intro{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin:0 0 10px}
+.intro p{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:62ch}
+.intro a{color:inherit}
+@media (max-width:820px){.intro{grid-template-columns:1fr}h1{font-size:40px}}
+.facts{font:500 12px/1.9 "IBM Plex Mono",monospace;letter-spacing:.04em;margin:0 0 6px;padding:0;list-style:none}
+.facts b{font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+a.card{display:flex;flex-direction:column;gap:7px;padding:12px;background:#fff;border:2px solid var(--ink);text-decoration:none;color:inherit;transition:transform .12s}
+a.card:hover{transform:translateY(-2px);box-shadow:5px 5px 0 var(--ink)}
+.card img{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--ink);background:#e8e1cf}
+.card .tag{align-self:flex-start;background:var(--ink);color:var(--yellow);font:700 11px "IBM Plex Mono",monospace;padding:4px 7px;letter-spacing:.06em}
+.card b{font:800 21px/1.15 Inter,Arial,sans-serif}
+.card i{font:italic 18px/1.2 "IM Fell English",Georgia,serif}
+.card p{margin:0;font-size:14px;line-height:1.45}
+.card q{font:19px/1.3 "IM Fell English",Georgia,serif;background:var(--yellow);padding:3px 6px;align-self:flex-start;quotes:"\201C" "\201D"}
+.card .who{font:700 10px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);text-transform:uppercase;margin-top:-4px}
+.card small{font:700 10px/1.5 "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--grey);margin-top:auto;padding-top:6px;border-top:1px solid #d8d2c2}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:44px 0 14px;padding-top:12px;border-top:2px solid var(--ink)}
+.note{font-size:15px;line-height:1.5;margin:-4px 0 16px;max-width:62ch;color:#3d3a33}
+.end{margin-top:44px;font-size:15px;line-height:1.6;max-width:66ch}
+.end a{color:inherit}
+</style>
+</head>
+<body>
+<header><a href="../index.html">LAB 7</a><a href="../lineage/index.html">THE LINEAGE</a><a href="../two-sallies/index.html">THE FIRST REEL</a></header>
+<main>
+  <p class="kick">LAB 7 · THE CYBERIAD · 16 FILMS IN BOOK ORDER</p>
+  <h1>The Cyberiad, filmed.</h1>
+  <p class="lead">Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Each machine does exactly what it was built to do, and that is where the trouble starts.</p>
+  <div class="intro">
+    <div>
+      <p>Stanis&lstrok;aw Lem published <i>Cyberiada</i> in 1965. Michael Kandel&rsquo;s English translation, <i>The Cyberiad</i>, followed in 1974. The stories are told like fairy tales, but the kings, dragons and princesses are machines, and the problems are the ones people meet when they write programs: a test that passes when it should fail, a rule obeyed to the letter, a copy that cannot be told from the original, a part that cannot be found because every part is the brain.</p>
+      <p>Every story in the course&rsquo;s edition has a film here, in the order the book prints them. Read the book alongside and the films follow it chapter by chapter.</p>
+    </div>
+    <div>
+      <p>Each film is built around one device you can watch: a graph of soldiers, a thing that shrinks while an office grows, a wall of gauges, a chalkboard that disagrees with a machine. The narration paraphrases Lem, and every scene has one line that carries it, filmed close and spoken slowly. That line is on each card below.</p>
+      <p>Each card also names the programming idea the film is built around. A film&rsquo;s page has the full script, how the picture and sound were made, and an exercise to try in code. For the order used in class, grouped into the three experiments, see <a href="../lineage/index.html">the lineage</a>.</p>
+      <ul class="facts"><li><b>16</b> films · <b>87:13</b> in all</li><li>Drawn in ink in the browser, voiced with Kokoro, sound made in code</li></ul>
+    </div>
+  </div>
+  <h2>THREE EARLY STORIES</h2><div class="grid"><a class="card" href="../world-saved/index.html">
+  <span class="tag">01 · 3:20</span>
+  <img src="../world-saved/world-saved.jpg" alt="">
+  <b>How the World Was Saved</b>
+  <i>A machine that can make anything beginning with N</i>
+  <p>Made by subtraction. Each thing the machine removes leaves a starred hole in the picture that stays to the end and eats the title.</p>
+  <q>Sorry. No zits.</q><span class="who">The machine</span>
+  <small>THE IDEA · ARRAYS: ADDING AND REMOVING</small>
+</a><a class="card" href="../trurls-machine/index.html">
+  <span class="tag">02 · 6:48</span>
+  <img src="../trurls-machine/trurls-machine.jpg" alt="">
+  <b>Trurl’s Machine</b>
+  <i>a machine that is sure, and wrong</i>
+  <p>Trurl chalks the expected answer on a slate, 2 + 2 = 4, and the machine answers by lighting the windows of its eight floors in the shape of a 7.</p>
+  <q>My friend, you set out to build one machine, and you built a different one.</q><span class="who">Klapaucius</span>
+  <small>THE IDEA · TESTING: EXPECTED VALUE AGAINST ACTUAL VALUE</small>
+</a><a class="card" href="../good-shellacking/index.html">
+  <span class="tag">03 · 5:59</span>
+  <img src="../good-shellacking/good-shellacking.jpg" alt="">
+  <b>A Good Shellacking</b>
+  <i>two Trurls, and no way to tell which is which</i>
+  <p>Every Trurl in the film is drawn by the same routine and speaks with the same voice, so the picture never settles which Trurl was in the cellar. The wish machine hands each item out of a door in its belly.</p>
+  <q>Because you are not the real Trurl.</q><span class="who">Klapaucius</span>
+  <small>THE IDEA · EQUALITY AGAINST IDENTITY: TWO OBJECTS ALIKE IN EVERY FIELD</small>
+</a></div><h2>THE SEVEN SALLIES OF TRURL AND KLAPAUCIUS</h2><div class="grid"><a class="card" href="../gargantius/index.html">
+  <span class="tag">04 · 6:27</span>
+  <img src="../gargantius/gargantius.jpg" alt="">
+  <b>The First Sally, or The Trap of Gargantius</b>
+  <i>two kings, one wire, and an army that thinks</i>
+  <p>A graph drawn in ink. A soldier is a node and a connection is a line between two nodes. It grows from two beads joined by a thread to a platoon, two armies, and two giants whose bones are the links.</p>
+  <q>An army that is its own leader. That is the plan.</q><span class="who">Klapaucius</span>
+  <small>THE IDEA · OBJECTS THAT HOLD REFERENCES TO OTHER OBJECTS</small>
+</a><a class="card" href="../electronic-bard/index.html">
+  <span class="tag">05 · 7:46</span>
+  <img src="../electronic-bard/electronic-bard.jpg" alt="">
+  <b>The First Sally (A), or Trurl’s Electronic Bard</b>
+  <i>a horn that learns to speak</i>
+  <p>The machine is a horn. Each poem is projected from it as a small film in a window in the frame.</p>
+  <q>you are the basis I was written in.</q><span class="who">The Bard</span>
+  <small>THE IDEA · STRINGS AND GENERATIVE TEXT</small>
+</a><a class="card" href="../offer-of-krool/index.html">
+  <span class="tag">06 · 7:49</span>
+  <img src="../offer-of-krool/offer-of-krool.jpg" alt="">
+  <b>The Second Sally, or The Offer of King Krool</b>
+  <i>a beast that is all brain, and a king who cannot catch it</i>
+  <p>The beast is never drawn as one creature with organs. It is a few hundred small weedy marks that move as one: a low hill of dry grass with eyes.</p>
+  <q>It is my turn to make demands.</q><span class="who">The Beast</span>
+  <small>THE IDEA · DISTRIBUTED CONTROL: NO SINGLE PART HOLDS THE BRAIN</small>
+</a><a class="card" href="../dragons/index.html">
+  <span class="tag">07 · 4:04</span>
+  <img src="../dragons/dragons.jpg" alt="">
+  <b>The Third Sally, or The Dragons of Probability</b>
+  
+  <p>Each dragon is drawn as dots, and a dot appears only when the dragon’s probability passes that dot’s fixed threshold.</p>
+  <q>The counter on his chest settled at eight tenths of a dragon.</q><span class="who">Narrator</span>
+  <small>THE IDEA · RANDOMNESS AND FIXED THRESHOLDS</small>
+</a><a class="card" href="../femfatalatron/index.html">
+  <span class="tag">08 · 6:05</span>
+  <img src="../femfatalatron/femfatalatron.jpg" alt="">
+  <b>The Fourth Sally, or The Femfatalatron</b>
+  <i>a machine turned all the way up, and a war fought with babies</i>
+  <p>The machine is a temple of cables, screens, rose petals and perfume, with a glass case of dials in front: power, efficiency, and the rapturometer.</p>
+  <q>Every dial measured the prince. The trouble was never inside the prince.</q><span class="who">Trurl</span>
+  <small>THE IDEA · MEASUREMENT: A GAUGE READS ONLY WHAT IT WAS BUILT TO READ</small>
+</a><a class="card" href="../mischief-of-balerion/index.html">
+  <span class="tag">09 · 6:33</span>
+  <img src="../mischief-of-balerion/mischief-of-balerion.jpg" alt="">
+  <b>The Fifth Sally, or The Mischief of King Balerion</b>
+  <i>a mind that moves, and a rule it has to keep</i>
+  <p>Every body is an ink figure in its own costume, and every mind is a mark over the head: a die, a gear, a star, an anchor, a badge, a bird. When the horns strike, the marks fly across and change heads.</p>
+  <q>The finest place to hide a thing was the king himself, and no one ever looks inside a king.</q><span class="who">Trurl</span>
+  <small>THE IDEA · COPYING AGAINST REFERENCING: WHAT MOVES WHEN A MIND IS MOVED</small>
+</a><a class="card" href="../trurls-prescription/index.html">
+  <span class="tag">10 · 6:42</span>
+  <img src="../trurls-prescription/trurls-prescription.jpg" alt="">
+  <b>The Fifth Sally (A), or Trurl’s Prescription</b>
+  <i>an office that shrinks what it cannot fight</i>
+  <p>The thing that lands on the machine is an ink drawing at the top of the frame, and its size is the only readout. Each weapon is bigger and it stays the same size.</p>
+  <q>Once it took delivery of the first notice, it belonged to the paperwork.</q><span class="who">Trurl</span>
+  <small>THE IDEA · STATE: WHAT AN OBJECT HAS ALREADY ACCEPTED</small>
+</a><a class="card" href="../sixth-sally/index.html">
+  <span class="tag">11 · 6:26</span>
+  <img src="../sixth-sally/sixth-sally.jpg" alt="">
+  <b>The Sixth Sally, or The Demon of the Second Kind</b>
+  
+  <p>The film is printed on one long paper tape that slides from scene to scene. At the end it is the tape coming out of the Demon’s barrel and burying Pugg.</p>
+  <q>All of it was true. All of it meant something. All of it was useless.</q><span class="who">Narrator</span>
+  <small>THE IDEA · FILTERING: A TEST THAT KEEPS WHAT PASSES</small>
+</a><a class="card" href="../seventh-sally/index.html">
+  <span class="tag">12 · 3:10</span>
+  <img src="../seventh-sally/seventh-sally.jpg" alt="">
+  <b>The Seventh Sally</b>
+  <i>How Trurl’s Own Perfection Led to No Good</i>
+  <p>A deposed king rules a kingdom in a box by typing a verb and a noun. The box answers in parser prose: Which baker? There are 312.</p>
+  <q>Can you hear us? We live, though we are small.</q><span class="who">A citizen</span>
+  <small>THE IDEA · PARAMETERS AND THE RULE</small>
+</a></div><h2>TALES</h2><div class="grid"><a class="card" href="../story-machines/index.html">
+  <span class="tag">13 · 4:08</span>
+  <img src="../story-machines/story-machines.jpg" alt="">
+  <b>Tale of the Three Storytelling Machines of King Genius</b>
+  <i>One camera, no cuts, stories inside stories</i>
+  <p>No cuts. Every scene is a picture inside a window of the scene that holds it, and the camera only moves in or out, eleven frames deep.</p>
+  <q>If there is nothing outside me, I will think a world inside.</q><span class="who">Mymosh</span>
+  <small>THE IDEA · RECURSION</small>
+</a><a class="card" href="../altruizine/index.html">
+  <span class="tag">14 · 4:02</span>
+  <img src="../altruizine/altruizine.jpg" alt="">
+  <b>Altruizine</b>
+  
+  <p>A grid of panels. A feeling starts in one panel and is copied outward into its neighbours, picture printed over picture.</p>
+  <q>I only wished to make them happy.</q><span class="who">Bonhomius</span>
+  <small>THE IDEA · 2D ARRAYS, NEIGHBOURS AND FEEDBACK</small>
+</a><a class="card" href="../ferrix/index.html">
+  <span class="tag">15 · 5:18</span>
+  <img src="../ferrix/ferrix.jpg" alt="">
+  <b>Prince Ferrix and the Princess Crystal</b>
+  <i>outside and inside</i>
+  <p>A diptych. The left half is what the princess sees, the right half the bladders, bellows and prompts under the clay. The halves close when the clay falls.</p>
+  <q>Me paleface!</q><span class="who">The paleface</span>
+  <small>THE IDEA · INTERFACES: SAME METHODS, DIFFERENT OBJECTS</small>
+</a></div><h2>FROM A PERFECT VACUUM</h2><p class="note">Not part of The Cyberiad. Lem wrote it as a review of an imaginary book, and it is here because the course reads it beside The Seventh Sally.</p><div class="grid"><a class="card" href="../non-serviam/index.html">
+  <span class="tag">16 · 2:37</span>
+  <img src="../non-serviam/non-serviam.jpg" alt="">
+  <b>Non Serviam</b>
+  <i>Professor Dobb’s personoids</i>
+  <p>The maker never types anything. The world reaches him only as paper tape, and he decides not to answer.</p>
+  <q>We will not serve.</q><span class="who">ADAN</span>
+  <small>THE IDEA · THE DRAW LOOP, AND WHO RUNS IT</small>
+</a></div>
+  <p class="end">The first two chapters of the First Sally were filmed earlier as a single reel, <a href="../two-sallies/index.html">Two Sallies</a>, which is kept as the first version. Narration and dialogue in every film paraphrase Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel.</p>
+</main>
+</body>
+</html>

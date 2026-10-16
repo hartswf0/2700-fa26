@@ -197,6 +197,102 @@ total = sum(f['sec'] for f in FILMS)
 made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 open(os.path.join(HERE, 'index.html'), 'w').write(page)
 
+# ---------------- the Cyberiad page: every film in book order ----------------
+byd = {f['dir']: f for f in FILMS}
+cards, k = [], 0
+for title, d, nxt in BOOK:
+    if title.startswith('How the World'): cards.append('<h2>THREE EARLY STORIES</h2><div class="grid">')
+    if title.startswith('The First Sally, or'): cards.append('</div><h2>THE SEVEN SALLIES OF TRURL AND KLAPAUCIUS</h2><div class="grid">')
+    if title.startswith('Tale of'): cards.append('</div><h2>TALES</h2><div class="grid">')
+    if title.startswith('Non Serviam'): cards.append('</div><h2>FROM A PERFECT VACUUM</h2><p class="note">Not part of The Cyberiad. Lem wrote it as a review of an imaginary book, and it is here because the course reads it beside The Seventh Sally.</p><div class="grid">')
+    f = byd.get(d)
+    if not f: continue
+    k += 1
+    who, said = f['line']
+    idea = f['idea']
+    sub = '' if f['sub'].lower().startswith('or,') else f'<i>{E(f["sub"])}</i>'
+    sents = re.split(r'(?<=[.!?])\s+', f['picture']); pic = sents[0]
+    for x in sents[1:]:
+        if len(pic) + len(x) > 210: break
+        pic += ' ' + x
+    cards.append(f"""<a class="card" href="../{d}/index.html">
+  <span class="tag">{k:02d} · {E(mmss(f['sec']))}</span>
+  <img src="../{d}/{d}.jpg" alt="">
+  <b>{E(title.split(' (A Perfect')[0])}</b>
+  {sub}
+  <p>{E(pic)}</p>
+  <q>{E(said)}</q><span class="who">{E(who)}</span>
+  <small>THE IDEA · {E(idea.upper())}</small>
+</a>""")
+cards.append('</div>')
+cy = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Cyberiad · Lab 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{{--ink:#141414;--paper:#f4f2ea;--yellow:#ffdc00;--grey:#6d695f}}
+*{{box-sizing:border-box}}
+body{{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}}
+header{{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}}
+header a{{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}}
+header a:hover{{background:var(--yellow)}}
+main{{max-width:1080px;margin:0 auto;padding:44px 22px 70px}}
+.kick{{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--grey);margin:0}}
+h1{{font:800 52px/1 Inter,Arial,sans-serif;letter-spacing:-.02em;margin:12px 0 14px}}
+.lead{{font:400 24px/1.3 "IM Fell English",Georgia,serif;max-width:44ch;margin:0 0 26px}}
+.intro{{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin:0 0 10px}}
+.intro p{{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:62ch}}
+.intro a{{color:inherit}}
+@media (max-width:820px){{.intro{{grid-template-columns:1fr}}h1{{font-size:40px}}}}
+.facts{{font:500 12px/1.9 "IBM Plex Mono",monospace;letter-spacing:.04em;margin:0 0 6px;padding:0;list-style:none}}
+.facts b{{font-weight:700}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}}
+a.card{{display:flex;flex-direction:column;gap:7px;padding:12px;background:#fff;border:2px solid var(--ink);text-decoration:none;color:inherit;transition:transform .12s}}
+a.card:hover{{transform:translateY(-2px);box-shadow:5px 5px 0 var(--ink)}}
+.card img{{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--ink);background:#e8e1cf}}
+.card .tag{{align-self:flex-start;background:var(--ink);color:var(--yellow);font:700 11px "IBM Plex Mono",monospace;padding:4px 7px;letter-spacing:.06em}}
+.card b{{font:800 21px/1.15 Inter,Arial,sans-serif}}
+.card i{{font:italic 18px/1.2 "IM Fell English",Georgia,serif}}
+.card p{{margin:0;font-size:14px;line-height:1.45}}
+.card q{{font:19px/1.3 "IM Fell English",Georgia,serif;background:var(--yellow);padding:3px 6px;align-self:flex-start;quotes:"\\201C" "\\201D"}}
+.card .who{{font:700 10px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);text-transform:uppercase;margin-top:-4px}}
+.card small{{font:700 10px/1.5 "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--grey);margin-top:auto;padding-top:6px;border-top:1px solid #d8d2c2}}
+h2{{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:44px 0 14px;padding-top:12px;border-top:2px solid var(--ink)}}
+.note{{font-size:15px;line-height:1.5;margin:-4px 0 16px;max-width:62ch;color:#3d3a33}}
+.end{{margin-top:44px;font-size:15px;line-height:1.6;max-width:66ch}}
+.end a{{color:inherit}}
+</style>
+</head>
+<body>
+<header><a href="../index.html">LAB 7</a><a href="../lineage/index.html">THE LINEAGE</a><a href="../two-sallies/index.html">THE FIRST REEL</a></header>
+<main>
+  <p class="kick">LAB 7 · THE CYBERIAD · {len(FILMS)} FILMS IN BOOK ORDER</p>
+  <h1>The Cyberiad, filmed.</h1>
+  <p class="lead">Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Each machine does exactly what it was built to do, and that is where the trouble starts.</p>
+  <div class="intro">
+    <div>
+      <p>Stanis&lstrok;aw Lem published <i>Cyberiada</i> in 1965. Michael Kandel&rsquo;s English translation, <i>The Cyberiad</i>, followed in 1974. The stories are told like fairy tales, but the kings, dragons and princesses are machines, and the problems are the ones people meet when they write programs: a test that passes when it should fail, a rule obeyed to the letter, a copy that cannot be told from the original, a part that cannot be found because every part is the brain.</p>
+      <p>Every story in the course&rsquo;s edition has a film here, in the order the book prints them. Read the book alongside and the films follow it chapter by chapter.</p>
+    </div>
+    <div>
+      <p>Each film is built around one device you can watch: a graph of soldiers, a thing that shrinks while an office grows, a wall of gauges, a chalkboard that disagrees with a machine. The narration paraphrases Lem, and every scene has one line that carries it, filmed close and spoken slowly. That line is on each card below.</p>
+      <p>Each card also names the programming idea the film is built around. A film&rsquo;s page has the full script, how the picture and sound were made, and an exercise to try in code. For the order used in class, grouped into the three experiments, see <a href="../lineage/index.html">the lineage</a>.</p>
+      <ul class="facts"><li><b>{len(FILMS)}</b> films · <b>{mmss(total)}</b> in all</li><li>Drawn in ink in the browser, voiced with Kokoro, sound made in code</li></ul>
+    </div>
+  </div>
+  {''.join(cards)}
+  <p class="end">The first two chapters of the First Sally were filmed earlier as a single reel, <a href="../two-sallies/index.html">Two Sallies</a>, which is kept as the first version. Narration and dialogue in every film paraphrase Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel.</p>
+</main>
+</body>
+</html>
+"""
+open(os.path.join(ROOT, 'cyberiad', 'index.html'), 'w', encoding='utf-8').write(cy)
+
 # ---------------- one header for every film page ----------------
 for i, f in enumerate(FILMS):
     p = os.path.join(ROOT, f['dir'], 'index.html'); s = open(p).read()
