@@ -93,6 +93,12 @@ FILMS = [
        sound='The same racket of thinking, the same length every time, before every wrong answer, and every answer delivered the same way. Outside the cave the voice is muffled through steel; Trurl shouts four while the machine pounds the cliff, and its last seven is almost nothing.',
        code='Testing. An expected value is set beside an actual value; a test does not fix the program, it only shows where the program disagrees with what it should do.',
        builds='The Femfatalatron measures the wrong variable. Here the measurement is right and the program refuses it. Like Trurl’s Prescription, the machine keeps what it has accepted, and nothing done to it afterward changes the answer.'),
+  dict(dir='good-shellacking', title='A Good Shellacking', sub='two Trurls, and no way to tell which is which', source='A Good Shellacking',
+       line=('Klapaucius', 'Because you are not the real Trurl.'),
+       picture='Every Trurl in the film is drawn by the same routine and speaks with the same voice, so the picture never settles which Trurl was in the cellar. The wish machine hands each item out of a door in its belly.',
+       sound='Each item from the wish machine gets a chime. The cellar is clangs that echo under one lamp, then snoring and a gallop in the dark. The medal fanfare goes flat and the blinds come down.',
+       code='Equality against identity. Two objects can be equal in every field and still be two objects, and nothing you can read from the outside says which one is the original.',
+       builds='In The Mischief of King Balerion one body holds different minds. Here two bodies look and sound the same, and the question is whether they are the same one.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -100,7 +106,7 @@ FILMS = [
 BOOK = [
   ('How the World Was Saved', 'world-saved', None),
   ('Trurl’s Machine', 'trurls-machine', None),
-  ('A Good Shellacking', None, None),
+  ('A Good Shellacking', 'good-shellacking', None),
   ('The First Sally, or The Trap of Gargantius', 'gargantius', ('Two kings each hire a constructor to link their soldiers into one mind. Joined, each army becomes a single thinker that would rather think than fight.', 'Objects that hold references to other objects: a network, and what it does that no single node was told to do.')),
   ('The First Sally (A), or Trurl’s Electronic Bard', 'electronic-bard', ('The poetry machine already appears in the reel. An engraved version could build each poem under the constraint Klapaucius sets.', 'Strings and generative text: a grammar, a rule, and output that has to obey it.')),
   ('The Second Sally, or The Offer of King Krool', None, None),
@@ -120,7 +126,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -130,7 +136,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
