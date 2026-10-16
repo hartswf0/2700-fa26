@@ -1,0 +1,164 @@
+{
+ "beat_seconds": 0.625,
+ "montage_start": 7.5,
+ "title_at": 66.875,
+ "total": 84.375,
+ "shots": [
+  {
+   "at": 10.0,
+   "film": "world-saved",
+   "source_in": 24.0,
+   "dur": 2.5
+  },
+  {
+   "at": 12.5,
+   "film": "trurls-machine",
+   "source_in": 71.0,
+   "dur": 2.5
+  },
+  {
+   "at": 17.5,
+   "film": "good-shellacking",
+   "source_in": 188.5,
+   "dur": 2.5
+  },
+  {
+   "at": 20.0,
+   "film": "gargantius",
+   "source_in": 181.5,
+   "dur": 2.5
+  },
+  {
+   "at": 25.0,
+   "film": "electronic-bard",
+   "source_in": 11.3,
+   "dur": 1.875
+  },
+  {
+   "at": 26.875,
+   "film": "electronic-bard",
+   "source_in": 405.0,
+   "dur": 1.875
+  },
+  {
+   "at": 28.75,
+   "film": "offer-of-krool",
+   "source_in": 187.0,
+   "dur": 1.875
+  },
+  {
+   "at": 30.625,
+   "film": "offer-of-krool",
+   "source_in": 330.0,
+   "dur": 1.875
+  },
+  {
+   "at": 32.5,
+   "film": "dragons",
+   "source_in": 24.0,
+   "dur": 1.875
+  },
+  {
+   "at": 34.375,
+   "film": "dragons",
+   "source_in": 147.0,
+   "dur": 1.875
+  },
+  {
+   "at": 38.75,
+   "film": "femfatalatron",
+   "source_in": 122.0,
+   "dur": 1.875
+  },
+  {
+   "at": 40.625,
+   "film": "mischief-of-balerion",
+   "source_in": 345.0,
+   "dur": 1.875
+  },
+  {
+   "at": 42.5,
+   "film": "trurls-prescription",
+   "source_in": 345.0,
+   "dur": 1.875
+  },
+  {
+   "at": 44.375,
+   "film": "sixth-sally",
+   "source_in": 185.2,
+   "dur": 1.875
+  },
+  {
+   "at": 46.25,
+   "film": "sixth-sally",
+   "source_in": 336.0,
+   "dur": 1.875
+  },
+  {
+   "at": 50.625,
+   "film": "seventh-sally",
+   "source_in": 38.0,
+   "dur": 1.25
+  },
+  {
+   "at": 51.875,
+   "film": "story-machines",
+   "source_in": 189.0,
+   "dur": 1.25
+  },
+  {
+   "at": 53.125,
+   "film": "altruizine",
+   "source_in": 81.0,
+   "dur": 1.25
+  },
+  {
+   "at": 54.375,
+   "film": "ferrix",
+   "source_in": 129.0,
+   "dur": 1.25
+  },
+  {
+   "at": 55.625,
+   "film": "non-serviam",
+   "source_in": 91.4,
+   "dur": 1.25
+  },
+  {
+   "at": 59.375,
+   "film": "bitic-literature",
+   "source_in": 155.9,
+   "dur": 1.25
+  },
+  {
+   "at": 60.625,
+   "film": "bitic-literature",
+   "source_in": 212.0,
+   "dur": 1.25
+  },
+  {
+   "at": 61.875,
+   "film": "bitic-introduction",
+   "source_in": 251.5,
+   "dur": 1.25
+  },
+  {
+   "at": 63.125,
+   "film": "bitic-mimesis",
+   "source_in": 259.4,
+   "dur": 1.25
+  },
+  {
+   "at": 64.375,
+   "film": "bitic-apostasy",
+   "source_in": 180.0,
+   "dur": 1.25
+  },
+  {
+   "at": 65.625,
+   "film": "bitic-theology",
+   "source_in": 150.0,
+   "dur": 1.25
+  }
+ ]
+}

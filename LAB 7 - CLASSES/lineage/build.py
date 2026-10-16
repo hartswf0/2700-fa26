@@ -135,6 +135,12 @@ FILMS = [
        sound='A typewriter turns into a data rhythm. The reader breathes and writes in pencil, a small reading machine chimes, and the machines speak as a bit-reduced chorus.',
        code='Machine-readable output: one program writes a sentence, a second summarises only that string, and you compare what is lost.',
        builds='Grounded in Lem’s text. It opens the four grounded bitic films: what bitic literature is, how the field is divided, and how the machines’ writing turned away from human readers.'),
+  dict(dir='theory-of-possibilities', title='The Theory of Possibilities', sub='an essay by Ewelina Woźniak-Czech, and Lem’s books that do not exist', source='Woźniak-Czech (2024)',
+       line=('Narrator', 'In 1973, bitic literature was a book that did not exist. Now it is being written.'),
+       picture='The bitic study with a stage added: concepts with name-card heads turn, fall and travel, a gapped text keeps several readings at once, and the shelf changes in every scene, from theories to blank-spined books that do not exist to books written by machines.',
+       sound='Pencil, page turns and breathing from the bitic films, a curtain and footsteps on boards for the stage, and the bitic data rhythm that comes in on the last line and stays to the end.',
+       code='Keeping possibilities: a class that holds every reading of a gapped text and switches between them, compared with one that overwrites each reading with the next.',
+       builds='An afterword to the collection. It follows Woźniak-Czech’s essay on theory as a field of coexisting possibilities, and ends on her reading of Lem’s books that do not exist and of bitic literature as a theory now being realised.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -162,7 +168,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -172,7 +178,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
