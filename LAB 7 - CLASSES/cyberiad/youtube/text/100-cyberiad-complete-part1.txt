@@ -1,8 +1,20 @@
 TITLE
-The Cyberiad, filmed: Stanisław Lem’s robot stories in ink (Part 1 of 2)
+The Cyberiad, Part One: ten robot stories by Stanisław Lem, drawn in ink
 
 DESCRIPTION
-Part 1 of 2: three early stories and the first five sallies. Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.
+Part one of The Cyberiad, filmed: ten short films after Stanisław Lem, drawn in ink, about an hour long. Two constructors, Trurl and Klapaucius, build machines for kings and for each other, and every machine does exactly what it was built to do.
+
+In this hour:
+A machine that can make anything beginning with N is asked to make Nothing.
+An eight-story computer insists that two and two make seven.
+A wish machine makes a second Trurl, and Klapaucius takes him down to the cellar.
+Two armies are wired into two minds that would rather think than fight.
+A poetry machine writes to order, and the poets of the land cannot keep up.
+A king who has hunted everything orders a beast clever enough to beat him.
+Dragons get loose as soon as someone raises their probability.
+A prince sick with love is hooked to a machine with every dial at maximum.
+A king who loves hide-and-seek gets hold of a device that moves minds between bodies.
+Something lands on a planet, survives every weapon, and is finally beaten with paperwork.
 
 Chapters
 0:00 Opening titles
@@ -23,11 +35,7 @@ In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyber
 
 Credits
 After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
-After Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).
-After Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).
-After Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).
-The afterword follows Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.
-Narration and dialogue paraphrase their sources. Nothing is quoted.
+Narration and dialogue paraphrase the source. Nothing is quoted.
 Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
 Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
 
