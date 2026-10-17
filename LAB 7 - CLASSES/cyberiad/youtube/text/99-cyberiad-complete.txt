@@ -1,0 +1,50 @@
+TITLE
+The Cyberiad, filmed: Stanisław Lem’s robot stories in ink (complete, 2 hours)
+
+DESCRIPTION
+Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.
+
+Twenty-two short films after Stanisław Lem, drawn in ink and played one after another: The Cyberiad in the order of the book, Prince Ferrix and the Princess Crystal, Non Serviam from A Perfect Vacuum, and five films from A History of Bitic Literature. An afterword reads them through an essay on the theory of possibilities.
+
+Chapters
+0:00 Opening titles
+1:24 How the World Was Saved
+4:43 Trurl’s Machine
+11:32 A Good Shellacking
+17:31 The First Sally: The Trap of Gargantius
+23:58 The First Sally (A): Trurl’s Electronic Bard
+31:44 The Second Sally: The Offer of King Krool
+39:33 The Third Sally: The Dragons of Probability
+43:37 The Fourth Sally: The Femfatalatron
+49:42 The Fifth Sally: The Mischief of King Balerion
+56:15 The Fifth Sally (A): Trurl’s Prescription
+1:02:56 The Sixth Sally: The Demon of the Second Kind
+1:09:23 The Seventh Sally
+1:12:32 The Three Storytelling Machines of King Genius
+1:16:40 Altruizine
+1:20:43 Prince Ferrix and the Princess Crystal
+1:26:00 Non Serviam
+1:28:37 A History of Bitic Literature
+1:34:01 A History of Bitic Literature: The Introduction
+1:39:57 A History of Bitic Literature: Monoetics and Mimesis
+1:45:51 A History of Bitic Literature: Sophocrisis and Apostasy
+1:51:49 A History of Bitic Literature: Theobitistics
+1:56:46 The Theory of Possibilities
+
+Each film on its own: [playlist link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+After Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).
+After Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).
+After Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).
+The afterword follows Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.
+Narration and dialogue paraphrase their sources. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+The Cyberiad, Stanisław Lem, full movie, animated anthology, A Perfect Vacuum, Imaginary Magnitude, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

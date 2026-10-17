@@ -1,0 +1,25 @@
+TITLE
+The Three Storytelling Machines of King Genius | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+Trurl tells King Genius about the storytelling machines he built, and each story opens into another, eleven frames deep, in one shot without a cut.
+
+No cuts. Every scene is a picture inside a window of the scene that holds it, and the camera only moves in or out, eleven frames deep.
+
+Film 13 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Recursion. drawFrame(stack, i) draws frame i and calls drawFrame(stack, i + 1) inside it. The stack is the call stack.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+King Genius, Three Storytelling Machines, stories within stories, recursion, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

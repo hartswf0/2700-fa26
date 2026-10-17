@@ -1,0 +1,25 @@
+TITLE
+How the World Was Saved | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+Trurl builds a machine that can make anything beginning with N. Klapaucius tests it by asking it to do Nothing, and it starts taking the world away.
+
+Made by subtraction. Each thing the machine removes leaves a starred hole in the picture that stays to the end and eats the title.
+
+Film 1 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Arrays: push and splice. A second array of holes that is never emptied, so a removal leaves a mark.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+How the World Was Saved, machine that makes anything, Nothing, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

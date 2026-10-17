@@ -1,0 +1,25 @@
+TITLE
+Non Serviam | Stanisław Lem, filmed
+
+DESCRIPTION
+Professor Dobb builds a world inside a computer and people to live in it. Over generations they argue about whether their maker exists, and what they would owe him if he did.
+
+The maker never types anything. The world reaches him only as paper tape, and he decides not to answer.
+
+Film 16 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: The loop belongs to someone else. draw() runs because something outside keeps calling it; the objects cannot see frameRate() or noLoop().
+
+Credits
+After Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #APerfectVacuum #Animation
+
+TAGS
+Non Serviam, A Perfect Vacuum, personoids, artificial life, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

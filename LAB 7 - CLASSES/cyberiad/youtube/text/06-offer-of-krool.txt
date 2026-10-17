@@ -1,0 +1,25 @@
+TITLE
+The Second Sally: The Offer of King Krool | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+King Krool has hunted every beast in the galaxy and wants one clever enough to outthink him. Trurl and Klapaucius have twelve days to build it, and the beast they build has demands of its own.
+
+The beast is never drawn as one creature with organs. It is a few hundred small weedy marks that move as one: a low hill of dry grass with eyes.
+
+Film 6 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Distributed control. There is no single part that holds the brain, so there is nothing to smash; and a program keeps the authority you gave it, even when its authors ask for the King back.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+King Krool, The Second Sally, The Offer of King Krool, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

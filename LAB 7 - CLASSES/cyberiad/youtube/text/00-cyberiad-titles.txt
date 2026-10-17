@@ -1,0 +1,19 @@
+TITLE
+The Cyberiad, filmed: opening titles
+
+DESCRIPTION
+The opening titles for The Cyberiad, filmed: twenty-two short films after Stanisław Lem, drawn in ink. The sequence is cut from the films themselves.
+
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974). With films from A Perfect Vacuum and Imaginary Magnitude.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+The Cyberiad, Stanisław Lem, title sequence, opening titles, Stanislaw Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media, Cyberiad, Trurl, Klapaucius

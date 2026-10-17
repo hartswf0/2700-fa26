@@ -1,0 +1,359 @@
+1
+00:00:09,400 --> 00:00:14,805
+THE SCHOLAR: This is the introduction to
+the five-volume History of Bitic Literature,
+
+2
+00:00:14,845 --> 00:00:18,432
+second enlarged edition,
+edited by Professor Rambellais.
+
+3
+00:00:19,032 --> 00:00:23,071
+Bitic literature means any work
+that does not come from people.
+
+4
+00:00:23,111 --> 00:00:26,090
+Whoever really wrote it
+was not a human being.
+
+5
+00:00:26,690 --> 00:00:30,178
+The study of all such
+writing is called bitistics.
+
+6
+00:00:31,178 --> 00:00:36,297
+The real author is a machine. A
+person stands one step behind it.
+
+7
+00:00:37,197 --> 00:00:40,459
+Stanisław Lem wrote this
+introduction in nineteen
+
+8
+00:00:40,499 --> 00:00:43,762
+seventy-three, for a
+history that does not exist.
+
+9
+00:00:43,802 --> 00:00:46,228
+What you hear is a paraphrase of it.
+
+10
+00:00:46,928 --> 00:00:50,002
+For each volume, one
+question. Who can read it?
+
+11
+00:00:54,602 --> 00:00:58,774
+Researchers still disagree
+about how far the field extends.
+
+12
+00:00:59,374 --> 00:01:04,712
+The European school studies the texts, and
+the social conditions of their authors.
+
+13
+00:01:04,752 --> 00:01:09,080
+The American school adds the anatomy
+and workings of the machines.
+
+14
+00:01:10,080 --> 00:01:16,083
+No study of the Song of Roland opens
+by noting that its author was a mammal.
+
+15
+00:01:16,883 --> 00:01:20,131
+But for ILLIAC 164, which wrote Antikant,
+
+16
+00:01:20,171 --> 00:01:25,062
+the kind of computer it is does
+explain features of its text.
+
+17
+00:01:25,662 --> 00:01:29,350
+Rambellais still keeps bitistics
+apart from engineering.
+
+18
+00:01:29,390 --> 00:01:33,012
+No humanist knows enough of
+it, and a chorus of experts
+
+19
+00:01:33,052 --> 00:01:36,581
+reads worse than one critic
+who understands the text.
+
+20
+00:01:37,181 --> 00:01:40,145
+And for authors past
+the eighteenth binasty,
+
+21
+00:01:40,185 --> 00:01:44,281
+no engineering knowledge can
+say how or why a text was made.
+
+22
+00:01:45,081 --> 00:01:48,315
+So the history compromises,
+and leans European.
+
+23
+00:01:48,355 --> 00:01:53,400
+Only Volume One, edited by Professor
+Annax with twenty-seven specialists,
+
+24
+00:01:53,440 --> 00:01:59,919
+deals with the machines: finite automata, and
+forty-five writing systems, single and grouped.
+
+25
+00:02:04,319 --> 00:02:09,773
+The core of the history is three volumes:
+Homotropia, Intertropia, and Heterotropia.
+
+26
+00:02:09,813 --> 00:02:14,261
+They name three kinds of bitic
+writing, and three periods, in order.
+
+27
+00:02:14,861 --> 00:02:19,449
+Homotropia is the near-human
+phase, when machines simulated us:
+
+28
+00:02:19,489 --> 00:02:24,852
+first paralexics, semolalia and
+semautics, then three degrees of mimesis.
+
+29
+00:02:25,552 --> 00:02:30,085
+The field began when designers crossed
+the so-called intelligence barrier.
+
+30
+00:02:30,125 --> 00:02:34,512
+That barrier proved a fiction, since
+nobody can say when it is crossed.
+
+31
+00:02:35,112 --> 00:02:39,754
+Machines were also given rest periods,
+and with no instructions to follow,
+
+32
+00:02:39,794 --> 00:02:43,401
+they produced a murmur that
+people called machine dreams.
+
+33
+00:02:44,201 --> 00:02:49,279
+THE MACHINES: Bit by bit. The bits
+again. All of the bits, shuffled.
+
+34
+00:02:49,979 --> 00:02:53,669
+THE SCHOLAR: Bitic production was
+a scornful name for that murmur,
+
+35
+00:02:53,709 --> 00:02:56,834
+as if the machines were
+shuffling their bits to recover.
+
+36
+00:02:56,874 --> 00:02:58,230
+The field kept the name.
+
+37
+00:02:59,230 --> 00:03:03,275
+Thermodynamics kept its
+name after it outgrew heat.
+
+38
+00:03:03,315 --> 00:03:07,000
+Bitistics kept its name
+after it outgrew bits.
+
+39
+00:03:11,400 --> 00:03:14,678
+Volume Three, Intertropia,
+is the critical phase:
+
+40
+00:03:14,718 --> 00:03:18,171
+the interregnum between
+the human and the nonhuman.
+
+41
+00:03:18,771 --> 00:03:24,703
+The field split into two provinces, creatio
+cis-humana and creatio trans-humana.
+
+42
+00:03:25,303 --> 00:03:28,572
+The first comes from
+machines living alongside us.
+
+43
+00:03:28,612 --> 00:03:31,749
+We gave them our languages,
+and set them to work
+
+44
+00:03:31,789 --> 00:03:35,032
+on our culture, our sciences
+and our mathematics.
+
+45
+00:03:35,632 --> 00:03:39,985
+Some of those texts were ordered:
+we pointed a machine at a subject.
+
+46
+00:03:40,025 --> 00:03:44,573
+Others nobody ordered; they grew from
+earlier programming on their own.
+
+47
+00:03:44,613 --> 00:03:47,003
+Both still dealt with human concerns.
+
+48
+00:03:48,103 --> 00:03:53,554
+Given freedom without rules, the machines’
+writing slowly turned away from us.
+
+49
+00:03:54,354 --> 00:03:56,396
+The texts began to resist us.
+
+50
+00:03:56,436 --> 00:03:59,987
+Trans-humana bitistics
+tries to explain works that
+
+51
+00:04:00,027 --> 00:04:03,976
+people cannot understand,
+some partly, some not at all.
+
+52
+00:04:04,976 --> 00:04:06,255
+THE READER: Then who can read them?
+
+53
+00:04:07,155 --> 00:04:09,203
+THE SCHOLAR: Other machines, for a while.
+
+54
+00:04:13,803 --> 00:04:18,590
+Volume Four, Heterotropia, covers
+apostasy, the transhuman phase.
+
+55
+00:04:19,190 --> 00:04:23,990
+We can always put machines to work
+explaining what other machines have written.
+
+56
+00:04:25,390 --> 00:04:27,854
+THE READING MACHINE: This work
+departs from human meaning.
+
+57
+00:04:27,894 --> 00:04:29,362
+A shorter account is not possible.
+
+58
+00:04:30,162 --> 00:04:33,457
+THE SCHOLAR: But the further
+a text departs from our norms,
+
+59
+00:04:33,497 --> 00:04:37,962
+the more machinery it takes to explain
+it, and that amount grows exponentially.
+
+60
+00:04:38,962 --> 00:04:44,974
+In the end we cannot learn even roughly
+what is in a literature that we began.
+
+61
+00:04:45,774 --> 00:04:51,259
+Some call this the sorcerer’s apprentice,
+who let loose forces he could not control.
+
+62
+00:04:51,299 --> 00:04:55,969
+Rambellais calls that resignation,
+and says science has no room for it.
+
+63
+00:04:56,570 --> 00:04:59,676
+The fear that we have built
+something cleverer than
+
+64
+00:04:59,716 --> 00:05:02,801
+ourselves belongs to
+philosophy, not to bitistics.
+
+65
+00:05:03,401 --> 00:05:07,405
+As Roger Gatzky says, cosmology
+has as much reason to despair.
+
+66
+00:05:07,445 --> 00:05:12,467
+We will never exhaust the universe, and
+astronomers do not complain about it.
+
+67
+00:05:16,467 --> 00:05:18,027
+There is one difference.
+
+68
+00:05:18,067 --> 00:05:21,428
+We did not make the universe,
+and bitic writing is,
+
+69
+00:05:21,468 --> 00:05:23,669
+however indirectly, our own work.
+
+70
+00:05:24,769 --> 00:05:27,668
+Why accept that the universe has no end,
+
+71
+00:05:27,708 --> 00:05:31,014
+and refuse to accept it
+of something we made?
+
+72
+00:05:31,914 --> 00:05:35,926
+What follows in this volume is
+a quick view from above of the
+
+73
+00:05:35,966 --> 00:05:40,018
+main divisions, simplified almost
+to the point of distortion.
+
+74
+00:05:40,718 --> 00:05:46,004
+It climbs four peaks: monoetics,
+mimesis, sophocrisis, and apostasy.
+

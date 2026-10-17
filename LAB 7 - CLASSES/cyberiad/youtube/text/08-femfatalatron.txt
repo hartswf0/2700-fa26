@@ -1,0 +1,25 @@
+TITLE
+The Fourth Sally: The Femfatalatron | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+A king’s son is sick with love, and Trurl is summoned to cure him. He builds a machine that can produce any degree of passion, and finds that the cure is not inside the prince at all.
+
+The machine is a temple of cables, screens, rose petals and perfume, with a glass case of dials in front: power, efficiency, and the rapturometer. In the first half the dials are the main picture, and every needle climbs to its stop without changing the prince.
+
+Film 8 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Measurement. A gauge reads only the variable it is wired to; turning every input to its maximum does nothing if the result depends on a variable none of them touch.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+Femfatalatron, The Fourth Sally, love machine, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

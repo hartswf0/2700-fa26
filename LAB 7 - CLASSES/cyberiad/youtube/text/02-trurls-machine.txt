@@ -1,0 +1,25 @@
+TITLE
+Trurl’s Machine | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+Trurl builds an eight-story thinking machine. It insists that two and two make seven, and when its makers try to correct it, it chases them across the countryside.
+
+Trurl chalks the expected answer on a slate, 2 + 2 = 4, and the machine answers by lighting the windows of its eight floors in the shape of a 7. The chalk and the lit numeral side by side come back after every repair and never agree.
+
+Film 2 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Testing. An expected value is set beside an actual value; a test does not fix the program, it only shows where the program disagrees with what it should do.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+Trurl's Machine, 2 + 2 = 7, thinking machine, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

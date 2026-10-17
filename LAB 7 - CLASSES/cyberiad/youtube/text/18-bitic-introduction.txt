@@ -1,0 +1,25 @@
+TITLE
+A History of Bitic Literature: The Introduction | Stanisław Lem, filmed
+
+DESCRIPTION
+The introduction to a five-volume history of books written by machines: what bitic literature is, how scholars divide it, and how the machines’ writing slowly turned away from human readers.
+
+Five volumes come off the shelf and open to one page: a technical page, the classification of Homotropia, Intertropia and Heterotropia, then drifting text and marks no one can read, while the reader at the desk shrinks.
+
+Film 18 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Machine-readable output: one program writes a sentence, a second summarises only that string, and you compare what is lost.
+
+Credits
+After Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #ImaginaryMagnitude #Animation
+
+TAGS
+A History of Bitic Literature, Imaginary Magnitude, bitic literature, machine writing, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

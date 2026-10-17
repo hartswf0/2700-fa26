@@ -1,0 +1,25 @@
+TITLE
+The Theory of Possibilities | an afterword to Stanisław Lem, filmed
+
+DESCRIPTION
+An essay film after Ewelina Woźniak-Czech: literary theory as a field of possibilities that exist side by side, and Lem’s books that did not exist, now being written by machines.
+
+The bitic study with a stage added: concepts with name-card heads turn, fall and travel, a gapped text keeps several readings at once, and the shelf changes in every scene, from theories to blank-spined books that do not exist to books written by machines.
+
+Film 22 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Keeping possibilities: a class that holds every reading of a gapped text and switches between them, compared with one that overwrites each reading with the next.
+
+Credits
+After Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.
+Narration paraphrases the essay. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #LiteraryTheory #EssayFilm
+
+TAGS
+The Theory of Possibilities, Ewelina Woźniak-Czech, literary theory, essay film, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

@@ -1,0 +1,25 @@
+TITLE
+Altruizine | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+A hermit named Bonhomius tries to make everyone happy with a substance that makes every creature feel what its neighbours feel. It does not go as he planned.
+
+A grid of panels. A feeling starts in one panel and is copied outward into its neighbours, picture printed over picture.
+
+Film 14 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: A 2D array where each cell updates from its neighbours, and a feedback loop that runs away when the gain is above 1.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+Altruizine, Bonhomius, empathy, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

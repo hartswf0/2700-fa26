@@ -1,0 +1,25 @@
+TITLE
+Prince Ferrix and the Princess Crystal | Stanisław Lem, filmed
+
+DESCRIPTION
+Prince Ferrix loves the Princess Crystal, who will marry only a paleface, one of the soft creatures made of slush and splashes that machines once served. So he has himself disguised as one.
+
+A diptych. The left half is what the princess sees, the right half the bladders, bellows and prompts under the clay.
+
+Film 15 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Interfaces. Two objects with the same methods, one computing its answers and one storing them. One draw function called twice, with inside true or false.
+
+Credits
+After Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #RobotFables #Animation
+
+TAGS
+Prince Ferrix and the Princess Crystal, Fables for Robots, Mortal Engines, paleface, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

@@ -1,0 +1,25 @@
+TITLE
+A History of Bitic Literature: Theobitistics | Stanisław Lem, filmed
+
+DESCRIPTION
+In the fifth volume the machines turn to God: mystical writing measured by a word counter, a frozen computer that never finishes its line, and the idea that we are leftovers from the last time the universe was thinking.
+
+A fifth volume joins the shelf. It opens to mystical writing passed through a word counter, then a sine wave drawn between two infinities, a frost-covered machine that never finishes its line, and a scatter of grains that becomes a galaxy.
+
+Film 21 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Measuring information: score each word’s surprise as minus the log of its frequency, and compare two texts.
+
+Credits
+After Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #ImaginaryMagnitude #Animation
+
+TAGS
+A History of Bitic Literature, Imaginary Magnitude, theology, information theory, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

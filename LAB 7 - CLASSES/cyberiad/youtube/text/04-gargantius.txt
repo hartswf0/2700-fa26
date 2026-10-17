@@ -1,0 +1,25 @@
+TITLE
+The First Sally: The Trap of Gargantius | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+Two kings preparing for war each hire a constructor to turn their army into a single mind. The armies are joined, and each becomes one thinker with better things to do than fight.
+
+A graph drawn in ink. A soldier is a node and a connection is a line between two nodes.
+
+Film 4 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: Objects that hold references to other objects. A network does things no single node was told to do, and a connection cannot be undone one node at a time.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+The Trap of Gargantius, The First Sally, collective mind, network, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

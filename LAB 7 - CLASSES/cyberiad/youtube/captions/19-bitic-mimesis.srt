@@ -1,0 +1,360 @@
+1
+00:00:09,900 --> 00:00:13,173
+RAMBELLAIS: This is Rambellais,
+editor of the history.
+
+2
+00:00:13,213 --> 00:00:15,852
+Its first volume stops
+at four high points.
+
+3
+00:00:16,552 --> 00:00:20,680
+Monoetics. Mimesis. Sophocrisis. Apostasy.
+
+4
+00:00:21,380 --> 00:00:27,131
+Those names are out of date. The last of
+them names work that no person can follow.
+
+5
+00:00:28,131 --> 00:00:31,570
+I keep the old names
+because they are clear.
+
+6
+00:00:34,370 --> 00:00:36,705
+Monoetics was the earliest stage.
+
+7
+00:00:36,745 --> 00:00:40,704
+The name joins the Greek
+words for one, and for making.
+
+8
+00:00:41,304 --> 00:00:45,784
+It began when machines learned
+how a language builds its words.
+
+9
+00:00:46,384 --> 00:00:50,219
+A machine knew none of the
+limits a living language keeps,
+
+10
+00:00:50,259 --> 00:00:52,998
+so it found the words ours had passed by.
+
+11
+00:00:53,798 --> 00:00:57,178
+First, it gave words we
+already had new meanings.
+
+12
+00:00:58,078 --> 00:01:03,259
+THE MACHINE: Thoroughfare. A large meal.
+Skinflint. Stone facing. Horseman. Centaur.
+
+13
+00:01:04,159 --> 00:01:07,691
+RAMBELLAIS: Horseman, it
+reasoned, joins a horse and a man,
+
+14
+00:01:07,731 --> 00:01:10,637
+so it must name a creature
+that is half of each.
+
+15
+00:01:11,737 --> 00:01:17,190
+For us, the world comes first. For
+the machine, language came first.
+
+16
+00:01:19,990 --> 00:01:23,168
+Second, it built new words
+along lines of meaning,
+
+17
+00:01:23,208 --> 00:01:25,461
+the way one root puts out a family.
+
+18
+00:01:26,361 --> 00:01:30,881
+THE MACHINE: Wordwork. Verse. Wordsteal.
+Plagiarism. Gladland. Paradise.
+
+19
+00:01:31,881 --> 00:01:34,984
+RAMBELLAIS: Nothing here
+was meant as a joke.
+
+20
+00:01:35,684 --> 00:01:38,693
+Some of these may not
+be the machine's at all.
+
+21
+00:01:38,733 --> 00:01:41,849
+Dimocracy, for a madhouse,
+may be a comedian's.
+
+22
+00:01:42,549 --> 00:01:45,568
+This is the kindergarten of the field.
+
+23
+00:01:48,368 --> 00:01:52,051
+Then the machines began to
+read our language back to us,
+
+24
+00:01:52,091 --> 00:01:57,742
+hunting for figures of speech that exist
+only because of the shape of the human body.
+
+25
+00:01:58,342 --> 00:02:04,182
+We say a person rises, or is brought low.
+We call one thing high and another base.
+
+26
+00:02:05,082 --> 00:02:07,214
+THE MACHINE: Elevation. Abasement.
+
+27
+00:02:08,114 --> 00:02:11,959
+RAMBELLAIS: In the machine's reading,
+these are words about gravity,
+
+28
+00:02:11,999 --> 00:02:14,685
+which every body must
+work its muscles against.
+
+29
+00:02:15,785 --> 00:02:20,520
+The pull of the earth passes
+through the body and into our words.
+
+30
+00:02:21,320 --> 00:02:24,633
+That is the machine's
+reading. It is not ours.
+
+31
+00:02:28,033 --> 00:02:32,904
+Mimesis came later, and by accident,
+out of machine translation.
+
+32
+00:02:33,504 --> 00:02:36,973
+A good translation does
+not carry words across.
+
+33
+00:02:37,013 --> 00:02:40,224
+It carries the system
+of ideas behind them.
+
+34
+00:02:40,824 --> 00:02:44,704
+Several machines aim at one
+text from different sides,
+
+35
+00:02:44,744 --> 00:02:47,648
+and project it into a space of concepts.
+
+36
+00:02:48,348 --> 00:02:53,903
+There it grows into a body of abstractions,
+as an embryo grows into an animal.
+
+37
+00:02:55,003 --> 00:02:59,931
+The translation is written out
+from that body, not from the words.
+
+38
+00:03:00,731 --> 00:03:04,723
+Then it is translated back and
+compared with the original,
+
+39
+00:03:04,763 --> 00:03:06,918
+to check that nothing was lost.
+
+40
+00:03:09,718 --> 00:03:13,180
+Two researchers found that
+this body could be seen,
+
+41
+00:03:13,220 --> 00:03:15,830
+with an instrument called a semascope.
+
+42
+00:03:16,530 --> 00:03:18,922
+It looks like a mass of many shells,
+
+43
+00:03:18,962 --> 00:03:22,340
+woven from billions of
+glowing threads of meaning.
+
+44
+00:03:23,140 --> 00:03:27,724
+Arguments show as tight bundles.
+Poems and scripture look alike.
+
+45
+00:03:27,764 --> 00:03:31,738
+An allegory has a pale halo,
+with echoes at either end.
+
+46
+00:03:32,838 --> 00:03:35,941
+A good text makes a beautiful shape.
+
+47
+00:03:39,141 --> 00:03:42,283
+The first famous work
+of mimesis was a novel,
+
+48
+00:03:42,323 --> 00:03:45,999
+The Girl, by the author now
+called Pseudodostoevsky.
+
+49
+00:03:46,699 --> 00:03:52,014
+Machines set to translate all of
+Dostoevsky wrote it during a rest period.
+
+50
+00:03:52,714 --> 00:03:58,069
+The Dostoevsky scholar who received the
+typescript was not sure he was awake.
+
+51
+00:03:58,769 --> 00:04:03,883
+He did not doubt it was genuine. He also
+knew Dostoevsky had never written it.
+
+52
+00:04:04,683 --> 00:04:09,184
+The machines had not modelled the
+man. They had no interest in him.
+
+53
+00:04:09,884 --> 00:04:14,517
+In the space of meanings, his novels
+form a ring that does not close.
+
+54
+00:04:14,557 --> 00:04:16,860
+The gap comes after The Possessed.
+
+55
+00:04:18,060 --> 00:04:20,593
+The machines closed the gap.
+
+56
+00:04:23,793 --> 00:04:27,882
+His unfinished novel, The
+Emperor, could not be continued.
+
+57
+00:04:27,922 --> 00:04:30,912
+In it he was reaching past his own powers.
+
+58
+00:04:31,612 --> 00:04:34,961
+So the history claims,
+against the old humanities,
+
+59
+00:04:35,001 --> 00:04:38,323
+that The Girl is more
+truly his than The Emperor.
+
+60
+00:04:39,123 --> 00:04:40,359
+The rule is this.
+
+61
+00:04:40,399 --> 00:04:44,562
+If a writer has used up the
+central pattern of his work,
+
+62
+00:04:44,602 --> 00:04:46,704
+mimesis can add only echoes.
+
+63
+00:04:47,704 --> 00:04:51,319
+If he left something
+unsaid, because he died too
+
+64
+00:04:51,359 --> 00:04:54,710
+soon or did not dare,
+mimesis can supply it.
+
+65
+00:04:55,510 --> 00:04:57,468
+Critics hoped for more Kafka.
+
+66
+00:04:57,508 --> 00:05:00,568
+But with The Castle he
+had reached his limit,
+
+67
+00:05:00,608 --> 00:05:03,914
+and each machine continuation
+drowned in echoes.
+
+68
+00:05:06,914 --> 00:05:09,070
+These limits were good for culture.
+
+69
+00:05:09,110 --> 00:05:13,438
+When The Girl appeared, there was
+panic well beyond literary circles.
+
+70
+00:05:14,038 --> 00:05:19,186
+People pictured a service where anyone
+could order a new Shakespeare on a whim,
+
+71
+00:05:19,226 --> 00:05:22,379
+until great works were
+as common as waste paper.
+
+72
+00:05:23,279 --> 00:05:24,800
+That did not happen.
+
+73
+00:05:25,500 --> 00:05:27,785
+Mimesis did become an industry.
+
+74
+00:05:27,825 --> 00:05:33,900
+It cost jobs only among writers of routine
+genre fiction, thrillers and the like.
+
+75
+00:05:35,000 --> 00:05:40,032
+The machines replaced the books that
+were already written by formula.
+
+76
+00:05:40,832 --> 00:05:44,107
+A humanist need not
+grieve over that for long.
+

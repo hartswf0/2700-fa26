@@ -1,0 +1,37 @@
+TITLE
+The Cyberiad, filmed: Stanisław Lem’s robot stories in ink (Part 1 of 2)
+
+DESCRIPTION
+Part 1 of 2: three early stories and the first five sallies. Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.
+
+Chapters
+0:00 Opening titles
+1:24 How the World Was Saved
+4:43 Trurl’s Machine
+11:32 A Good Shellacking
+17:31 The First Sally: The Trap of Gargantius
+23:58 The First Sally (A): Trurl’s Electronic Bard
+31:44 The Second Sally: The Offer of King Krool
+39:33 The Third Sally: The Dragons of Probability
+43:37 The Fourth Sally: The Femfatalatron
+49:42 The Fifth Sally: The Mischief of King Balerion
+56:15 The Fifth Sally (A): Trurl’s Prescription
+
+Part 2: [part 2 link]
+Each film on its own: [playlist link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+After Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).
+After Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).
+After Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).
+The afterword follows Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.
+Narration and dialogue paraphrase their sources. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+The Cyberiad, Stanisław Lem, animated anthology, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

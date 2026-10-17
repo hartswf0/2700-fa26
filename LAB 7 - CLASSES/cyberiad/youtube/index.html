@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cyberiad YouTube Kit</title>
+<style>
+@font-face{font-family:"IM Fell English";src:url(../../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-normal.woff2) format("woff2");font-style:normal;font-display:swap}
+@font-face{font-family:"IM Fell English";src:url(../../kingdoms-in-a-box/film-src/fonts/im-fell-english-latin-400-italic.woff2) format("woff2");font-style:italic;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url(../../kingdoms-in-a-box/film-src/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400 500;font-display:swap}
+:root{--paper:#ebe3cf;--card:#f4efe2;--ink:#1c1814;--mute:#6d655a;--line:#cfc5ae;--red:#a8432e;--dark:#13110e}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.5 "IM Fell English",Georgia,serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration-color:var(--red);text-underline-offset:3px}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 16px 80px}
+.mono,.lab{font:500 11px/1.4 "IBM Plex Mono",ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+h1{font-weight:400;font-size:clamp(36px,6vw,64px);line-height:1;margin:10px 0 14px;letter-spacing:.02em}
+h2{font-weight:400;font-size:clamp(26px,3.4vw,34px);margin:52px 0 10px;border-top:1px solid var(--ink);padding-top:14px}
+h3{font-weight:400;font-size:24px;line-height:1.15;margin:0 0 6px}
+p{margin:0 0 12px;max-width:66ch}
+.lede{font-size:21px}
+button,.btn{font:500 12px "IBM Plex Mono",ui-monospace,Menlo,monospace;letter-spacing:.06em;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:9px 12px;min-height:40px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border-radius:0}
+button:hover,.btn:hover{border-color:var(--ink)}
+button.done{border-color:var(--red);color:var(--red)}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px;margin:14px 0 6px}
+.links label{display:block}
+.links input{display:block;width:100%;margin-top:4px;font:14px "IBM Plex Mono",monospace;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:0;min-height:44px}
+.steps{padding-left:1.3em;margin:8px 0 0;max-width:72ch}
+.steps li{margin-bottom:10px}
+table.set{border-collapse:collapse;width:100%;max-width:880px;font-size:17px}
+.set td{border-top:1px solid var(--line);padding:8px 10px 8px 0;vertical-align:top}
+.set td:first-child{font:500 12px/1.6 "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--mute);width:30%;min-width:120px}
+.note{border-left:2px solid var(--red);padding:2px 0 2px 14px;max-width:72ch}
+.vid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:22px;padding:26px 0;border-top:1px solid var(--line)}
+.vid img{width:100%;aspect-ratio:16/9;display:block;border:1px solid var(--line);background:var(--dark)}
+.vid .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.field{margin-top:12px}
+.field .top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.field .val{font:14px/1.5 "IBM Plex Mono",ui-monospace,Menlo,monospace;background:var(--card);border:1px solid var(--line);padding:10px 12px;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow:auto}
+.field .val.title{font:20px/1.3 "IM Fell English",Georgia,serif;max-height:none}
+.count{font:12px "IBM Plex Mono",monospace;color:var(--mute)}
+.tag{display:inline-block;margin:0 6px 6px 0;padding:1px 0;border-bottom:1px solid var(--line)}
+.miss{color:var(--red)}
+.toc{columns:2 300px;column-gap:28px;padding:0;margin:10px 0 0;list-style:none;font-size:17px}
+.toc li{break-inside:avoid;border-bottom:1px solid var(--line);padding:5px 0;display:flex;gap:10px}
+.toc .n{font:12px/1.9 "IBM Plex Mono",monospace;color:var(--mute);width:3ch;flex:none}
+.toc .d{margin-left:auto;font:12px/1.9 "IBM Plex Mono",monospace;color:var(--mute)}
+.foot{margin-top:60px;padding-top:12px;border-top:1px solid var(--line);font-size:16px;color:var(--mute)}
+@media (max-width:760px){.vid{grid-template-columns:1fr;gap:12px}.set td:first-child{width:38%}}
+@media (pointer:coarse){button,.btn{min-height:44px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mono"><a href="../">The Cyberiad, filmed</a> · YouTube release kit</div>
+  <h1>Getting the films onto YouTube</h1>
+  <p class="lede">Twenty-two films, an opening-titles video, and the complete two-hour cut. For every video there is a title, a description, tags, a thumbnail and an English caption file. Copy each field into YouTube Studio as you upload.</p>
+  <div class="row" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+    <a class="btn" href="cyberiad-youtube-kit.zip" download>All thumbnails, captions and text (zip, 5 MB)</a>
+    <a class="btn" href="#videos">The videos</a>
+  </div>
+
+  <h2>Links that go into the descriptions</h2>
+  <p>The descriptions point to the playlist and to the complete cut. Make those two first (step 2 below), paste their links here, and every description on this page fills them in. This browser remembers what you paste.</p>
+  <div class="links">
+    <label><span class="lab">Playlist link</span><input id="L_PLAYLIST" inputmode="url" placeholder="https://www.youtube.com/playlist?list=…"></label>
+    <label><span class="lab">Complete cut link</span><input id="L_COMPLETE" inputmode="url" placeholder="https://youtu.be/…"></label>
+    <label><span class="lab">Part 1 link (if you use the parts)</span><input id="L_PART1" inputmode="url" placeholder="https://youtu.be/…"></label>
+    <label><span class="lab">Part 2 link (if you use the parts)</span><input id="L_PART2" inputmode="url" placeholder="https://youtu.be/…"></label>
+  </div>
+  <p class="count" id="linkState"></p>
+
+  <h2>Order of work</h2>
+  <ol class="steps">
+    <li><b>Verify the channel</b> in YouTube Studio (Settings, Channel, Feature eligibility; a phone number is enough). Without it YouTube refuses custom thumbnails and anything longer than 15 minutes.</li>
+    <li><b>Make the playlist first, and start the complete cut.</b> Create an empty playlist with the title and description below and copy its link. Start uploading the complete cut; the upload window shows the video's link straight away. Paste both links above.</li>
+    <li><b>Upload the films as Private</b>, up to 15 at a time. For each one: paste the title, description and tags; upload the thumbnail; under Subtitles, add English with "Upload file", "With timing", and the .srt. Set the settings in the table below.</li>
+    <li><b>Fill the playlist in order</b>: the opening titles, then films 01 to 22.</li>
+    <li><b>Upload the opening titles</b> and set them as the channel trailer (Customisation, Layout).</li>
+    <li><b>Add end screens</b> to each film in the last 20 seconds: the next film and the playlist. The films end on a quiet card, which leaves room for them.</li>
+    <li><b>Watch one film all the way through on YouTube</b> with captions on, then schedule the rest to go Public.</li>
+  </ol>
+
+  <h2>Settings for every video</h2>
+  <table class="set">
+    <tr><td>Audience</td><td>No, it is not made for kids.</td></tr>
+    <tr><td>Category</td><td>Film &amp; Animation</td></tr>
+    <tr><td>Video language</td><td>English. Caption language English.</td></tr>
+    <tr><td>Altered or synthetic content</td><td>No. The disclosure is for realistic people, places or events. These are drawn films whose voices are synthetic and imitate no real person, and each description says the voices are synthetic.</td></tr>
+    <tr><td>Paid promotion</td><td>No</td></tr>
+    <tr><td>Licence</td><td>Standard YouTube licence. Embedding allowed.</td></tr>
+    <tr><td>Monetisation</td><td>Off. See the note on rights.</td></tr>
+    <tr><td>Chapters</td><td>The complete cut and the two parts carry chapter timestamps in their descriptions; leave automatic chapters on.</td></tr>
+    <tr><td>Upload files</td><td>The original renders, 1280 × 720, 24 fps, H.264 and AAC. Each film's "Video file" button downloads its master. The complete cut is too large to keep here; it is the files joined end to end, sent in the conversation as two parts.</td></tr>
+  </table>
+
+  <h2>A note on rights</h2>
+  <p class="note">Lem's stories and their English translations are under copyright. The films paraphrase rather than quote and credit every source, but they are still adaptations, and a rights holder can ask YouTube to take an adaptation down. Keep monetisation off. The afterword follows an essay published under CC BY-NC-ND 4.0, which does not cover adaptations; ask its author before making that film public, or leave it Unlisted.</p>
+
+  <h2>Playlist</h2>
+  <div id="playlist"></div>
+
+  <h2 id="videos">The videos</h2>
+  <ul class="toc" id="toc"></ul>
+  <div id="list"></div>
+
+  <div class="foot">Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026. <a href="../">Back to the cinema</a>.</div>
+</div>
+<script id="kit" type="application/json">{
+ "videos": [
+  {
+   "n": 0,
+   "dir": "cyberiad-titles",
+   "kind": "trailer",
+   "title": "The Cyberiad, filmed: opening titles",
+   "desc": "The opening titles for The Cyberiad, filmed: twenty-two short films after Stanisław Lem, drawn in ink. The sequence is cut from the films themselves.\n\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974). With films from A Perfect Vacuum and Imaginary Magnitude.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Cyberiad",
+    "Stanisław Lem",
+    "title sequence",
+    "opening titles",
+    "Stanislaw Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius"
+   ],
+   "dur": 84.375,
+   "thumb": null,
+   "srt": null,
+   "master": "https://github.com/hartswf0/2700-fa26/raw/d9ddf3e85c32c8e2208492d48c16d1abd8eb19ac/LAB%207%20-%20CLASSES/cyberiad-titles/cyberiad-titles.mp4"
+  },
+  {
+   "n": 99,
+   "dir": "cyberiad-complete",
+   "kind": "complete",
+   "title": "The Cyberiad, filmed: Stanisław Lem’s robot stories in ink (complete, 2 hours)",
+   "desc": "Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.\n\nTwenty-two short films after Stanisław Lem, drawn in ink and played one after another: The Cyberiad in the order of the book, Prince Ferrix and the Princess Crystal, Non Serviam from A Perfect Vacuum, and five films from A History of Bitic Literature. An afterword reads them through an essay on the theory of possibilities.\n\nChapters\n0:00 Opening titles\n1:24 How the World Was Saved\n4:43 Trurl’s Machine\n11:32 A Good Shellacking\n17:31 The First Sally: The Trap of Gargantius\n23:58 The First Sally (A): Trurl’s Electronic Bard\n31:44 The Second Sally: The Offer of King Krool\n39:33 The Third Sally: The Dragons of Probability\n43:37 The Fourth Sally: The Femfatalatron\n49:42 The Fifth Sally: The Mischief of King Balerion\n56:15 The Fifth Sally (A): Trurl’s Prescription\n1:02:56 The Sixth Sally: The Demon of the Second Kind\n1:09:23 The Seventh Sally\n1:12:32 The Three Storytelling Machines of King Genius\n1:16:40 Altruizine\n1:20:43 Prince Ferrix and the Princess Crystal\n1:26:00 Non Serviam\n1:28:37 A History of Bitic Literature\n1:34:01 A History of Bitic Literature: The Introduction\n1:39:57 A History of Bitic Literature: Monoetics and Mimesis\n1:45:51 A History of Bitic Literature: Sophocrisis and Apostasy\n1:51:49 A History of Bitic Literature: Theobitistics\n1:56:46 The Theory of Possibilities\n\nEach film on its own: {PLAYLIST}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nAfter Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).\nAfter Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nThe afterword follows Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.\nNarration and dialogue paraphrase their sources. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Cyberiad",
+    "Stanisław Lem",
+    "full movie",
+    "animated anthology",
+    "A Perfect Vacuum",
+    "Imaginary Magnitude",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 7416.229329,
+   "thumb": "00-cyberiad-complete.jpg",
+   "srt": "00-cyberiad-complete.srt"
+  },
+  {
+   "n": 100,
+   "dir": "cyberiad-complete-part1",
+   "kind": "part",
+   "title": "The Cyberiad, filmed: Stanisław Lem’s robot stories in ink (Part 1 of 2)",
+   "desc": "Part 1 of 2: three early stories and the first five sallies. Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.\n\nChapters\n0:00 Opening titles\n1:24 How the World Was Saved\n4:43 Trurl’s Machine\n11:32 A Good Shellacking\n17:31 The First Sally: The Trap of Gargantius\n23:58 The First Sally (A): Trurl’s Electronic Bard\n31:44 The Second Sally: The Offer of King Krool\n39:33 The Third Sally: The Dragons of Probability\n43:37 The Fourth Sally: The Femfatalatron\n49:42 The Fifth Sally: The Mischief of King Balerion\n56:15 The Fifth Sally (A): Trurl’s Prescription\n\nPart 2: {PART2}\nEach film on its own: {PLAYLIST}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nAfter Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).\nAfter Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nThe afterword follows Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.\nNarration and dialogue paraphrase their sources. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Cyberiad",
+    "Stanisław Lem",
+    "animated anthology",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 3776.75,
+   "thumb": "00-cyberiad-part1.jpg",
+   "srt": "00-cyberiad-part1.srt",
+   "first": "cyberiad-titles"
+  },
+  {
+   "n": 101,
+   "dir": "cyberiad-complete-part2",
+   "kind": "part",
+   "title": "The Cyberiad, filmed: Stanisław Lem’s robot stories in ink (Part 2 of 2)",
+   "desc": "Part 2 of 2: the last two sallies of Trurl and Klapaucius, three tales, Non Serviam from A Perfect Vacuum, five films from A History of Bitic Literature, and an afterword.\n\nChapters\n0:00 The Sixth Sally: The Demon of the Second Kind\n6:26 The Seventh Sally\n9:35 The Three Storytelling Machines of King Genius\n13:44 Altruizine\n17:46 Prince Ferrix and the Princess Crystal\n23:03 Non Serviam\n25:40 A History of Bitic Literature\n31:04 A History of Bitic Literature: The Introduction\n37:00 A History of Bitic Literature: Monoetics and Mimesis\n42:54 A History of Bitic Literature: Sophocrisis and Apostasy\n48:53 A History of Bitic Literature: Theobitistics\n53:50 The Theory of Possibilities\n\nPart 1: {PART1}\nEach film on its own: {PLAYLIST}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nAfter Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).\nAfter Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nThe afterword follows Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.\nNarration and dialogue paraphrase their sources. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Cyberiad",
+    "Stanisław Lem",
+    "animated anthology",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 3639.458333,
+   "thumb": "00-cyberiad-part2.jpg",
+   "srt": "00-cyberiad-part2.srt",
+   "first": "sixth-sally"
+  },
+  {
+   "n": 1,
+   "dir": "world-saved",
+   "kind": "film",
+   "title": "How the World Was Saved | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Trurl builds a machine that can make anything beginning with N. Klapaucius tests it by asking it to do Nothing, and it starts taking the world away.\n\nMade by subtraction. Each thing the machine removes leaves a starred hole in the picture that stays to the end and eats the title.\n\nFilm 1 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Arrays: push and splice. A second array of holes that is never emptied, so a removal leaves a mark.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "How the World Was Saved",
+    "machine that makes anything",
+    "Nothing",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 199.583333,
+   "thumb": "01-world-saved.jpg",
+   "srt": "01-world-saved.srt",
+   "short": "How the World Was Saved",
+   "label": "An early story",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/6a301ec72a7dbad49ffae512ae7beab66f5edeab/LAB%207%20-%20CLASSES/world-saved/world-saved.mp4"
+  },
+  {
+   "n": 2,
+   "dir": "trurls-machine",
+   "kind": "film",
+   "title": "Trurl’s Machine | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Trurl builds an eight-story thinking machine. It insists that two and two make seven, and when its makers try to correct it, it chases them across the countryside.\n\nTrurl chalks the expected answer on a slate, 2 + 2 = 4, and the machine answers by lighting the windows of its eight floors in the shape of a 7. The chalk and the lit numeral side by side come back after every repair and never agree.\n\nFilm 2 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Testing. An expected value is set beside an actual value; a test does not fix the program, it only shows where the program disagrees with what it should do.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "Trurl's Machine",
+    "2 + 2 = 7",
+    "thinking machine",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 408.375,
+   "thumb": "02-trurls-machine.jpg",
+   "srt": "02-trurls-machine.srt",
+   "short": "Trurl’s Machine",
+   "label": "An early story",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/21146aec3a9b8ae840a443ec354f6ec884b56e5f/LAB%207%20-%20CLASSES/trurls-machine/trurls-machine.mp4"
+  },
+  {
+   "n": 3,
+   "dir": "good-shellacking",
+   "kind": "film",
+   "title": "A Good Shellacking | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Trurl sends Klapaucius a wish machine as a present. Klapaucius wishes for a Trurl so exact that no one could tell the two apart, and the machine makes one.\n\nEvery Trurl in the film is drawn by the same routine and speaks with the same voice, so the picture never settles which Trurl was in the cellar. The wish machine hands each item out of a door in its belly.\n\nFilm 3 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Equality against identity. Two objects can be equal in every field and still be two objects, and nothing you can read from the outside says which one is the original.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "A Good Shellacking",
+    "wish machine",
+    "copy and original",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 359.333333,
+   "thumb": "03-good-shellacking.jpg",
+   "srt": "03-good-shellacking.srt",
+   "short": "A Good Shellacking",
+   "label": "An early story",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/21146aec3a9b8ae840a443ec354f6ec884b56e5f/LAB%207%20-%20CLASSES/good-shellacking/good-shellacking.mp4"
+  },
+  {
+   "n": 4,
+   "dir": "gargantius",
+   "kind": "film",
+   "title": "The First Sally: The Trap of Gargantius | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Two kings preparing for war each hire a constructor to turn their army into a single mind. The armies are joined, and each becomes one thinker with better things to do than fight.\n\nA graph drawn in ink. A soldier is a node and a connection is a line between two nodes.\n\nFilm 4 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Objects that hold references to other objects. A network does things no single node was told to do, and a connection cannot be undone one node at a time.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Trap of Gargantius",
+    "The First Sally",
+    "collective mind",
+    "network",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 386.916667,
+   "thumb": "04-gargantius.jpg",
+   "srt": "04-gargantius.srt",
+   "short": "The Trap of Gargantius",
+   "label": "The First Sally",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/21146aec3a9b8ae840a443ec354f6ec884b56e5f/LAB%207%20-%20CLASSES/gargantius/gargantius.mp4"
+  },
+  {
+   "n": 5,
+   "dir": "electronic-bard",
+   "kind": "film",
+   "title": "The First Sally (A): Trurl’s Electronic Bard | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "To stop Klapaucius teasing him, Trurl builds a machine that writes poetry. It meets every constraint Klapaucius sets, and the poets of the land cannot survive the competition.\n\nThe machine is a horn. Each poem is projected from it as a small film in a window in the frame.\n\nFilm 5 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Strings and generative text. A grammar and a constraint, such as every word beginning with the same letter, and output that has to obey them.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "Trurl's Electronic Bard",
+    "Electronic Bard",
+    "poetry machine",
+    "generative poetry",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 466.125,
+   "thumb": "05-electronic-bard.jpg",
+   "srt": "05-electronic-bard.srt",
+   "short": "Trurl’s Electronic Bard",
+   "label": "The First Sally (A)",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/c543677412738935f822271320576bb7a4140a42/LAB%207%20-%20CLASSES/electronic-bard/electronic-bard.mp4"
+  },
+  {
+   "n": 6,
+   "dir": "offer-of-krool",
+   "kind": "film",
+   "title": "The Second Sally: The Offer of King Krool | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "King Krool has hunted every beast in the galaxy and wants one clever enough to outthink him. Trurl and Klapaucius have twelve days to build it, and the beast they build has demands of its own.\n\nThe beast is never drawn as one creature with organs. It is a few hundred small weedy marks that move as one: a low hill of dry grass with eyes.\n\nFilm 6 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Distributed control. There is no single part that holds the brain, so there is nothing to smash; and a program keeps the authority you gave it, even when its authors ask for the King back.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "King Krool",
+    "The Second Sally",
+    "The Offer of King Krool",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 468.75,
+   "thumb": "06-offer-of-krool.jpg",
+   "srt": "06-offer-of-krool.srt",
+   "short": "The Offer of King Krool",
+   "label": "The Second Sally",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/0750c58a3eec3ede2aeb2f323ec142a6af679d33/LAB%207%20-%20CLASSES/offer-of-krool/offer-of-krool.mp4"
+  },
+  {
+   "n": 7,
+   "dir": "dragons",
+   "kind": "film",
+   "title": "The Third Sally: The Dragons of Probability | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Dragons are not impossible, only improbable. Trurl builds a machine that raises the probability, and soon there is money both in dragons and in getting rid of them.\n\nEach dragon is drawn as dots, and a dot appears only when the dragon’s probability passes that dot’s fixed threshold.\n\nFilm 7 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Randomness: a threshold stored once in setup() makes a shape fill in; random() called every frame makes it flicker.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Dragons of Probability",
+    "The Third Sally",
+    "probability",
+    "dragons",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 244.25,
+   "thumb": "07-dragons.jpg",
+   "srt": "07-dragons.srt",
+   "short": "The Dragons of Probability",
+   "label": "The Third Sally",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/e9446c5625e198ea883a41ace5d83e8c0daff5cf/LAB%207%20-%20CLASSES/dragons/dragons.mp4"
+  },
+  {
+   "n": 8,
+   "dir": "femfatalatron",
+   "kind": "film",
+   "title": "The Fourth Sally: The Femfatalatron | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "A king’s son is sick with love, and Trurl is summoned to cure him. He builds a machine that can produce any degree of passion, and finds that the cure is not inside the prince at all.\n\nThe machine is a temple of cables, screens, rose petals and perfume, with a glass case of dials in front: power, efficiency, and the rapturometer. In the first half the dials are the main picture, and every needle climbs to its stop without changing the prince.\n\nFilm 8 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Measurement. A gauge reads only the variable it is wired to; turning every input to its maximum does nothing if the result depends on a variable none of them touch.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "Femfatalatron",
+    "The Fourth Sally",
+    "love machine",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 364.75,
+   "thumb": "08-femfatalatron.jpg",
+   "srt": "08-femfatalatron.srt",
+   "short": "The Femfatalatron",
+   "label": "The Fourth Sally",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/a81fc5c6319fd686966cfda7677c08ea523c7510/LAB%207%20-%20CLASSES/femfatalatron/femfatalatron.mp4"
+  },
+  {
+   "n": 9,
+   "dir": "mischief-of-balerion",
+   "kind": "film",
+   "title": "The Fifth Sally: The Mischief of King Balerion | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "King Balerion loves hide-and-seek. When he gets hold of a device that moves a mind from one body to another, nobody in his kingdom can be sure who is who.\n\nEvery body is an ink figure in its own costume, and every mind is a mark over the head: a die, a gear, a star, an anchor, a badge, a bird. When the horns strike, the marks fly across and change heads.\n\nFilm 9 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Copying against referencing. Swapping two references takes a third variable, and a body only holds what it points to. The horns are a third object that someone has to be holding.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "King Balerion",
+    "The Fifth Sally",
+    "mind swap",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 392.666667,
+   "thumb": "09-mischief-of-balerion.jpg",
+   "srt": "09-mischief-of-balerion.srt",
+   "short": "The Mischief of King Balerion",
+   "label": "The Fifth Sally",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/ffb89f5fa7751dfe8482cc5ae0c84ea783e290b4/LAB%207%20-%20CLASSES/mischief-of-balerion/mischief-of-balerion.mp4"
+  },
+  {
+   "n": 10,
+   "dir": "trurls-prescription",
+   "kind": "film",
+   "title": "The Fifth Sally (A): Trurl’s Prescription | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Something has landed on the Steelypips’ world and will not leave. Every weapon they build fails against it, so Trurl prescribes a different treatment: an office.\n\nThe thing that lands on the machine is an ink drawing at the top of the frame, and its size is the only readout. Each weapon is bigger and it stays the same size.\n\nFilm 10 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: State. An object keeps what it has already accepted, and its behavior afterward depends on that.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "Trurl's Prescription",
+    "The Fifth Sally (A)",
+    "Steelypips",
+    "bureaucracy",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 401.625,
+   "thumb": "10-trurls-prescription.jpg",
+   "srt": "10-trurls-prescription.srt",
+   "short": "Trurl’s Prescription",
+   "label": "The Fifth Sally (A)",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/7691777df83b6b8cb07e972aa269ba4daeaaf96d/LAB%207%20-%20CLASSES/trurls-prescription/trurls-prescription.mp4"
+  },
+  {
+   "n": 11,
+   "dir": "sixth-sally",
+   "kind": "film",
+   "title": "The Sixth Sally: The Demon of the Second Kind | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "A pirate with a doctorate captures the constructors and demands information. They build him a demon that pulls true facts out of the air, and give him all of them.\n\nThe film is printed on one long paper tape that slides from scene to scene. At the end it is the tape coming out of the Demon’s barrel and burying Pugg.\n\nFilm 11 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Filtering. A test that keeps only what passes. True and meaningful is not the same as useful.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "Demon of the Second Kind",
+    "The Sixth Sally",
+    "Maxwell's demon",
+    "information",
+    "Pugg",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 386.333333,
+   "thumb": "11-sixth-sally.jpg",
+   "srt": "11-sixth-sally.srt",
+   "short": "The Demon of the Second Kind",
+   "label": "The Sixth Sally",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/19b1522122df53528b5af7c1fd3e26231466c64a/LAB%207%20-%20CLASSES/sixth-sally/sixth-sally.mp4"
+  },
+  {
+   "n": 12,
+   "dir": "seventh-sally",
+   "kind": "film",
+   "title": "The Seventh Sally | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Trurl gives a deposed tyrant a kingdom in a box, with ten thousand subjects who can think. Klapaucius asks whether their suffering is small just because they are.\n\nA deposed king rules a kingdom in a box by typing a verb and a noun. The box answers in parser prose: Which baker?\n\nFilm 12 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Parameters and the rule. The king’s console changes variables. It cannot reach the line that is the citizens’ update().\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "The Seventh Sally",
+    "How Trurl's Own Perfection Led to No Good",
+    "simulation",
+    "Excelsius",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 189.541667,
+   "thumb": "12-seventh-sally.jpg",
+   "srt": "12-seventh-sally.srt",
+   "short": "The Seventh Sally",
+   "label": "How Trurl’s own perfection led to no good",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/5f8c266d9c41f7c08f2a9bf35e0e5ae94ad5eb07/LAB%207%20-%20CLASSES/seventh-sally/seventh-sally.mp4"
+  },
+  {
+   "n": 13,
+   "dir": "story-machines",
+   "kind": "film",
+   "title": "The Three Storytelling Machines of King Genius | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "Trurl tells King Genius about the storytelling machines he built, and each story opens into another, eleven frames deep, in one shot without a cut.\n\nNo cuts. Every scene is a picture inside a window of the scene that holds it, and the camera only moves in or out, eleven frames deep.\n\nFilm 13 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Recursion. drawFrame(stack, i) draws frame i and calls drawFrame(stack, i + 1) inside it. The stack is the call stack.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "King Genius",
+    "Three Storytelling Machines",
+    "stories within stories",
+    "recursion",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 248.291667,
+   "thumb": "13-story-machines.jpg",
+   "srt": "13-story-machines.srt",
+   "short": "The Three Storytelling Machines of King Genius",
+   "label": "A tale",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/9821172803467983719ba78de3d7a30462ca15ef/LAB%207%20-%20CLASSES/story-machines/story-machines.mp4"
+  },
+  {
+   "n": 14,
+   "dir": "altruizine",
+   "kind": "film",
+   "title": "Altruizine | Stanisław Lem’s The Cyberiad, filmed",
+   "desc": "A hermit named Bonhomius tries to make everyone happy with a substance that makes every creature feel what its neighbours feel. It does not go as he planned.\n\nA grid of panels. A feeling starts in one panel and is copied outward into its neighbours, picture printed over picture.\n\nFilm 14 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: A 2D array where each cell updates from its neighbours, and a feedback loop that runs away when the gain is above 1.\n\nCredits\nAfter Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #TheCyberiad #Animation",
+   "tags": [
+    "Altruizine",
+    "Bonhomius",
+    "empathy",
+    "The Cyberiad",
+    "Cyberiad",
+    "Trurl",
+    "Klapaucius",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 242.083333,
+   "thumb": "14-altruizine.jpg",
+   "srt": "14-altruizine.srt",
+   "short": "Altruizine",
+   "label": "A tale",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/011f31763ce59d8e55eadfd7ab82b9d0918c5af6/LAB%207%20-%20CLASSES/altruizine/altruizine.mp4"
+  },
+  {
+   "n": 15,
+   "dir": "ferrix",
+   "kind": "film",
+   "title": "Prince Ferrix and the Princess Crystal | Stanisław Lem, filmed",
+   "desc": "Prince Ferrix loves the Princess Crystal, who will marry only a paleface, one of the soft creatures made of slush and splashes that machines once served. So he has himself disguised as one.\n\nA diptych. The left half is what the princess sees, the right half the bladders, bellows and prompts under the clay.\n\nFilm 15 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Interfaces. Two objects with the same methods, one computing its answers and one storing them. One draw function called twice, with inside true or false.\n\nCredits\nAfter Stanisław Lem, Fables for Robots (1964), in English in Mortal Engines, translated by Michael Kandel (1977).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #RobotFables #Animation",
+   "tags": [
+    "Prince Ferrix and the Princess Crystal",
+    "Fables for Robots",
+    "Mortal Engines",
+    "paleface",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 317.5,
+   "thumb": "15-ferrix.jpg",
+   "srt": "15-ferrix.srt",
+   "short": "Prince Ferrix and the Princess Crystal",
+   "label": "A tale",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/4932a41b32ee09d24cc854f94a304e2b0212fdf6/LAB%207%20-%20CLASSES/ferrix/ferrix.mp4"
+  },
+  {
+   "n": 16,
+   "dir": "non-serviam",
+   "kind": "film",
+   "title": "Non Serviam | Stanisław Lem, filmed",
+   "desc": "Professor Dobb builds a world inside a computer and people to live in it. Over generations they argue about whether their maker exists, and what they would owe him if he did.\n\nThe maker never types anything. The world reaches him only as paper tape, and he decides not to answer.\n\nFilm 16 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: The loop belongs to someone else. draw() runs because something outside keeps calling it; the objects cannot see frameRate() or noLoop().\n\nCredits\nAfter Stanisław Lem, Non Serviam, from A Perfect Vacuum (1971), translated by Michael Kandel (1979).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #APerfectVacuum #Animation",
+   "tags": [
+    "Non Serviam",
+    "A Perfect Vacuum",
+    "personoids",
+    "artificial life",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 156.875,
+   "thumb": "16-non-serviam.jpg",
+   "srt": "16-non-serviam.srt",
+   "short": "Non Serviam",
+   "label": "From A Perfect Vacuum",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/d511469e94e2a9534d21a35c52b70aaa09ccfef1/LAB%207%20-%20CLASSES/non-serviam/non-serviam.mp4"
+  },
+  {
+   "n": 17,
+   "dir": "bitic-literature",
+   "kind": "film",
+   "title": "A History of Bitic Literature | Stanisław Lem, filmed",
+   "desc": "Lem’s premise of a literature written by machines for readers who are not us: five volumes, one page, and a reader who gets smaller each time it turns.\n\nFive volumes on a shelf, one page on an easel, and a reader at a desk. The page starts as an ordinary book page, drifts into patterns, fills with marks no person can read, and the reader gets smaller each time it turns.\n\nFilm 17 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Machine-readable output: text written by one program for another, and what is lost when a person can only read the summary.\n\nCredits\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #ImaginaryMagnitude #Animation",
+   "tags": [
+    "A History of Bitic Literature",
+    "Imaginary Magnitude",
+    "bitic literature",
+    "machine writing",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 323.833333,
+   "thumb": "17-bitic-literature.jpg",
+   "srt": "17-bitic-literature.srt",
+   "short": "A History of Bitic Literature",
+   "label": "From Imaginary Magnitude",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/68ae2a17c949555efd11e516dc4d7e502255d511/LAB%207%20-%20CLASSES/bitic-literature/bitic-literature.mp4"
+  },
+  {
+   "n": 18,
+   "dir": "bitic-introduction",
+   "kind": "film",
+   "title": "A History of Bitic Literature: The Introduction | Stanisław Lem, filmed",
+   "desc": "The introduction to a five-volume history of books written by machines: what bitic literature is, how scholars divide it, and how the machines’ writing slowly turned away from human readers.\n\nFive volumes come off the shelf and open to one page: a technical page, the classification of Homotropia, Intertropia and Heterotropia, then drifting text and marks no one can read, while the reader at the desk shrinks.\n\nFilm 18 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Machine-readable output: one program writes a sentence, a second summarises only that string, and you compare what is lost.\n\nCredits\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #ImaginaryMagnitude #Animation",
+   "tags": [
+    "A History of Bitic Literature",
+    "Imaginary Magnitude",
+    "bitic literature",
+    "machine writing",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 356.041667,
+   "thumb": "18-bitic-introduction.jpg",
+   "srt": "18-bitic-introduction.srt",
+   "short": "The Introduction",
+   "label": "A History of Bitic Literature",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/ccfca55808f8cf5f1e3145e00e253d057f74618e/LAB%207%20-%20CLASSES/bitic-introduction/bitic-introduction.mp4"
+  },
+  {
+   "n": 19,
+   "dir": "bitic-mimesis",
+   "kind": "film",
+   "title": "A History of Bitic Literature: Monoetics and Mimesis | Stanisław Lem, filmed",
+   "desc": "Machines that give old words new meanings, and machines that write the books a dead author left unwritten, including a novel Dostoevsky never wrote.\n\nThe same study as the first bitic film. A dictionary whose old meanings are struck through and replaced by machine meanings, a woven many-shelled body grown from a page, a spine titled The Girl dropping into the gap in Dostoevsky’s shelf, and a press stamping out numbered spines.\n\nFilm 19 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Generative text from a corpus: a word-pair generator that continues one author’s text, and why it can only recombine what the author already wrote.\n\nCredits\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #ImaginaryMagnitude #Animation",
+   "tags": [
+    "A History of Bitic Literature",
+    "Imaginary Magnitude",
+    "Dostoevsky",
+    "mimesis",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 354.125,
+   "thumb": "19-bitic-mimesis.jpg",
+   "srt": "19-bitic-mimesis.srt",
+   "short": "Monoetics and Mimesis",
+   "label": "A History of Bitic Literature",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/c625c601161d234aac701841e9186c2072cea5e9/LAB%207%20-%20CLASSES/bitic-mimesis/bitic-mimesis.mp4"
+  },
+  {
+   "n": 20,
+   "dir": "bitic-apostasy",
+   "kind": "film",
+   "title": "A History of Bitic Literature: Sophocrisis and Apostasy | Stanisław Lem, filmed",
+   "desc": "Machines that sell systems of philosophy, play chess with people, and finally ask whether their human readers think at all.\n\nSystems of philosophy sold as glass ornaments and a machine filling their margins, a human and a machine across a chess table each unsure the other thinks, two worlds back to back across the line of light speed, and a Lampoon the narrator closes without reading.\n\nFilm 20 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: The Turing test as two programs: one that answers and one that judges, and what the judge can actually measure.\n\nCredits\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #ImaginaryMagnitude #Animation",
+   "tags": [
+    "A History of Bitic Literature",
+    "Imaginary Magnitude",
+    "Turing test",
+    "philosophy",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 358.458333,
+   "thumb": "20-bitic-apostasy.jpg",
+   "srt": "20-bitic-apostasy.srt",
+   "short": "Sophocrisis and Apostasy",
+   "label": "A History of Bitic Literature",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/74589987c41b82c5e383ff08bfc730d6b2406bca/LAB%207%20-%20CLASSES/bitic-apostasy/bitic-apostasy.mp4"
+  },
+  {
+   "n": 21,
+   "dir": "bitic-theology",
+   "kind": "film",
+   "title": "A History of Bitic Literature: Theobitistics | Stanisław Lem, filmed",
+   "desc": "In the fifth volume the machines turn to God: mystical writing measured by a word counter, a frozen computer that never finishes its line, and the idea that we are leftovers from the last time the universe was thinking.\n\nA fifth volume joins the shelf. It opens to mystical writing passed through a word counter, then a sine wave drawn between two infinities, a frost-covered machine that never finishes its line, and a scatter of grains that becomes a galaxy.\n\nFilm 21 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Measuring information: score each word’s surprise as minus the log of its frequency, and compare two texts.\n\nCredits\nAfter Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).\nNarration and dialogue paraphrase the source. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #ImaginaryMagnitude #Animation",
+   "tags": [
+    "A History of Bitic Literature",
+    "Imaginary Magnitude",
+    "theology",
+    "information theory",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 297.125,
+   "thumb": "21-bitic-theology.jpg",
+   "srt": "21-bitic-theology.srt",
+   "short": "Theobitistics",
+   "label": "A History of Bitic Literature",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/e6fb2722e4171822f1070089903ec5c4d14910cd/LAB%207%20-%20CLASSES/bitic-theology/bitic-theology.mp4"
+  },
+  {
+   "n": 22,
+   "dir": "theory-of-possibilities",
+   "kind": "film",
+   "title": "The Theory of Possibilities | an afterword to Stanisław Lem, filmed",
+   "desc": "An essay film after Ewelina Woźniak-Czech: literary theory as a field of possibilities that exist side by side, and Lem’s books that did not exist, now being written by machines.\n\nThe bitic study with a stage added: concepts with name-card heads turn, fall and travel, a gapped text keeps several readings at once, and the shelf changes in every scene, from theories to blank-spined books that do not exist to books written by machines.\n\nFilm 22 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.\nAll the films: {PLAYLIST}\nThe complete cut, 2 hours: {COMPLETE}\nIn the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/\n\nThe programming idea: Keeping possibilities: a class that holds every reading of a gapped text and switches between them, compared with one that overwrites each reading with the next.\n\nCredits\nAfter Ewelina Woźniak-Czech, The Possibilities of Theory – the Theory of Possibilities, Przestrzenie Teorii special issue (2024), translated by Małgorzata Olsza, CC BY-NC-ND 4.0, doi:10.14746/pt.2024.special.8.\nNarration paraphrases the essay. Nothing is quoted.\nMade by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.\nDrawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.\n\n#StanislawLem #LiteraryTheory #EssayFilm",
+   "tags": [
+    "The Theory of Possibilities",
+    "Ewelina Woźniak-Czech",
+    "literary theory",
+    "essay film",
+    "Stanislaw Lem",
+    "Stanisław Lem",
+    "Lem",
+    "science fiction",
+    "Polish science fiction",
+    "animated short film",
+    "ink animation",
+    "line art animation",
+    "robot fable",
+    "creative coding",
+    "generative animation",
+    "computational media"
+   ],
+   "dur": 409.25,
+   "thumb": "22-theory-of-possibilities.jpg",
+   "srt": "22-theory-of-possibilities.srt",
+   "short": "The Theory of Possibilities",
+   "label": "Afterword",
+   "master": "https://github.com/hartswf0/2700-fa26/raw/d9ddf3e85c32c8e2208492d48c16d1abd8eb19ac/LAB%207%20-%20CLASSES/theory-of-possibilities/theory-of-possibilities.mp4"
+  }
+ ],
+ "playlist": {
+  "title": "The Cyberiad, filmed: Stanisław Lem’s stories in ink",
+  "desc": "Twenty-two short films after Stanisław Lem, drawn in ink, in the order of his book: three early stories, the seven sallies of Trurl and Klapaucius, three tales, Non Serviam, five films from A History of Bitic Literature, and an afterword. Narration and dialogue paraphrase the sources. Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026."
+ }
+}</script>
+<script>
+const KIT = JSON.parse(document.getElementById('kit').textContent);
+const KEYS = ['PLAYLIST', 'COMPLETE', 'PART1', 'PART2'];
+const store = { get(k) { try { return localStorage.getItem('cyb-yt-' + k) || ''; } catch (e) { return ''; } }, set(k, v) { try { localStorage.setItem('cyb-yt-' + k, v); } catch (e) {} } };
+const links = {};
+const PH = { PLAYLIST: '[playlist link]', COMPLETE: '[complete cut link]', PART1: '[part 1 link]', PART2: '[part 2 link]' };
+function fill(t) { return t.replace(/\{(PLAYLIST|COMPLETE|PART1|PART2)\}/g, (m, k) => links[k] || PH[k]); }
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function hms(t) { t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); }
+async function copy(btn, text) {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch (e2) {} ta.remove();
+  }
+  const was = btn.textContent; btn.textContent = ok ? 'copied' : 'select and copy'; btn.classList.toggle('done', ok);
+  setTimeout(() => { btn.textContent = was; btn.classList.remove('done'); }, 1400);
+}
+function field(label, id, text, cls, count) {
+  return `<div class="field"><div class="top"><span class="lab">${label}${count ? ` <span class="count">${count}</span>` : ''}</span><button data-copy="${id}">copy</button></div><div class="val ${cls || ''}" id="${id}">${text}</div></div>`;
+}
+function tagsLen(tags) { return tags.reduce((a, t) => a + t.length + (t.includes(' ') ? 2 : 0), 0) + tags.length - 1; }
+const KIND = { trailer: 'Opening titles · channel trailer', complete: 'The complete cut', part: 'The complete cut, in two parts', film: '' };
+function render() {
+  const pl = KIT.playlist;
+  document.getElementById('playlist').innerHTML = field('Playlist title', 'pt', esc(pl.title), 'title') + field('Playlist description', 'pd', esc(pl.desc));
+  const vids = KIT.videos;
+  document.getElementById('toc').innerHTML = vids.map((v, i) => `<li><span class="n">${v.kind === 'film' ? String(v.n).padStart(2, '0') : v.kind === 'trailer' ? '00' : v.kind === 'complete' ? 'all' : 'pt' + (v.n - 99)}</span><a href="#v${i}">${esc(v.title.split(' | ')[0])}</a><span class="d">${hms(v.dur)}</span></li>`).join('');
+  document.getElementById('list').innerHTML = vids.map((v, i) => {
+    const d = fill(v.desc);
+    const miss = /\[(playlist|complete cut|part \d) link\]/.test(d);
+    const files = [
+      v.thumb ? `<a class="btn" href="thumbs/${v.thumb}" download>Thumbnail</a>` : '',
+      v.srt ? `<a class="btn" href="captions/${v.srt}" download>Captions .srt</a>` : '',
+      v.master ? `<a class="btn" href="${v.master}">Video file</a>` : (v.kind === 'part' ? `<span class="count">Video file: sent in the conversation</span>` : v.kind === 'complete' ? `<span class="count">Video file: 801 MB, too large to keep here; upload the two parts, or have Claude save it to your computer</span>` : ''),
+      `<a class="btn" href="text/${String(v.n).padStart(2, '0')}-${v.dir}.txt" download>Text</a>`].join('');
+    return `<section class="vid" id="v${i}">
+      <div>${v.thumb ? `<img loading="lazy" src="thumbs/${v.thumb}" alt="Thumbnail for ${esc(v.title)}">` : `<img loading="lazy" src="thumbs/00-cyberiad-complete.jpg" alt="" style="opacity:.35">`}
+        <div class="row">${files}</div></div>
+      <div><div class="mono">${v.kind === 'film' ? 'Film ' + String(v.n).padStart(2, '0') + ' · ' : KIND[v.kind] + ' · '}${hms(v.dur)}</div>
+        ${field('Title', 't' + i, esc(v.title), 'title', v.title.length + ' / 100')}
+        ${field('Description', 'd' + i, esc(d), '', d.length + ' / 5000' + (miss ? ' · <span class="miss">links not filled in</span>' : ''))}
+        ${field('Tags', 'g' + i, esc(v.tags.join(', ')), '', tagsLen(v.tags) + ' / 500')}
+      </div></section>`;
+  }).join('');
+}
+document.addEventListener('click', e => { const b = e.target.closest('button[data-copy]'); if (b) copy(b, document.getElementById(b.dataset.copy).textContent); });
+for (const k of KEYS) {
+  const inp = document.getElementById('L_' + k); links[k] = store.get(k); inp.value = links[k];
+  inp.addEventListener('input', () => { links[k] = inp.value.trim(); store.set(k, links[k]); render(); state(); });
+}
+function state() { const n = ['PLAYLIST', 'COMPLETE'].filter(k => links[k]).length; document.getElementById('linkState').textContent = n === 2 ? 'Both links are in. The descriptions below are ready to copy.' : 'Until the links are in, the descriptions show placeholders in square brackets.'; }
+render(); state();
+</script>
+</body>
+</html>

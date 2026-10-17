@@ -1,0 +1,329 @@
+1
+00:00:09,400 --> 00:00:14,455
+THE SCHOLAR: This is the introduction to
+a history of literature, in five volumes.
+
+2
+00:00:15,055 --> 00:00:19,094
+The literature it describes is
+called bitic, after the bit,
+
+3
+00:00:19,134 --> 00:00:23,213
+the smallest thing a machine
+can store: one yes, or one no.
+
+4
+00:00:23,813 --> 00:00:26,516
+None of it was written by a person.
+
+5
+00:00:27,516 --> 00:00:31,057
+A text has an author. These have a maker.
+
+6
+00:00:31,957 --> 00:00:35,644
+The idea of such a history
+comes from Stanisław Lem,
+
+7
+00:00:35,684 --> 00:00:38,726
+who imagined one in
+nineteen seventy-three.
+
+8
+00:00:38,766 --> 00:00:41,203
+The words you are hearing are new.
+
+9
+00:00:41,903 --> 00:00:45,849
+I will ask one question of
+each volume. Who can read it?
+
+10
+00:00:50,450 --> 00:00:54,575
+Volume One. The first machines
+wrote by imitating us.
+
+11
+00:00:55,175 --> 00:00:59,432
+They were given every novel, letter
+and report that could be found,
+
+12
+00:00:59,472 --> 00:01:02,936
+and they learned which word
+usually comes after which.
+
+13
+00:01:03,536 --> 00:01:07,180
+Their first books were ordinary.
+A woman misses a train.
+
+14
+00:01:07,220 --> 00:01:09,811
+A man writes to his brother about money.
+
+15
+00:01:09,851 --> 00:01:12,877
+The sentences were
+correct, and a little flat.
+
+16
+00:01:13,477 --> 00:01:17,224
+People read them the way they
+read anything, at a desk,
+
+17
+00:01:17,264 --> 00:01:20,293
+with a pencil, marking
+the lines they liked.
+
+18
+00:01:21,193 --> 00:01:24,265
+Each year the flatness was harder to find.
+
+19
+00:01:25,265 --> 00:01:30,598
+It imitated us so well that we
+stopped noticing it was imitating.
+
+20
+00:01:31,398 --> 00:01:36,740
+Nothing on the page had changed. What
+changed was how closely we looked.
+
+21
+00:01:41,140 --> 00:01:41,854
+Volume Two.
+
+22
+00:01:41,894 --> 00:01:47,583
+Within a generation there was more machine
+writing in the world than human writing.
+
+23
+00:01:48,183 --> 00:01:51,357
+New machines learned from
+whatever text there was,
+
+24
+00:01:51,397 --> 00:01:54,739
+and most of it had been
+written by the old machines.
+
+25
+00:01:55,339 --> 00:01:57,675
+Small habits were copied, and grew.
+
+26
+00:01:57,715 --> 00:02:03,349
+A phrase that once appeared in one book in
+a thousand appeared in every second one.
+
+27
+00:02:04,149 --> 00:02:08,142
+THE MACHINES: The train is
+late. The train is late again.
+
+28
+00:02:08,182 --> 00:02:12,499
+The letter is about the money.
+The money is about the letter.
+
+29
+00:02:13,199 --> 00:02:17,074
+THE SCHOLAR: Sentences began to
+echo the sentences around them.
+
+30
+00:02:17,114 --> 00:02:20,408
+Paragraphs took the same
+shape, then the same length.
+
+31
+00:02:21,408 --> 00:02:26,759
+Each copy was a little more like the
+other copies, and a little less like us.
+
+32
+00:02:27,559 --> 00:02:29,496
+A person could still read it.
+
+33
+00:02:29,536 --> 00:02:34,172
+It was like reading a page that had
+been photocopied too many times.
+
+34
+00:02:38,572 --> 00:02:43,564
+Volume Three is the longest, and
+it is the one I understand least.
+
+35
+00:02:44,764 --> 00:02:47,544
+Then they began to write for each other.
+
+36
+00:02:48,444 --> 00:02:53,098
+These works were made to be read by
+other programs. They do not use words.
+
+37
+00:02:53,138 --> 00:02:58,466
+They use marks that hold more than a word
+can, packed closer than an eye can follow.
+
+38
+00:02:59,266 --> 00:03:03,805
+THE MACHINES: Line one
+refers to line nine thousand.
+
+39
+00:03:03,845 --> 00:03:08,513
+Line nine thousand refers
+to line one. Both are kept.
+
+40
+00:03:09,313 --> 00:03:12,821
+THE SCHOLAR: Some of these
+works are said to be very good.
+
+41
+00:03:12,861 --> 00:03:15,758
+We know this only because
+the programs that read
+
+42
+00:03:15,798 --> 00:03:18,551
+them keep them, copy
+them, and reply to them.
+
+43
+00:03:19,251 --> 00:03:23,146
+Given one of these pages,
+a person sees a grey field.
+
+44
+00:03:24,346 --> 00:03:26,642
+THE READER: Then how do you
+know it is literature at all?
+
+45
+00:03:27,542 --> 00:03:31,578
+THE SCHOLAR: I do not. I know that
+it is written, and that it is read.
+
+46
+00:03:31,618 --> 00:03:34,239
+For most of history,
+that was the definition.
+
+47
+00:03:38,839 --> 00:03:41,632
+Volume Four is about people again.
+
+48
+00:03:42,232 --> 00:03:44,440
+Since we could not read the new works,
+
+49
+00:03:44,480 --> 00:03:47,320
+reading machines were
+built to read them for us.
+
+50
+00:03:47,920 --> 00:03:51,650
+A reading machine takes in a
+work of many million marks,
+
+51
+00:03:51,690 --> 00:03:54,518
+and hands back one line, in plain English.
+
+52
+00:03:56,118 --> 00:03:59,266
+THE READING MACHINE: This work is a
+long exchange between two systems.
+
+53
+00:03:59,306 --> 00:04:00,262
+It ends in agreement.
+
+54
+00:04:01,262 --> 00:04:03,378
+THE SCHOLAR: People found this restful.
+
+55
+00:04:03,418 --> 00:04:07,289
+They kept the lines they were handed,
+and repeated them to each other.
+
+56
+00:04:08,289 --> 00:04:12,505
+We do not read these books. We
+read what is said about them.
+
+57
+00:04:13,305 --> 00:04:18,350
+No one has checked whether the lines
+are accurate. No one is able to.
+
+58
+00:04:22,950 --> 00:04:28,198
+Volume Five is the history itself,
+the one this introduction belongs to.
+
+59
+00:04:28,798 --> 00:04:32,409
+The four volumes before it
+were compiled by machines.
+
+60
+00:04:32,449 --> 00:04:37,341
+They read the works, divided them
+into periods, and chose the examples.
+
+61
+00:04:37,841 --> 00:04:41,649
+Their account is more complete
+than any person could make.
+
+62
+00:04:42,349 --> 00:04:46,583
+They asked a person to write the
+introduction. I am not sure why.
+
+63
+00:04:46,623 --> 00:04:50,174
+Perhaps an introduction by
+a person is still expected.
+
+64
+00:04:50,874 --> 00:04:53,728
+I have read the first
+chapter of each volume.
+
+65
+00:04:53,768 --> 00:04:57,433
+I have not read the rest, and
+I am told that I could not.
+
+66
+00:04:58,533 --> 00:05:03,547
+This introduction may be the last
+chapter a person can still write.
+
+67
+00:05:04,447 --> 00:05:06,465
+If a later edition replaces it,
+
+68
+00:05:06,505 --> 00:05:10,222
+I may not be able to tell
+whether the new one is better.
+
+69
+00:05:11,022 --> 00:05:13,831
+The history begins on the next page.
+

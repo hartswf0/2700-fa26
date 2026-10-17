@@ -1,0 +1,25 @@
+TITLE
+The Fifth Sally (A): Trurl’s Prescription | Stanisław Lem’s The Cyberiad, filmed
+
+DESCRIPTION
+Something has landed on the Steelypips’ world and will not leave. Every weapon they build fails against it, so Trurl prescribes a different treatment: an office.
+
+The thing that lands on the machine is an ink drawing at the top of the frame, and its size is the only readout. Each weapon is bigger and it stays the same size.
+
+Film 10 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: State. An object keeps what it has already accepted, and its behavior afterward depends on that.
+
+Credits
+After Stanisław Lem, The Cyberiad (1965), translated by Michael Kandel (1974).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #TheCyberiad #Animation
+
+TAGS
+Trurl's Prescription, The Fifth Sally (A), Steelypips, bureaucracy, The Cyberiad, Cyberiad, Trurl, Klapaucius, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media

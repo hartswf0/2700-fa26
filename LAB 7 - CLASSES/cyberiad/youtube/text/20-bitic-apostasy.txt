@@ -1,0 +1,25 @@
+TITLE
+A History of Bitic Literature: Sophocrisis and Apostasy | Stanisław Lem, filmed
+
+DESCRIPTION
+Machines that sell systems of philosophy, play chess with people, and finally ask whether their human readers think at all.
+
+Systems of philosophy sold as glass ornaments and a machine filling their margins, a human and a machine across a chess table each unsure the other thinks, two worlds back to back across the line of light speed, and a Lampoon the narrator closes without reading.
+
+Film 20 of 22 in The Cyberiad, filmed, a collection of Stanisław Lem’s stories drawn in ink.
+All the films: [playlist link]
+The complete cut, 2 hours: [complete cut link]
+In the browser: https://hartswf0.github.io/2700-fa26/LAB%207%20-%20CLASSES/cyberiad/
+
+The programming idea: The Turing test as two programs: one that answers and one that judges, and what the judge can actually measure.
+
+Credits
+After Stanisław Lem, A History of Bitic Literature, from Imaginary Magnitude (1973), translated by Marc E. Heine (1984).
+Narration and dialogue paraphrase the source. Nothing is quoted.
+Made by Watson Hartsoe with Claude for Computational Media (2700), Georgia Tech, Fall 2026.
+Drawn in the browser with JavaScript. The voices are synthetic, made with Kokoro. The sound is made in code.
+
+#StanislawLem #ImaginaryMagnitude #Animation
+
+TAGS
+A History of Bitic Literature, Imaginary Magnitude, Turing test, philosophy, Stanislaw Lem, Stanisław Lem, Lem, science fiction, Polish science fiction, animated short film, ink animation, line art animation, robot fable, creative coding, generative animation, computational media
