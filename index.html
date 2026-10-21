@@ -466,6 +466,19 @@ header {
   min-width: 0;
 }
 
+.wg-film { border-top: 1px solid var(--hair-strong); border-bottom: 1px solid var(--hair-strong); background: #000; }
+.wg-film video { width: 100%; aspect-ratio: 16 / 9; display: block; background: #000; }
+.wg-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.wg-body .folder-title { white-space: normal; }
+.wg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.wg-strip { display: flex; gap: 4px; flex-wrap: wrap; }
+.wg-chip { font: 800 10.5px/1 var(--mono); padding: 7px 9px; border: 1px solid var(--hair-strong); background: var(--surface); color: var(--ink); cursor: pointer; }
+.wg-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.wg-note { font: 11px/1.45 var(--mono); color: var(--muted); margin: 4px 0 14px; }
+.wg-head > a.dossier-btn { flex: 0 0 auto; width: auto; min-width: 0; padding: 8px 12px; }
+@media (max-width: 720px) { .wg-head > a.dossier-btn { flex: 1 1 100%; } }
+a.dossier-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
 .folder-preview-box {
   width: 110px;
   height: 82px;
@@ -1259,6 +1272,20 @@ header {
     { date: "DEC 16", short: ["CLOSE"], phase: "ASSESS", name: "Final Close", title: "Finish with authored work.", claim: "Rigorous assessment does not require grade scarcity." }
   ];
 
+  // WarGames milestone track (M1–M7): films + operating manuals. Week placement follows the manual's
+  // relative-week Gantt starting at W09 (illustrative, not course deadlines).
+  const WG_BASE = "WARGAMES - MILESTONES/";
+  const WARGAMES = {
+    M1: { film: "Three Machines", name: "Project launch and research", doc: "M1_Project_Launch_and_Research", dur: "1:35", rule: "Both partners select one concept by comparing its actions, required assets and reachable outcome.", submit: "One group PDF of at least two pages." },
+    M2: { film: "Two Traces", name: "Design brief and systems plan", doc: "M2_Design_Brief_and_Systems_Plan", dur: "1:36", rule: "Write the state, accepted input, condition, data change and visible response for every planned transition.", submit: "One group PDF of at least two pages; design brief itself one page." },
+    M3: { film: "Another Computer", name: "Prototype build", doc: "M3_Prototype_Build", dur: "1:55", rule: "Predict a run, execute that run in the packaged copy, and repair any difference before recording a pass.", submit: "One working-project ZIP plus one group PDF of at least two pages." },
+    M4: { film: "Don't Explain", name: "Alpha build and playtest packet", doc: "M4_Alpha_Build_and_Playtest_Packet", dur: "1:35", rule: "Record peer actions first; connect each proposed change to an observation or a labeled group refinement.", submit: "One ZIP containing the complete alpha build and playtest packet." },
+    M5: { film: "One Change", name: "Beta build and presentation preparation", doc: "M5_Beta_Build_and_Presentation_Preparation", dur: "1:37", rule: "Make one bounded revision, repeat its check, and preserve the full route before moving to presentation work.", submit: "The beta and required records in the current Canvas fields." },
+    M6: { film: "The Same Route", name: "Presentation build", doc: "M6_Presentation_Build", dur: "1:35", rule: "Present only behavior present in the selected build; rehearse that same route and record any failed step.", submit: "Presentation build, one slide or one-page visual summary, self-assessment and records." },
+    M7: { film: "Outcome Recorded", name: "Final documentation package", doc: "M7_Final_Documentation_Package", dur: "1:38", rule: "Keep every submitted claim traceable to the same final version or to a labeled historical record.", submit: "Final code folder, playable build, 300–500-word statement, screenshot set and complete records." }
+  };
+  const WARGAMES_BY_WEEK = { 8: ["M1"], 9: ["M2"], 10: ["M3"], 11: ["M3", "M4"], 12: ["M4"], 13: ["M5"], 14: ["M6", "M7"] };
+
   const phaseBands = [
     { name: "PHASE I: FOUNDATION", sub: "DIRECT CONTACT", start: 0, end: 5 },
     { name: "PHASE II: DELEGATION", sub: "AFTER CONTACT", start: 6, end: 7 },
@@ -1762,6 +1789,11 @@ header {
       objectCount.textContent = activeSpectrumLvl === "arc" ? "LAB 07 ESSENTIALS" : "7 LAB 07 MODULES";
       spectrumStrip.style.display = "flex";
       renderDossierCards();
+    } else if (WARGAMES_BY_WEEK[selectedWeek]) {
+      const ids = WARGAMES_BY_WEEK[selectedWeek];
+      objectCount.textContent = "WARGAMES · " + ids.join(" + ");
+      spectrumStrip.style.display = "none";
+      renderWargamesCards(ids);
     } else {
       objectCount.textContent = "CURRICULUM OUTLINE";
       spectrumStrip.style.display = "none";
@@ -1775,10 +1807,55 @@ header {
             <button class="dossier-btn" onclick="selectWeek(4)" style="flex:1;min-width:120px;">Lab 03 Dossier</button>
             <button class="dossier-btn" onclick="selectWeek(5)" style="flex:1;min-width:120px;">Lab 05 Dossier</button>
             <button class="dossier-btn primary" onclick="selectWeek(7)" style="flex:1;min-width:120px;">Lab 07 Dossier</button>
+            <button class="dossier-btn" onclick="selectWeek(8)" style="flex:1;min-width:120px;">WarGames M1–M7</button>
           </div>
         </div>
       `;
     }
+  }
+
+  function renderWargamesCards(ids) {
+    const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    const cards = ids.map(id => {
+      const m = WARGAMES[id];
+      const page = WG_BASE + "index.html#m" + id.slice(1);
+      const absUrl = getAbsoluteWebUrl(page);
+      return `
+        <article class="folder-card wg-card">
+          <div class="folder-tab">
+            <span class="folder-tag">${id}</span>
+            <span class="folder-type">MILESTONE · FILM + MANUAL</span>
+            <span class="folder-tier-badge">WARGAMES TRACK</span>
+          </div>
+          <div class="wg-film">
+            <video controls preload="none" playsinline poster="${WG_BASE}films/${id}.jpg" src="${WG_BASE}films/${id}.mp4"></video>
+          </div>
+          <div class="wg-body">
+            <h2 class="folder-title">${id} · ${esc(m.name)}</h2>
+            <p class="folder-desc"><b>${esc(m.film)}</b> (${m.dur}). BUG makes, NIT checks. ${esc(m.rule)}</p>
+            <div class="folder-meta"><span>SUBMIT: ${esc(m.submit)}</span></div>
+          </div>
+          <div class="folder-actions">
+            <a href="${page}" class="dossier-btn primary">Open</a>
+            <a href="${WG_BASE}manuals/${m.doc}.pdf" target="_blank" class="dossier-btn">PDF</a>
+            <a href="${WG_BASE}manuals/${m.doc}.docx" class="dossier-btn">DOCX</a>
+            <button class="dossier-btn qr-btn" onclick="openQrModal('${absUrl}', '${id} ${esc(m.film).replace(/'/g, "\\'")}')" title="Scan QR Code">[ QR ]</button>
+          </div>
+        </article>`;
+    }).join("");
+    const strip = Object.keys(WARGAMES).map(id => {
+      const wk = Object.keys(WARGAMES_BY_WEEK).find(k => WARGAMES_BY_WEEK[k].includes(id));
+      const on = ids.includes(id);
+      return `<button class="wg-chip${on ? " on" : ""}" onclick="selectWeek(${wk})" title="${esc(WARGAMES[id].film)}">${id}</button>`;
+    }).join("");
+    dossierContainer.innerHTML = `
+      <div class="wg-head">
+        <div class="wg-strip">${strip}</div>
+        <a class="dossier-btn" href="${WG_BASE}index.html">All seven · manuals + films</a>
+      </div>
+      ${selectedWeek === 12 ? '<p class="wg-note">This week also holds the recovery allowance: move it to whichever work fails a check.</p>' : ""}
+      ${cards}
+      <p class="wg-note">Week placement follows the manual's illustrative relative-week Gantt. Use the corrected course dates.</p>`;
   }
 
   function renderDossierCards() {

@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WarGames Milestones</title>
+<meta name="description" content="Seven WarGames project milestones (M1–M7) for Intro to Computational Media, each with a short film and its operating manual.">
+<style>
+:root{--paper:#f4f2ea;--surface:#fff;--ink:#11110f;--muted:#5e5b53;--hair:#d4d0c4;--accent:#1e52a8;--accent-bg:rgba(30,82,168,.10);--red:#b3261e;--phos:#0f7a5c;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;--sans:"Helvetica Neue",Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#0e0e0c;--surface:#151513;--ink:#f2f0e6;--muted:#9c988e;--hair:#2b2a26;--accent:#5896e6;--accent-bg:rgba(88,150,230,.14);--red:#e0645a;--phos:#4af6c3}}
+:root[data-theme="dark"]{--paper:#0e0e0c;--surface:#151513;--ink:#f2f0e6;--muted:#9c988e;--hair:#2b2a26;--accent:#5896e6;--accent-bg:rgba(88,150,230,.14);--red:#e0645a;--phos:#4af6c3}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:var(--paper);border-bottom:2px solid var(--ink);font:800 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.top a{text-decoration:none}
+.top .back{border:1.5px solid var(--ink);padding:6px 9px}
+.top .back:hover{background:var(--ink);color:var(--paper)}
+main{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+.hero{padding:38px 0 22px;display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:end;border-bottom:1px solid var(--hair)}
+.kick{font:800 11px var(--mono);letter-spacing:.14em;color:var(--accent);margin:0 0 10px;text-transform:uppercase}
+h1{font:800 clamp(30px,4.6vw,52px)/1.02 var(--sans);letter-spacing:-.025em;margin:0}
+.hero p{margin:0 0 12px;color:var(--muted);font-size:15.5px}
+.hero .links{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.btn{font:800 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border:1.5px solid var(--ink);padding:8px 10px;background:var(--surface)}
+.btn.pri{background:var(--ink);color:var(--paper)}
+.btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.track{position:sticky;top:49px;z-index:15;background:var(--paper);display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:12px 0;border-bottom:1px solid var(--hair)}
+.chip{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1.5px solid var(--ink);background:var(--surface);text-decoration:none;min-width:0}
+.chip b{font:800 13px var(--mono);color:var(--accent)}
+.chip span{font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip i{font:600 9.5px var(--mono);font-style:normal;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.chip:hover{background:var(--accent-bg)}
+.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 8px}
+.op{border:1px solid var(--hair);background:var(--surface);padding:12px 14px}
+.op b{display:block;font:800 10px var(--mono);letter-spacing:.12em;color:var(--accent);margin-bottom:4px;text-transform:uppercase}
+.op p{margin:0;font-size:13.5px}
+.ms{padding:34px 0 10px;border-bottom:2px solid var(--ink);scroll-margin-top:120px}
+.ms-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ms-code{font:800 13px var(--mono);background:var(--ink);color:var(--paper);padding:4px 8px}
+.ms-name{font:800 clamp(20px,2.6vw,28px)/1.1 var(--sans);letter-spacing:-.02em}
+.ms-wk{font:700 10px var(--mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:auto}
+.ms-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:22px;align-items:start}
+.film{margin:0;border:2px solid var(--ink);background:#000}
+.film video{width:100%;aspect-ratio:16/9;display:block;background:#000}
+.film figcaption{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 10px;background:var(--surface);border-top:2px solid var(--ink);font-size:14px}
+.film figcaption span{font:600 10.5px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.log{font-size:17px;line-height:1.4;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+.rule{border-left:4px solid var(--accent);background:var(--accent-bg);padding:10px 12px;margin-bottom:12px;font-size:14px}
+.rule span,.kv span{display:block;font:800 9.5px var(--mono);letter-spacing:.14em;color:var(--accent);margin-bottom:3px}
+.kv{border-top:1px solid var(--hair);padding:8px 0}
+.kv p{margin:0;font-size:13.5px}
+.files{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.files a{font:800 10px/1 var(--mono);letter-spacing:.08em;text-decoration:none;border:1.5px solid var(--ink);padding:7px 9px;background:var(--surface)}
+.files a:hover{background:var(--ink);color:var(--paper)}
+.shows{margin-top:18px}
+.shows h3,.doc summary{font:800 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:0 0 8px}
+.shows ol{margin:0;padding-left:22px;display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;font-size:14px}
+.doc{margin-top:18px;border:1.5px solid var(--ink);background:var(--surface)}
+.doc summary{cursor:pointer;padding:12px 14px;margin:0;display:flex;justify-content:space-between;gap:10px;list-style:none}
+.doc summary::-webkit-details-marker{display:none}
+.doc summary:before{content:"+";font-weight:800;margin-right:8px;color:var(--accent)}
+.doc[open] summary:before{content:"–"}
+.doc summary span{color:var(--muted);font-weight:600;letter-spacing:.06em;margin-left:auto}
+.doc-body{padding:4px 18px 18px;border-top:1px solid var(--hair);font-size:14px;max-width:none}
+.doc-body p{margin:8px 0;max-width:80ch}
+.lab{font:800 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-right:4px}
+.mh1{font:800 16px var(--sans);margin:22px 0 4px;padding-top:12px;border-top:2px solid var(--ink)}
+.mh2{font:800 11px var(--mono);letter-spacing:.08em;margin:16px 0 4px;color:var(--accent)}
+.tw{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--hair);padding:7px 9px;text-align:left;vertical-align:top}
+th{font:800 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;background:var(--paper)}
+td:first-child{font:700 12px var(--mono);white-space:nowrap}
+ul.chk{padding-left:20px} ul.chk li{margin:4px 0}
+.map{margin:12px 0} .map img{width:100%;max-width:860px;display:block;border:1px solid var(--hair);background:#fff}
+.handoff{font-size:13.5px;color:var(--muted);margin:14px 0 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.handoff b{font:800 10px var(--mono);letter-spacing:.12em;color:var(--ink)}
+.handoff .nx{margin-left:auto;font:800 11px var(--mono)}
+.handoff .nx a{text-decoration:none;border-bottom:2px solid var(--accent)}
+.sched{padding:34px 0;border-bottom:2px solid var(--ink)}
+.sched h2,.credits h2{font:800 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:0 0 12px}
+.sched img{width:100%;max-width:980px;display:block;border:1px solid var(--hair);background:#fff}
+.sched p,.credits p{font-size:13.5px;color:var(--muted);max-width:90ch}
+.credits{padding:28px 0}
+@media (max-width:900px){.hero,.ms-grid{grid-template-columns:1fr}.track{grid-template-columns:repeat(4,1fr)}.ops{grid-template-columns:1fr}.shows ol{grid-template-columns:1fr}}
+@media (max-width:560px){.top{padding:10px 16px}.top .ttl{display:none}main{padding:0 16px 60px}.track{position:static;grid-template-columns:repeat(2,1fr)}.ms-wk{margin-left:0}.handoff .nx{margin-left:0}}
+</style>
+</head>
+<body id="top">
+<div class="top"><span class="ttl">Intro to Computational Media · WarGames Milestones</span><a class="back" href="../index.html">← Semester wheel</a></div>
+<main>
+<section class="hero">
+  <div>
+    <p class="kick">WarGames project · M1–M7 · maker and checker</p>
+    <h1>Nothing counts until someone else runs it.</h1>
+  </div>
+  <div>
+    <p>Groups of two build a WarGames-connected game in p5.js across seven milestones. Each milestone has a short film and its operating manual. In the films, BUG is the maker and NIT is the checker, and together they build LAST MOVE, a tic-tac-toe game against the machine. Each film acts out its milestone's procedure: a claim gets replaced by a run, a displayed consequence and a record.</p>
+    <div class="links">
+      <a class="btn pri" href="manuals/WarGames_Complete_Operational_Manual.pdf" target="_blank">Complete manual · PDF</a>
+      <a class="btn" href="manuals/WarGames_Complete_Operational_Manual.docx">DOCX</a>
+      <a class="btn" href="manuals/WarGames_Master_Map_and_Gantt.pdf" target="_blank">Master map + Gantt</a>
+      <a class="btn" href="cinema.html">Cartoon cinema · play all</a>
+    </div>
+  </div>
+</section>
+<nav class="track" aria-label="Milestones"><a class="chip" href="#m1"><b>M1</b><span>Three Machines</span><i>Week 1</i></a><a class="chip" href="#m2"><b>M2</b><span>Two Traces</span><i>Week 2</i></a><a class="chip" href="#m3"><b>M3</b><span>Another Computer</span><i>Weeks 3–4</i></a><a class="chip" href="#m4"><b>M4</b><span>Don&#x27;t Explain</span><i>Weeks 4–5</i></a><a class="chip" href="#m5"><b>M5</b><span>One Change</span><i>Week 6</i></a><a class="chip" href="#m6"><b>M6</b><span>The Same Route</span><i>Week 7</i></a><a class="chip" href="#m7"><b>M7</b><span>Outcome Recorded</span><i>Week 7</i></a></nav>
+<div class="ops">
+  <div class="op"><b>Maker / checker</b><p>One partner performs the operation. The other compares the result with the written expectation. Swap roles at the next task.</p></div>
+  <div class="op"><b>Pending until performed</b><p>A check that has not been run stays marked pending or not tested. A finished time window does not complete a milestone.</p></div>
+  <div class="op"><b>Failed check</b><p>Follow the repair route on the workflow map and repeat the affected check. If a repair changes a core rule, revise the M2 plan first.</p></div>
+</div>
+
+<section class="ms" id="m1">
+  <header class="ms-head">
+    <span class="ms-code">M1</span>
+    <span class="ms-name">Project launch and research</span>
+    <span class="ms-wk">Week 1 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M1.jpg" src="films/M1.mp4"></video>
+      <figcaption><b>Three Machines</b> <span>1:35 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">BUG arrives with big words. NIT pops them and asks one question of three machines: what ends it?</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Both partners select one concept by comparing its actions, required assets and reachable outcome.</div>
+      <div class="kv"><span>DO</span><p>Compare three different interactions, select one with your partner, and submit a sketch that shows its controls and response.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit one group PDF of at least two pages.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>The checker finds every required item in the exported PDF. Both partners identify the same selected concept and trace one action from the sketch to its response and proposed ending.</p></div>
+      <div class="files">
+        <a href="manuals/M1_Project_Launch_and_Research.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M1_Project_Launch_and_Research.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M1_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>EXPERIENCE, SCOPE and AESTHETIC are popped and replaced by action slips: PLAYER [USES] CONTROL, PROGRAM [CHECKS] CONDITION, PROGRAM [SHOWS] RESPONSE.</li><li>The TENSION cloud turns into an empty ENDING slot: a claimed feeling replaced by a stated ending.</li><li>Three machines compared by action, assets, choice and ending. The dial never ends (48,000 turns), the button ends at once with no choice, the grid ends in a checkable DRAW.</li><li>Both partners commit to the grid, BUG sketches the control surface, NIT traces it before accepting, and the roles swap.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M1 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M1_Workflow_Map.png" alt="M1 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of experience, aesthetic and scope with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace a claim that players will feel tension with a visible choice, a displayed consequence and a stated ending.</p>
+<p><b class="lab">The Language Game</b> Both partners select one concept by comparing its actions, required assets and reachable outcome.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Compare three different interactions, select one with your partner, and submit a sketch that shows its controls and response.</p>
+<p><b class="lab">Start with</b> Bring the assignment, access to WarGames, reference links, any March 18 lab sketch, and both partners&#x27; available work time. Record missing inputs before beginning.</p>
+<p><b class="lab">Required package</b> Submit one group PDF of at least two pages.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 1 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>Write one proposed sequence per concept: &lt;player&gt; [uses] &lt;control&gt;; &lt;program&gt; [checks] &lt;condition&gt;, [updates] &lt;value&gt; and [shows] &lt;response&gt;. Name the activity represented and the ending test the program checks. Mark every operation as planned until code exists.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>Name the player, information displayed, choice offered, consequence and outcome for each concept.</td></tr><tr><td>[Operations]</td><td>Name one central action per concept. Record the visible response to that action.</td></tr><tr><td>&lt;States&gt;</td><td>Sketch a proposed start, interaction and outcome. Mark these as planned screens or states.</td></tr><tr><td>&lt;Conditions&gt;</td><td>Write when the player may act and what event reaches an ending.</td></tr><tr><td>&lt;Invariants&gt;</td><td>Propose a rule that remains true throughout a named scope. Example to adopt or replace: during a run, the active-state value always belongs to the declared state IDs.</td></tr><tr><td>&lt;Constraints&gt;</td><td>List required platform, two-person work, available sessions and assets. Mark optional features for removal if they displace required work.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep cited assignment requirements in the constraints record.</td></tr><tr><td>&lt;uncertain&gt;</td><td>Record untested controls, session length and asset effort. Assign a sketch, walkthrough or setup check to each uncertainty.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Leave the selected concept and final input method open until both partners record their choice.</td></tr></tbody></table></div>
+<p>For each open item, record {claim, status, person checking, evidence to collect, next action}. Keep a proposed choice labeled proposed until the group adopts it.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 1 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Collect observations</td><td>Revisit the film; record a source location and observation. Collect credited visual references. Review relevant supplied tutorials. Open or install Processing with p5.js mode and run a minimal setup check; record blockers. Organize references and sketches.</td><td>The partner locates each reference. Replace unsupported film claims. Record setup separately from the static sketch; a working game is not required here.</td></tr><tr><td>02 Draft three concepts</td><td>Each partner contributes. Write one paragraph per concept covering the action sequence, visual treatment and player/interactor outcome. Change the central action between concepts; three color schemes do not make three concepts.</td><td>Underline the action and ending in each paragraph. Rewrite any pair that asks the player to do the same thing in the same way.</td></tr><tr><td>03 Select and sketch</td><td>Compare required screens, assets and build work. Record the selected concept and one rationale paragraph explaining the choice and its effect on the final project. Draw a title, main or other interface with controls and feedback.</td><td>Both partners write the selected name and point to the control and its response. Reopen the choice if the selection is still disputed.</td></tr><tr><td>04 Trace the sketch</td><td>Give both partners the same starting screen and action. Each writes the next display and ending rule, then compare records. Label the sketch static if it is not executable.</td><td>Resolve every conflicting prediction in the concept paragraph or sketch. Do not claim the program works from a static image.</td></tr><tr><td>05 Assemble and inspect</td><td>Export one PDF with the three concepts, selection paragraph, sketch, screenshot/capture, references, progress note and AI statement. Open the exported PDF and check page count and readable labels.</td><td>Use at least two pages. Add missing content or enlarge unreadable text, export again, and reopen the PDF.</td></tr><tr><td>06 Hand off</td><td>Place the selected concept, sketch, references, open decisions and AI record with the M2 inputs. Both partners open the same files.</td><td>Record the submitted file name and any unresolved question. Begin M2 from the selected concept only.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>No distinct concepts</td><td>Rewrite the central action or outcome in step 02; keep three different proposals.</td></tr><tr><td>No adopted selection</td><td>Compare work and constraints in step 03; keep the stage pending until the group records its choice.</td></tr><tr><td>Polished image with no usable control</td><td>Add the control, feedback and ending reference in step 03; repeat the trace in step 04.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 1 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Replace the input</td><td>Replace typed commands with visible buttons, or reverse that choice. Redraw the control and trace the same decision. Record which rules remain unchanged and which instructions change.</td></tr><tr><td>Reduce the work budget</td><td>Halve the proposed session length and custom-asset allowance. Cross out optional content. Verify that the central action, a reachable outcome and all required deliverables remain.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>Assign reference collection and first concept drafts to one partner; assign the comparison sheet and first sketch to the other. Swap review roles before selection. Run only a small setup or behavior experiment if it answers a named uncertainty.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Produce the concept paragraphs and interface sketch. Do not build the full project at this stage. If a small executable proof is used, write its rule and expected output first, then record what the run actually showed.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>List proposed data such as choice or signal; do not claim it is implemented.</td></tr><tr><td>&lt;functions&gt;</td><td>Map the central action to a proposed operation.</td></tr><tr><td>&lt;classes&gt;</td><td>Use none unless a later design gives one a specific responsibility.</td></tr><tr><td>&lt;tests&gt;</td><td>Keep the two partners&#x27; sketch traces and change-test notes.</td></tr><tr><td>&lt;comments&gt;</td><td>Annotate why the sketch puts a control or display in that position.</td></tr><tr><td>&lt;configuration&gt;</td><td>Record proposed controls, session length, colors and asset allowance.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 1 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Record the reason for choosing this concept, the alternatives rejected, and one question still needing a running test. Each partner points to a reference and to the sketch element it influenced. Preserve disagreements as open decisions.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>One group PDF, at least two pages.</li>
+<li>Three concept paragraphs covering experience, aesthetic and interactor/player outcomes.</li>
+<li>One selected-concept paragraph explaining the choice and its influence on the final project.</li>
+<li>One proof-of-concept interface sketch; label a static mockup as static.</li>
+<li>At least one screenshot or sketch capture, a short progress note, reference credits and an AI Use Statement.</li>
+</ul>
+<p>Suggested PDF order: concepts and selection on page 1; sketch, captions and records on page 2 or later. Add pages when needed for readable text.</p>
+<p><b class="lab">Completion check</b> The checker finds every required item in the exported PDF. Both partners identify the same selected concept and trace one action from the sketch to its response and proposed ending.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> Send the selected concept, rationale, sketch, source list and open decisions into M2. Do not carry the rejected concepts forward as simultaneous requirements.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> Send the selected concept, rationale, sketch, source list and open decisions into M2. Do not carry the rejected concepts forward as simultaneous requirements. <span class="nx"><a href="#m2">M2 →</a></span></p>
+</section>
+<section class="ms" id="m2">
+  <header class="ms-head">
+    <span class="ms-code">M2</span>
+    <span class="ms-name">Design brief and systems plan</span>
+    <span class="ms-wk">Week 2 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M2.jpg" src="films/M2.mp4"></video>
+      <figcaption><b>Two Traces</b> <span>1:36 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">Same inputs, two paper traces, two different results. The missing rule is found and written on the arrow.</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Write the state, accepted input, condition, data change and visible response for every planned transition.</div>
+      <div class="kv"><span>DO</span><p>Write enough rules for both partners to predict a run, then submit the brief, program state flowchart, asset list and two mockups.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit one group PDF of at least two pages; keep the design brief itself to one page.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>The checker finds every required document. Both partners&#x27; traces give the same next states and visible outputs for the agreed input sequence; each planned outcome has an explicit entry condition.</p></div>
+      <div class="files">
+        <a href="manuals/M2_Design_Brief_and_Systems_Plan.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M2_Design_Brief_and_Systems_Plan.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M2_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>The big board becomes the state flow TITLE → PLAY → END.</li><li>One input card (squares 5, 1, 9), two separate traces: X WINS and STILL PLAY.</li><li>The difference is traced to an unwritten rule. NIT writes PLAYER MOVES FIRST on the transition, and the retrace matches.</li><li>The invariant is tested: after END, new marks bounce off and the result does not change.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M2 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M2_Workflow_Map.png" alt="M2 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of clarity, system and feasibility with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace both partners understand the design with two written traces of the same inputs and a comparison of their outputs.</p>
+<p><b class="lab">The Language Game</b> Write the state, accepted input, condition, data change and visible response for every planned transition.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Write enough rules for both partners to predict a run, then submit the brief, program state flowchart, asset list and two mockups.</p>
+<p><b class="lab">Start with</b> Open the selected M1 concept, rationale, sketch, sources and unresolved choices. Reopen M1 if no concept has been adopted.</p>
+<p><b class="lab">Required package</b> Submit one group PDF of at least two pages; keep the design brief itself to one page.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 2 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>Write the chosen sequence: &lt;player&gt; [starts] &lt;run&gt; and [uses] &lt;control&gt;; &lt;input handler&gt; [checks] &lt;condition&gt; and [updates] &lt;domain value&gt;; &lt;outcome handler&gt; [records] &lt;outcome&gt; when the written test succeeds. State the goal, unsuccessful condition and ending; use only the scoring or competition your concept actually needs.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>List each domain value and its purpose. Give initial values, allowed values and the event that changes each value.</td></tr><tr><td>[Operations]</td><td>For each control, record the permitted action, input validation, data change and displayed result.</td></tr><tr><td>&lt;States&gt;</td><td>Name at least three states for the required program diagram. Record visible information and accepted or blocked inputs in each.</td></tr><tr><td>&lt;Conditions&gt;</td><td>Write a testable condition on every transition. Set priority if two ending conditions can hold at once.</td></tr><tr><td>&lt;Invariants&gt;</td><td>Write rules that must remain true within stated scopes. Example to adopt or replace: after an ending, ordinary play input cannot change the completed result.</td></tr><tr><td>&lt;Constraints&gt;</td><td>List platform, required screens/states, input method, asset limit and recipient launch requirement. Separate these delivery constraints from runtime invariants.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep adopted choices in the entry records and requirements in constraints.</td></tr><tr><td>&lt;uncertain&gt;</td><td>Mark timing, randomness, difficulty, file loading and device layout untested. Name a prototype check for each.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Resolve disputed goal, ending, controls and simultaneous-outcome priority before implementing those rules.</td></tr></tbody></table></div>
+<p>Record {claim, status, owner, check, consequence if wrong}. Give each unresolved implementation question an M3 test. Rewrite contradictory core rules now.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 2 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Fix the run rule</td><td>Both partners complete the purpose sentence and mark the required goal, unsuccessful condition and ending. List what the player sees before deciding.</td><td>Remove rules that require information the interface does not show, or add that information to the mockup.</td></tr><tr><td>02 Specify transitions</td><td>Create one row per event: {current state, input/event, condition, data change, next state, visible result}. Add blocked-input handling and reset values if replay is included.</td><td>Trace every row from a defined start. Repair unreachable outcomes, undefined values and conflicting conditions.</td></tr><tr><td>03 Draw and inventory</td><td>Draw the program state flowchart with at least three states. Draw both title and main-interaction mockups. List each asset&#x27;s use, creator/source, permission or license, status and owner.</td><td>Match control labels to transition rows. Mark placeholders and remove optional assets that exceed the work allowance.</td></tr><tr><td>04 Run paper checks</td><td>Give both partners the same starting values and input sequence. Each writes the states, data and outputs independently. Compare one complete run and one blocked input.</td><td>Resolve differences in step 02. Update the diagram and mockups after a rule changes. Do not settle a contradiction by choosing different test inputs.</td></tr><tr><td>05 Assemble the PDF</td><td>Write the one-page brief from the agreed rules. Add flowchart, asset list, both mockups, screenshot/capture, progress note and AI statement on further pages.</td><td>Open the exported PDF. Confirm total length is at least two pages, the brief is one page and each figure can be read.</td></tr><tr><td>06 Hand off</td><td>Give M3 the brief, transition table, state diagram, mockups, asset list, scoped invariants and test list. Record actual installed versions when available.</td><td>Both partners locate the same start values, ending condition and first prototype check.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>Different predicted outputs</td><td>Revise the relevant condition in step 02; repeat the same paper trace.</td></tr><tr><td>Workflow map submitted as state diagram</td><td>Create the program&#x27;s screen/state diagram in step 03. The process map in this manual does not satisfy that deliverable.</td></tr><tr><td>Missing title or main mockup</td><td>Draw the absent interface and annotate its controls; include both in step 05.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 2 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Change the limiting rule</td><td>Replace a timer with a fixed number of decisions; if no limit exists, propose a decision limit. Revise state data, conditions and instructions on paper. Trace one ending with the replacement.</td></tr><tr><td>Add another outcome</td><td>Add one proposed ending. Write its entry condition and priority against existing endings. Trace a case where two conditions coincide; specify exactly which result is shown.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>Assign the transition table and first paper trace to one partner, the mockups and asset inventory to the other, then swap review. Outline initialization, input handling, rule updates, drawing, outcome checks and reset if used. Schedule peer availability early; collect peer evidence in M4.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Produce the design documents. No game implementation is required in M2. Use short pseudocode only to settle a specific rule, after writing that rule in the transition table; keep it labeled proposed.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>Propose a data representation for each entity and valid range.</td></tr><tr><td>&lt;functions&gt;</td><td>Assign each operation and condition to one planned responsibility.</td></tr><tr><td>&lt;classes&gt;</td><td>Add a class only for a named recurring responsibility; otherwise mark not used.</td></tr><tr><td>&lt;tests&gt;</td><td>Link each condition or invariant to a paper trace and future run check.</td></tr><tr><td>&lt;comments&gt;</td><td>Record why outcome priority, reset or input restrictions were chosen.</td></tr><tr><td>&lt;configuration&gt;</td><td>List adjustable limits, sizes and timings separately from fixed rules.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 2 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Save the reasons for the chosen mechanic, outcome priority and asset cuts. Each partner traces the same proposed rule change through the table and mockup. Write any disagreement as a specific rule to resolve before its code is written.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>One group PDF, at least two pages, containing a one-page design brief.</li>
+<li>A program state flowchart with at least three states and labeled transitions.</li>
+<li>An asset list.</li>
+<li>A title-screen mockup and a main-interaction-screen mockup.</li>
+<li>At least one screenshot/mockup capture, short progress note, credits as needed and AI Use Statement.</li>
+</ul>
+<p>Suggested order: page 1 brief; page 2 program flowchart and asset list; page 3 or later mockups and records. Keep the brief&#x27;s one-page requirement distinct from total PDF length.</p>
+<p><b class="lab">Completion check</b> The checker finds every required document. Both partners&#x27; traces give the same next states and visible outputs for the agreed input sequence; each planned outcome has an explicit entry condition.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> Pass the agreed rules and unresolved technical questions to M3. Mark the workflow map in this manual as a work aid, not the required program state diagram.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> Pass the agreed rules and unresolved technical questions to M3. Mark the workflow map in this manual as a work aid, not the required program state diagram. <span class="nx"><a href="#m3">M3 →</a></span></p>
+</section>
+<section class="ms" id="m3">
+  <header class="ms-head">
+    <span class="ms-code">M3</span>
+    <span class="ms-name">Prototype build</span>
+    <span class="ms-wk">Weeks 3–4 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M3.jpg" src="films/M3.mp4"></video>
+      <figcaption><b>Another Computer</b> <span>1:55 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">It works on one computer. NIT carries the ZIP to a second one.</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Predict a run, execute that run in the packaged copy, and repair any difference before recording a pass.</div>
+      <div class="kv"><span>DO</span><p>Build a complete minimal interaction and test the actual recipient package on another computer.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit one working-project ZIP plus one group PDF of at least two pages.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>The checker launches the recipient copy by the written simple method, starts from the title, uses the shown controls and reaches the intended outcome. The required ZIP, PDF and accurate records all exist.</p></div>
+      <div class="files">
+        <a href="manuals/M3_Prototype_Build.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M3_Prototype_Build.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M3_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>NIT writes the prediction before anything runs.</li><li>The game works on computer A. The extracted ZIP on computer B shows &quot;?&quot; where the X should be: expected versus observed.</li><li>Cause: x.png was left behind through a ../ path. Repaired, re-zipped, retested, and only then is the pass recorded.</li><li>The claim stays the size of the test: tested on 2 computers, every other computer NOT TESTED.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M3 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M3_Workflow_Map.png" alt="M3 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of functionality, portability and understanding with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace it works and we understand the code with a recorded launch, input sequence, observed result and partner trace through named files.</p>
+<p><b class="lab">The Language Game</b> Predict a run, execute that run in the packaged copy, and repair any difference before recording a pass.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Build a complete minimal interaction and test the actual recipient package on another computer.</p>
+<p><b class="lab">Start with</b> Open the M2 brief, transition table, program state diagram, mockups, asset plan and unresolved technical checks. Keep the required Processing p5.js mode project intact.</p>
+<p><b class="lab">Required package</b> Submit one working-project ZIP plus one group PDF of at least two pages.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 3 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>Write the expected sequence: &lt;player&gt; [activates] &lt;Start&gt;; &lt;input handler&gt; [sets] &lt;main state&gt;; &lt;player&gt; [uses] &lt;control&gt;; &lt;named handler&gt; [updates] &lt;data&gt;; &lt;outcome handler&gt; [checks] &lt;ending test&gt; and [records] &lt;outcome&gt;. Use actual handler names when they exist. List optional features that may remain placeholders.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>List actual runtime data, starting values and the files that store them. Mark planned data separately.</td></tr><tr><td>[Operations]</td><td>Identify the handler that accepts input, validates it, changes data and causes displayed feedback.</td></tr><tr><td>&lt;States&gt;</td><td>Implement a title, main interaction and at least one fail or success state; retain at least three screens/states overall.</td></tr><tr><td>&lt;Conditions&gt;</td><td>Write the exact input guards and ending tests. Specify behavior after an outcome and for replay if provided.</td></tr><tr><td>&lt;Invariants&gt;</td><td>Carry forward scoped rules from M2. Check valid value ranges after accepted and rejected inputs. Record expected reset values as the postconditions of replay.</td></tr><tr><td>&lt;Constraints&gt;</td><td>Keep controls visible. Record actual authoring versions and recipient launch route. Require no extra software downloads and no complex recipient setup; preserve cross-OS operation.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep agreed rules in the plan and observed results in check records.</td></tr><tr><td>&lt;uncertain&gt;</td><td>Mark timing, rapid input, dependencies and every untested OS/browser combination not tested.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Resolve any repair that changes the player&#x27;s rule in M2 before implementing it.</td></tr></tbody></table></div>
+<p>Record {Processing version, mode version, p5.js version, dependency, intended launch method, test environment}. Do not infer recipient operation from the editor&#x27;s Run button.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 3 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Write the expected run</td><td>The maker writes starting values, inputs, next states, visible output and ending before running code. The checker compares this with M2.</td><td>If predictions conflict, revise the rule before building it.</td></tr><tr><td>02 Build the core route</td><td>Implement title, visible controls, main action, response and a reachable fail or success state in Processing p5.js mode. Use placeholders that still communicate the action and result.</td><td>Keep at least three screens/states. Pause styling work when it delays a missing transition.</td></tr><tr><td>03 Run behavior checks</td><td>Execute the predicted route in the authoring environment. Try a blocked input, rapid repeated input and replay if supported. Write expected and observed outputs separately.</td><td>Repair the smallest failing operation; replay its input sequence. Record a designed player loss separately from a software defect.</td></tr><tr><td>04 Test distribution</td><td>Create the actual ZIP. Extract it in a fresh location on another computer; follow only the included launch instructions. Record OS/browser, network condition, dependencies, inputs and result.</td><td>Repair missing files or launch problems, recreate the ZIP, extract again and retest. Leave untested environments marked not tested.</td></tr><tr><td>05 Produce the report</td><td>Write what works and what is missing. Add current screenshots, launch/test record, short progress note, credits and AI statement. Export at least two pages and reopen both deliverables.</td><td>Check the screenshots and report identify the same build inside the ZIP.</td></tr><tr><td>06 Hand off</td><td>Pass the exact prototype, rule changes, distribution record and ordered missing-work list to M4. Each partner traces one input through the submitted code.</td><td>Resolve a missing required route before marking the prototype ready for the alpha stage.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>Code runs only in the original folder</td><td>Repair dependencies and relative paths in step 04; test a newly extracted ZIP.</td></tr><tr><td>Rules change during drawing or repeat unexpectedly</td><td>Locate the data-changing handler in step 03; define when an action counts and test that rule.</td></tr><tr><td>Simple launch needs extra setup</td><td>Simplify the dependency or resolve the launch method. Do not replace the required working ZIP with a video or an untested hosted link.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 3 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Reduce frame rate</td><td>Record whether the timing code uses elapsed time or frame count. Run at a lower frame rate in a test copy. Compare duration and action counts with the written rule; repair unintended timing changes and restore normal settings.</td></tr><tr><td>Repeat input rapidly</td><td>Write which presses count in the current state and which are ignored. Send the repeated input. Compare data changes and transitions with that count; record and repair duplicate triggers.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>Give one partner a small behavior change and the other its prediction/check. Swap at the next operation. Keep initialization, input, rule updates and drawing responsibilities identifiable. Bundle compatible dependencies and test the chosen recipient route; record network requirements rather than assuming offline support.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Write only the next small operation after its inputs, conditions and expected output are recorded. For AI-assisted examples or repairs, study, adapt and rewrite where appropriate; explain the change to the partner and add assistance comments. Do not replace the whole sketch with generated code.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>Write actual variable/data names next to their domain meaning.</td></tr><tr><td>&lt;functions&gt;</td><td>Locate initialization, input, rule update, drawing and ending checks.</td></tr><tr><td>&lt;classes&gt;</td><td>Record used class responsibilities or not used; classes are optional.</td></tr><tr><td>&lt;tests&gt;</td><td>Link input sequences to expected and observed outputs and build ID.</td></tr><tr><td>&lt;comments&gt;</td><td>Explain non-obvious rules, dependencies and AI-assisted changes.</td></tr><tr><td>&lt;configuration&gt;</td><td>Identify tunable values and checks to repeat after changing them.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 3 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Each partner selects one input, predicts its effect, finds the responsible function and data, and compares the prediction with a run. Keep the design reason and any untested behavior in the handoff note. Do not convert a successful test on one computer into a claim about every operating system.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>One ZIP containing the working prototype and files needed for its documented launch.</li>
+<li>A title screen, main interaction loop and at least one fail OR success state; at least three screens/states overall.</li>
+<li>One group PDF of at least two pages with what works and what is missing.</li>
+<li>At least one actual prototype screenshot, a short progress note, references and AI Use Statement.</li>
+<li>Provide cross-OS operation on another computer without extra software downloads or complex setup. Test the extracted ZIP; record actual OS/browser, network needs and result. Label untested environments not tested.</li>
+</ul>
+<p>Suggested report order: page 1 current behavior and screenshots; page 2 or later missing work, launch/check evidence, progress note and AI statement. Keep the report separate from the required ZIP.</p>
+<p><b class="lab">Completion check</b> The checker launches the recipient copy by the written simple method, starts from the title, uses the shown controls and reaches the intended outcome. The required ZIP, PDF and accurate records all exist.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> Carry the tested package, implementation-to-rule map, observed defects and missing features to M4. Preserve untested status where evidence is absent.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> Carry the tested package, implementation-to-rule map, observed defects and missing features to M4. Preserve untested status where evidence is absent. <span class="nx"><a href="#m4">M4 →</a></span></p>
+</section>
+<section class="ms" id="m4">
+  <header class="ms-head">
+    <span class="ms-code">M4</span>
+    <span class="ms-name">Alpha build and playtest packet</span>
+    <span class="ms-wk">Weeks 4–5 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M4.jpg" src="films/M4.mp4"></video>
+      <figcaption><b>Don&#x27;t Explain</b> <span>1:35 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">Two peers play the alpha. BUG wants to explain. NIT writes down where they stop.</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Record peer actions first; connect each proposed change to an observation or a labeled group refinement.</div>
+      <div class="kv"><span>DO</span><p>Complete the route from beginning to end, observe two actual peers using it, and rank three next changes from recorded evidence.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit one ZIP containing the complete alpha build and playtest packet.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>The checker completes the alpha route, opens two genuine peer notes and finds three ranked changes with stated checks. Every required item opens from the extracted ZIP.</p></div>
+      <div class="files">
+        <a href="manuals/M4_Alpha_Build_and_Playtest_Packet.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M4_Alpha_Build_and_Playtest_Packet.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M4_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>MOSS presses keys at PRESS ANY KEY and nothing happens. Recorded: STOPPED: TITLE, TRIED: KEYS.</li><li>BUG tries to explain; NIT stops him three times. Recorded: INTERVENTION: NONE.</li><li>RUST&#x27;s double-click places two X on one move; RUST&#x27;s pause at the missing turn cue is recorded.</li><li>Three next changes are ranked and tied to observations. A card with no observation behind it is refused.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M4 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M4_Workflow_Map.png" alt="M4 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of usability, feedback and improvement with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace users were confused with the control they tried, the display they saw, the point they stopped and any instruction you gave.</p>
+<p><b class="lab">The Language Game</b> Record peer actions first; connect each proposed change to an observation or a labeled group refinement.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Complete the route from beginning to end, observe two actual peers using it, and rank three next changes from recorded evidence.</p>
+<p><b class="lab">Start with</b> Open the M3 prototype, current rules, launch record, missing-work list and defects. Obtain the assigned feedback form when available and arrange actual peer sessions.</p>
+<p><b class="lab">Required package</b> Submit one ZIP containing the complete alpha build and playtest packet.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 4 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>Write the task each peer will attempt and the starting condition. Record the intended ending and what counts as an intervention. Use the session to observe actions, stops and outcomes without adding explanations that the release does not provide.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>Track the alpha build, peer, task, attempted input, displayed response, observation and proposed change.</td></tr><tr><td>[Operations]</td><td>Launch, give initial instructions, observe, record intervention, collect a note and rank revisions.</td></tr><tr><td>&lt;States&gt;</td><td>Keep the complete program route and its endings. Record the exact state in which each peer stops or changes approach.</td></tr><tr><td>&lt;Conditions&gt;</td><td>For each recorded peer action, identify the input guard and ending condition checked by the program. Keep session and peer-note checks in the procedure.</td></tr><tr><td>&lt;Invariants&gt;</td><td>Name the adopted runtime rules that must remain true within their scope. Check their affected values during alpha completion and peer input sequences.</td></tr><tr><td>&lt;Constraints&gt;</td><td>Supply two peer notes and three next changes. Preserve the tested build identifier and the source of each feedback statement.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep prior observations labeled with the build and sequence checked.</td></tr><tr><td>&lt;uncertain&gt;</td><td>Mark whether a new peer can use the instructions and reach an ending as untested until a session occurs.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Have the group select the three revisions. Keep a peer suggestion separate from an adopted requirement.</td></tr></tbody></table></div>
+<p>For each suspected problem, record {observed event or prediction, affected build/state, next check, owner}. Do not infer a peer&#x27;s motive from a pause or wrong input.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 4 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Finish the alpha</td><td>Complete the required beginning, middle and ending. Keep existing controls and feedback usable. Resolve prototype defects that prevent completion.</td><td>Run a full route internally and record the result before giving that version to a peer.</td></tr><tr><td>02 Prepare the sessions</td><td>Select the exact alpha and a short task instruction. Arrange two peers; provide the assigned form when available. Give both sessions the same initial conditions when comparing behavior.</td><td>Keep the form&#x27;s actual fields. Do not fabricate its contents or claim a session that has not occurred.</td></tr><tr><td>03 Observe two peers</td><td>One partner watches actions; the other records the state, input, response, stop point and any intervention. Avoid coaching the route. Ask a bounded follow-up about an observed difficulty.</td><td>Save two genuine notes. Label quotations, paraphrases and group interpretations separately. AI roleplay and self-review do not replace peers.</td></tr><tr><td>04 Rank three changes</td><td>For each priority, record the observed problem, proposed change, owner and repeatable check. Rank completion blockers before cosmetic work. Label a group refinement when it was not a peer complaint.</td><td>If fewer than three issues were observed, use an honest group refinement for a remaining slot; do not invent a third complaint.</td></tr><tr><td>05 Package the packet</td><td>Include the alpha, two peer notes, top-three revision plan, updated screenshot set, progress note and AI statement in one ZIP. Label the build shown in each record.</td><td>Extract the ZIP and open the build and every note. Repair a missing file or mismatched build reference.</td></tr><tr><td>06 Hand off</td><td>Give M5 the alpha, the raw observations, three ranked changes and checks. Record which peer tasks completed and which stopped.</td><td>Leave the stage pending if the build cannot finish or a real peer note is missing.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>Peer cannot reach an outcome</td><td>Record the stop and intervention, repair the alpha, and rerun the affected route; preserve the original note.</td></tr><tr><td>Only one real peer note exists</td><td>Arrange and run the missing session in step 03. Do not create substitute testimony.</td></tr><tr><td>Revision says make it clearer</td><td>Name the label, control or response to change and the exact peer action to repeat in step 04.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 4 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Use an unplanned legal sequence</td><td>Select a valid sequence the designers did not rehearse. Predict the ending or permitted continuation, then run it. Record unreachable states, hidden ordering requirements or contradictory results.</td></tr><tr><td>Remove spoken guidance</td><td>Give a peer only the instructions shipped with the alpha. Record every stop and any intervention. Repeat the affected task after the relevant written instruction changes.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>One partner completes a missing route element while the other prepares the task and record sheet; swap review before testing. During sessions assign one observer and one recorder. Preserve the tested version so both partners can compare earlier and revised runs during M5.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Make only the implementation changes needed to complete the route and remove blocking defects. Write the expected behavior before each change, record the actual result, and keep assisted-code comments current. Do not manufacture peer observations to justify a patch.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>Locate data involved in each observed problem.</td></tr><tr><td>&lt;functions&gt;</td><td>Name the input, update or display function related to each revision.</td></tr><tr><td>&lt;classes&gt;</td><td>Record affected responsibilities only where classes exist.</td></tr><tr><td>&lt;tests&gt;</td><td>Turn the observed failing action sequence into a repeatable check.</td></tr><tr><td>&lt;comments&gt;</td><td>Record the rule reason or prior defect when it helps a later edit.</td></tr><tr><td>&lt;configuration&gt;</td><td>Mark adjustable labels, timings or limits; preserve tested values.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 4 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Record why the group ranked the three changes in this order and which suggestions it did not adopt. Preserve raw notes beside those decisions. Each partner traces one observation to a proposed change and its pass/fail check.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>One ZIP containing an alpha playable from beginning to end.</li>
+<li>Two actual peer feedback notes; use the assigned form when available.</li>
+<li>A revision plan listing the top three next changes.</li>
+<li>An updated screenshot set and short progress note.</li>
+<li>AI Use Statement and current credit/reference records for included material.</li>
+</ul>
+<p>Suggested ZIP contents: project folder, peer note 1, peer note 2, revision plan, screenshots, progress note and AI record. The assignment sets no PDF minimum for this stage.</p>
+<p><b class="lab">Completion check</b> The checker completes the alpha route, opens two genuine peer notes and finds three ranked changes with stated checks. Every required item opens from the extracted ZIP.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> Pass observed behavior and three executable revision tasks to M5. Keep missing peer evidence visible; do not treat a completed internal test as a second peer session.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> Pass observed behavior and three executable revision tasks to M5. Keep missing peer evidence visible; do not treat a completed internal test as a second peer session. <span class="nx"><a href="#m5">M5 →</a></span></p>
+</section>
+<section class="ms" id="m5">
+  <header class="ms-head">
+    <span class="ms-code">M5</span>
+    <span class="ms-name">Beta build and presentation preparation</span>
+    <span class="ms-wk">Week 6 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M5.jpg" src="films/M5.mp4"></video>
+      <figcaption><b>One Change</b> <span>1:37 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">Keep the old build. Make one change. Replay the recorded input. A second change breaks the ending.</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Make one bounded revision, repeat its check, and preserve the full route before moving to presentation work.</div>
+      <div class="kv"><span>DO</span><p>Apply the selected revisions, repeat the affected actions, and prepare the beta title, designer statement and four screenshots.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit the beta and required records in the current Canvas fields; use a named folder or ZIP only as a packaging convention.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>The checker repeats the adopted revision checks and the complete route without a required behavior failing. The final title, statement, four screenshots and records all match the beta.</p></div>
+      <div class="files">
+        <a href="manuals/M5_Beta_Build_and_Presentation_Preparation.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M5_Beta_Build_and_Presentation_Preparation.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M5_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>The working build is copied to a v0.4 floppy before any edit.</li><li>One bounded revision (PRESS ANY KEY → CLICK A SQUARE); MOSS&#x27;s recorded input is replayed and compared.</li><li>A second, unchecked change removes checkEnd(): the board fills and DRAW never appears.</li><li>Restore v0.4, reapply only the first change, rerun the full route, take four actual screenshots.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M5 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M5_Workflow_Map.png" alt="M5 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of polish, improvement and readiness with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace the interface feels better with the changed label or response and the result of replaying the observed task.</p>
+<p><b class="lab">The Language Game</b> Make one bounded revision, repeat its check, and preserve the full route before moving to presentation work.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Apply the selected revisions, repeat the affected actions, and prepare the beta title, designer statement and four screenshots.</p>
+<p><b class="lab">Start with</b> Open the alpha, two peer notes, top-three revision plan, current rules and tested-package record. Keep a copy of the prior working build.</p>
+<p><b class="lab">Required package</b> Submit the beta and required records in the current Canvas fields; use a named folder or ZIP only as a packaging convention.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 5 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>For each selected revision, &lt;maker&gt; [repeats] &lt;recorded input&gt;; &lt;checker&gt; [records] &lt;displayed response&gt;; &lt;maker&gt; [edits] &lt;named code or asset&gt;; &lt;checker&gt; [repeats] &lt;input&gt; and [compares] &lt;observed response&gt; with &lt;expected response&gt;. Preserve the chosen player task and ending unless the group records a rule change.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>Track each issue, observation, revision, expected result, actual result and build version.</td></tr><tr><td>[Operations]</td><td>Reproduce the problem, change a bounded part, rerun the task, compare results and keep or restore the change.</td></tr><tr><td>&lt;States&gt;</td><td>List states affected by the revision and all states on the complete route. Check that an interface change has not hidden a required transition.</td></tr><tr><td>&lt;Conditions&gt;</td><td>Record the old and revised input or outcome condition. Keep verification status in the revision record; reopen M2 when a core rule changes.</td></tr><tr><td>&lt;Invariants&gt;</td><td>For each adopted change, check scoped rules retained from M2, including valid value ranges. Record expected reset values as postconditions of reset.</td></tr><tr><td>&lt;Constraints&gt;</td><td>Retain required interaction and outcomes. Supply final title, short designer statement, four actual screenshots and draft credits.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep alpha observations as evidence beside proposed revisions.</td></tr><tr><td>&lt;uncertain&gt;</td><td>Treat the effect of each proposed revision and any new presentation setup as untested.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Record adopted fixes, removed optional features and deferred work with reasons. Do not defer required behavior and still mark the stage passed.</td></tr></tbody></table></div>
+<p>Use {issue, evidence, planned change, owner, expected output, observed output, disposition}. Keep a proposed improvement separate from a verified result.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 5 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Reproduce each issue</td><td>Use the alpha&#x27;s recorded inputs and note the current result. Rewrite a vague issue as an observable action and response before editing.</td><td>If the problem cannot be reproduced, record that limit and collect enough detail to make a bounded change.</td></tr><tr><td>02 Write the revision rule</td><td>State the expected response and the affected state. Mark whether the change alters a game rule, control or display. Update the systems plan first when rules change.</td><td>Both partners predict the same post-change result before implementation.</td></tr><tr><td>03 Change and compare</td><td>Implement one revision at a time. Repeat the recorded task and compare expected versus actual behavior. After consequential changes, recheck the complete beginning-to-ending route.</td><td>Keep verified changes. Repair or restore a revision that introduces a failure; repeat affected checks.</td></tr><tr><td>04 Finish the beta records</td><td>Record each priority as verified, simplified/removed or deferred with a reason. Choose the final title. Write a short designer statement naming the action, response and film connection present in the beta.</td><td>Remove unsupported claims. Leave substantial unfinished core work in the active task list instead of labeling it presentation polish.</td></tr><tr><td>05 Capture and package</td><td>Capture four distinct screenshots from the beta. Update draft credits/references, progress note and AI statement. Rehearse the actual beta launch and route.</td><td>Match all four images and claims to the same build. Use actual screenshots, not unimplemented mockups.</td></tr><tr><td>06 Hand off</td><td>Pass the checked beta, title, statement, screenshots, revision results and remaining limitations to M6.</td><td>List only final presentation tasks after required behavior and records pass their checks.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>A fix changes another state unexpectedly</td><td>Restore the working behavior or repair the affected rule in step 03; rerun that route.</td></tr><tr><td>Optional feature adds an untested dependency</td><td>Remove or simplify it, then repeat the recipient launch and route check.</td></tr><tr><td>Four images show an older version</td><td>Recapture the beta in step 05; label the build and visible screen/state.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 5 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Remove a confusing control</td><td>In a test copy, remove or simplify the optional control. Repeat the observed task and verify that required actions and status information remain reachable. Keep or reject the change from the recorded result.</td></tr><tr><td>Mute sound</td><td>Run the route with sound muted. For each essential sound cue, check that visible information also communicates the needed state or action. Add that display if it is absent and repeat the task.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>Give each revision an owner and a different checker. Keep changes small enough to associate a result with one edit. Capture screenshots after the checks, and update credits while adding or replacing assets.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Implement only adopted revisions and bounded defect repairs. Update rules, instructions and comments together when behavior changes. Use targeted AI help only for a named problem; record what was kept, changed or rejected.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>Name data added, removed or reinterpreted by each revision.</td></tr><tr><td>&lt;functions&gt;</td><td>List changed handlers or rendering functions beside their issue IDs.</td></tr><tr><td>&lt;classes&gt;</td><td>Keep existing responsibilities traceable; avoid restructuring without a stated need.</td></tr><tr><td>&lt;tests&gt;</td><td>Attach before/after task results and the complete-route check.</td></tr><tr><td>&lt;comments&gt;</td><td>Update outdated rules and AI assistance comments.</td></tr><tr><td>&lt;configuration&gt;</td><td>Record final beta values and the evidence for adjustments.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 5 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Record why the group kept, simplified or rejected each proposal. Each partner identifies one verified change and shows the before/after action result. Keep unresolved limitations beside the build that still contains them.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>A beta build.</li>
+<li>The final title and a short designer statement.</li>
+<li>Four actual screenshots from the beta.</li>
+<li>Draft credits and references.</li>
+<li>Short progress note and AI Use Statement.</li>
+</ul>
+<p>Use clearly named files or a folder/ZIP if the Canvas fields permit it. The supplied instructions do not specify a container or minimum PDF length for M5.</p>
+<p><b class="lab">Completion check</b> The checker repeats the adopted revision checks and the complete route without a required behavior failing. The final title, statement, four screenshots and records all match the beta.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> Pass one identified beta and its evidence to M6. Record any optional deferred work so it is not accidentally promised during the presentation.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> Pass one identified beta and its evidence to M6. Record any optional deferred work so it is not accidentally promised during the presentation. <span class="nx"><a href="#m6">M6 →</a></span></p>
+</section>
+<section class="ms" id="m6">
+  <header class="ms-head">
+    <span class="ms-code">M6</span>
+    <span class="ms-name">Presentation build</span>
+    <span class="ms-wk">Week 7 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M6.jpg" src="films/M6.mp4"></video>
+      <figcaption><b>The Same Route</b> <span>1:35 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">The rehearsal runs the wrong build. The demo runs the same route as the rehearsal, move for move.</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Present only behavior present in the selected build; rehearse that same route and record any failed step.</div>
+      <div class="kv"><span>DO</span><p>Rehearse the exact presentation build, prepare one slide or a one-page summary, and demonstrate the start, interaction and ending to another group.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit the presentation build, one slide OR a one-page visual summary, self-assessment and required records.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>Both partners launch the selected build, show beginning/middle/end and trace an input. Check that the visual and records match. These checks establish submission readiness; record the actual presentation and feedback separately before completing the M7 handoff.</p></div>
+      <div class="files">
+        <a href="manuals/M6_Presentation_Build.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M6_Presentation_Build.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M6_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>Rehearsal launches v0.4: a key is pressed, nothing happens, the failed step is recorded.</li><li>v0.5 is selected by its label; the full route is rehearsed and timed at 0:48.</li><li>The demo repeats the same route over the rehearsal&#x27;s ghost marks.</li><li>An audience question, WHY DRAW?, is answered by pointing at lines 6–7 of sketch.js.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M6 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M6_Workflow_Map.png" alt="M6 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of confidence, understanding and reliability with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace we know the project with each partner launching the selected build, tracing an input and demonstrating its consequence.</p>
+<p><b class="lab">The Language Game</b> Present only behavior present in the selected build; rehearse that same route and record any failed step.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Rehearse the exact presentation build, prepare one slide or a one-page summary, and demonstrate the start, interaction and ending to another group.</p>
+<p><b class="lab">Start with</b> Open the verified beta, final title, designer statement, four screenshots, revision results, credits and known limitations. Identify the setup intended for the demonstration.</p>
+<p><b class="lab">Required package</b> Submit the presentation build, one slide OR a one-page visual summary, self-assessment and required records.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 6 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>Write the demonstration sequence: &lt;presenter&gt; [launches] &lt;build&gt;, [shows] &lt;title&gt;, [uses] &lt;control&gt;, [shows] &lt;consequence&gt;, and [reaches] &lt;ending&gt;. Point to the film-derived theme, interface or rule that the audience can inspect in that sequence.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>Track the selected build, launch instructions, presenter, demo input sequence, visual summary, backup and observed feedback.</td></tr><tr><td>[Operations]</td><td>Launch, introduce the goal, operate a control, show the result, identify the WarGames link and answer by pointing to a rule or code location.</td></tr><tr><td>&lt;States&gt;</td><td>Include title, main interaction and ending in the demo. Record which optional states the short route omits.</td></tr><tr><td>&lt;Conditions&gt;</td><td>Name the input guards and ending conditions used on the demo route. Keep rehearsal and backup checks in steps 01-03.</td></tr><tr><td>&lt;Invariants&gt;</td><td>For each scoped runtime invariant used on the demo route, name the stored values involved and check them during rehearsal.</td></tr><tr><td>&lt;Constraints&gt;</td><td>Check title, controls, readable instructions, beginning/middle/end and credits. Provide one slide or one-page visual summary and a self-assessment paragraph.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep checked beta results and limits in the rehearsal inputs.</td></tr><tr><td>&lt;uncertain&gt;</td><td>Record untested display size, browser, network or input hardware in the presentation setup.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Have the group choose the final demo route, speaker handoffs and any late repair. Do not promise unimplemented work.</td></tr></tbody></table></div>
+<p>Write {setup, claim, verification action, person, result}. Name the exact build in the rehearsal record and on the backup folder.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 6 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Select and copy</td><td>Select the build to present and record its identifier. Make a matching backup. Keep the launch instructions with both copies.</td><td>Open each copy and verify the same title, controls and route before calling the backup ready.</td></tr><tr><td>02 Script the demonstration</td><td>Write the opening task, actual controls, consequential action, ending and specific WarGames connection. Assign the speaking and operating parts to the two partners.</td><td>Point each claim to a visible screen, behavior, reference or code location. Remove any claim the build cannot demonstrate.</td></tr><tr><td>03 Rehearse the selected build</td><td>Use the expected setup. Show readable instructions, start, interaction, ending and credits. Have each partner run the route and trace one input to its result.</td><td>Record failed steps. Repair or restore a checked copy; rerun the route after the change.</td></tr><tr><td>04 Prepare the visual and reflection</td><td>Create one presentation slide or one-page visual summary with title, team, screenshot, control, goal and film connection. Write the final self-assessment paragraph from actual changes, tests and remaining limits.</td><td>Use a screenshot from the selected build. Replace broad claims with the action performed and its recorded result.</td></tr><tr><td>05 Package and check</td><td>Include presentation build, visual summary, self-assessment, updated credits/references, screenshot, progress note and AI statement. Open every item from the delivery copy.</td><td>Match versions and remove stale instructions. Keep any still-unverified setup labeled untested.</td></tr><tr><td>06 Present and record</td><td>Present to another group; demonstrate the interactive flow and its WarGames connection. Save actual questions and feedback for M7.</td><td>Keep presentation feedback separate from planned talking points. Do not fabricate an audience response before the presentation.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>Late repair has no completed check</td><td>Restore the checked copy or finish the affected check before presenting.</td></tr><tr><td>Demo omits the outcome</td><td>Shorten optional narration or actions in step 02; preserve title, consequential input and an ending.</td></tr><tr><td>Partner cannot trace the rule</td><td>Locate the relevant condition and handler together, then have that partner repeat the trace and run.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 6 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Shorten the demo</td><td>Cut the planned demonstration time or route. Retain a visible beginning, consequential interaction and ending. Run the shorter sequence and remove any statement it no longer supports.</td></tr><tr><td>Swap the presenter</td><td>Switch speaking and operating roles. Ask the new speaker to trace one unexpected legal action from state and input to output and code. Check the answer against the selected build.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>Assign one partner the first visual-summary draft and the other the demo route; swap checks. Rehearse on the exact build, then freeze the chosen copy for presentation. Limit late edits to named defects and repeat their checks.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Generate no new feature simply to make the presentation larger. Repair a specific blocking defect only after writing the intended rule, locating the relevant operation and planning a check. Update the build identifier, screenshots and records after a change.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>Name the data that changes during the demonstrated input.</td></tr><tr><td>&lt;functions&gt;</td><td>Locate the input handler, rule and display used in the demo.</td></tr><tr><td>&lt;classes&gt;</td><td>Explain used responsibilities only; do not invent architecture for the talk.</td></tr><tr><td>&lt;tests&gt;</td><td>Keep launch, complete-route, backup and presenter-swap results.</td></tr><tr><td>&lt;comments&gt;</td><td>Check that code explanations and AI annotations match the presented copy.</td></tr><tr><td>&lt;configuration&gt;</td><td>Record display, control and timing settings used in rehearsal.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 6 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Record each presenter&#x27;s assigned explanation, the reason for the short route and any feature deliberately omitted from the demo. Preserve actual audience questions and the group&#x27;s responses for the final account.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>Final presentation build ready for demonstration.</li>
+<li>One presentation slide OR a one-page visual summary.</li>
+<li>A final self-assessment paragraph.</li>
+<li>Updated credits and references.</li>
+<li>At least one screenshot, short progress note and AI Use Statement.</li>
+</ul>
+<p>Use the current Canvas fields for the build and records. The brief specifies one slide or a one-page visual summary; it does not specify a minimum-length PDF or container for the whole stage.</p>
+<p><b class="lab">Completion check</b> Both partners launch the selected build, show beginning/middle/end and trace an input. Check that the visual and records match. These checks establish submission readiness; record the actual presentation and feedback separately before completing the M7 handoff.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> After the demonstration, pass the presented build, self-assessment, actual questions, feedback and final changes to M7. Keep a missing presentation event marked pending.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> After the demonstration, pass the presented build, self-assessment, actual questions, feedback and final changes to M7. Keep a missing presentation event marked pending. <span class="nx"><a href="#m7">M7 →</a></span></p>
+</section>
+<section class="ms" id="m7">
+  <header class="ms-head">
+    <span class="ms-code">M7</span>
+    <span class="ms-name">Final documentation package</span>
+    <span class="ms-wk">Week 7 · illustrative</span>
+  </header>
+  <div class="ms-grid">
+    <figure class="film">
+      <video controls preload="metadata" playsinline poster="films/M7.jpg" src="films/M7.mp4"></video>
+      <figcaption><b>Outcome Recorded</b> <span>1:38 · BUG makes, NIT checks</span></figcaption>
+    </figure>
+    <div class="ctx">
+      <p class="log">Every claim is held against the final build. A recipient runs it alone. Then it is submitted.</p>
+      <div class="rule"><span>THE LANGUAGE GAME</span>Keep every submitted claim traceable to the same final version or to a labeled historical record.</div>
+      <div class="kv"><span>DO</span><p>Match the final code, playable copy, statement, images and credits; test the delivery copy and submit the complete record.</p></div>
+      <div class="kv"><span>SUBMIT</span><p>Submit the final code folder, playable build, 300-500-word statement, screenshot set and complete records.</p></div>
+      <div class="kv"><span>DONE WHEN</span><p>The checker runs the final delivery copy by its documented route, verifies the 300-500-word body and four topics, and opens all required files. Both partners complete the group confirmation; the upload record identifies the delivered copy.</p></div>
+      <div class="files">
+        <a href="manuals/M7_Final_Documentation_Package.pdf" target="_blank">MANUAL · PDF</a>
+        <a href="manuals/M7_Final_Documentation_Package.docx">EDITABLE · DOCX</a>
+        <a href="manuals/maps/M7_Workflow_Map.png" target="_blank">WORKFLOW MAP</a>
+      </div>
+    </div>
+  </div>
+  <div class="shows">
+    <h3>What the film shows</h3>
+    <ol><li>File-by-file comparison: a stale PRESS ANY KEY screenshot is replaced with a fresh capture.</li><li>The statement overshoots to 547 words and is cut to 412; credits and the AI statement are reconciled.</li><li>Test copy first: MOSS runs it alone from the README while BUG and NIT watch through a window. Then submit, then the receipt.</li><li>OUTCOME RECORDED.</li></ol>
+  </div>
+  <details class="doc">
+    <summary>Operating manual · M7 · full text <span>5 pages · 10 sections</span></summary>
+    <div class="doc-body">
+      <figure class="map"><img loading="lazy" src="manuals/maps/M7_Workflow_Map.png" alt="M7 workflow map: perform, save and check, with the repair route when a check fails"></figure>
+      <p>I will first construct the &lt;theory-of-the-program&gt;, then generate &lt;program text&gt; only after the theory is explicit.</p>
+<h5 class="mh2">OPERATIONAL_DIAGNOSTIC</h5>
+<p><b class="lab">Substantives Demolished</b> Replace vague uses of completeness, authenticity and understanding with the actions and records below.</p>
+<p><b class="lab">Occult States Removed</b> Replace the project is finished with an opened final package, a successful documented run and a file-by-file comparison of claims, images and credits.</p>
+<p><b class="lab">The Language Game</b> Keep every submitted claim traceable to the same final version or to a labeled historical record.</p>
+<h5 class="mh2">CONTROL_SURFACE_DRAFT</h5>
+<p>Match the final code, playable copy, statement, images and credits; test the delivery copy and submit the complete record.</p>
+<p><b class="lab">Start with</b> Gather the presentation build, code, actual feedback, current screenshots, all source credits, AI records and documented limitations from M1 through M6.</p>
+<p><b class="lab">Required package</b> Submit the final code folder, playable build, 300-500-word statement, screenshot set and complete records.</p>
+<p>Assign maker __________ and checker __________. Swap roles at the next task. Leave checks pending until performed.</p>
+<h4 class="mh1">Milestone 7 Write the rules</h4>
+<h5 class="mh2">1 &lt;Initial Interpretation&gt;</h5>
+<p>Write the task a new recipient will perform: &lt;recipient&gt; [opens] &lt;package&gt;, [follows] &lt;launch instructions&gt;, [uses] &lt;controls&gt;, and [reaches] &lt;outcome&gt;. Document the same version that the recipient will run.</p>
+<h5 class="mh2">2 &lt;Theory Skeleton&gt;</h5>
+<div class="tw"><table><thead><tr><th>Record</th><th>What to write</th></tr></thead><tbody><tr><td>&lt;Entities&gt;</td><td>List final source folder, playable copy, version, statement, screenshots, credits, AI entries and known limitations.</td></tr><tr><td>[Operations]</td><td>Select, launch, compare, trace, count words, reconcile credits and inspect the final upload copy.</td></tr><tr><td>&lt;States&gt;</td><td>Document the actual final screens/states and endings. Remove claims about abandoned states or label them as past work.</td></tr><tr><td>&lt;Conditions&gt;</td><td>Document final input guards and ending tests with code locations. Keep word-count and package checks on the submission checklist.</td></tr><tr><td>&lt;Invariants&gt;</td><td>List final scoped runtime rules with code locations and checks. Keep consistent build identifiers as a separate packaging convention.</td></tr><tr><td>&lt;Constraints&gt;</td><td>Provide title, actual team names, source folder, playable build, statement, screenshot set, full credits and cumulative AI statement.</td></tr></tbody></table></div>
+<p>Use conditions to decide whether an action or transition is allowed. State the scope of each invariant and how to check it. Keep submission requirements separate from runtime rules.</p>
+<h5 class="mh2">3 &lt;Assumption Ledger&gt;</h5>
+<div class="tw"><table><thead><tr><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>&lt;safe&gt;</td><td>Enter an unverified premise only with its basis and limited consequence if wrong. Keep build-specific results and adopted decisions in the evidence record.</td></tr><tr><td>&lt;uncertain&gt;</td><td>List untested recipient environments or unsupported features; do not generalize successful local checks.</td></tr><tr><td>&lt;requires-user-decision&gt;</td><td>Have both partners select the final version and complete the group confirmation after tracing submitted code and images.</td></tr></tbody></table></div>
+<p>Create a final unresolved-items list with {item, effect on recipient, evidence, action}. Resolve required omissions before submission; disclose actual remaining limits without inventing tests.</p>
+<p><b class="lab">Record the next open item</b> Claim __________  Status __________
+Owner __________  Evidence/check __________  Next action __________</p>
+<p>Write &lt;entity&gt; for a person, object, value or state; [operation] for an action; and {record} for related fields. Record planned, observed, failed or not tested beside each claim. Do not mark a check passed until a person performs it and records the result.</p>
+<h4 class="mh1">Milestone 7 Run the procedure</h4>
+<h5 class="mh2">4 &lt;Operational Description&gt;</h5>
+<p>Read each action aloud before doing it. The maker performs the action; the checker records the named result. Use the return instruction when a check fails.</p>
+<div class="tw"><table><thead><tr><th>Step</th><th>Perform and save</th><th>Check and return</th></tr></thead><tbody><tr><td>01 Select the final version</td><td>Match the final source folder to the playable build. Remove abandoned experiments from the delivery folder; preserve a separate working archive if needed.</td><td>Locate the source of every submitted behavior. Resolve a mismatch before writing final claims.</td></tr><tr><td>02 Test the recipient copy</td><td>Open the final delivery copy using its included instructions. Start, use the displayed control and reach an ending. Record environment, network condition and observed result.</td><td>Repair packaging or behavior, regenerate the final copy and repeat the affected checks. Record untested platforms honestly.</td></tr><tr><td>03 Write the statement</td><td>Write 300-500 words in four paragraphs: project; WarGames connection; code structure/mechanics/design process; AI use. Add title and actual team names outside that body.</td><td>Count the statement body and check all four topics. Edit claims that describe absent features or tests that were never performed.</td></tr><tr><td>04 Reconcile the evidence</td><td>Use screenshots from the final build. Match borrowed assets, code, tutorials, fonts, sounds, inspirations and AI assistance to credits and code comments.</td><td>Correct missing sources, obsolete screenshots and inconsistent AI dates or kept/changed/rejected entries.</td></tr><tr><td>05 Inspect and package</td><td>Each partner traces a code change and identifies image sources, edits and displayed information; then complete the group confirmation. Include code, playable build, statement, screenshots, full credits, cumulative AI record and final progress note.</td><td>Open the exact final files. Leave the confirmation pending until both partners perform the recommended checks and can confirm the submitted work.</td></tr><tr><td>06 Submit and preserve</td><td>Use the actual Canvas upload fields. After upload, inspect the listed files and reopen or download them when available. Retain the submitted copy and receipt.</td><td>Record the submitted names and status. Do not mark submission complete merely because files exist locally.</td></tr></tbody></table></div>
+<h5 class="mh2">5 &lt;Failure Description&gt;</h5>
+<div class="tw"><table><thead><tr><th>Observed problem</th><th>Required response</th></tr></thead><tbody><tr><td>Statement and build describe different behavior</td><td>Correct the text or deliberately repair the behavior, then repeat the relevant check.</td></tr><tr><td>Word count or required topic is wrong</td><td>Edit the four-paragraph body in step 03; recount and check every topic.</td></tr><tr><td>Missing credit or partner confirmation</td><td>Resolve the specific source or demonstration in steps 04-05. Do not sign for the other partner.</td></tr></tbody></table></div>
+<p><b class="lab">Use the map</b> A no branch returns to the named task. Repair the recorded problem and repeat that check; do not mark the stage passed because the planned time window ended.</p>
+<h4 class="mh1">Milestone 7 Test changes and produce the work</h4>
+<h5 class="mh2">6 &lt;Change Test&gt;</h5>
+<p>Ask: &quot;What would change if the requirements changed?&quot; The maker writes the expected result first. The checker performs or traces the change and records the result. Swap roles for the second scenario.</p>
+<div class="tw"><table><thead><tr><th>Modification</th><th>Run this check</th></tr></thead><tbody><tr><td>Change a rule parameter</td><td>In a separate test copy, choose one parameter. Predict the affected behavior, files, instructions and checks; change it and compare the run. Restore or deliberately adopt the change and update all affected records.</td></tr><tr><td>Replace the visual treatment</td><td>Identify which colors, shapes or text carry information and which are decorative. Propose a style replacement. Verify that controls, state distinctions and outcome information remain readable and distinguishable.</td></tr></tbody></table></div>
+<p>Save {version or design record, starting condition, input/change, expected result, observed result, pass/fail/not tested, next action}. Use paper traces in M1-M2; report executed checks only when they occurred.</p>
+<h5 class="mh2">7 &lt;Implementation Plan&gt;</h5>
+<p>Assign the first statement draft and file inventory to one partner, the final launch and credit reconciliation to the other, then swap review. Keep supporting technical notes outside the 300-500-word statement. Use four paragraphs to cover the four required topics.</p>
+<h5 class="mh2">8 &lt;Program Text&gt;</h5>
+<p>Produce final documentation and packaging. Change implementation only for a named defect; write the intended behavior first, apply a bounded repair and repeat affected checks. Update the final identifier and matching evidence afterward.</p>
+<h5 class="mh2">9 &lt;Theory-Code Mapping&gt;</h5>
+<div class="tw"><table><thead><tr><th>Element</th><th>Record the connection</th></tr></thead><tbody><tr><td>&lt;types&gt;</td><td>Document final data names, meaning, valid values and reset values.</td></tr><tr><td>&lt;functions&gt;</td><td>Map input, rule updates, drawing and outcomes to actual file/function names.</td></tr><tr><td>&lt;classes&gt;</td><td>List actual responsibilities or mark not used.</td></tr><tr><td>&lt;tests&gt;</td><td>Retain final launch, input, outcome and modification records.</td></tr><tr><td>&lt;comments&gt;</td><td>Preserve non-obvious reasons, limitations and AI assistance annotations.</td></tr><tr><td>&lt;configuration&gt;</td><td>Name safe-to-change values and the checks required after each change.</td></tr></tbody></table></div>
+<p>Use actual file and function names when code exists. Label planned counterparts proposed; write not applicable when a structure is absent.</p>
+<h5 class="mh2">Carry forward the course rules</h5>
+<p>Keep the project connected to WarGames. Build in Processing using p5.js mode; accept interactive input; include at least three distinct screens or states; provide a start and reachable outcome; credit external material; organize and comment the code.</p>
+<p>Record actual AI use at every milestone, including use of this manual if adopted. Use AI for bounded brainstorming, explanation, small examples you study and adapt, specific debugging or review. Author the project as a group; do not request an entire generated project. Identify assisted code and your changes in comments.</p>
+<h4 class="mh1">Milestone 7 Submit and hand off</h4>
+<h5 class="mh2">10 &lt;Residual Human Theory&gt;</h5>
+<p>Record why the group selected its mechanic, interpreted peer observations and rejected alternatives. Explain which rule changes require a new diagram or playtest. Have each partner locate those records and demonstrate one small change before completing the group confirmation.</p>
+<h5 class="mh2">Check the required submission</h5>
+<ul class="chk">
+<li>Final code folder and final playable build.</li>
+<li>A 300-500-word project statement covering project, WarGames connection, code/mechanics/process and AI use.</li>
+<li>Project title and actual student/team names.</li>
+<li>A final screenshot set and complete credits/references.</li>
+<li>An AI Use Statement covering the whole project and a short final progress note.</li>
+<li>Optional short video or GIF; keep the required playable build regardless.</li>
+</ul>
+<p>Organize code, playable build, statement, screenshots and records into clearly named items. Follow current Canvas fields; the supplied final-package instructions set no PDF minimum or explicit ZIP requirement.</p>
+<p><b class="lab">Completion check</b> The checker runs the final delivery copy by its documented route, verifies the 300-500-word body and four topics, and opens all required files. Both partners complete the group confirmation; the upload record identifies the delivered copy.</p>
+<p><b class="lab">Progress note</b> Name the current version; state what was completed and checked, what is missing, and the next action with its owner. Add the screenshot/capture supporting the current status.</p>
+<h5 class="mh2">Complete the AI Use Statement</h5>
+<div class="tw"><table><thead><tr><th>Field</th><th>Enter the actual record</th></tr></thead><tbody><tr><td>Tool and dates</td><td>Name the tool, or record no AI used only if accurate. Enter actual dates of use.</td></tr><tr><td>Request and affected work</td><td>Summarize the request. Name the text, image, planning record or code file affected.</td></tr><tr><td>Kept changed rejected</td><td>Record the output retained, edits or rewrites made, and material discarded.</td></tr><tr><td>Group confirmation</td><td>Recommended check: each partner traces actual submitted code; for planning-only work, trace the proposed interaction. Identify image sources, retained edits and displayed information. Then complete the required group confirmation covering code and images; leave it pending until both partners can confirm it.</td></tr></tbody></table></div>
+<p>If this AI-produced manual is adopted, record ChatGPT, October 21 2026, milestone planning and operational rewrite, and your actual kept/changed/rejected choices. Do not copy a completed student confirmation from this manual.</p>
+<p><b class="lab">Handoff</b> Preserve the exact submitted version, launch instructions, check evidence and reasons for the rules so a later editor can locate and verify a proposed change.</p>
+<p><b class="lab">Record:</b> maker __________ checker __________ version __________
+Checks still pending __________ submitted file(s) __________ upload status __________</p>
+<p>Requirements source: supplied WarGames project brief and milestone instructions. Treat roles, file names, internal checks and relative-week allocations as recommended working procedures. Use corrected deadlines from the course; none are asserted here.</p>
+    </div>
+  </details>
+  <p class="handoff"><b>HANDOFF</b> Preserve the exact submitted version, launch instructions, check evidence and reasons for the rules so a later editor can locate and verify a proposed change. <span class="nx"><a href="#top">Back to the track ↑</a></span></p>
+</section>
+<section class="sched" id="schedule">
+  <h2>Relative-week schedule</h2>
+  <img loading="lazy" src="manuals/maps/Relative_Week_Gantt.png" alt="Gantt chart: M1 week 1, M2 week 2, M3 weeks 3 to 4, M4 weeks 4 to 5, recovery allowance in week 5, M5 week 6, M6 and M7 in week 7, credits, AI and evidence across all seven weeks">
+  <p>The weeks are illustrative working estimates from the manual, not course deadlines. Use the corrected course dates. Move the recovery allowance to whichever work fails a check.</p>
+</section>
+<section class="credits">
+  <h2>Records</h2>
+  <p>The operating manuals (M1–M7, the combined manual, and the master map and Gantt) are an AI-prepared operational rewrite of the WarGames project brief and milestone instructions. Their Read Me records ChatGPT, October 21 2026. If a group adopts them, it records that use in its AI Use Statement. The films are original cartoons, made with Claude on October 21 2026. They were drawn in canvas by one deterministic renderer, with synthesized sound, and the characters are original. <a href="manuals/Read_Me.txt">Read Me</a></p>
+</section>
+</main>
+</body>
+</html>
