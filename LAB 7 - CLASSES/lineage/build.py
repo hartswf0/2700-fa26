@@ -165,6 +165,12 @@ FILMS = [
        sound='Typewriter keys, a wooden knock for each wall, the Edifier’s hum, annexes that echo less as they shrink, rain on the strike, and at the end a trowel and one knock per brick.',
        code='Programming as theory building (Naur, 1985): change one requirement in a program you did not write, and write down what you had to understand before the change would work.',
        builds='Film three of The House That Language Built. A theorist who has generated seven million houses learns, by building one wall, that producing a thing and understanding it are different.'),
+  dict(dir='abominable-house', title='The Burning of the Abominable House', sub='four tenants, twelve deeds, and a computer asked to put them in order', source='Calvino, Numbers in the Dark',
+       line=('The programmer', 'I am the second programmer.'),
+       picture="A programmer's room: a computer cabinet, a corkboard and a desk, with a counter of possible stories above the board. The board shows a house burning on waste ground, a copybook's index of twelve deeds, four tenants as pinned cards, the grid of who did what to whom, insurance policies, rules, and the house rising again inside the computer.",
+       sound='The cabinet hums, a house burns, cards are pinned to cork, a counter rolls through trillions, rain falls at the window, a doorbell rings and a siren comes closer.',
+       code='Counting and pruning: twelve deeds times twelve pairs is twelve to the twelfth power, and each rule is a filter that throws stories away.',
+       builds="After Calvino's story of a computer asked to rebuild a lost book from its index. It stands next to the bitic films: another book that does not exist, and a machine asked to write it."),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -192,7 +198,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source', 'Theory building: what you understand, not what you produced']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source', 'Theory building: what you understand, not what you produced', 'Counting and pruning: how rules shrink a search']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -202,7 +208,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er', 'architect-never-built': 'an'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er', 'architect-never-built': 'an', 'abominable-house': 'ah'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
@@ -260,7 +266,7 @@ open(os.path.join(HERE, 'index.html'), 'w').write(page)
 # ---------------- the Cyberiad page: a cinema, every film in book order ----------------
 # Works from a plain folder or drive: no fetch, no server, fonts and films by relative path.
 byd = {f['dir']: f for f in FILMS}
-BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None), ('The Theory of Possibilities', 'theory-of-possibilities', None)]
+BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None), ('The Burning of the Abominable House', 'abominable-house', None), ('The Theory of Possibilities', 'theory-of-possibilities', None)]
 reel, part = [], ''
 for title, d, nxt in BOOK_PLUS:
     if title.startswith('How the World'): part = 'Three Early Stories'
@@ -268,6 +274,7 @@ for title, d, nxt in BOOK_PLUS:
     if title.startswith('Tale of'): part = 'Tales'
     if title.startswith('Non Serviam'): part = 'From A Perfect Vacuum'; title = 'Non Serviam'
     if title.startswith('A History of Bitic'): part = 'From Imaginary Magnitude'
+    if d == 'abominable-house': part = 'After Calvino'
     if d == 'theory-of-possibilities': part = 'Afterword'
     if d == 'bitic-literature': title = 'A History of Bitic Literature, after the premise'
     f = byd.get(d)
@@ -280,6 +287,7 @@ hm = lambda s: (f"{int(s // 3600)} hr {int(s % 3600 // 60)} min" if s >= 3600 el
 nb = sum(r['p'] == 'From Imaginary Magnitude' for r in reel)
 extra = ('<i>Non Serviam</i>, and ' + ['', 'one film', 'two films', 'three films', 'four films', 'five films', 'six films'][nb] + ' from <i>A History of Bitic Literature</i>') if nb else '<i>Non Serviam</i>'
 after = any(r['p'] == 'Afterword' for r in reel)
+cal = any(r['p'] == 'After Calvino' for r in reel)
 def write_cinema(outdir, reel, title, by, intro_html, end_html, intro_file=''):
     tot = sum(r['n'] for r in reel)
     groups = []
@@ -534,10 +542,11 @@ cur = hi < 0 ? 0 : hi; if (h[1]) pendingSeek = +h[1]; setNow();
 """
 
 cy_intro = ('<p>Two constructors, Trurl and Klapaucius, build machines for kings and for each other. Every machine does exactly what it was built to do, and that is where each story begins.</p>\n    '
-            '<p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: ' + extra + '.'
+            '<p>These are Lem&rsquo;s stories in the order his book prints them, drawn in ink and played one after another. At the end come two of his books about imaginary books: ' + extra + '.' + (' Then a story by Italo Calvino about a book that survives only as its index.' if cal else '')
             + (' An afterword reads them through an essay on the theory of possibilities.' if after else '') + '</p>')
 bit = (' and <i>A History of Bitic Literature</i> from <i>Imaginary Magnitude</i>, translated by Marc E. Heine' if nb else '')
 cy_end = ('<p>After Stanis&lstrok;aw Lem, <i>The Cyberiad</i>, translated by Michael Kandel, with <i>Non Serviam</i> from <i>A Perfect Vacuum</i>' + bit + '.'
+          + (' With Italo Calvino, <i>The Burning of the Abominable House</i>, in <i>Numbers in the Dark</i>, translated by Tim Parks.' if cal else '')
           + (' The afterword follows Ewelina Wo&zacute;niak-Czech, <i>The Possibilities of Theory &ndash; the Theory of Possibilities</i> (2024).' if after else '') + '</p>\n  '
           '<p>Narration and dialogue paraphrase their sources. Drawn in ink in the browser, voiced with Kokoro, the sound made in code. Also: <a href="../edifiction/index.html">The House That Language Built</a>, four fables of Edifiction.</p>')
 write_cinema('cyberiad', reel, 'The Cyberiad', 'Stanis&lstrok;aw Lem, filmed', cy_intro, cy_end, INTRO)
