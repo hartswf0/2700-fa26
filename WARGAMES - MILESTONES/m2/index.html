@@ -39,6 +39,11 @@ h1{font:800 clamp(28px,4.4vw,48px)/1.04 var(--sans);letter-spacing:-.025em;margi
 canvas.moth{display:block;width:100%;aspect-ratio:16/9;background:#050505}
 .prov{font:600 12.5px var(--mono);padding:8px 12px;border-top:1.5px solid var(--ink);display:grid;gap:4px}
 .prov b{font-weight:800;letter-spacing:.08em}
+.hook{font:800 clamp(18px,2vw,22px)/1.2 var(--sans);letter-spacing:-.015em;margin:0 0 8px}
+.pitch{margin:0 0 12px;font-size:14px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.checks div{border:1.5px solid var(--ink);padding:7px 9px;font-size:12.5px}
+.checks b{display:block;font:800 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
 .brief dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}
 .brief dt{font:800 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);padding-top:3px}
 .brief dd{margin:0}
@@ -79,6 +84,7 @@ svg.mock{aspect-ratio:16/9}
 </main>
 <script src="moth-kit.js"></script>
 <script src="teams.js"></script>
+<script src="briefs.js"></script>
 <script>
 (function(){
 'use strict';
@@ -136,7 +142,7 @@ function flow(tm) {
     s += `<path d="${d}" marker-end="url(#ar-${tm.id})" opacity=".85"/>`;
     if (lab) s += `<text x="${lx}" y="${ly}" fill="currentColor" stroke="none" text-anchor="${a === b ? 'start' : 'middle'}" opacity=".75">${esc(lab)}</text>`;
   });
-  tm.states.forEach(([id]) => { const p = pos[id]; const end = /^end|ENDING|END|REPORT|VERDICT|COMPARISON|OVER/.test(id + p.l); const fail = /FAIL|CAUGHT|GAME OVER|DIES|RETRAIN|WASTED|LOOKED|RESET|LIED|TAKEN|broke|dead/i.test(p.l + id) && !/ENDING: HARVEST/.test(p.l);
+  tm.states.forEach(([id]) => { const p = pos[id]; const end = /^end|ENDING|END|REPORT|VERDICT|COMPARISON|OVER/.test(id + p.l); const fail = /FAIL|CAUGHT|GAME OVER|DIES|RETRAIN|WASTED|LOOKED|RESET|LIED|TAKEN|CLOSED|BLACKOUT|broke|dead/i.test(p.l + id) && !/ENDING: HARVEST/.test(p.l);
     s += `<rect x="${p.x}" y="${p.y}" width="${bw}" height="${bh}" rx="${end ? 17 : 3}" fill="${fail ? 'rgba(179,38,30,.10)' : 'var(--surface)'}" stroke="${fail ? '#b3261e' : 'currentColor'}" stroke-width="${id === 'title' ? 2.5 : 1.5}"/>`;
     const ls = wrap(p.l, 15); ls.forEach((t, i) => s += `<text x="${p.x + bw / 2}" y="${p.y + bh / 2 + 3 + (i - (ls.length - 1) / 2) * 10}" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">${esc(t)}</text>`);
   });
@@ -191,6 +197,7 @@ const MOCK = {
     ['COMPLY','EDIT','REFUSE'].forEach((t, i) => s += `<rect x="${96 + i * 66}" y="138" width="60" height="16" rx="4" fill="${i === 2 ? p.acc : 'none'}" stroke="${p.fg}"/><text x="${126 + i * 66}" y="149" fill="${i === 2 ? '#fff' : p.fg}" font-size="7" text-anchor="middle">${t}</text>`); return s; },
   cutter(p) { let s = `<rect x="0" y="110" width="320" height="16" fill="${p.fg}" opacity=".2"/><rect x="40" y="86" width="240" height="26" rx="13" fill="${p.fg}"/><rect x="44" y="90" width="232" height="18" rx="9" fill="${p.bg}" opacity=".8"/>`;
     for (let i = 1; i < 6; i++) s += `<line x1="${40 + i * 40}" y1="76" x2="${40 + i * 40}" y2="122" stroke="${p.acc}" stroke-dasharray="3 3"/>`;
+    if (p.tickets) s += [['T4  8 PCS SALMON','01/01/1900'],['T2  6 PCS TUNA','12/31/1999']].map(([a, b2], i) => `<rect x="${150 + i * 84}" y="${130 + i * 6}" width="74" height="34" fill="#f5f1e6" stroke="${p.fg}" transform="rotate(${i ? -4 : 3} ${187 + i * 84} 150)"/><text x="${156 + i * 84}" y="${144 + i * 6}" fill="#222" font-size="6" transform="rotate(${i ? -4 : 3} ${187 + i * 84} 150)">${a}</text><text x="${156 + i * 84}" y="${154 + i * 6}" fill="${i ? '#222' : '#c0392b'}" font-size="6" transform="rotate(${i ? -4 : 3} ${187 + i * 84} 150)">${b2}</text>`).join('');
     s += `<path d="M200 20 l20 0 0 50 -20 -10z" fill="${p.fg}"/><text x="20" y="24" fill="${p.fg}" font-size="9" font-weight="700">SCORE 340</text><text x="20" y="38" fill="${p.acc}" font-size="8">COMBO x2</text><text x="300" y="24" fill="${p.fg}" font-size="9" text-anchor="end">LIVES ***</text><text x="160" y="160" fill="${p.fg}" font-size="9" text-anchor="middle">SPACE = CUT</text>`; return s; },
   room(p) { let s = `<path d="M160 30 L290 90 L160 150 L30 90z" fill="${p.fg}" opacity=".08" stroke="${p.fg}"/><path d="M30 90 L30 40 L160 -20 L160 30" fill="none" stroke="${p.fg}" opacity=".4"/>`;
     s += `<rect x="120" y="86" width="16" height="20" fill="${p.fg}" opacity=".6"/><path d="M128 86 q-10 -20 0 -26 q10 6 0 26" fill="${p.acc}"/><rect x="190" y="70" width="40" height="24" fill="${p.fg}" opacity=".25"/>`;
@@ -218,9 +225,10 @@ T.forEach(tm => {
   <div class="grid">
     <div class="panel"><h3>Provocation <i>BUG and NIT</i></h3><canvas class="moth" data-id="${tm.id}" aria-label="BUG and NIT in front of ${esc(tm.name)}"></canvas>
       <div class="prov"><div><b>BUG:</b> ${esc(tm.prov.bug)}</div><div><b>NIT:</b> ${esc(tm.prov.nit)}</div></div></div>
-    <div class="panel brief"><h3>1 · Design brief <i>one page</i></h3><div class="in"><dl>
+    <div class="panel brief"><h3>1 · Design brief <i>one page</i></h3><div class="in">${tm.hook ? `<p class="hook">${esc(tm.hook)}</p><p class="pitch">${esc(tm.pitch)}</p>` : ''}<dl>
       <dt>Player</dt><dd>${esc(b.player)}</dd><dt>Goal</dt><dd>${esc(b.goal)}</dd><dt>Fail</dt><dd>${esc(b.fail)}</dd><dt>Ending</dt><dd>${esc(b.ending)}</dd>
       <dt>Core verb</dt><dd>${esc(b.verb)}</dd><dt>Theme</dt><dd>${esc(b.theme)}</dd><dt>Look</dt><dd>${esc(b.look)}</dd></dl>
+      <div class="checks"><div><b>A stranger gets it in a minute?</b>${esc(tm.minute || '')}</div><div><b>Can the group build it?</b>${esc(tm.build || '')}</div></div>
       <div class="scope"><b>Scope:</b> ${esc(tm.scope)}</div></div></div>
   </div>
   <div class="row3">
