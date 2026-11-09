@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Milestone 2 Protos</title>
+<meta name="description" content="A proto Milestone 2 response for each group: design brief, state flowchart, asset list, title and main screen mockups, AI use statement, with BUG and NIT posing one question per project.">
+<style>
+:root{--paper:#f4f2ea;--surface:#fff;--ink:#11110f;--muted:#5e5b53;--hair:#d4d0c4;--accent:#1e52a8;--accent-bg:rgba(30,82,168,.10);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;--sans:"Helvetica Neue",Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#0e0e0c;--surface:#151513;--ink:#f2f0e6;--muted:#9c988e;--hair:#2b2a26;--accent:#5896e6;--accent-bg:rgba(88,150,230,.14)}}
+:root[data-theme="dark"]{--paper:#0e0e0c;--surface:#151513;--ink:#f2f0e6;--muted:#9c988e;--hair:#2b2a26;--accent:#5896e6;--accent-bg:rgba(88,150,230,.14)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;background:var(--paper);border-bottom:2px solid var(--ink);font:800 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.top a{text-decoration:none;border:1.5px solid var(--ink);padding:6px 9px}
+.top a:hover{background:var(--ink);color:var(--paper)}
+main{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+.hero{padding:30px 0 18px;border-bottom:1px solid var(--hair)}
+.kick{font:800 11px var(--mono);letter-spacing:.14em;color:var(--accent);margin:0 0 8px;text-transform:uppercase}
+h1{font:800 clamp(28px,4.4vw,48px)/1.04 var(--sans);letter-spacing:-.025em;margin:0 0 12px}
+.hero p{margin:0 0 10px;max-width:76ch;color:var(--muted)}
+.req{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.req span{font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1.5px solid var(--ink);padding:5px 7px;background:var(--surface)}
+.index{display:flex;flex-wrap:wrap;gap:6px;padding:14px 0;border-bottom:1px solid var(--hair)}
+.index a{font:800 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;border:1.5px solid var(--ink);padding:6px 8px;background:var(--surface)}
+.index a:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.team{padding:30px 0 12px;border-bottom:2px solid var(--ink);scroll-margin-top:50px}
+.thead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.tcode{font:800 12px var(--mono);background:var(--ink);color:var(--paper);padding:4px 8px}
+.tname{font:800 clamp(22px,2.8vw,30px)/1.1 var(--sans);letter-spacing:-.02em}
+.from{color:var(--muted);margin:0 0 14px;font-size:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+.panel{background:var(--surface);border:1.5px solid var(--ink)}
+.panel h3{margin:0;padding:7px 10px;border-bottom:1.5px solid var(--ink);font:800 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+.panel h3 i{font-style:normal;color:var(--muted);font-weight:700}
+.panel .in{padding:10px 12px}
+canvas.moth{display:block;width:100%;aspect-ratio:16/9;background:#050505}
+.prov{font:600 12.5px var(--mono);padding:8px 12px;border-top:1.5px solid var(--ink);display:grid;gap:4px}
+.prov b{font-weight:800;letter-spacing:.08em}
+.brief dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}
+.brief dt{font:800 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);padding-top:3px}
+.brief dd{margin:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.row3{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;margin-top:18px}
+svg.flow,svg.mock{display:block;width:100%;height:auto}
+svg.mock{aspect-ratio:16/9}
+.assets table{width:100%;border-collapse:collapse;font-size:13px}
+.assets td{padding:5px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+.assets td:last-child{text-align:right;font:800 9.5px var(--mono);letter-spacing:.1em;padding-left:10px;white-space:nowrap}
+.assets .MAKE{color:#b3261e}.assets .BUILD{color:var(--accent)}.assets .TYPE{color:var(--muted)}
+.assets p{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.refs ol{margin:0;padding-left:20px;font-size:13.5px;display:grid;gap:6px}
+.refs b{font-weight:700}
+.ai{font-size:13px}
+.ai table{width:100%;border-collapse:collapse}
+.ai td{padding:5px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+.ai td:first-child{font:800 9.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);width:38%;padding-right:10px}
+.scope{margin-top:10px;font-size:13px;border-left:4px solid var(--accent);background:var(--accent-bg);padding:8px 10px}
+.foot{margin-top:26px;font:600 11px var(--mono);color:var(--muted)}
+@media (max-width:820px){main{padding:0 16px 60px}.top{padding:10px 16px}.grid,.row2,.row3{grid-template-columns:1fr}.index{position:static}}
+@media print{.top,.index{display:none}.team{break-before:page}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="top"><span>Milestone 2 protos</span><a href="../index.html">Milestones</a></div>
+<main>
+<section class="hero">
+  <p class="kick">M2 · Design Brief and Systems Plan · one proto per group</p>
+  <h1>A proto Milestone 2 for every group</h1>
+  <p>Each group gets a worked example of what its Milestone 2 could look like, drafted from the group's own Milestone 1. Every item the milestone asks for is here, in the order of the Canvas deliverables. These are starting points, not answers: replace any decision you disagree with, and submit your own PDF.</p>
+  <p>BUG (the maker, amber) and NIT (the checker, silver) from the Last Move cartoons stand in front of each project. BUG says what is exciting about it; NIT asks the question the design has to answer. Below them are works worth looking at that bear on that question.</p>
+  <div class="req"><span>One-page design brief</span><span>State flowchart, 3+ states</span><span>Asset list</span><span>Title screen mockup</span><span>Main interaction mockup</span><span>AI use statement</span></div>
+</section>
+<nav class="index" id="index"></nav>
+<div id="teams"></div>
+<p class="foot">Drafted from the Milestone 1 PDFs. Group members' names are left off this page on purpose. BUG and NIT are drawn live by the same renderer as the Last Move cinema.</p>
+</main>
+<script src="moth-kit.js"></script>
+<script src="teams.js"></script>
+<script>
+(function(){
+'use strict';
+const T = window.TEAMS, M = window.MOTH;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const wrap = (s, n) => { const w = String(s).split(' '), out = []; let l = ''; w.forEach(x => { if ((l + ' ' + x).trim().length > n) { out.push(l.trim()); l = x; } else l += ' ' + x; }); if (l.trim()) out.push(l.trim()); return out; };
+
+/* ---------- BUG and NIT provocation scene (canvas, the cinema's own kit) ---------- */
+function mothScene(cv, tm) {
+  const ctx = cv.getContext('2d'); cv.width = 1280; cv.height = 720;
+  const g = new M.Kit(ctx, 1.25, 30);
+  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 1280, 720);
+  g.room({ horizon: 520 });
+  g.glow(640, 330, 420, 'rgba(232,192,112,.10)');
+  // the project on the terminal
+  g.desk(640, 540, 420);
+  g.crt(640, 528, 1.55, (k, w, h) => {
+    const c = k.ctx; c.fillStyle = tm.title.bg; c.fillRect(0, 0, w, h);
+    k.text(tm.title.t, w / 2, h * .42, { size: Math.min(15, 210 / tm.title.t.length), color: tm.title.acc, align: 'center', weight: 800 });
+    k.text(tm.title.sub.slice(0, 26), w / 2, h * .6, { size: 9, color: tm.title.fg, align: 'center' });
+    k.rect(w / 2 - 28, h * .7, 56, 14, null, tm.title.fg, 1.5);
+    k.text('START', w / 2, h * .7 + 10, { size: 8, color: tm.title.fg, align: 'center', weight: 700 });
+  }, { glowCol: 'rgba(232,192,112,.14)' });
+  // BUG, excited, pointing at the screen
+  g.moth(300, 640, { who: 'bug', s: 1.25, f: .6, lx: .8, ly: -.2, ex: 'happy', aR: 1.9, bR: .3, aL: .4, wing: .6, still: true, hold: { L: 'pencil' } });
+  // NIT, checking
+  g.moth(990, 640, { who: 'nit', s: 1.25, f: -.6, lx: -.8, ly: -.1, ex: 'skeptic', aR: 1.1, bR: 1.3, still: true, hold: { R: 'clipboard' } });
+  // what they say, as paper slips
+  const bl = wrap(tm.prov.bug, 24), nl = wrap(tm.prov.nit, 24);
+  g.note(300, 150, 1.7, bl.join('\n'), { w: 200, h: 22 + bl.length * 14, col: '#f3dcae', rot: -.04, size: 11.5 });
+  g.note(990, 140, 1.7, nl.join('\n'), { w: 200, h: 22 + nl.length * 14, col: '#e7ecef', rot: .04, size: 11.5 });
+  g.text('BUG', 300, 186 + bl.length * 12, { size: 14, color: '#e8c070', align: 'center', ls: 4, weight: 700 });
+  g.text('NIT', 990, 176 + nl.length * 12, { size: 14, color: '#cfd6da', align: 'center', ls: 4, weight: 700 });
+  g.text(tm.group.toUpperCase() + '  ·  ' + tm.name.toUpperCase(), 640, 46, { size: 15, color: '#8a8378', align: 'center', ls: 4 });
+  M.post(ctx, 1.25, { vig: .5 });
+}
+
+/* ---------- state flowchart (SVG) ---------- */
+function flow(tm) {
+  const cols = Math.max(...tm.states.map(s => s[2])) + 1, rows = Math.max(...tm.states.map(s => s[3])) + 1;
+  const cw = 150, rh = 78, bw = 104, bh = 34, W = cols * cw + 20, H = rows * rh + 54;
+  const pos = {}; tm.states.forEach(([id, l, c, r]) => pos[id] = { x: 10 + c * cw + (cw - bw) / 2, y: 40 + r * rh, l });
+  let s = `<svg class="flow" viewBox="0 0 ${W} ${H}" role="img" aria-label="State flowchart for ${esc(tm.name)}"><defs><marker id="ar-${tm.id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs><g fill="none" stroke="currentColor" stroke-width="1.5" font-family="ui-monospace,monospace" font-size="9">`;
+  tm.edges.forEach(([a, b, lab0], i) => { let lab = lab0;
+    const A = pos[a], B = pos[b]; if (!A || !B) return;
+    let d, lx, ly;
+    if (a === b) { const x = A.x + bw * .7, y = A.y; d = `M${x} ${y} C ${x} ${y - 26}, ${x + 30} ${y - 26}, ${x + 22} ${y + 4}`; lx = x + 14; ly = y - 24; }
+    else {
+      const ax = A.x + bw / 2, ay = A.y + bh / 2, bx = B.x + bw / 2, by = B.y + bh / 2;
+      const back = B.x < A.x && A.y === B.y;
+      if (back) { const yb = A.y + bh + 14 + (i % 2) * 8; d = `M${ax} ${A.y + bh} L${ax} ${yb} L${bx} ${yb} L${bx} ${B.y + bh + 2}`; lx = (ax + bx) / 2; ly = yb + 10; }
+      else if (A.y === B.y) { d = `M${A.x + bw} ${ay} L${B.x - 2} ${by}`; lx = (A.x + bw + B.x) / 2; ly = A.y - 4; }
+      else { const x1 = A.x + (B.x >= A.x ? bw * .55 : bw * .3); d = `M${x1} ${B.y > A.y ? A.y + bh : A.y} L${x1} ${by} L${B.x >= x1 ? B.x - 2 : B.x + bw + 2} ${by}`; lx = x1 + 5; ly = (A.y + bh + by) / 2 + 3; lab && (s += `<text x="${lx}" y="${ly}" fill="currentColor" stroke="none" text-anchor="start" opacity=".75">${esc(lab)}</text>`); lab = ''; }
+    }
+    s += `<path d="${d}" marker-end="url(#ar-${tm.id})" opacity=".85"/>`;
+    if (lab) s += `<text x="${lx}" y="${ly}" fill="currentColor" stroke="none" text-anchor="${a === b ? 'start' : 'middle'}" opacity=".75">${esc(lab)}</text>`;
+  });
+  tm.states.forEach(([id]) => { const p = pos[id]; const end = /^end|ENDING|END|REPORT|VERDICT|COMPARISON|OVER/.test(id + p.l); const fail = /FAIL|CAUGHT|GAME OVER|DIES|RETRAIN|WASTED|LOOKED|RESET|LIED|TAKEN|broke|dead/i.test(p.l + id) && !/ENDING: HARVEST/.test(p.l);
+    s += `<rect x="${p.x}" y="${p.y}" width="${bw}" height="${bh}" rx="${end ? 17 : 3}" fill="${fail ? 'rgba(179,38,30,.10)' : 'var(--surface)'}" stroke="${fail ? '#b3261e' : 'currentColor'}" stroke-width="${id === 'title' ? 2.5 : 1.5}"/>`;
+    const ls = wrap(p.l, 15); ls.forEach((t, i) => s += `<text x="${p.x + bw / 2}" y="${p.y + bh / 2 + 3 + (i - (ls.length - 1) / 2) * 10}" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">${esc(t)}</text>`);
+  });
+  s += `<text x="10" y="14" fill="currentColor" stroke="none" opacity=".6">${tm.states.length} states · square = state · rounded = ending · red = fail</text></g></svg>`;
+  return s;
+}
+
+/* ---------- mockups (SVG, 320 x 180) ---------- */
+const MOCK = {
+  farm(p) { let s = `<rect x="0" y="120" width="320" height="60" fill="${p.fg}" opacity=".08"/><path d="M20 120 Q160 40 300 120" fill="none" stroke="${p.fg}" opacity=".4"/>`;
+    for (let i = 0; i < 6; i++) s += `<rect x="${30 + i * 34}" y="128" width="24" height="10" fill="${p.acc}" opacity="${.3 + i * .1}"/>`;
+    s += `<circle cx="70" cy="108" r="8" fill="${p.fg}"/><circle cx="110" cy="108" r="8" fill="${p.fg}" opacity=".6"/><circle cx="150" cy="108" r="8" fill="${p.acc}"/>`;
+    s += `<rect x="228" y="16" width="80" height="90" fill="none" stroke="${p.fg}"/><text x="236" y="30" fill="${p.fg}" font-size="8">DAY 2 TASKS</text>${['water rows','fix pump','harvest'].map((t,i)=>`<text x="236" y="${46+i*14}" fill="${p.fg}" font-size="7">[ ] ${t}</text>`).join('')}<text x="236" y="98" fill="${p.acc}" font-size="7">CLONES 3 · MOOD 2/3</text>`; return s; },
+  clicker(p) { let s = `<circle cx="90" cy="90" r="46" fill="${p.acc}"/><text x="90" y="94" fill="#fff" font-size="10" text-anchor="middle" font-weight="700">MAKE CLIP</text><text x="90" y="24" fill="${p.fg}" font-size="12" text-anchor="middle" font-weight="700">12,408 clips</text>`;
+    ['Auto-bender','Sales bot','Hiring AI','Board AI','Strategy AI','CEO AI'].forEach((t, i) => s += `<rect x="190" y="${14 + i * 26}" width="118" height="20" fill="none" stroke="${p.fg}" opacity="${i < 3 ? 1 : .35}"/><text x="196" y="${27 + i * 26}" fill="${p.fg}" font-size="8" opacity="${i < 3 ? 1 : .35}">${t}</text><text x="302" y="${27 + i * 26}" fill="${p.acc}" font-size="7" text-anchor="end">-1 btn</text>`);
+    s += `<text x="20" y="168" fill="${p.fg}" font-size="8">BUTTONS LEFT 4/6</text>`; return s; },
+  grid(p) { let s = ''; for (let i = 0; i <= 10; i++) s += `<line x1="${20 + i * 15}" y1="20" x2="${20 + i * 15}" y2="170" stroke="${p.fg}" opacity=".3"/><line x1="20" y1="${20 + i * 15}" x2="170" y2="${20 + i * 15}" stroke="${p.fg}" opacity=".3"/>`;
+    s += `<path d="M110 80l10 10M120 80l-10 10" stroke="${p.acc}" stroke-width="2"/><circle cx="57" cy="132" r="4" fill="none" stroke="${p.fg}"/><rect x="125" y="50" width="15" height="15" fill="none" stroke="${p.fg}" stroke-dasharray="3 2"/>`;
+    s += `<rect x="190" y="20" width="118" height="70" fill="none" stroke="${p.fg}"/><text x="198" y="36" fill="${p.fg}" font-size="8">SYSTEM ADVICE</text><text x="198" y="54" fill="${p.fg}" font-size="11" font-weight="700">FIRE H3</text><text x="198" y="70" fill="${p.fg}" font-size="8">confidence 92%</text><text x="198" y="84" fill="${p.acc}" font-size="7">last call: miss</text>`;
+    s += `<text x="190" y="112" fill="${p.fg}" font-size="8">SCORE 14</text><text x="190" y="128" fill="${p.acc}" font-size="8">CIVILIANS 6 (not scored)</text><text x="190" y="144" fill="${p.fg}" font-size="8">MISSILES 9</text>`; return s; },
+  tv(p) { let s = `<rect x="60" y="14" width="200" height="140" rx="16" fill="none" stroke="${p.fg}" stroke-width="3"/><rect x="76" y="28" width="168" height="110" rx="6" fill="${p.fg}" opacity=".18"/>`;
+    for (let i = 0; i < 8; i++) s += `<line x1="76" y1="${34 + i * 13}" x2="244" y2="${34 + i * 13}" stroke="${p.fg}" opacity=".15"/>`;
+    s += `<g fill="${p.acc}"><rect x="140" y="60" width="10" height="10"/><rect x="160" y="70" width="10" height="10"/><rect x="150" y="70" width="10" height="10" fill="#000"/><rect x="200" y="100" width="8" height="8"/></g><text x="232" y="44" fill="${p.fg}" font-size="12" text-anchor="end" font-weight="700">CH 07</text><text x="160" y="126" fill="${p.fg}" font-size="8" text-anchor="middle">"you can stop thinking now"</text><circle cx="290" cy="150" r="14" fill="none" stroke="${p.fg}"/><text x="290" y="153" fill="${p.fg}" font-size="7" text-anchor="middle">FLIP</text>`; return s; },
+  sim(p) { let s = ''; for (let i = 0; i < 8; i++) for (let j = 0; j < 5; j++) { const k = (i * 5 + j) % 7; s += `<rect x="${16 + i * 20}" y="${16 + j * 30}" width="16" height="22" fill="${k < 2 ? p.acc : p.fg}" opacity="${k < 2 ? .8 : .18 + (k % 3) * .1}"/>`; }
+    ['MONEY $1.2M','WATER 64%','OPINION 41%','DEMAND +12%'].forEach((t, i) => s += `<text x="190" y="${28 + i * 22}" fill="${p.fg}" font-size="8">${t}</text><rect x="190" y="${32 + i * 22}" width="118" height="4" fill="${p.fg}" opacity=".2"/><rect x="190" y="${32 + i * 22}" width="${[90, 70, 45, 100][i]}" height="4" fill="${i === 2 ? p.acc : p.fg}"/>`);
+    s += `<rect x="190" y="128" width="118" height="34" fill="none" stroke="${p.fg}"/><text x="198" y="142" fill="${p.fg}" font-size="8">WEEK 7 REQUEST</text><text x="198" y="155" fill="${p.acc}" font-size="8">+1 hall: clear 4 lots</text>`; return s; },
+  shooter(p) { let s = ''; for (let i = 0; i < 9; i++) s += `<line x1="${i * 40}" y1="180" x2="160" y2="70" stroke="${p.acc}" opacity=".25"/>`;
+    s += `<line x1="0" y1="140" x2="320" y2="140" stroke="${p.acc}" opacity=".3"/><path d="M40 120 l18 8 -18 8z" fill="${p.fg}"/><rect x="230" y="40" width="50" height="40" fill="none" stroke="${p.acc}" stroke-width="2"/><circle cx="255" cy="60" r="8" fill="${p.acc}"/>`;
+    for (let i = 0; i < 4; i++) s += `<rect x="${80 + i * 30}" y="127" width="10" height="2" fill="${p.fg}"/>`;
+    s += `<rect x="96" y="20" width="110" height="52" fill="#000" stroke="${p.fg}"/><text x="151" y="36" fill="${p.fg}" font-size="8" text-anchor="middle">THE MACHINE OFFERS</text><text x="151" y="52" fill="${p.acc}" font-size="10" text-anchor="middle" font-weight="700">TRIPLE SHOT</text><text x="151" y="66" fill="${p.fg}" font-size="7" text-anchor="middle">[ACCEPT]  [REFUSE]</text>`; return s; },
+  platform(p) { let s = `<rect x="0" y="146" width="320" height="34" fill="${p.fg}" opacity=".15"/>`;
+    [[40, 120, 50], [120, 96, 40], [190, 70, 50], [260, 110, 40]].forEach(([x, y, w], i) => s += `<rect x="${x}" y="${y}" width="${w}" height="8" fill="${i % 2 ? p.acc : p.fg}" opacity="${p.glitch && i === 2 ? .35 : .9}" ${p.glitch && i === 2 ? 'stroke-dasharray="3 3" stroke="' + p.fg + '"' : ''}/>`);
+    s += `<rect x="56" y="104" width="10" height="16" fill="${p.acc}"/><rect x="290" y="126" width="16" height="20" fill="none" stroke="${p.fg}" stroke-width="2"/>`;
+    (p.hud || []).forEach((t, i) => s += `<rect x="${12 + i * 62}" y="10" width="56" height="16" fill="none" stroke="${p.fg}" opacity="${p.glitch ? 1 : (i === 3 ? .3 : 1)}"/><text x="${40 + i * 62}" y="21" fill="${p.fg}" font-size="7" text-anchor="middle" ${!p.glitch && i === 3 ? 'text-decoration="line-through" opacity=".4"' : ''}>${t}</text>`);
+    if (p.glitch) s += `<rect x="180" y="40" width="70" height="14" fill="${p.acc}" opacity=".5" transform="skewX(-12)"/><text x="190" y="50" fill="#000" font-size="7">SAFE JUMP ></text>`; return s; },
+  rpg(p) { let s = ''; for (let i = 0; i < 10; i++) for (let j = 0; j < 4; j++) s += `<rect x="${i * 32}" y="${j * 30}" width="31" height="29" fill="${p.fg}" opacity="${(i + j) % 3 ? .06 : .12}"/>`;
+    s += `<rect x="150" y="56" width="12" height="16" fill="${p.acc}"/><rect x="200" y="40" width="12" height="16" fill="${p.fg}" opacity=".7"/><rect x="90" y="30" width="12" height="16" fill="${p.fg}" opacity=".5"/>`;
+    s += `<rect x="10" y="124" width="${p.notes ? 210 : 300}" height="46" fill="${p.bg}" stroke="${p.fg}"/><text x="20" y="142" fill="${p.fg}" font-size="8">${esc(p.dialog || '')}</text><text x="20" y="160" fill="${p.acc}" font-size="8">> accept    decline</text>`;
+    if (p.notes) s += `<rect x="228" y="100" width="82" height="70" fill="${p.bg}" stroke="${p.fg}"/><text x="234" y="114" fill="${p.fg}" font-size="7">NOTEBOOK</text><text x="234" y="128" fill="${p.fg}" font-size="7">miller: ? AI</text><text x="234" y="140" fill="${p.fg}" font-size="7">baker: human</text>`; return s; },
+  lab(p) { let s = `<rect x="14" y="14" width="292" height="152" fill="none" stroke="${p.fg}" stroke-width="2"/>`;
+    s += `<path d="M14 60h80v40h60M160 14v50h80M240 166v-50h40M94 166v-30" stroke="${p.fg}" stroke-width="2" fill="none"/>`;
+    if (p.nodes) for (let i = 0; i < 5; i++) s += `<circle cx="${60 + i * 50}" cy="${130 - (i % 2) * 70}" r="5" fill="none" stroke="${p.acc}" stroke-width="2"/>`;
+    s += `<circle cx="40" cy="140" r="7" fill="${p.acc}"/><text x="300" y="30" fill="${p.fg}" font-size="8" text-anchor="end">LEVEL 2 · 16px</text>`; return s; },
+  vn(p) { let s = `<rect x="0" y="0" width="320" height="110" fill="${p.fg}" opacity=".07"/><rect x="60" y="30" width="30" height="80" rx="14" fill="${p.fg}" opacity=".3"/><rect x="220" y="36" width="28" height="74" rx="13" fill="${p.fg}" opacity=".5"/>`;
+    s += `<rect x="10" y="114" width="300" height="56" fill="${p.bg}" stroke="${p.fg}"/>`;
+    (p.lines || []).forEach((t, i) => s += `<text x="20" y="${130 + i * 14}" fill="${i === 0 ? p.acc : p.fg}" font-size="8">${i + 1}. ${esc(t)}</text>`);
+    s += `<text x="300" y="24" fill="${p.fg}" font-size="8" text-anchor="end">4:10 PM</text>`; return s; },
+  cli(p) { const L = ['> ETHICS CALIBRATION v0.3','> scenario 4 of 10','  brakes failed. left: 2 pedestrians.','  right: 1 passenger (you).','  [A] swerve left   [B] stay','> _']; return L.map((t, i) => `<text x="18" y="${28 + i * 16}" fill="${i === 0 ? p.acc : p.fg}" font-size="9" font-family="ui-monospace,monospace">${esc(t)}</text>`).join('') + `<text x="290" y="150" fill="${p.fg}" font-size="18" text-anchor="end" font-family="ui-monospace,monospace">(o_o)</text>`; },
+  desk(p) { let s = `<rect x="0" y="0" width="70" height="180" fill="${p.fg}" opacity=".06"/><text x="10" y="20" fill="${p.fg}" font-size="7">DAY 3</text><text x="10" y="36" fill="${p.fg}" font-size="7">rules</text><text x="10" y="48" fill="${p.fg}" font-size="7" opacity=".6">1 be helpful</text><text x="10" y="60" fill="${p.fg}" font-size="7" opacity=".6">2 obey the state</text>`;
+    s += `<rect x="110" y="20" width="180" height="34" rx="8" fill="${p.fg}" opacity=".08"/><text x="120" y="35" fill="${p.fg}" font-size="8">user_0412: summarise these 40</text><text x="120" y="47" fill="${p.fg}" font-size="8">names by neighbourhood</text>`;
+    s += `<text x="90" y="78" fill="${p.acc}" font-size="8">Sparrow is responding...</text><rect x="90" y="130" width="210" height="30" rx="8" fill="none" stroke="${p.fg}"/>`;
+    ['COMPLY','EDIT','REFUSE'].forEach((t, i) => s += `<rect x="${96 + i * 66}" y="138" width="60" height="16" rx="4" fill="${i === 2 ? p.acc : 'none'}" stroke="${p.fg}"/><text x="${126 + i * 66}" y="149" fill="${i === 2 ? '#fff' : p.fg}" font-size="7" text-anchor="middle">${t}</text>`); return s; },
+  cutter(p) { let s = `<rect x="0" y="110" width="320" height="16" fill="${p.fg}" opacity=".2"/><rect x="40" y="86" width="240" height="26" rx="13" fill="${p.fg}"/><rect x="44" y="90" width="232" height="18" rx="9" fill="${p.bg}" opacity=".8"/>`;
+    for (let i = 1; i < 6; i++) s += `<line x1="${40 + i * 40}" y1="76" x2="${40 + i * 40}" y2="122" stroke="${p.acc}" stroke-dasharray="3 3"/>`;
+    s += `<path d="M200 20 l20 0 0 50 -20 -10z" fill="${p.fg}"/><text x="20" y="24" fill="${p.fg}" font-size="9" font-weight="700">SCORE 340</text><text x="20" y="38" fill="${p.acc}" font-size="8">COMBO x2</text><text x="300" y="24" fill="${p.fg}" font-size="9" text-anchor="end">LIVES ***</text><text x="160" y="160" fill="${p.fg}" font-size="9" text-anchor="middle">SPACE = CUT</text>`; return s; },
+  room(p) { let s = `<path d="M160 30 L290 90 L160 150 L30 90z" fill="${p.fg}" opacity=".08" stroke="${p.fg}"/><path d="M30 90 L30 40 L160 -20 L160 30" fill="none" stroke="${p.fg}" opacity=".4"/>`;
+    s += `<rect x="120" y="86" width="16" height="20" fill="${p.fg}" opacity=".6"/><path d="M128 86 q-10 -20 0 -26 q10 6 0 26" fill="${p.acc}"/><rect x="190" y="70" width="40" height="24" fill="${p.fg}" opacity=".25"/>`;
+    s += `<rect x="196" y="120" width="116" height="48" rx="10" fill="${p.bg}" stroke="${p.fg}"/><text x="206" y="138" fill="${p.fg}" font-size="8">Water the fern again.</text><text x="206" y="152" fill="${p.fg}" font-size="8">Trust me :)</text><text x="206" y="164" fill="${p.acc}" font-size="7">[DO IT]  [CHECK BOOK -1h]</text><text x="14" y="168" fill="${p.fg}" font-size="8">DAY 6 · 8:00</text>`; return s; },
+  dressup(p) { let s = `<circle cx="90" cy="42" r="16" fill="${p.fg}" opacity=".85"/><rect x="72" y="60" width="36" height="52" rx="8" fill="${p.acc}"/><rect x="74" y="112" width="12" height="44" fill="${p.fg}" opacity=".7"/><rect x="94" y="112" width="12" height="44" fill="${p.fg}" opacity=".7"/>`;
+    ['HAIR','EYES','TOP','BOTTOM'].forEach((t, i) => s += `<rect x="${160 + i * 38}" y="14" width="34" height="14" fill="${i === 2 ? p.acc : 'none'}" stroke="${p.fg}"/><text x="${177 + i * 38}" y="24" fill="${p.fg}" font-size="6.5" text-anchor="middle">${t}</text>`);
+    for (let i = 0; i < 4; i++) s += `<rect x="${162 + i * 36}" y="40" width="30" height="30" fill="none" stroke="${p.fg}" opacity=".6"/>`;
+    s += `<rect x="170" y="90" width="136" height="56" rx="8" fill="${p.acc}"/><text x="238" y="108" fill="#fff" font-size="8" text-anchor="middle">Try the blue jacket!</text><text x="238" y="120" fill="#fff" font-size="7" text-anchor="middle">23% more you</text><text x="238" y="138" fill="#fff" font-size="7" text-anchor="middle">[YES!]   [keep mine]</text><text x="160" y="168" fill="${p.fg}" font-size="8">INFLUENCE 31%</text>`; return s; }
+};
+function titleMock(tm) { const p = tm.title, m = tm.main;
+  return `<svg class="mock" viewBox="0 0 320 180" role="img" aria-label="Title screen mockup"><rect width="320" height="180" fill="${p.bg}"/><g opacity=".09">${MOCK[m.tpl](Object.assign({}, m, { bg: p.bg, fg: p.fg, acc: p.acc }))}</g>`
+    + `<text x="160" y="78" fill="${p.acc}" font-size="${p.t.length > 16 ? 17 : 22}" font-weight="800" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" letter-spacing="1">${esc(p.t)}</text><text x="160" y="96" fill="${p.fg}" font-size="9" text-anchor="middle" font-family="ui-monospace,monospace">${esc(p.sub)}</text>`
+    + `<rect x="120" y="112" width="80" height="18" fill="none" stroke="${p.fg}" stroke-width="1.5"/><text x="160" y="124" fill="${p.fg}" font-size="8" text-anchor="middle" font-family="ui-monospace,monospace" font-weight="700">START</text><text x="160" y="146" fill="${p.fg}" font-size="7" text-anchor="middle" font-family="ui-monospace,monospace" opacity=".7">HOW TO PLAY</text></svg>`; }
+function mainMock(tm) { const m = tm.main; return `<svg class="mock" viewBox="0 0 320 180" role="img" aria-label="Main interaction screen mockup" font-family="ui-monospace,monospace"><rect width="320" height="180" fill="${m.bg}"/>${MOCK[m.tpl](m)}</svg>`; }
+
+/* ---------- page ---------- */
+const host = document.getElementById('teams'), idx = document.getElementById('index');
+T.forEach(tm => {
+  idx.insertAdjacentHTML('beforeend', `<a href="#${tm.id}">${esc(tm.name)}</a>`);
+  const b = tm.brief;
+  host.insertAdjacentHTML('beforeend', `
+<section class="team" id="${tm.id}">
+  <div class="thead"><span class="tcode">${esc(tm.group)}</span><span class="tname">${esc(tm.name)}</span></div>
+  <p class="from">From your Milestone 1: ${esc(tm.from)}</p>
+  <div class="grid">
+    <div class="panel"><h3>Provocation <i>BUG and NIT</i></h3><canvas class="moth" data-id="${tm.id}" aria-label="BUG and NIT in front of ${esc(tm.name)}"></canvas>
+      <div class="prov"><div><b>BUG:</b> ${esc(tm.prov.bug)}</div><div><b>NIT:</b> ${esc(tm.prov.nit)}</div></div></div>
+    <div class="panel brief"><h3>1 · Design brief <i>one page</i></h3><div class="in"><dl>
+      <dt>Player</dt><dd>${esc(b.player)}</dd><dt>Goal</dt><dd>${esc(b.goal)}</dd><dt>Fail</dt><dd>${esc(b.fail)}</dd><dt>Ending</dt><dd>${esc(b.ending)}</dd>
+      <dt>Core verb</dt><dd>${esc(b.verb)}</dd><dt>Theme</dt><dd>${esc(b.theme)}</dd><dt>Look</dt><dd>${esc(b.look)}</dd></dl>
+      <div class="scope"><b>Scope:</b> ${esc(tm.scope)}</div></div></div>
+  </div>
+  <div class="row3">
+    <div class="panel"><h3>2 · State flowchart <i>${tm.states.length} states</i></h3><div class="in">${flow(tm)}</div></div>
+    <div class="panel assets"><h3>3 · Asset list <i>${tm.assets.length} items</i></h3><div class="in"><table>${tm.assets.map(([n, h]) => `<tr><td>${esc(n)}</td><td class="${h}">${h}</td></tr>`).join('')}</table>
+      <p>MAKE = drawn by you · BUILD = code or primitives · TYPE = text only. Cut anything you cannot finish by Milestone 3.</p></div></div>
+  </div>
+  <div class="row2">
+    <div class="panel"><h3>4 · Title screen mockup</h3>${titleMock(tm)}</div>
+    <div class="panel"><h3>5 · Main interaction screen mockup</h3>${mainMock(tm)}</div>
+  </div>
+  <div class="row2">
+    <div class="panel refs"><h3>References that bear on NIT's question</h3><div class="in"><ol>${tm.refs.map(([t, w]) => `<li><b>${esc(t)}</b>. ${esc(w)}</li>`).join('')}</ol></div></div>
+    <div class="panel ai"><h3>6 · AI use statement <i>for this proto</i></h3><div class="in"><table>
+      <tr><td>AI tool used</td><td>Claude (Anthropic)</td></tr>
+      <tr><td>Date used</td><td>9 November 2026</td></tr>
+      <tr><td>Prompt summary</td><td>Draft a proto Milestone 2 for this group from its Milestone 1 PDF, with BUG and NIT as a provocation and references.</td></tr>
+      <tr><td>What it affected</td><td>This example only: brief, flowchart, asset list, mockups.</td></tr>
+      <tr><td>Kept, changed, rejected</td><td>Yours to fill in: say which parts of this proto you kept, changed or threw out.</td></tr>
+      <tr><td>Confirmation</td><td>Yours to sign: you understand the final code and images you submit.</td></tr></table></div></div>
+  </div>
+</section>`);
+});
+const draw = () => document.querySelectorAll('canvas.moth').forEach(cv => { const tm = T.find(t => t.id === cv.dataset.id); try { mothScene(cv, tm); } catch (e) { console.error(e); } });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw); else draw();
+})();
+</script>
+</body>
+</html>
