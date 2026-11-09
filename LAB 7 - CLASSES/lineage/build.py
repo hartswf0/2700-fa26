@@ -183,6 +183,24 @@ FILMS = [
        sound="Paper, cloth, flour, rope and ash; a candle, a lamp, moonlight on glass, a door, a witness's whisper; a twelve-note chord when the film stops; and a clock that speeds up until the fire.",
        code='Exact counting by dynamic programming over packed states, checked against brute-force enumeration, with a MAP-Elites grid in place of a single score.',
        builds="A third film after Calvino: the copybook machine from The Burning of the Abominable House rebuilt with The House of Dust's four parts, so room and light decide who knows, and the films are counted instead of sampled."),
+  dict(dir='house-taken-over', title='House Taken Over', sub='a house read as a graph of rooms and doors, losing rooms to whoever is heard on the other side', source='After Cortázar',
+       line=('Irene', 'Then we will live on this side.'),
+       picture="A Buenos Aires house drawn as an architectural plan and read as a graph: rooms as nodes, doors as edges, a red search spreading from Irene's room. Scenes in elevation (Irene knitting on her sofa, the oak door at the end of the corridor, the iron gate in the tiled vestibule, the street at night) keep the plan in the corner, with the rooms that are lost shaded dark.",
+       sound='A clock, two knitting needles, a kettle, a bolt, an iron gate, plates, stamp-album pages, breathing at night, and the sounds from the other side filtered as if through a door.',
+       code='Breadth-first search over a graph of rooms and doors: what is reachable, and how one shut door cuts it.',
+       builds="The first film of The House That Language Built: a house that two people lose a door at a time, counted as the rooms still reachable from Irene's room."),
+  dict(dir='crooked-house', title='And He Built a Crooked House', sub='an eight-room house built as an unfolded tesseract, folded up by an earthquake', source='After Heinlein',
+       line=('Narrator', 'Seen in three dimensions, a four-dimensional figure always looks crooked.'),
+       picture='A tesseract computed from its sixteen corners, rotated in four dimensions and projected to the page; a toothpick-and-clay model on a table; eight cubes sliding into a cross on a Hollywood hillside; the room graph of eight rooms and twenty-four touching pairs; a tunnel of windows with the same three people four rooms away; four study windows onto a skyscraper, an upside-down sea, bare paper, and a yellow desert.',
+       sound='Toothpicks on a table, a stair sliding down from the ceiling, footsteps up four flights, two earthquakes, a rosebush, a blind going up four times, wind on the desert, and an old truck.',
+       code="Four-dimensional rotation and projection, the hypercube's vertex and edge counts, and its cell adjacency graph.",
+       builds="The second film of The House That Language Built: a house whose plan is a tesseract, so its doors and stairs follow the hypercube's adjacency rather than the street's."),
+  dict(dir='house-of-asterion', title='The House of Asterion', sub='a house of identical courtyards on a torus, and the count of where its one inhabitant could be', source='After Borges',
+       line=('Asterion', 'Only two things seem to happen once. Above, the sun. Below, Asterion.'),
+       picture='Stone galleries of identical arches; a bull-headed puppet running, hiding by a pool, falling and pretending to sleep; a street with a temple of the axes and a crowd that flees; a plan of 196 identical courtyards on a torus with the set of places he could be shaded gold; nine figures lying in the galleries; and a morning scene with Theseus, Ariadne and a red thread.',
+       sound='Wind in stone galleries, running hooves, breathing, a crowd and thrown stones, nine falls, a far set of footsteps, and a bell in the morning.',
+       code='Localization on a torus: keeping the set of positions consistent with moves and observations, and how landmarks make it shrink.',
+       builds='The third film of The House That Language Built: a house where every place is another place, until the bodies of the nine make one courtyard different from the next.'),
 ]
 
 # The Cyberiad, in book order (as in the course's edition), plus the one story from outside it.
@@ -210,7 +228,7 @@ def dur(d):
     f = os.path.join(ROOT, d, d + '.mp4')
     s = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
     return s
-IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source', 'Theory building: what you understand, not what you produced', 'Counting and pruning: how rules shrink a search', 'Forecasting by rendering: a picture as a prediction', 'Counting instead of sampling: dynamic programming and quality-diversity']
+IDEAS = ['Parameters and the rule', 'The draw loop, and who runs it', 'Recursion', '2D arrays, neighbours and feedback', 'Arrays: adding and removing', 'Randomness and fixed thresholds', 'Interfaces: same methods, different objects', 'Filtering: a test that keeps what passes', 'Objects that hold references to other objects', 'Strings and generative text', 'State: what an object has already accepted', 'Copying against referencing: what moves when a mind is moved', 'Measurement: a gauge reads only what it was built to read', 'Testing: expected value against actual value', 'Equality against identity: two objects alike in every field', 'Distributed control: no single part holds the brain', 'Machine-readable output: text written for other programs', 'Generative text from a corpus: continuing an author', 'Measuring information: how surprising each word is', 'The Turing test: what a judge program can measure', 'Text for other programs: one writes, one summarises', 'Keeping possibilities: many readings, none deleted', 'One interface, four implementations', 'Stated against defaulted: what a description leaves out', 'Provenance: every fact with its source', 'Theory building: what you understand, not what you produced', 'Counting and pruning: how rules shrink a search', 'Forecasting by rendering: a picture as a prediction', 'Counting instead of sampling: dynamic programming and quality-diversity', 'Reachability: breadth-first search on a floor plan', 'Four dimensions: rotating and projecting a hypercube', 'Where am I: belief sets on a symmetric grid']
 for i, f in enumerate(FILMS):
     f['n'] = i + 1; f['sec'] = dur(f['dir']); f['idea'] = IDEAS[i]
 num = {f['dir']: f['n'] for f in FILMS}
@@ -220,7 +238,7 @@ made = sum(1 for b in BOOK if b[1] and not b[1].startswith('reel'))
 
 
 # ---------------- the videotext: data for the contents page and the reader ----------------
-TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er', 'architect-never-built': 'an', 'abominable-house': 'ah', 'house-is-occupied': 'hi', 'by-what-light': 'bw'}
+TIMING = {'seventh-sally': 'sally', 'non-serviam': 'ns', 'story-machines': 'sm', 'altruizine': 'al', 'world-saved': 'ws', 'dragons': 'dr', 'ferrix': 'fx', 'sixth-sally': 'ps', 'gargantius': 'gg', 'electronic-bard': 'eb', 'trurls-prescription': 'tp', 'mischief-of-balerion': 'mb', 'femfatalatron': 'ff', 'trurls-machine': 'tm', 'good-shellacking': 'gs', 'offer-of-krool': 'kk', 'bitic-literature': 'bl', 'bitic-mimesis': 'bm', 'bitic-theology': 'bt', 'bitic-apostasy': 'ba', 'bitic-introduction': 'bi', 'theory-of-possibilities': 'tq', 'congress-of-doors': 'cd', 'edifiction-history': 'eh', 'empty-room': 'er', 'architect-never-built': 'an', 'abominable-house': 'ah', 'house-is-occupied': 'hi', 'by-what-light': 'bw', 'house-taken-over': 'ht', 'crooked-house': 'ch', 'house-of-asterion': 'as'}
 films = {}
 for f in FILMS:
     d = f['dir']; T = json.load(open(os.path.join(ROOT, d, 'film-src', 'timing', TIMING[d] + '.json')))
@@ -278,7 +296,7 @@ open(os.path.join(HERE, 'index.html'), 'w').write(page)
 # ---------------- the Cyberiad page: a cinema, every film in book order ----------------
 # Works from a plain folder or drive: no fetch, no server, fonts and films by relative path.
 byd = {f['dir']: f for f in FILMS}
-BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None), ('The Burning of the Abominable House', 'abominable-house', None), ('The House Is Occupied', 'house-is-occupied', None), ('By What Light', 'by-what-light', None), ('The Theory of Possibilities', 'theory-of-possibilities', None)]
+BOOK_PLUS = list(BOOK) + [('A History of Bitic Literature', 'bitic-literature', None), ('A History of Bitic Literature: The Introduction', 'bitic-introduction', None), ('A History of Bitic Literature: Monoetics and Mimesis', 'bitic-mimesis', None), ('A History of Bitic Literature: Sophocrisis and Apostasy', 'bitic-apostasy', None), ('A History of Bitic Literature: Theobitistics', 'bitic-theology', None), ('The Burning of the Abominable House', 'abominable-house', None), ('The House Is Occupied', 'house-is-occupied', None), ('By What Light', 'by-what-light', None), ('House Taken Over', 'house-taken-over', None), ('And He Built a Crooked House', 'crooked-house', None), ('The House of Asterion', 'house-of-asterion', None), ('The Theory of Possibilities', 'theory-of-possibilities', None)]
 reel, part = [], ''
 for title, d, nxt in BOOK_PLUS:
     if title.startswith('How the World'): part = 'Three Early Stories'
@@ -287,6 +305,7 @@ for title, d, nxt in BOOK_PLUS:
     if title.startswith('Non Serviam'): part = 'From A Perfect Vacuum'; title = 'Non Serviam'
     if title.startswith('A History of Bitic'): part = 'From Imaginary Magnitude'
     if d == 'abominable-house': part = 'After Calvino'
+    if d == 'house-taken-over': part = 'The House That Language Built'
     if d == 'theory-of-possibilities': part = 'Afterword'
     if d == 'bitic-literature': title = 'A History of Bitic Literature, after the premise'
     f = byd.get(d)

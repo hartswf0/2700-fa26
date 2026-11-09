@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>House Taken Over &middot; Lab 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--paper:#f4f2ea;--card:#ebe3cf;--yellow:#ffdc00;--grey:#6d695f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
+header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 22px;border-bottom:2px solid var(--ink);font:700 12px "IBM Plex Mono",monospace;letter-spacing:.08em}
+header a{color:var(--ink);text-decoration:none;padding:5px 8px;border:1.5px solid var(--ink)}
+header a:hover{background:var(--yellow)}
+main{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+h1{font:400 54px/1 "IM Fell English",Georgia,serif;margin:6px 0 6px}
+.sub{font:italic 22px "IM Fell English",Georgia,serif;margin:0 0 22px}
+video{width:100%;display:block;border:2px solid var(--ink);background:var(--card);aspect-ratio:16/9}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}h1{font-size:40px}}
+h2{font:700 12px "IBM Plex Mono",monospace;letter-spacing:.14em;margin:0 0 14px;padding-top:12px;border-top:2px solid var(--ink)}
+ol.lines{margin:0 0 30px;padding:0;list-style:none;counter-reset:l}
+ol.lines li{font:23px/1.3 "IM Fell English",Georgia,serif;margin:0 0 14px}
+ol.lines span{display:block;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grey);margin-bottom:2px;text-transform:uppercase}
+.note p{font-size:16px;line-height:1.6;margin:0 0 14px;max-width:60ch}
+.note code{font:500 14px "IBM Plex Mono",monospace;background:#fff;border:1px solid #d8d2c2;padding:1px 4px}
+.script p{font:17px/1.5 "IM Fell English",Georgia,serif;margin:0 0 8px}
+.script p.cmd{font:700 14px "IBM Plex Mono",monospace;margin:0 0 10px}
+.script p.out{font:400 14px "IBM Plex Mono",monospace;margin:0 0 8px;color:#3d3a33}
+.script p.fulcrum{background:var(--yellow);padding:2px 6px;margin-left:-6px}
+.src{font-size:13px;color:var(--grey);margin-top:26px}
+.src a{color:inherit}
+.script h3{font:700 11px "IBM Plex Mono",monospace;letter-spacing:.12em;color:var(--grey);margin:22px 0 8px}
+.stack{font:500 13px/1.7 "IBM Plex Mono",monospace;margin:0 0 26px;padding:0;list-style:none}
+.stack li{padding-left:calc(var(--d)*14px)}
+</style>
+</head>
+<body>
+<header><a href="../index.html">LAB 7</a><a href="../lineage/index.html">ALL FILMS</a><span style="padding:5px 2px">30 / 32</span><a href="../by-what-light/index.html">&larr; BY WHAT LIGHT</a><a href="../crooked-house/index.html">AND HE BUILT A CROOKED HOUSE &rarr;</a></header>
+<main>
+<h1>House Taken Over</h1>
+<p class="sub">a house read as a graph of rooms and doors, losing rooms to whoever is heard on the other side</p>
+<video controls preload="metadata" poster="house-taken-over.jpg" src="house-taken-over.mp4"></video>
+<div class="cols">
+<section class="note">
+<h2>EIGHT LINES</h2>
+<ol class="lines"><li><span>The brother</span>Some day distant cousins would pull the house down and sell the bricks.</li><li><span>The brother</span>Fifteen rooms with the door open. Eight with it shut.</li><li><span>The brother</span>I could watch her hands for hours: the needles going, the balls of yarn jumping in the basket.</li><li><span>Irene</span>Then we will live on this side.</li><li><span>The brother</span>We were all right. Bit by bit we stopped thinking, and it turned out a person can live that way.</li><li><span>The brother</span>In the kitchen we made enough noise with the plates. In the other rooms we walked slowly and kept quiet.</li><li><span>The brother</span>Her knitting had come off her hands. The yarn was running back under the gate, and she let the rest drop.</li><li><span>The brother</span>I locked the front door and threw the key down the drain, so that no poor thief would go into the house at that hour, the way it was now.</li></ol>
+<h2>HOW IT IS MADE</h2>
+<p>This is the first film of <b>The House That Language Built</b>, three films after short stories in which a house is made, unmade or ruled by the way it is described. A brother and his sister Irene, both near forty, live alone in a big old family house. One night he hears something behind the oak door at the end of the corridor, shuts it and bolts it, and the two of them live on the near side. Later the sound comes from their own side, and they leave through the iron gate and the front door with nothing.</p>
+<p>The film reads the house the way a program would. The plan is a graph: each room is a node, each door an edge. What the two of them have is every room that can be reached from Irene&rsquo;s room without going through a shut door. The film computes that with a breadth-first search, and the red wave on the plan is the search spreading one door at a time. With the oak door open, fifteen rooms. Shut, eight. After the iron gate, one, the vestibule. After the front door is locked and the key is gone, none. Whoever takes the house over is never drawn and never counted as anything but a shut door; they are only heard, through walls, as a knocked chair and a low conversation.</p>
+<p>The people are the jointed puppets of the earlier films. The plan stays in the top corner of every scene in the house, so the count is always on screen. The sound keeps the house&rsquo;s small noises: a clock, two knitting needles, a kettle, a bolt, a drawer, plates, stamp-album pages, breathing at night, and the sounds from the other side, filtered as if through a door.</p>
+<h2>FOR THE BENCH</h2>
+<p>Write the house as data: an array of rooms and an array of doors, each door naming the two rooms it joins and whether it is shut. Then write <code>reach(start)</code>: put the start room in a queue, and while the queue is not empty take a room out, look at every open door it touches, and add the room on the other side if you have not seen it. Return how many rooms you saw. Now shut one door and run it again. Find the one door whose shutting loses the most rooms; that is the oak door. Then give the house a second way round to the back (a door from the kitchen into the dining room) and see how the answer changes.</p>
+<p class="src">After Julio Cort&aacute;zar, &ldquo;Casa tomada&rdquo; (1946), translated by Paul Blackburn as &ldquo;House Taken Over&rdquo;. Paraphrased; nothing is quoted. <a href="house-taken-over.mp4" download>Download the film (mp4)</a>.</p>
+
+</section>
+<section class="script"><h2>THE SCRIPT</h2><h3>THE HOUSE</h3><p><b>The brother.</b> We liked the house because it was old and big, and because it still held our great-grandparents, our grandfather, our parents, and all of our childhood.</p><p><b>The brother.</b> There was room in it for eight people who need never meet. Irene and I lived in it alone.</p><p><b>The brother.</b> We were nearly forty. We took it for granted that the two of us were how the family would end, here.</p><p class=fulcrum><b>The brother.</b> Some day distant cousins would pull the house down and sell the bricks.</p><h3>THE PLAN</h3><p><b>The brother.</b> This is the plan. A vestibule with tiles. An iron gate. A living room, with our two bedrooms on either side of it.</p><p><b>The brother.</b> Then a corridor. Just before it ends, a narrow passage turns off to the bath and the kitchen.</p><p><b>The brother.</b> At the end of the corridor, a heavy oak door. Behind it, the dining room, the room with the tapestries, the library, and three big bedrooms at the back.</p><p><b>The brother.</b> With the oak door open you could feel how big the house was. With it shut, it was like one of the small flats they build now.</p><p class=fulcrum><b>The brother.</b> Fifteen rooms with the door open. Eight with it shut.</p><h3>THE DAYS</h3><p><b>The brother.</b> We got up at seven and cleaned. At eleven I went to the kitchen. We ate at noon exactly.</p><p><b>The brother.</b> After that Irene knitted on her sofa until night. Sweaters, socks, bed jackets. Sometimes she pulled a whole jacket apart because something in it did not please her.</p><p><b>The brother.</b> Every Saturday I took the tram downtown for her wool, and asked in the bookshops for new French books. Nothing new had come since nineteen thirty-nine.</p><p class=fulcrum><b>The brother.</b> I could watch her hands for hours: the needles going, the balls of yarn jumping in the basket.</p><h3>THE OAK DOOR &middot; 20:00</h3><p><b>The brother.</b> It happened simply. It was eight at night. Irene was knitting, and I went to put water on for mate.</p><p><b>The brother.</b> The oak door was half open. As I turned toward the kitchen I heard a sound from the dining room, or else the library. A chair falling on a carpet, or a low conversation.</p><p><b>The brother.</b> Then I heard it in the passage behind the door. I threw myself against the door and shut it, and leaned on it. The key, by luck, was in our side of the lock. I ran the big bolt as well.</p><p><b>The brother.</b> I made the mate, carried the tray to her room, and told her I had shut the corridor door. They had taken the back part.</p><p><b>Irene.</b> Are you sure?</p><p class=fulcrum><b>Irene.</b> Then we will live on this side.</p><p><b>The brother.</b> She took up her knitting again, slowly. It was a gray vest. I liked that vest.</p><h3>THIS SIDE</h3><p><b>The brother.</b> At first it was hard. My French books were in the library. Irene's writing paper and her winter slippers were back there, and my pipe.</p><p><b>The brother.</b> We would shut a drawer and look at each other. It was not there. One more thing on the other side.</p><p><b>The brother.</b> But the cleaning was done by eleven now. Irene helped me in the kitchen. We made cold suppers and ate them at the table in her room.</p><p><b>The brother.</b> She had more time to knit. I sorted our father's stamps.</p><p class=fulcrum><b>The brother.</b> We were all right. Bit by bit we stopped thinking, and it turned out a person can live that way.</p><h3>AT NIGHT</h3><p><b>The brother.</b> At night every sound in the house carried. Each of us could hear the other breathe, cough, and feel for the light switch.</p><p><b>The brother.</b> If Irene spoke in her sleep, I was awake at once. The voice did not seem to come from her throat.</p><p class=fulcrum><b>The brother.</b> In the kitchen we made enough noise with the plates. In the other rooms we walked slowly and kept quiet.</p><h3>THE IRON GATE &middot; 23:00</h3><p><b>The brother.</b> It was almost the same scene again, except for what came of it. I was thirsty, and I told Irene I would fetch a glass of water.</p><p><b>The brother.</b> From her doorway I heard it. The bath, or the kitchen. Irene saw me stop, and came and stood beside me.</p><p><b>The brother.</b> We listened. It was this side of the oak door now. The bath, the kitchen, then the bend of the hall, close beside us.</p><p><b>The brother.</b> I took her arm and we ran to the iron gate without looking back. I slammed it. In the vestibule there was nothing to hear.</p><p><b>Irene.</b> They have taken our side.</p><p class=fulcrum><b>The brother.</b> Her knitting had come off her hands. The yarn was running back under the gate, and she let the rest drop.</p><h3>THE STREET &middot; 23:00</h3><p><b>The brother.</b> I asked if she had brought anything.</p><p><b>Irene.</b> Nothing.</p><p><b>The brother.</b> We had what we were wearing. I thought of fifteen thousand pesos in my wardrobe. Too late.</p><p><b>The brother.</b> My watch said eleven at night. I put my arm around her. I think she was crying.</p><p class=fulcrum><b>The brother.</b> I locked the front door and threw the key down the drain, so that no poor thief would go into the house at that hour, the way it was now.</p></section>
+</div>
+</main>
+</body>
+</html>
