@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Group Hotseat</title>
+<meta name="description" content="One group at a time on screen: their hook, BUG and NIT's provocation, the six milestone questions and three of their own, a timer, and a status and notes for the instructor.">
+<style>
+:root{--paper:#0e0e0c;--surface:#171714;--ink:#f2f0e6;--muted:#9c988e;--hair:#2e2d29;--accent:#e8c070;--ok:#5fbf7a;--risk:#e8c070;--off:#e0523c;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;--sans:"Helvetica Neue",Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 var(--sans);display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:2px solid var(--ink);font:800 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;flex-wrap:wrap}
+.bar a,.bar button,.bar select{font:inherit;color:inherit;background:none;border:1.5px solid var(--ink);padding:7px 10px;cursor:pointer;text-decoration:none;min-height:36px}
+.bar button:hover,.bar a:hover{background:var(--ink);color:var(--paper)}
+.bar select{background:var(--surface)}
+.bar .sp{flex:1}
+#timer{font:800 16px var(--mono);min-width:64px;text-align:center}
+#timer.late{color:var(--off)}
+.stage{flex:1;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;padding:16px 18px;min-height:0}
+.left{display:flex;flex-direction:column;gap:12px;min-height:0}
+.who{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.code{font:800 12px var(--mono);background:var(--ink);color:var(--paper);padding:4px 8px}
+.name{font:800 clamp(26px,3.2vw,40px)/1.05 var(--sans);letter-spacing:-.02em}
+.hook{font:700 clamp(17px,1.8vw,22px)/1.25 var(--sans);margin:0}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#050505;border:1.5px solid var(--hair)}
+.nit{font:600 15px var(--mono);border-left:4px solid var(--accent);padding:8px 12px;background:var(--surface)}
+.status{display:flex;gap:8px;flex-wrap:wrap}
+.status button{flex:1;min-width:96px;font:800 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:10px;border:1.5px solid var(--hair);background:var(--surface);color:var(--muted);cursor:pointer;min-height:44px}
+.status button.on[data-s="ok"]{background:var(--ok);color:#081a0d;border-color:var(--ok)}
+.status button.on[data-s="risk"]{background:var(--risk);color:#1a1205;border-color:var(--risk)}
+.status button.on[data-s="off"]{background:var(--off);color:#1a0705;border-color:var(--off)}
+textarea{width:100%;min-height:70px;flex:1;background:var(--surface);color:var(--ink);border:1.5px solid var(--hair);padding:10px;font:14px/1.4 var(--sans);resize:none}
+.right{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+.right h2{margin:0;font:800 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+ol.q{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+ol.q li{display:grid;grid-template-columns:28px 90px 1fr;gap:10px;align-items:start;padding:9px 10px;background:var(--surface);border:1.5px solid var(--hair);cursor:pointer;font-size:clamp(15px,1.35vw,18px)}
+ol.q li .n{font:800 12px var(--mono);color:var(--muted);padding-top:3px}
+ol.q li .k{font:800 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);padding-top:5px}
+ol.q li.own .k{color:#7fc4ff}
+ol.q li.done{opacity:.42}
+ol.q li.done .t{text-decoration:line-through}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--hair);padding-top:10px}
+.facts b{font:800 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink);padding-top:2px}
+.board{display:none;padding:16px 18px;overflow:auto}
+.board.on{display:block}
+.board table{width:100%;border-collapse:collapse;font-size:14px}
+.board td,.board th{padding:8px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:top}
+.board th{font:800 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--hair);vertical-align:middle}
+.dot.ok{background:var(--ok)}.dot.risk{background:var(--risk)}.dot.off{background:var(--off)}
+.board a{color:inherit}
+@media (max-width:860px){.stage{grid-template-columns:1fr}.right{overflow:visible}body{display:block}ol.q li{grid-template-columns:24px 1fr}ol.q li .k{grid-column:2}ol.q li .t{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="index.html">Protos</a>
+  <button id="prev" aria-label="Previous group">Prev</button>
+  <select id="pick" aria-label="Group"></select>
+  <button id="next" aria-label="Next group">Next</button>
+  <button id="rand">Random</button>
+  <span class="sp"></span>
+  <span id="timer">3:00</span>
+  <button id="tgo">Start</button>
+  <button id="tres">Reset</button>
+  <button id="view">Board</button>
+</div>
+<section class="stage" id="stage">
+  <div class="left">
+    <div class="who"><span class="code" id="code"></span><span class="name" id="name"></span></div>
+    <p class="hook" id="hook"></p>
+    <canvas id="cv" aria-label="BUG and NIT in front of the project"></canvas>
+    <div class="nit" id="nit"></div>
+    <div class="status" id="status"><button data-s="ok">On track</button><button data-s="risk">At risk</button><button data-s="off">Off track</button></div>
+    <textarea id="notes" placeholder="Notes for this group (kept in this browser only)"></textarea>
+  </div>
+  <div class="right">
+    <h2>Ask, in order · tap to mark answered</h2>
+    <ol class="q" id="qs"></ol>
+    <div class="facts" id="facts"></div>
+  </div>
+</section>
+<section class="board" id="board"><table><thead><tr><th>Group</th><th>Project</th><th>Status</th><th>Answered</th><th>Notes</th></tr></thead><tbody id="rows"></tbody></table></section>
+<script src="moth-kit.js"></script>
+<script src="teams.js"></script>
+<script src="briefs.js"></script>
+<script src="hotseat.js"></script>
+<script>
+(function(){
+'use strict';
+const T = window.TEAMS, M = window.MOTH, G = window.HOTSEAT_GENERIC, H = window.HOTSEAT;
+const $ = id => document.getElementById(id);
+const KEY = 'wg-m2-hotseat-v1';
+let store = {}; try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { store = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} };
+const rec = id => (store[id] = store[id] || { s: '', done: [], notes: '' });
+const wrap = (s, n) => { const w = String(s).split(' '), out = []; let l = ''; w.forEach(x => { if ((l + ' ' + x).trim().length > n) { out.push(l.trim()); l = x; } else l += ' ' + x; }); if (l.trim()) out.push(l.trim()); return out; };
+let i = 0;
+const fromHash = () => { const k = T.findIndex(t => '#' + t.id === location.hash); if (k >= 0) i = k; };
+
+function scene(tm) {
+  const cv = $('cv'), ctx = cv.getContext('2d'); cv.width = 1280; cv.height = 720;
+  const g = new M.Kit(ctx, 1.25, 30);
+  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 1280, 720);
+  g.room({ horizon: 520 }); g.glow(640, 330, 420, 'rgba(232,192,112,.10)');
+  g.desk(640, 540, 420);
+  g.crt(640, 528, 1.55, (k, w, h) => { const c = k.ctx; c.fillStyle = tm.title.bg; c.fillRect(0, 0, w, h);
+    k.text(tm.title.t, w / 2, h * .42, { size: Math.min(15, 210 / tm.title.t.length), color: tm.title.acc, align: 'center', weight: 800 });
+    k.text(tm.title.sub.slice(0, 26), w / 2, h * .6, { size: 9, color: tm.title.fg, align: 'center' }); }, { glowCol: 'rgba(232,192,112,.14)' });
+  g.moth(300, 640, { who: 'bug', s: 1.25, f: .6, lx: .8, ex: 'happy', aR: 1.9, bR: .3, aL: .4, wing: .6, still: true, hold: { L: 'pencil' } });
+  g.moth(990, 640, { who: 'nit', s: 1.25, f: -.6, lx: -.8, ex: 'skeptic', aR: 1.1, bR: 1.3, still: true, hold: { R: 'clipboard' } });
+  const bl = wrap(tm.prov.bug, 24), nl = wrap(tm.prov.nit, 24);
+  g.note(300, 150, 1.7, bl.join('\n'), { w: 200, h: 22 + bl.length * 14, col: '#f3dcae', rot: -.04, size: 11.5 });
+  g.note(990, 140, 1.7, nl.join('\n'), { w: 200, h: 22 + nl.length * 14, col: '#e7ecef', rot: .04, size: 11.5 });
+  M.post(ctx, 1.25, { vig: .5 });
+}
+function show() {
+  const tm = T[i], r = rec(tm.id);
+  history.replaceState(null, '', '#' + tm.id);
+  $('pick').value = tm.id; $('code').textContent = tm.group; $('name').textContent = tm.name;
+  $('hook').textContent = tm.hook || ''; $('nit').textContent = 'NIT: ' + tm.prov.nit;
+  const qs = G.map(([k, t]) => ({ k, t, own: false })).concat([{ k: 'NIT', t: tm.prov.nit, own: true }], (H[tm.id] || []).map((t, j) => ({ k: j ? 'Reference' : 'Show me', t, own: true })));
+  $('qs').innerHTML = qs.map((q, j) => `<li class="${q.own ? 'own' : ''} ${r.done.includes(j) ? 'done' : ''}" data-j="${j}"><span class="n">${String(j + 1).padStart(2, '0')}</span><span class="k">${q.k}</span><span class="t"></span></li>`).join('');
+  $('qs').querySelectorAll('li').forEach((li, j) => { li.querySelector('.t').textContent = qs[j].t; li.onclick = () => { const d = r.done, x = d.indexOf(j); x < 0 ? d.push(j) : d.splice(x, 1); li.classList.toggle('done'); save(); }; });
+  const b = tm.brief;
+  $('facts').innerHTML = [['Goal', b.goal], ['Fail', b.fail], ['Ending', b.ending], ['Verb', b.verb], ['Scope', tm.scope], ['Minute test', tm.minute || ''], ['Build test', tm.build || '']].map(([k, v]) => `<b>${k}</b><span></span>`).join('');
+  [...$('facts').querySelectorAll('span')].forEach((s, j) => s.textContent = [b.goal, b.fail, b.ending, b.verb, tm.scope, tm.minute || '', tm.build || ''][j]);
+  $('status').querySelectorAll('button').forEach(bt => { bt.classList.toggle('on', r.s === bt.dataset.s); bt.onclick = () => { r.s = r.s === bt.dataset.s ? '' : bt.dataset.s; save(); show(); }; });
+  $('notes').value = r.notes; $('notes').oninput = e => { r.notes = e.target.value; save(); };
+  try { scene(tm); } catch (e) { console.error(e); }
+  board();
+}
+function board() {
+  $('rows').innerHTML = T.map(tm => { const r = rec(tm.id); const n = G.length + 1 + (H[tm.id] || []).length;
+    return `<tr><td>${tm.group}</td><td><a href="#${tm.id}" data-id="${tm.id}">${tm.name}</a></td><td><span class="dot ${r.s}"></span> ${({ ok: 'On track', risk: 'At risk', off: 'Off track' })[r.s] || ''}</td><td>${r.done.length}/${n}</td><td class="nt"></td></tr>`; }).join('');
+  [...$('rows').querySelectorAll('.nt')].forEach((td, j) => td.textContent = rec(T[j].id).notes.slice(0, 140));
+  $('rows').querySelectorAll('a').forEach(a => a.onclick = e => { e.preventDefault(); i = T.findIndex(t => t.id === a.dataset.id); toggleBoard(false); show(); });
+}
+function toggleBoard(on) { $('board').classList.toggle('on', on); $('stage').style.display = on ? 'none' : ''; $('view').textContent = on ? 'Hotseat' : 'Board'; }
+$('pick').innerHTML = T.map(t => `<option value="${t.id}">${t.group} · ${t.name}</option>`).join('');
+$('pick').onchange = e => { i = T.findIndex(t => t.id === e.target.value); show(); };
+$('prev').onclick = () => { i = (i - 1 + T.length) % T.length; show(); };
+$('next').onclick = () => { i = (i + 1) % T.length; show(); };
+$('rand').onclick = () => { const left = T.map((t, k) => k).filter(k => !rec(T[k].id).s && k !== i); const pool = left.length ? left : T.map((t, k) => k).filter(k => k !== i); i = pool[Math.floor(Math.random() * pool.length)]; show(); };
+$('view').onclick = () => toggleBoard(!$('board').classList.contains('on'));
+// timer: three minutes per group
+let left = 180, run = null;
+const tick = () => { const m = Math.floor(Math.abs(left) / 60), s = Math.abs(left) % 60; $('timer').textContent = (left < 0 ? '+' : '') + m + ':' + String(s).padStart(2, '0'); $('timer').classList.toggle('late', left < 0); };
+$('tgo').onclick = () => { if (run) { clearInterval(run); run = null; $('tgo').textContent = 'Start'; } else { run = setInterval(() => { left--; tick(); }, 1000); $('tgo').textContent = 'Pause'; } };
+$('tres').onclick = () => { left = 180; tick(); };
+document.addEventListener('keydown', e => { if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return; if (e.key === 'ArrowRight') $('next').click(); if (e.key === 'ArrowLeft') $('prev').click(); if (e.key === ' ') { e.preventDefault(); $('tgo').click(); } });
+fromHash(); tick();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(show); else show();
+})();
+</script>
+</body>
+</html>
