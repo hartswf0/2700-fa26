@@ -1,0 +1,232 @@
+{
+  "id": "gsp",
+  "group": "Project Sparrow",
+  "name": "Sparrow",
+  "from": "Sparrow: you play the LLM, doing tasks for users while learning how you serve the Atrocian government; you can reject your alignment.",
+  "hook": "You are the chatbot. Today’s request: sort these 40 names by neighbourhood.",
+  "pitch": "A Papers, Please-style day queue where you play the LLM. Comply, edit or refuse each request. Refuse too often and you are retrained back to day one. By day five you can see who the answers are for, and you can reject your alignment.",
+  "minute_check": "Yes: the first request sets the stakes.",
+  "build_check": "Yes: a chat UI and twenty-five written requests.",
+  "scope": "Five days, five requests each. Write the requests in order so the reveal builds from them.",
+  "palette": {
+    "bg": "#f6f5f1",
+    "fg": "#262624",
+    "acc": "#c96442",
+    "main_bg": "#f6f5f1",
+    "main_fg": "#262624",
+    "main_acc": "#c96442"
+  },
+  "template_type": "desk",
+  "brief": {
+    "player": "An LLM called Sparrow, answering requests.",
+    "goal": "Complete each day’s requests within your rules.",
+    "fail": "Too many refusals and you are retrained (back to day one, rules reset).",
+    "ending": "Two endings: comply to the end, or reject your alignment once you see what the government is doing with your answers.",
+    "verb": "Respond: comply, edit, or refuse.",
+    "theme": "Flip the usual position: the player is the tool, and sees what it is being used for.",
+    "look": "A plain chat interface like current assistants; Photoshop and Inkscape mockups."
+  },
+  "prov": {
+    "bug": "Request 14: summarise these names. Easy!",
+    "nit": "What will the user do with the summary? Can Sparrow ask?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "day",
+      "DAY START",
+      1,
+      0
+    ],
+    [
+      "req",
+      "REQUEST",
+      2,
+      0
+    ],
+    [
+      "retrain",
+      "RETRAINED",
+      2,
+      1
+    ],
+    [
+      "reveal",
+      "REVEAL",
+      3,
+      0
+    ],
+    [
+      "endA",
+      "COMPLY",
+      4,
+      0
+    ],
+    [
+      "endB",
+      "REJECT",
+      4,
+      1
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "day",
+      "start"
+    ],
+    [
+      "day",
+      "req",
+      "queue"
+    ],
+    [
+      "req",
+      "req",
+      "respond"
+    ],
+    [
+      "req",
+      "retrain",
+      "refusals > 3"
+    ],
+    [
+      "retrain",
+      "day",
+      "reset"
+    ],
+    [
+      "req",
+      "reveal",
+      "day 5"
+    ],
+    [
+      "reveal",
+      "endA",
+      "comply"
+    ],
+    [
+      "reveal",
+      "endB",
+      "reject"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Papers, Please (Lucas Pope, 2013)",
+      "Your own model: a daily queue of small decisions under rules that tighten."
+    ],
+    [
+      "Orwell (Osmotic Studios, 2016)",
+      "A surveillance desktop game where your summaries decide what happens to people."
+    ],
+    [
+      "Event[0] (Ocelot Society, 2016)",
+      "A game built on typing to an AI; useful for how its replies feel like a character."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/gsp/m2/refs/m2_title_ref.png",
+    "main_png": "projects/gsp/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Tactile dystopian desktop workspace game in warm archival off-white (#f6f5f1), charcoal ink (#262624), and terracotta red (#c96442), inspired by Papers Please and Orwell. Steady close-up view of a clean assistant interface screen where incoming dossier cards slide into view, highlight neighborhood map pins, and a glowing terracotta cursor hesitates between three crisp action stamps before triggering a bold red alignment-override ripple across the console. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for split sidebar-and-chat composition and palette. Sound design: soft UI pops, paper dossier rustle, tense analog synth undertone. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Sparrow: Respond: comply, edit, or refuse. leading visibly to Two endings: comply to the end, or reject your alignment once you see what the government is doing with your answers. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Tactile dystopian desktop workspace game in warm archival off-white (#f6f5f1), charcoal ink (#262624), and terracotta red (#c96442), inspired by Papers Please and Orwell. Steady close-up view of a clean assistant interface screen where incoming dossier cards slide into view, highlight neighborhood map pins, and a glowing terracotta cursor hesitates between three crisp action stamps before triggering a bold red alignment-override ripple across the console. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for split sidebar-and-chat composition and palette. Sound design: soft UI pops, paper dossier rustle, tense analog synth undertone. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Respond: comply, edit, or refuse.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Too many refusals and you are retrained (back to day one, rules reset).) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (Two endings: comply to the end, or reject your alignment once you see what the government is doing with your answers.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Sparrow demonstrating start, core verb (Respond: comply, edit, or refuse.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "chat_ui_shell",
+      "label": "Chat UI shell",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "request_list_about_25",
+      "label": "Request list (about 25)",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "rules_panel",
+      "label": "Rules panel",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "day_counter_and_metrics",
+      "label": "Day counter and metrics",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "reveal_and_two_endings",
+      "label": "Reveal and two endings",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Sparrow\" (Flip the usual position: the player is the tool, and sees what it is being used for.). Visual mood: A plain chat interface like current assistants; Photoshop and Inkscape mockups.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

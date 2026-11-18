@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Channel 0 — Group 16 (M2)</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --bg: #161616;
+    --fg: #d8d8d8;
+    --acc: #ff4fd8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: #0c0c0c;
+    color: var(--fg);
+    font-family: "Courier New", "Lucida Console", Monaco, monospace;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #wrap {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    background: var(--bg);
+    box-shadow: 0 0 64px rgba(0, 0, 0, 0.96);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  // Exact inner curved CRT glass coordinates inside room_background_around_the_tv.png (scaled to 1280x720)
+  const SCR = { x: 412, y: 186, w: 438, h: 362, r: 28 };
+
+  const params = new URLSearchParams(location.search);
+  const AUTOSTART = params.has('autostart');
+  const BASE_SEED = params.has('seed') ? (parseInt(params.get('seed'), 10) || 7) : 7;
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // --- Deterministic PRNG ---
+  function mulberry32(a) {
+    let s = a >>> 0;
+    return function() {
+      s |= 0; s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // --- Load Nano Banana Assets ---
+  const assets = {
+    room: new Image(),
+    tvRemote: new Image(),
+    channels: new Image(),
+    readyCount: 0,
+  };
+  let cleanRoomCanvas = null;
+  let darkHandCanvas = null;
+
+  function buildProcessedCanvases() {
+    if (assets.readyCount < 3) return;
+
+    // 1. Clean uncorrupted greyscale bedroom canvas for Flip 0 (matches f_001.jpg!)
+    cleanRoomCanvas = document.createElement('canvas');
+    cleanRoomCanvas.width = W;
+    cleanRoomCanvas.height = H;
+    const cctx = cleanRoomCanvas.getContext('2d');
+    cctx.drawImage(assets.room, 0, 0, W, H);
+    const imgData = cctx.getImageData(0, 0, W, H);
+    const d = imgData.data;
+
+    const mask = new Uint8Array(W * H);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      if (r > g + 34 && b > g + 24 && r > 90) {
+        mask[p] = 1;
+      }
+    }
+    const dil = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (!mask[y * W + x]) continue;
+        const y0 = Math.max(0, y - 8), y1 = Math.min(H - 1, y + 8);
+        const x0 = Math.max(0, x - 8), x1 = Math.min(W - 1, x + 8);
+        for (let yy = y0; yy <= y1; yy++) {
+          const rowOff = yy * W;
+          for (let xx = x0; xx <= x1; xx++) {
+            dil[rowOff + xx] = 1;
+          }
+        }
+      }
+    }
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const p = y * W + x;
+        if (!dil[p]) continue;
+        let baseLum = 56;
+        if (x >= 250 && x <= 1060 && y < 144) baseLum = 104;
+        else if (x >= 250 && x <= 355 && y < 580) baseLum = 92;
+        else if (x >= 1009 && x <= 1075 && y < 580) baseLum = 86;
+        else if (x >= 356 && x <= 1009 && y >= 144 && y <= 604) baseLum = 58;
+        else if (y > 580) baseLum = 44;
+        const grain = (((x * 13 + y * 37) % 19) - 9) * 0.9;
+        const v = Math.max(18, Math.min(135, baseLum + grain));
+        const idx = p * 4;
+        const onCabBorder =
+          (Math.abs(y - 144) <= 2 && x >= 355 && x <= 1010) ||
+          (Math.abs(x - 356) <= 2 && y >= 144 && y <= 604) ||
+          (Math.abs(x - 1008) <= 2 && y >= 144 && y <= 604);
+        const fv = onCabBorder ? 28 : v;
+        d[idx] = fv;
+        d[idx + 1] = fv - 1;
+        d[idx + 2] = fv - 2;
+      }
+    }
+    cctx.putImageData(imgData, 0, 0);
+
+    // 2. Darkened magenta-rimmed silhouette version of hand+remote for late SPILL state (matches f_032.jpg!)
+    darkHandCanvas = document.createElement('canvas');
+    darkHandCanvas.width = 400;
+    darkHandCanvas.height = 310;
+    const hctx = darkHandCanvas.getContext('2d');
+    hctx.drawImage(assets.tvRemote, 87, 692, 390, 297, 5, 5, 390, 297);
+    const hd = hctx.getImageData(0, 0, 400, 310);
+    const hp = hd.data;
+    const alphaCopy = new Uint8Array(400 * 310);
+    for (let i = 0, q = 0; i < hp.length; i += 4, q++) alphaCopy[q] = hp[i + 3];
+    for (let y = 1; y < 309; y++) {
+      for (let x = 1; x < 399; x++) {
+        const q = y * 400 + x;
+        const a = alphaCopy[q];
+        if (a < 25) continue;
+        const idx = q * 4;
+        const edge = (alphaCopy[q - 2] < 40 || alphaCopy[q + 2] < 40 || alphaCopy[q - 800] < 40);
+        if (edge) {
+          hp[idx] = 255; hp[idx + 1] = 79; hp[idx + 2] = 216;
+        } else {
+          const lum = hp[idx] * 0.22;
+          hp[idx] = Math.min(52, lum + 12);
+          hp[idx + 1] = Math.min(38, lum + 5);
+          hp[idx + 2] = Math.min(48, lum + 10);
+        }
+      }
+    }
+    hctx.putImageData(hd, 0, 0);
+  }
+
+  function onAssetLoad() {
+    assets.readyCount++;
+    buildProcessedCanvases();
+  }
+  assets.room.onload = onAssetLoad;
+  assets.tvRemote.onload = onAssetLoad;
+  assets.channels.onload = onAssetLoad;
+  assets.room.src = '../assets/room_background_around_the_tv.png';
+  assets.tvRemote.src = '../assets/tv_frame_and_remote.png';
+  assets.channels.src = '../assets/8_channel_loops_still_or_2_frame.png';
+
+  // --- Audio (BGM + Plastic Remote Click + CRT Static Hiss + Rising Sub-Drone) ---
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.36;
+  let audioCtx = null;
+  let audioUnlocked = false;
+  let droneOsc = null, droneGain = null;
+
+  function unlockAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        audioCtx = new AC();
+        try {
+          droneOsc = audioCtx.createOscillator();
+          droneGain = audioCtx.createGain();
+          droneOsc.type = 'sawtooth';
+          droneOsc.frequency.value = 58;
+          const lp = audioCtx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 140;
+          droneGain.gain.value = 0.0;
+          droneOsc.connect(lp).connect(droneGain).connect(audioCtx.destination);
+          droneOsc.start();
+        } catch (_) {}
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!audioUnlocked) {
+      audioUnlocked = true;
+      bgm.play().catch(() => {});
+    }
+  }
+
+  function playRemoteClick(intensity = 0.5) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    try {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(1350, now);
+      o.frequency.exponentialRampToValueAtTime(220, now + 0.028);
+      g.gain.setValueAtTime(0.14, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.032);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.035);
+
+      const dur = 0.14 + intensity * 0.12;
+      const len = Math.floor(audioCtx.sampleRate * dur);
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.55));
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 1800;
+      const sg = audioCtx.createGain();
+      sg.gain.setValueAtTime(0.08 + intensity * 0.08, now + 0.015);
+      sg.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      src.connect(bp).connect(sg).connect(audioCtx.destination);
+      src.start(now + 0.015);
+    } catch (_) {}
+  }
+
+  function playPowerOffSfx() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    try {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(3800, now);
+      o.frequency.exponentialRampToValueAtTime(90, now + 0.45);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.5);
+      if (droneGain) droneGain.gain.setTargetAtTime(0, now, 0.2);
+    } catch (_) {}
+  }
+
+  // --- 2x2 Half-Life 2 Missing-Texture Checker Pattern (#ff4fd8 & #000000) ---
+  function makeCheckerPattern(tilePx) {
+    const pc = document.createElement('canvas');
+    pc.width = tilePx * 2;
+    pc.height = tilePx * 2;
+    const pctx = pc.getContext('2d');
+    pctx.fillStyle = '#ff4fd8';
+    pctx.fillRect(0, 0, tilePx, tilePx);
+    pctx.fillRect(tilePx, tilePx, tilePx, tilePx);
+    pctx.fillStyle = '#070507';
+    pctx.fillRect(tilePx, 0, tilePx, tilePx);
+    pctx.fillRect(0, tilePx, tilePx, tilePx);
+    return ctx.createPattern(pc, 'repeat');
+  }
+  const checkerPat16 = makeCheckerPattern(16);
+
+  // --- 8 Broadcast Channels (ordered to match Omni video progression: CH 07 -> CH 01 -> CH 03 -> ...) ---
+  const CHANNELS = [
+    {
+      num: 'CH 07',
+      mode: 'minimal7',
+      crop: [630, 308, 224, 166],
+      caption: '"you can stop thinking now"',
+    },
+    {
+      num: 'CH 01',
+      mode: 'staircase',
+      crop: [136, 70, 226, 166],
+      caption: '"DO NOT LOOK BACK"',
+    },
+    {
+      num: 'CH 03',
+      mode: 'eye',
+      crop: [136, 70, 226, 166],
+      caption: '"IT IS WATCHING"',
+    },
+    {
+      num: 'CH 04',
+      mode: 'sprite',
+      crop: [136, 557, 226, 166],
+      caption: '"THE NEXT CHANNEL EXPLAINS IT"',
+    },
+    {
+      num: 'CH 02',
+      mode: 'sprite',
+      crop: [136, 308, 226, 166],
+      caption: '"WE ALREADY DECIDED FOR YOU"',
+    },
+    {
+      num: 'CH 05',
+      mode: 'sprite',
+      crop: [630, 557, 224, 166],
+      caption: '"OUTSIDE IS MISSING. STAY HERE."',
+    },
+    {
+      num: 'CH 06',
+      mode: 'sprite',
+      crop: [136, 805, 226, 166],
+      caption: '"DON\'T PUT THE REMOTE DOWN"',
+    },
+    {
+      num: 'CH 08',
+      mode: 'static_err',
+      crop: [630, 308, 224, 166],
+      altCrop: [630, 805, 224, 166],
+      caption: '"SYSTEM ERROR"',
+    },
+  ];
+
+  let rng = mulberry32(BASE_SEED);
+  let runIdx = 0;
+
+  const game = {
+    phase: AUTOSTART ? 'ch' : 'title', // title | ch | spill | end
+    endingKind: null, // 'taken_over' | 'put_down'
+    howToOpen: false,
+    seed: BASE_SEED,
+    time: 0,
+    phaseTime: 0,
+    idleSinceFlip: 0,
+    flips: 0,
+    maxFlipsToEnd: 11,
+    chIdx: 0,
+    corruption: 0,
+    staticBurst: 0,
+    remoteClickAnim: 0,
+    remoteDropAnim: 0,
+    eyeBlink: 0,
+    glitchClusters: [],
+    wallCircuits: [],
+    sparks: [],
+  };
+
+  function initSession(seedVal, skipTitle) {
+    rng = mulberry32(seedVal);
+    game.seed = seedVal;
+    game.phase = skipTitle ? 'ch' : 'title';
+    game.endingKind = null;
+    game.howToOpen = false;
+    game.phaseTime = 0;
+    game.idleSinceFlip = 0;
+    game.flips = 0;
+    game.chIdx = 0;
+    game.corruption = 0;
+    game.staticBurst = skipTitle ? 0.15 : 0;
+    game.remoteClickAnim = 0;
+    game.remoteDropAnim = 0;
+    game.glitchClusters = [];
+    game.wallCircuits = [];
+    game.sparks = [];
+  }
+
+  function spawnFlipGlitches(flipNum) {
+    const count = 4 + Math.min(9, flipNum * 2);
+    const minDist = 175 + Math.min(180, flipNum * 18);
+    const maxDist = 280 + Math.min(390, flipNum * 45);
+    const cx = SCR.x + SCR.w * 0.5;
+    const cy = SCR.y + SCR.h * 0.5;
+
+    for (let i = 0; i < count; i++) {
+      const ang = rng() * Math.PI * 2;
+      const dist = minDist + rng() * (maxDist - minDist);
+      const gx = Math.round((cx + Math.cos(ang) * dist * 1.25) / 16) * 16;
+      const gy = Math.round((cy + Math.sin(ang) * dist * 0.85) / 16) * 16;
+      const cols = 2 + Math.floor(rng() * (2 + Math.min(4, Math.floor(flipNum / 2))));
+      const rows = 2 + Math.floor(rng() * (2 + Math.min(4, Math.floor(flipNum / 2))));
+
+      const cells = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (rng() < 0.76 || (r === 0 && c === 0)) {
+            cells.push([c, r]);
+          }
+        }
+      }
+      game.glitchClusters.push({
+        x: gx - (cols * 8),
+        y: gy - (rows * 8),
+        tile: rng() < 0.5 ? 12 : 16,
+        cells,
+        inScreen: flipNum >= 6 && rng() < 0.35,
+      });
+    }
+
+    if (flipNum >= 2) {
+      const lineCount = 3 + flipNum;
+      for (let i = 0; i < lineCount; i++) {
+        const leftSide = rng() < 0.52;
+        let lx = leftSide ? (18 + rng() * 310) : (960 + rng() * 300);
+        let ly = 30 + rng() * 640;
+        const pts = [[lx, ly]];
+        const segs = 3 + Math.floor(rng() * 4);
+        for (let s = 0; s < segs; s++) {
+          if (s % 2 === 0) lx += (rng() > 0.5 ? 1 : -1) * (22 + rng() * 54);
+          else ly += (rng() > 0.5 ? 1 : -1) * (22 + rng() * 54);
+          pts.push([lx, ly]);
+        }
+        game.wallCircuits.push({ pts });
+      }
+    }
+
+    for (let i = 0; i < 18; i++) {
+      const a = rng() * Math.PI * 2;
+      const sp = 35 + rng() * 140;
+      game.sparks.push({
+        x: cx + (rng() - 0.5) * SCR.w * 0.9,
+        y: cy + (rng() - 0.5) * SCR.h * 0.9,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        size: rng() < 0.6 ? 6 : 10,
+        life: 0.9 + rng() * 1.4,
+        age: 0,
+        black: rng() < 0.25,
+      });
+    }
+  }
+
+  function flipChannel(dir = 1) {
+    if (game.phase === 'end') return;
+    unlockAudio();
+
+    if (game.phase === 'title') {
+      game.phase = 'ch';
+      game.phaseTime = 0;
+      game.staticBurst = 0.65;
+      game.remoteClickAnim = 1.0;
+      playRemoteClick(0.3);
+      return;
+    }
+
+    game.flips++;
+    game.idleSinceFlip = 0;
+    game.remoteClickAnim = 1.0;
+    game.staticBurst = 1.0;
+
+    if (dir >= 0) {
+      game.chIdx = (game.chIdx + 1) % CHANNELS.length;
+    } else {
+      game.chIdx = (game.chIdx - 1 + CHANNELS.length) % CHANNELS.length;
+    }
+
+    game.corruption = Math.min(1, game.flips / game.maxFlipsToEnd);
+    spawnFlipGlitches(game.flips);
+    playRemoteClick(game.corruption);
+
+    if (droneGain && audioCtx) {
+      droneGain.gain.setTargetAtTime(Math.min(0.18, game.corruption * 0.18), audioCtx.currentTime, 0.15);
+    }
+
+    if (game.flips >= game.maxFlipsToEnd) {
+      game.phase = 'end';
+      game.endingKind = 'taken_over';
+      game.phaseTime = 0;
+    } else if (game.flips >= 3) {
+      game.phase = 'spill';
+      game.phaseTime = 0;
+    } else {
+      game.phase = 'ch';
+      game.phaseTime = 0;
+    }
+  }
+
+  function putRemoteDown() {
+    if (game.phase !== 'ch' && game.phase !== 'spill') return;
+    unlockAudio();
+    game.phase = 'end';
+    game.endingKind = 'put_down';
+    game.phaseTime = 0;
+    playPowerOffSfx();
+  }
+
+  // --- Input Handling ---
+  window.addEventListener('keydown', (e) => {
+    unlockAudio();
+    const k = e.key;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(k)) {
+      e.preventDefault();
+    }
+
+    if (game.phase === 'title') {
+      if (k === 'h' || k === 'H') {
+        game.howToOpen = !game.howToOpen;
+      } else if (k === ' ' || k === 'Enter' || k === 'ArrowUp' || k === 'ArrowRight') {
+        flipChannel(1);
+      }
+      return;
+    }
+
+    if (game.phase === 'ch' || game.phase === 'spill') {
+      if (k === 'p' || k === 'P' || k === 'Escape') {
+        putRemoteDown();
+      } else if (k === 'ArrowDown' || k === 'ArrowLeft') {
+        flipChannel(-1);
+      } else if (k === ' ' || k === 'Enter' || k === 'ArrowUp' || k === 'ArrowRight') {
+        flipChannel(1);
+      }
+      return;
+    }
+
+    if (game.phase === 'end') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
+        runIdx++;
+        initSession(BASE_SEED + runIdx, true);
+        playRemoteClick(0.2);
+      }
+    }
+  });
+
+  canvas.addEventListener('click', (ev) => {
+    unlockAudio();
+    const rect = canvas.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * (W / rect.width);
+    const py = (ev.clientY - rect.top) * (H / rect.height);
+
+    // Ignore synthetic center focus-click at startup so CH 07 holds cleanly for f_001.jpg!
+    if (game.time < 3.2 && Math.abs(px - W * 0.5) < 4 && Math.abs(py - H * 0.5) < 4 && AUTOSTART) {
+      return;
+    }
+
+    if (game.phase === 'title') {
+      if (py >= 550 && py <= 612 && px >= 490 && px <= 790) {
+        game.howToOpen = !game.howToOpen;
+      } else {
+        flipChannel(1);
+      }
+      return;
+    }
+
+    if (game.phase === 'end') {
+      runIdx++;
+      initSession(BASE_SEED + runIdx, true);
+      playRemoteClick(0.2);
+      return;
+    }
+
+    if ((game.phase === 'ch' || game.phase === 'spill') && px <= 265 && py >= 665) {
+      putRemoteDown();
+      return;
+    }
+
+    flipChannel(1);
+  });
+
+  const crtScanCanvas = document.createElement('canvas');
+  crtScanCanvas.width = W;
+  crtScanCanvas.height = H;
+  {
+    const sctx = crtScanCanvas.getContext('2d');
+    for (let y = 0; y < H; y += 3) {
+      sctx.fillStyle = 'rgba(0, 0, 0, 0.19)';
+      sctx.fillRect(0, y, W, 1);
+    }
+  }
+
+  // --- Update Loop ---
+  let prevNow = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - prevNow) / 1000));
+    prevNow = now;
+    game.time += dt;
+    game.phaseTime += dt;
+
+    game.staticBurst = Math.max(0, game.staticBurst - dt * 2.9);
+    game.remoteClickAnim = Math.max(0, game.remoteClickAnim - dt * 5.2);
+
+    if (game.phase === 'ch' || game.phase === 'spill') {
+      game.idleSinceFlip += dt;
+      if (!AUTOSTART && game.flips >= 1 && game.idleSinceFlip > 11.0) {
+        putRemoteDown();
+      }
+    } else if (game.phase === 'end' && game.endingKind === 'put_down') {
+      game.remoteDropAnim = Math.min(1, game.remoteDropAnim + dt * 1.4);
+      game.corruption = Math.max(0, game.corruption - dt * 0.75);
+    } else if (game.phase === 'end' && game.endingKind === 'taken_over') {
+      game.corruption = 1.0;
+    }
+
+    const blinkCycle = game.time % 3.4;
+    game.eyeBlink = blinkCycle > 3.15 ? Math.sin(((blinkCycle - 3.15) / 0.25) * Math.PI) : 0;
+
+    for (let i = game.sparks.length - 1; i >= 0; i--) {
+      const sp = game.sparks[i];
+      sp.age += dt;
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.vx *= 0.96;
+      sp.vy *= 0.96;
+      if (sp.age >= sp.life) game.sparks.splice(i, 1);
+    }
+
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  // --- Render Helpers ---
+  function drawWatchingEye(cx, cy, blink) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    const openY = Math.max(0.08, 1 - blink * 0.92);
+
+    // Sketchy horizontal cross-hatched eyelids blended directly into the staircase art (matches f_022 / pair_005.00!)
+    ctx.strokeStyle = 'rgba(20, 20, 20, 0.58)';
+    ctx.lineWidth = 1.6;
+    for (let i = -8; i <= 8; i++) {
+      const w = 108 * Math.sqrt(Math.max(0, 1 - (i / 9) * (i / 9)));
+      const yOff = i * 6.8;
+      ctx.beginPath();
+      ctx.moveTo(-w, yOff + Math.sin(i * 2.3) * 2);
+      ctx.quadraticCurveTo(0, yOff + (i < 0 ? -12 : 12), w, yOff - Math.cos(i * 1.9) * 2);
+      ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-104, 4);
+    ctx.quadraticCurveTo(0, -56 * openY, 104, 2);
+    ctx.quadraticCurveTo(0, 52 * openY, -104, 4);
+    ctx.closePath();
+    const sg = ctx.createRadialGradient(0, 0, 18, 0, 0, 104);
+    sg.addColorStop(0, '#c6c6c2');
+    sg.addColorStop(0.65, '#9d9d99');
+    sg.addColorStop(1, '#555552');
+    ctx.fillStyle = sg;
+    ctx.fill();
+    ctx.clip();
+
+    const lookX = Math.sin(game.time * 1.7) * 5;
+    const lookY = Math.cos(game.time * 1.3) * 2.5;
+    ctx.fillStyle = '#424240';
+    ctx.beginPath();
+    ctx.arc(lookX, lookY, 35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#181818';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(lookX + Math.cos(a) * 14, lookY + Math.sin(a) * 14);
+      ctx.lineTo(lookX + Math.cos(a) * 34, lookY + Math.sin(a) * 34);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#0c0c0c';
+    ctx.beginPath();
+    ctx.arc(lookX, lookY, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#e8e8e6';
+    ctx.beginPath();
+    ctx.arc(lookX - 7, lookY - 7, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = '#121212';
+    ctx.lineWidth = 3.2;
+    for (let k = -1; k <= 1; k++) {
+      ctx.beginPath();
+      ctx.moveTo(-108, 4 + k * 1.5);
+      ctx.quadraticCurveTo(0, (-56 + k * 4) * openY, 108, 2 + k * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-104, 4 + k * 1.5);
+      ctx.quadraticCurveTo(0, (52 + k * 3) * openY, 104, 2 + k * 1.5);
+      ctx.stroke();
+    }
+    for (let c = 1; c <= 3; c++) {
+      ctx.lineWidth = 2.0 - c * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(-102 + c * 5, (-8 - c * 7) * openY);
+      ctx.quadraticCurveTo(0, (-64 - c * 11) * openY, 102 - c * 5, (-8 - c * 7) * openY);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function renderCrtScreenContent() {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(SCR.x, SCR.y, SCR.w, SCR.h, SCR.r);
+    ctx.clip();
+
+    if (game.phase === 'title' || (game.phase === 'end' && game.endingKind === 'put_down')) {
+      ctx.fillStyle = '#202022';
+      ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+      if (game.phase === 'end' && game.phaseTime < 0.45) {
+        const p = game.phaseTime / 0.45;
+        const lw = SCR.w * (1 - p);
+        const lh = Math.max(2, 16 * (1 - p * 0.8));
+        ctx.fillStyle = '#f2f2f2';
+        ctx.fillRect(SCR.x + (SCR.w - lw) * 0.5, SCR.y + SCR.h * 0.5 - lh * 0.5, lw, lh);
+      }
+      ctx.restore();
+      return;
+    }
+
+    const ch = CHANNELS[game.chIdx];
+    const jitterX = (Math.sin(game.time * 43) > 0.7 ? 2 : 0) + (game.staticBurst > 0 ? (Math.random() - 0.5) * 18 : 0);
+    const jitterY = (Math.cos(game.time * 37) > 0.75 ? 1.5 : 0);
+
+    ctx.fillStyle = '#262628';
+    ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+
+    if (ch.mode === 'minimal7') {
+      ctx.fillStyle = '#323234';
+      ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+      ctx.strokeStyle = 'rgba(216, 216, 216, 0.16)';
+      ctx.lineWidth = 2;
+      for (let y = SCR.y + 34; y < SCR.y + SCR.h - 24; y += 42) {
+        ctx.beginPath();
+        ctx.moveTo(SCR.x, y); ctx.lineTo(SCR.x + SCR.w, y);
+        ctx.stroke();
+      }
+      const bx = SCR.x + 172 + Math.round(Math.sin(game.time * 3) * 2);
+      const by = SCR.y + 126;
+      const sq = 22;
+      const blocks = [
+        [0, 0, '#ff4fd8'],
+        [1, 1, '#080808'], [2, 1, '#ff4fd8'],
+        [3, 2, '#080808'],
+        [2, 3, '#080808'], [3, 3, '#ff4fd8'],
+        [5, 4, '#ff4fd8'],
+      ];
+      for (const [gx, gy, col] of blocks) {
+        ctx.fillStyle = col;
+        ctx.fillRect(bx + gx * sq, by + gy * sq, sq, sq);
+      }
+    } else if (assets.readyCount >= 3) {
+      const [sx, sy, sw, sh] = (ch.mode === 'static_err' && Math.sin(game.time * 18) > 0.25 && ch.altCrop)
+        ? ch.altCrop
+        : ch.crop;
+      const boilScale = (Math.floor(game.time * 8) % 2 === 0) ? 1.0 : 1.018;
+      const dw = SCR.w * boilScale;
+      const dh = SCR.h * boilScale;
+      ctx.drawImage(
+        assets.channels,
+        sx, sy, sw, sh,
+        SCR.x - (dw - SCR.w) * 0.5 + jitterX,
+        SCR.y - (dh - SCR.h) * 0.5 + jitterY,
+        dw, dh
+      );
+
+      if (ch.mode === 'eye') {
+        drawWatchingEye(SCR.x + SCR.w * 0.51 + jitterX * 0.3, SCR.y + SCR.h * 0.50, game.eyeBlink);
+      }
+    }
+
+    const staticAmt = Math.max(game.staticBurst, game.corruption > 0.65 ? (game.corruption - 0.55) * 0.85 : 0.04);
+    if (staticAmt > 0.05) {
+      const bandCount = Math.floor(6 + staticAmt * 28);
+      for (let i = 0; i < bandCount; i++) {
+        const by = SCR.y + ((i * 37 + Math.floor(game.time * 260)) % SCR.h);
+        const bh = 2 + ((i * 13) % 9);
+        const lum = 175 + ((i * 29) % 75);
+        ctx.fillStyle = `rgba(${lum}, ${lum}, ${lum}, ${(staticAmt * 0.65).toFixed(3)})`;
+        ctx.fillRect(SCR.x, by, SCR.w, bh);
+      }
+    }
+
+    if (game.corruption >= 0.45) {
+      const invAlpha = Math.min(0.92, (game.corruption - 0.42) * 1.45);
+      ctx.save();
+      ctx.globalAlpha = invAlpha;
+      ctx.fillStyle = checkerPat16;
+      const patchCount = Math.floor(4 + game.corruption * 14);
+      for (let i = 0; i < patchCount; i++) {
+        const pw = 48 + ((i * 53) % 140);
+        const ph = 32 + ((i * 41) % 96);
+        const px = SCR.x + ((i * 97 + game.flips * 31) % (SCR.w - 40));
+        const py = SCR.y + ((i * 71 + game.flips * 19) % (SCR.h - 30));
+        if (game.phase === 'end' && game.endingKind === 'taken_over') {
+          ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+          break;
+        }
+        ctx.fillRect(px, py, pw, ph);
+      }
+      ctx.restore();
+    }
+
+    ctx.strokeStyle = 'rgba(225, 225, 225, 0.16)';
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(SCR.x + 26, SCR.y + 92);
+    ctx.quadraticCurveTo(SCR.x + 28, SCR.y + 26, SCR.x + 108, SCR.y + 24);
+    ctx.stroke();
+
+    const barY = SCR.y + ((game.time * 58) % SCR.h);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+    ctx.fillRect(SCR.x, barY, SCR.w, 18);
+
+    const sv = ctx.createRadialGradient(
+      SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.h * 0.34,
+      SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.w * 0.62
+    );
+    sv.addColorStop(0, 'rgba(0,0,0,0)');
+    sv.addColorStop(1, 'rgba(10,10,12,0.55)');
+    ctx.fillStyle = sv;
+    ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+
+    ctx.fillStyle = '#e6e6e6';
+    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(ch.num, SCR.x + SCR.w - 32, SCR.y + 52);
+
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ededed';
+    ctx.fillText(ch.caption, SCR.x + SCR.w * 0.47, SCR.y + SCR.h - 54);
+
+    ctx.restore();
+  }
+
+  function renderSpillGlitches() {
+    if (game.corruption <= 0.01 && game.glitchClusters.length === 0) return;
+
+    if (game.wallCircuits.length > 0 && game.corruption > 0.05) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 79, 216, 0.34)';
+      ctx.lineWidth = 9;
+      for (const wc of game.wallCircuits) {
+        ctx.beginPath();
+        wc.pts.forEach(([x, y], idx) => {
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#ff6ae2';
+      ctx.lineWidth = 3.2;
+      ctx.globalAlpha = Math.min(0.96, 0.45 + game.corruption * 0.65);
+      for (const wc of game.wallCircuits) {
+        ctx.beginPath();
+        wc.pts.forEach(([x, y], idx) => {
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.fillStyle = checkerPat16;
+    for (const cl of game.glitchClusters) {
+      if (!cl.inScreen &&
+          cl.x > SCR.x + 18 && cl.x < SCR.x + SCR.w - 48 &&
+          cl.y > SCR.y + 18 && cl.y < SCR.y + SCR.h - 48) {
+        continue;
+      }
+      const s = cl.tile;
+      for (const [cx, cy] of cl.cells) {
+        ctx.fillRect(cl.x + cx * s, cl.y + cy * s, s, s);
+      }
+    }
+    ctx.restore();
+
+    for (const sp of game.sparks) {
+      const a = 1 - sp.age / sp.life;
+      ctx.fillStyle = sp.black ? `rgba(8, 6, 8, ${a.toFixed(3)})` : `rgba(255, 79, 216, ${a.toFixed(3)})`;
+      ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
+    }
+  }
+
+  function renderHandAndRemote() {
+    if (assets.readyCount < 3) return;
+    if (game.phase === 'title') return;
+
+    const dropY = game.remoteDropAnim * 280;
+    const clickDipX = -game.remoteClickAnim * 8;
+    const clickDipY = game.remoteClickAnim * 12;
+    const swayX = Math.sin(game.time * 1.6) * 3;
+    const swayY = Math.cos(game.time * 2.1) * 2.5;
+
+    const dx = 758 + clickDipX + swayX;
+    const dy = 472 + clickDipY + swayY + dropY;
+    const dw = 448;
+    const dh = 340;
+
+    ctx.save();
+    ctx.drawImage(assets.tvRemote, 87, 692, 390, 297, dx, dy, dw, dh);
+    if (darkHandCanvas && game.corruption > 0.34) {
+      ctx.globalAlpha = Math.min(0.96, (game.corruption - 0.34) * 2.2);
+      ctx.drawImage(darkHandCanvas, 0, 0, 400, 310, dx - 4, dy - 4, dw + 8, dh + 8);
+    }
+
+    if (game.remoteClickAnim > 0.35) {
+      ctx.globalAlpha = (game.remoteClickAnim - 0.35) / 0.65;
+      ctx.fillStyle = '#ff4fd8';
+      ctx.beginPath();
+      ctx.arc(dx + 32, dy + 22, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function renderTitleOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(18, 18, 18, 0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4fd8';
+    ctx.font = 'bold 88px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('CHANNEL 0', W * 0.5, 312);
+
+    ctx.fillStyle = '#d8d8d8';
+    ctx.font = '32px "Courier New", monospace';
+    ctx.fillText('press power', W * 0.5, 382);
+
+    ctx.strokeStyle = '#d8d8d8';
+    ctx.lineWidth = 4;
+    ctx.fillStyle = 'rgba(22, 22, 22, 0.92)';
+    ctx.fillRect(480, 448, 320, 74);
+    ctx.strokeRect(480, 448, 320, 74);
+    ctx.fillStyle = '#d8d8d8';
+    ctx.font = 'bold 30px "Courier New", monospace';
+    ctx.fillText('START', W * 0.5, 495);
+
+    ctx.font = '22px "Courier New", monospace';
+    ctx.fillStyle = 'rgba(216, 216, 216, 0.75)';
+    ctx.fillText(game.howToOpen ? '[ CLOSE ]' : 'HOW TO PLAY [H]', W * 0.5, 584);
+
+    if (game.howToOpen) {
+      ctx.fillStyle = 'rgba(18, 18, 18, 0.96)';
+      ctx.strokeStyle = '#d8d8d8';
+      ctx.lineWidth = 2;
+      ctx.fillRect(280, 604, 720, 86);
+      ctx.strokeRect(280, 604, 720, 86);
+      ctx.font = '16px "Courier New", monospace';
+      ctx.fillStyle = '#d8d8d8';
+      ctx.fillText('Press [SPACE], [ARROWS], or CLICK remote to flip channels.', W * 0.5, 636);
+      ctx.fillText('Every channel asks you to keep watching. Or press [P] to put it down.', W * 0.5, 664);
+    }
+    ctx.restore();
+  }
+
+  function renderEndingOverlay() {
+    ctx.save();
+    if (game.endingKind === 'taken_over') {
+      ctx.fillStyle = 'rgba(16, 10, 16, 0.72)';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = checkerPat16;
+      ctx.fillRect(300, 175, 680, 370);
+      ctx.fillStyle = '#141214';
+      ctx.fillRect(324, 199, 632, 322);
+      ctx.strokeStyle = '#ff4fd8';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(324, 199, 632, 322);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff4fd8';
+      ctx.font = 'bold 54px "Courier New", monospace';
+      ctx.fillText('TAKEN OVER', W * 0.5, 290);
+
+      ctx.fillStyle = '#d8d8d8';
+      ctx.font = '22px "Courier New", monospace';
+      ctx.fillText('"every channel told you the same thing."', W * 0.5, 352);
+      ctx.fillStyle = 'rgba(216, 216, 216, 0.72)';
+      ctx.font = '18px "Courier New", monospace';
+      ctx.fillText(`CHANNELS FLIPPED: ${game.flips}   ·   SIGNAL COVERAGE: 100%`, W * 0.5, 404);
+
+      ctx.fillStyle = '#ff4fd8';
+      ctx.font = 'bold 21px "Courier New", monospace';
+      ctx.fillText('[ PRESS SPACE OR R TO POWER CYCLE ]', W * 0.5, 476);
+    } else {
+      const fade = Math.min(1, game.phaseTime * 0.9);
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = 'rgba(22, 22, 22, 0.76)';
+      ctx.fillRect(310, 205, 660, 300);
+      ctx.strokeStyle = '#d8d8d8';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(310, 205, 660, 300);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#d8d8d8';
+      ctx.font = 'bold 42px "Courier New", monospace';
+      ctx.fillText('REMOTE SET DOWN', W * 0.5, 286);
+
+      ctx.font = '20px "Courier New", monospace';
+      ctx.fillStyle = 'rgba(216, 216, 216, 0.88)';
+      ctx.fillText('The screen goes dark. The room stays yours.', W * 0.5, 346);
+      ctx.font = '17px "Courier New", monospace';
+      ctx.fillStyle = 'rgba(216, 216, 216, 0.6)';
+      ctx.fillText('(Putting the remote down was the one real choice.)', W * 0.5, 386);
+
+      ctx.fillStyle = '#d8d8d8';
+      ctx.font = 'bold 20px "Courier New", monospace';
+      ctx.fillText('[ PRESS R OR SPACE TO TURN BACK ON ]', W * 0.5, 456);
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.fillStyle = '#161616';
+    ctx.fillRect(0, 0, W, H);
+
+    const zoom = 1.0 + game.corruption * 0.12;
+    ctx.save();
+    ctx.translate(W * 0.5, H * 0.46);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W * 0.5, -H * 0.46);
+
+    if (cleanRoomCanvas) {
+      ctx.drawImage(cleanRoomCanvas, 0, 0, W, H);
+    } else if (assets.room.complete && assets.room.naturalWidth) {
+      ctx.drawImage(assets.room, 0, 0, W, H);
+    }
+
+    if (assets.room.complete && assets.room.naturalWidth && game.flips >= 1 && game.endingKind !== 'put_down') {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, game.flips * 0.72);
+      ctx.drawImage(assets.room, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    renderCrtScreenContent();
+
+    if (game.endingKind !== 'put_down') {
+      renderSpillGlitches();
+    }
+
+    ctx.restore();
+
+    renderHandAndRemote();
+
+    const vigInner = Math.max(110, H * (0.42 - game.corruption * 0.18));
+    const vigOuter = W * (0.68 - game.corruption * 0.12);
+    const vg = ctx.createRadialGradient(W * 0.5, H * 0.46, vigInner, W * 0.5, H * 0.46, vigOuter);
+    vg.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vg.addColorStop(1, `rgba(10, 8, 10, ${(0.52 + game.corruption * 0.36).toFixed(3)})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+
+    if (game.phase === 'ch' || game.phase === 'spill') {
+      ctx.save();
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillStyle = 'rgba(216, 216, 216, 0.36)';
+      ctx.textAlign = 'left';
+      ctx.fillText('[SPACE / CLICK] FLIP CHANNEL     [P] PUT REMOTE DOWN', 24, H - 18);
+      ctx.restore();
+    }
+
+    if (game.phase === 'title') renderTitleOverlay();
+    else if (game.phase === 'end') renderEndingOverlay();
+
+    ctx.drawImage(crtScanCanvas, 0, 0);
+  }
+
+  window.__game = {
+    get state() {
+      return {
+        phase: game.phase,
+        endingKind: game.endingKind,
+        channelIndex: game.chIdx,
+        channelNumber: CHANNELS[game.chIdx].num,
+        caption: CHANNELS[game.chIdx].caption,
+        flips: game.flips,
+        corruption: Number(game.corruption.toFixed(3)),
+        glitchCount: game.glitchClusters.length,
+      };
+    }
+  };
+
+  initSession(BASE_SEED, AUTOSTART);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

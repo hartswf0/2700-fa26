@@ -1,0 +1,216 @@
+{
+  "id": "g16",
+  "group": "Group 16",
+  "name": "Channel 0",
+  "from": "Channel 0: a broken greyscale TV with pink missing-texture glitches; every channel says the same thing.",
+  "hook": "Every channel tells you the same thing: keep watching.",
+  "pitch": "One remote, one button. A greyscale TV flips between channels, and pink missing-texture glitches spread with every flip, out of the set and into the room. There is no way to win. The only real choice is whether to put the remote down.",
+  "minute_check": "Yes: the gesture is the game.",
+  "build_check": "Yes: eight channel loops and an overlay.",
+  "scope": "Eight channels at most. Decide whether putting the remote down is possible; it is the one real choice.",
+  "palette": {
+    "bg": "#161616",
+    "fg": "#d8d8d8",
+    "acc": "#ff4fd8",
+    "main_bg": "#161616",
+    "main_fg": "#d8d8d8",
+    "main_acc": "#ff4fd8"
+  },
+  "template_type": "tv",
+  "brief": {
+    "player": "Someone holding a TV remote.",
+    "goal": "None stated: keep flipping channels. Each channel tells you to rely on the TV.",
+    "fail": "No failure state, by design.",
+    "ending": "The vignette closes, the pink glitches spill out of the set into the room, and the TV takes over.",
+    "verb": "Flip channel.",
+    "theme": "Dependence as a gesture: the only thing you can do is ask the TV for more. The pink placeholders are the gaps the company leaves.",
+    "look": "Hand-drawn static, chicken-scratch lines, greyscale with pink and black missing-texture checks."
+  },
+  "prov": {
+    "bug": "Flip again, the next channel will explain it.",
+    "nit": "If there is no way to win, what does the player choose? Can they put the remote down?"
+  },
+  "states": [
+    [
+      "title",
+      "TV OFF",
+      0,
+      0
+    ],
+    [
+      "ch",
+      "CHANNEL",
+      1,
+      0
+    ],
+    [
+      "spill",
+      "SPILL",
+      2,
+      0
+    ],
+    [
+      "end",
+      "TAKEN OVER",
+      3,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "ch",
+      "press power"
+    ],
+    [
+      "ch",
+      "ch",
+      "flip"
+    ],
+    [
+      "ch",
+      "spill",
+      "flips > N"
+    ],
+    [
+      "spill",
+      "ch",
+      "flip"
+    ],
+    [
+      "spill",
+      "end",
+      "room full"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Videodrome (David Cronenberg, 1983)",
+      "A man consumed by a broadcast. The body-and-screen horror you are drawing on."
+    ],
+    [
+      "Half-Life 2 (Valve, 2004) missing-texture checker",
+      "Your glitch motif. Use the real pattern deliberately: magenta and black, 2x2."
+    ],
+    [
+      "Kentucky Route Zero, WEVP-TV interludes (Cardboard Computer, 2013-2020)",
+      "Interactive television as a piece in itself, with choices that change little and mean a lot."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g16/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g16/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Hand-drawn scratchy greyscale psychological game (#161616 and #d8d8d8) with vivid magenta-and-black (#ff4fd8) missing-texture checkerboard glitches. Steady first-person view facing a bulky vintage CRT television in a dim sketchy bedroom; a hand in the lower corner clicks a remote control. Each click snaps the CRT screen through jittering hand-drawn broadcast static, and glowing magenta-black checker squares spill outward from the glass bezel onto the surrounding wallpaper. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for TV framing and palette. Sound design: heavy plastic remote clicks, CRT static hiss, rising low drone. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Channel 0: Flip channel. leading visibly to The vignette closes, the pink glitches spill out of the set into the room, and the TV takes over. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Hand-drawn scratchy greyscale psychological game (#161616 and #d8d8d8) with vivid magenta-and-black (#ff4fd8) missing-texture checkerboard glitches. Steady first-person view facing a bulky vintage CRT television in a dim sketchy bedroom; a hand in the lower corner clicks a remote control. Each click snaps the CRT screen through jittering hand-drawn broadcast static, and glowing magenta-black checker squares spill outward from the glass bezel onto the surrounding wallpaper. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for TV framing and palette. Sound design: heavy plastic remote clicks, CRT static hiss, rising low drone. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Flip channel.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (No failure state, by design.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The vignette closes, the pink glitches spill out of the set into the room, and the TV takes over.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Channel 0 demonstrating start, core verb (Flip channel.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "tv_frame_and_remote",
+      "label": "TV frame and remote",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Channel 0\": TV frame and remote. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#161616, #d8d8d8, accent #ff4fd8), style: Hand-drawn static, chicken-scratch lines, greyscale with pink and black missing-texture checks., matching the reference gameplay frame."
+    },
+    {
+      "id": "8_channel_loops_still_or_2_frame",
+      "label": "8 channel loops (still or 2-frame)",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Channel 0\": 8 channel loops (still or 2-frame). Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#161616, #d8d8d8, accent #ff4fd8), style: Hand-drawn static, chicken-scratch lines, greyscale with pink and black missing-texture checks., matching the reference gameplay frame."
+    },
+    {
+      "id": "pink_black_checker_glitch_tile",
+      "label": "Pink/black checker glitch tile",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "vignette_overlay",
+      "label": "Vignette overlay",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "room_background_around_the_tv",
+      "label": "Room background around the TV",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Channel 0\": Room background around the TV. strictly harmonized palette (#161616, #d8d8d8, accent #ff4fd8), style: Hand-drawn static, chicken-scratch lines, greyscale with pink and black missing-texture checks.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "channel_number_osd",
+      "label": "Channel number OSD",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Channel 0\" (Dependence as a gesture: the only thing you can do is ask the TV for more. The pink placeholders are the gaps the company leaves.). Visual mood: Hand-drawn static, chicken-scratch lines, greyscale with pink and black missing-texture checks.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

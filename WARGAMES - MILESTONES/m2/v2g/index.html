@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WarGames × Video-to-Game · Gemini Pipeline (M1–M7)</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --paper:#f4f2ea;--surface:#ffffff;--ink:#11110f;--muted:#5e5b53;--hair:#d4d0c4;
+  --accent:#1e52a8;--accent-bg:rgba(30,82,168,.10);--phos:#0f7a5c;--red:#b3261e;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0e0e0c;--surface:#151513;--ink:#f2f0e6;--muted:#9c988e;--hair:#2b2a26;
+    --accent:#5896e6;--accent-bg:rgba(88,150,230,.14);--phos:#4af6c3;--red:#e0645a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.top{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:10px 24px;background:var(--paper);border-bottom:2px solid var(--ink);
+  font:800 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;flex-wrap:wrap;
+}
+.top .pills{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{border:1.5px solid var(--ink);padding:5px 8px;background:var(--surface);text-decoration:none}
+.pill.live{border-color:var(--phos);color:var(--phos)}
+main{max-width:1280px;margin:0 auto;padding:0 24px 80px}
+.hero{padding:28px 0 18px;border-bottom:2px solid var(--ink)}
+.kick{font:800 11px var(--mono);letter-spacing:.14em;color:var(--accent);margin:0 0 8px;text-transform:uppercase}
+h1{font:800 clamp(26px,4vw,44px)/1.05 var(--sans);letter-spacing:-.025em;margin:0 0 10px}
+.hero p{margin:0 0 10px;max-width:82ch;color:var(--muted)}
+.stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px}
+.scard{border:1.5px solid var(--ink);background:var(--surface);padding:10px 12px}
+.scard b{display:block;font:800 10px var(--mono);letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:4px}
+.scard code{font:700 12px var(--mono)}
+.scard span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+.msbar{
+  position:sticky;top:45px;z-index:25;background:var(--paper);padding:10px 0;
+  border-bottom:1px solid var(--hair);display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+}
+.msbtn{
+  font:800 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  border:1.5px solid var(--ink);background:var(--surface);color:var(--ink);
+  padding:7px 10px;cursor:pointer;
+}
+.msbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.index{display:flex;flex-wrap:wrap;gap:6px;padding:12px 0;border-bottom:1px solid var(--hair)}
+.index a{
+  font:800 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  text-decoration:none;border:1.5px solid var(--ink);padding:6px 8px;background:var(--surface);
+}
+.index a:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.team{padding:28px 0 18px;border-bottom:2px solid var(--ink);scroll-margin-top:105px}
+.thead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.tcode{font:800 12px var(--mono);background:var(--ink);color:var(--paper);padding:4px 8px}
+.tname{font:800 clamp(22px,2.6vw,30px)/1.1 var(--sans);letter-spacing:-.02em}
+.swatches{display:inline-flex;gap:4px;margin-left:auto;align-items:center}
+.sw{width:16px;height:16px;border:1.5px solid var(--ink);display:inline-block}
+.hook{font:700 15px/1.35 var(--sans);margin:0 0 12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+.panel{background:var(--surface);border:1.5px solid var(--ink)}
+.panel h3{
+  margin:0;padding:7px 10px;border-bottom:1.5px solid var(--ink);
+  font:800 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.panel h3 i{font-style:normal;color:var(--muted)}
+.panel .in{padding:10px 12px}
+.mediaStage{position:relative;aspect-ratio:16/9;background:#090909;overflow:hidden;border-bottom:1.5px solid var(--ink)}
+.mediaStage img,.mediaStage video{width:100%;height:100%;object-fit:cover;display:block}
+.stageTabs{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.stab{
+  font:800 9.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 8px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer;text-decoration:none;
+}
+.stab.active{background:var(--ink);color:var(--paper)}
+.promptBox{
+  width:100%;min-height:92px;font:600 12px/1.45 var(--mono);padding:8px;
+  border:1.5px solid var(--hair);background:var(--paper);color:var(--ink);resize:vertical;
+}
+.cmdBar{
+  margin-top:8px;display:flex;gap:8px;align-items:center;justify-content:space-between;
+  background:var(--paper);border:1px solid var(--hair);padding:6px 8px;font:700 11px var(--mono);overflow-x:auto;
+}
+.copyBtn{
+  font:800 9.5px var(--mono);text-transform:uppercase;letter-spacing:.08em;
+  padding:5px 8px;border:1.5px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap;
+}
+.atable{width:100%;border-collapse:collapse;font-size:12.5px}
+.atable td{padding:5px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+.atable td:last-child{text-align:right;font:800 9.5px var(--mono);letter-spacing:.08em;padding-left:10px;white-space:nowrap}
+.tag-image{color:var(--accent)}
+.tag-music{color:var(--phos)}
+.tag-code{color:var(--muted)}
+.briefMini{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px;margin-bottom:10px}
+.briefMini dt{font:800 9.5px var(--mono);text-transform:uppercase;color:var(--accent);padding-top:2px}
+.briefMini dd{margin:0}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <span>WarGames 2700 · Video-to-Game (Gemini Native)</span>
+  <div class="pills">
+    <a class="pill live" href="playtest.html">▶ Single-Page Playtest Arcade ↗</a>
+    <span class="pill">Zero fal · 100% Gemini API</span>
+    <a class="pill" href="https://hartswf0.github.io/2700-fa26/WARGAMES%20-%20MILESTONES/m2/" target="_blank">Source M2 Page ↗</a>
+    <a class="pill" href="https://github.com/lovisdotio/video-to-game" target="_blank">lovisdotio/video-to-game ↗</a>
+  </div>
+</div>
+<main>
+  <section class="hero">
+    <p class="kick">18 Student Projects × 7 Milestones (M1–M7) · Omni 1.2 Flash + Nano Banana 2.1 + Lyria 3</p>
+    <h1>WarGames Video-to-Game Pipeline</h1>
+    <p>Every WarGames project on M2 is wired for the full <b>video-to-game</b> loop without <code>fal</code>: rasterized M2 SVG mockups ground <b>Gemini Omni 1.2 Flash</b> for the 10 s 1080p gameplay video, <code>study_video.py</code> extracts frames and hex palettes, <b>Nano Banana 2.1</b> + <code>cutout.py</code> + <b>Lyria</b> generate the game's sprites, backgrounds, and music loop, and <code>record_play.mjs</code> films the playable HTML build.</p>
+    <div class="stack">
+      <div class="scard"><b>1 · Gameplay Video</b><code>gemini-omni-1.2-flash</code><span>10s 1080p 16:9 + native audio, grounded on M2 mockup PNG; chains M2→M7 via <code>previous_interaction_id</code>.</span></div>
+      <div class="scard"><b>2 · Sprites &amp; Cutouts</b><code>gemini-nano-banana-2.1</code><span>Generates <code>MAKE</code> sprites &amp; rooms from video frames + local alpha matting via <code>cutout.py</code>.</span></div>
+      <div class="scard"><b>3 · Soundtrack &amp; Voice</b><code>lyria-3-clip-preview</code><span>30s loopable instrumental BGM scored from video frames (+ <code>gemini-3.8-flash-tts</code> when needed).</span></div>
+      <div class="scard"><b>4 · Playtest Proof</b><code>record_play.mjs</code><span>Automated Playwright keyboard scenario + <code>best_window.py</code> + <code>side_by_side.py</code> frame pairs.</span></div>
+    </div>
+  </section>
+
+  <div class="msbar" id="msbar"></div>
+  <nav class="index" id="navIndex"></nav>
+  <div id="projectsHost"></div>
+</main>
+
+<script>
+const MILESTONES = [
+  ['m1','M1 · Launch'],
+  ['m2','M2 · Seed Video & Game'],
+  ['m3','M3 · Prototype'],
+  ['m4','M4 · Alpha'],
+  ['m5','M5 · Beta'],
+  ['m6','M6 · Presentation'],
+  ['m7','M7 · Final Doc']
+];
+let activeMs = 'm2';
+let PROJECTS = [];
+
+const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function renderMsBar() {
+  const bar = document.getElementById('msbar');
+  bar.innerHTML = `<span style="font:800 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px;">Milestone View:</span>` +
+    MILESTONES.map(([code, label]) =>
+      `<button class="msbtn ${code === activeMs ? 'active' : ''}" data-ms="${code}">${esc(label)}</button>`
+    ).join('');
+  bar.querySelectorAll('button').forEach(btn => {
+    btn.onclick = () => { activeMs = btn.dataset.ms; renderMsBar(); renderProjects(); probeLiveFiles(); };
+  });
+}
+
+function renderProjects() {
+  const host = document.getElementById('projectsHost');
+  host.innerHTML = PROJECTS.map(p => {
+    const msObj = p.milestones[activeMs] || p.milestones.m2;
+    const videoSrc = `projects/${p.id}/${activeMs}/video/gameplay.mp4`;
+    const sheetSrc = `projects/${p.id}/${activeMs}/study/sheet.jpg`;
+    const gameHref = `projects/${p.id}/${activeMs}/game/index.html`;
+    const cliCmd = `python3 scripts/run_pipeline.py --project ${p.id} --milestone ${activeMs}`;
+
+    const assetRows = p.asset_plan.map(a => {
+      const badge = a.kind === 'image'
+        ? `<span class="tag-image">NANO BANANA${a.cutout ? ' + CUTOUT' : ''}</span>`
+        : a.kind === 'music'
+        ? `<span class="tag-music">LYRIA 3 LOOP</span>`
+        : `<span class="tag-code">${esc(a.how)}</span>`;
+      return `<tr><td>${esc(a.label)}</td><td>${badge}</td></tr>`;
+    }).join('');
+
+    return `
+    <section class="team" id="${esc(p.id)}">
+      <div class="thead">
+        <span class="tcode">${esc(p.group)}</span>
+        <span class="tname">${esc(p.name)}</span>
+        <span class="swatches" title="M2 Palette">
+          <i class="sw" style="background:${esc(p.palette.bg)}"></i>
+          <i class="sw" style="background:${esc(p.palette.fg)}"></i>
+          <i class="sw" style="background:${esc(p.palette.acc)}"></i>
+        </span>
+      </div>
+      <p class="hook">${esc(p.hook || p.from)}</p>
+      <div class="grid2">
+        <div class="panel">
+          <h3><span>${esc(msObj.code)} · ${esc(msObj.title)}</span><i>${esc(msObj.mode)}</i></h3>
+          <div class="mediaStage" id="stage-${esc(p.id)}">
+            <img src="${esc(p.m2_mockups.main_png)}" alt="${esc(p.name)} M2 main mockup">
+          </div>
+          <div class="stageTabs">
+            <button class="stab active" onclick="swapStage('${p.id}','img','${p.m2_mockups.main_png}',this)">M2 Main Ref</button>
+            <button class="stab" onclick="swapStage('${p.id}','img','${p.m2_mockups.title_png}',this)">M2 Title Ref</button>
+            <button class="stab" id="btn-vid-${p.id}" onclick="swapStage('${p.id}','video','${videoSrc}',this)">Omni Gameplay.mp4</button>
+            <button class="stab" id="btn-sht-${p.id}" onclick="swapStage('${p.id}','img','${sheetSrc}',this)">Study Sheet</button>
+            <button class="stab" id="btn-take-${p.id}" onclick="swapStage('${p.id}','video','projects/${p.id}/${activeMs}/playtest/best.mp4',this)">Playtest Clip</button>
+            <button class="stab" id="btn-pair-${p.id}" onclick="swapStage('${p.id}','img','projects/${p.id}/${activeMs}/pairs/pair_005.00.jpg',this)">Side-by-Side</button>
+            <a class="stab" id="btn-play-${p.id}" href="${esc(gameHref)}" target="_blank">Play Game ↗</a>
+          </div>
+          <div class="in">
+            <label style="display:block;font:800 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Gemini Omni 1.2 Flash Prompt (${esc(activeMs.toUpperCase())})</label>
+            <textarea class="promptBox" readonly>${esc(msObj.prompt)}</textarea>
+            <div class="cmdBar">
+              <code>${esc(cliCmd)}</code>
+              <button class="copyBtn" onclick="navigator.clipboard.writeText('${cliCmd}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy CLI',1200)">Copy CLI</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3><span>Design Spec &amp; Gemini Asset Manifest</span><i>${p.asset_plan.length} items</i></h3>
+          <div class="in">
+            <dl class="briefMini">
+              <dt>Core Verb</dt><dd>${esc(p.brief.verb)}</dd>
+              <dt>Goal</dt><dd>${esc(p.brief.goal)}</dd>
+              <dt>Fail</dt><dd>${esc(p.brief.fail)}</dd>
+              <dt>Ending</dt><dd>${esc(p.brief.ending)}</dd>
+              <dt>Look</dt><dd>${esc(p.brief.look)}</dd>
+            </dl>
+            <table class="atable">${assetRows}</table>
+          </div>
+        </div>
+      </div>
+    </section>`;
+  }).join('');
+}
+
+window.swapStage = function(pid, type, src, btn) {
+  const stage = document.getElementById('stage-' + pid);
+  btn.parentElement.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (type === 'video') {
+    stage.innerHTML = `<video controls autoplay loop playsinline src="${src}" onerror="this.parentElement.innerHTML='<div style=\\'padding:32px;color:#fff;font:600 12px monospace;\\'>gameplay.mp4 not generated yet.<br><br>Set GEMINI_API_KEY and run:<br>python3 scripts/run_pipeline.py --project ${pid} --milestone ${activeMs}</div>'"></video>`;
+  } else {
+    stage.innerHTML = `<img src="${src}" onerror="this.parentElement.innerHTML='<div style=\\'padding:32px;color:#fff;font:600 12px monospace;\\'>${src} not generated yet.</div>'">`;
+  }
+};
+
+fetch('data/projects.json').then(r => r.json()).then(data => {
+  PROJECTS = data;
+  document.getElementById('navIndex').innerHTML = data.map(p => `<a href="#${esc(p.id)}" id="nav-${esc(p.id)}">${esc(p.name)}</a>`).join('');
+  renderMsBar();
+  renderProjects();
+  probeLiveFiles();
+  setInterval(probeLiveFiles, 12000);
+});
+
+async function probeLiveFiles() {
+  for (const p of PROJECTS) {
+    const checks = [
+      [`projects/${p.id}/${activeMs}/video/gameplay.mp4`, `btn-vid-${p.id}`, '✓ Omni Gameplay.mp4'],
+      [`projects/${p.id}/${activeMs}/study/sheet.jpg`, `btn-sht-${p.id}`, '✓ Study Sheet'],
+      [`projects/${p.id}/${activeMs}/playtest/best.mp4`, `btn-take-${p.id}`, '✓ Playtest Clip'],
+      [`projects/${p.id}/${activeMs}/pairs/pair_005.00.jpg`, `btn-pair-${p.id}`, '✓ Side-by-Side'],
+      [`projects/${p.id}/${activeMs}/game/index.html`, `btn-play-${p.id}`, '▶ PLAY GAME ↗']
+    ];
+    for (const [url, btnId, readyLabel] of checks) {
+      try {
+        const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        const el = document.getElementById(btnId);
+        if (r.ok && el) {
+          el.textContent = readyLabel;
+          el.style.borderColor = 'var(--phos)';
+          if (btnId.startsWith('btn-play-')) {
+            el.style.background = 'var(--phos)';
+            el.style.color = '#000';
+            const nav = document.getElementById(`nav-${p.id}`);
+            if (nav && !nav.textContent.startsWith('▶ ')) nav.textContent = '▶ ' + nav.textContent;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+}
+</script>
+</body>
+</html>

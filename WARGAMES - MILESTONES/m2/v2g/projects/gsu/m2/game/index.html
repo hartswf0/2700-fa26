@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>SUSHI CUTTING — Y2K Kitchen Rush (M2)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0e0906;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Courier New", Courier, monospace;
+  }
+  #wrap {
+    position: relative;
+    width: 100vw; height: 56.25vw;
+    max-height: 100vh; max-width: 177.78vh;
+    background: #1b1410;
+    box-shadow: 0 20px 64px rgba(0,0,0,0.75);
+  }
+  canvas {
+    display: block;
+    width: 100%; height: 100%;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="1280" height="720"></canvas></div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  // Query params: ?autostart and ?seed=N
+  const params = new URLSearchParams(location.search);
+  const AUTOSTART = params.has('autostart');
+  let rngState = (parseInt(params.get('seed') || '7', 10) >>> 0) || 7;
+  function rand() {
+    rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
+    return rngState / 4294967296;
+  }
+
+  // Palette (strictly harmonized with spec.json + Omni video)
+  const PAL = {
+    bg: '#1b1410',
+    cream: '#f5e9d6',
+    paper: '#efe7d6',
+    paperShadow: '#d7ccb8',
+    coral: '#ff6b4a',
+    coralBright: '#ff9676',
+    gold: '#ffd28a',
+    ink: '#221a15',
+    glitchRed: '#b53324'
+  };
+
+  // Load Nano Banana assets + Lyria loop
+  const bgImg = new Image();
+  let bgReady = false;
+  bgImg.onload = () => { bgReady = true; };
+  bgImg.src = '../assets/counter_and_cutting_board.png';
+
+  const spImg = new Image();
+  let spReady = false;
+  spImg.onload = () => { spReady = true; };
+  spImg.src = '../assets/roll_and_fish_sprites_cut_pieces.png';
+
+  // Exact verified sprite regions in roll_and_fish_sprites_cut_pieces.png (1024x1024)
+  const SPR = {
+    rollA:     { x: 38,  y: 50,  w: 296, h: 86 },
+    rollB:     { x: 363, y: 50,  w: 298, h: 86 },
+    sliceWide: { x: 39,  y: 181, w: 83,  h: 87 },
+    sliceMed:  { x: 147, y: 181, w: 73,  h: 87 },
+    sliceThin: { x: 244, y: 181, w: 65,  h: 87 },
+    sliceTilt: { x: 332, y: 183, w: 84,  h: 86 },
+    sliceFace1:{ x: 765, y: 176, w: 98,  h: 98 },
+    sliceFace2:{ x: 888, y: 177, w: 98,  h: 97 },
+    fishFillet:{ x: 626, y: 324, w: 130, h: 70 },
+    knifeVert: { x: 57,  y: 432, w: 52,  h: 252 },
+    burstFlash:{ x: 247, y: 695, w: 148, h: 134 },
+    burstRing: { x: 439, y: 669, w: 157, h: 180 }
+  };
+
+  // Audio: Lyria loop + procedural WebAudio SFX
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.36;
+  let audioCtx = null;
+  let bgmStarted = false;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!bgmStarted) {
+      bgmStarted = true;
+      bgm.play().catch(() => { bgmStarted = false; });
+    }
+  }
+
+  function playSfx(kind, comboLevel = 1) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    if (kind === 'chop') {
+      // Crisp wooden board thud + metallic slice + combo harmonic ping
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(195, now);
+      osc.frequency.exponentialRampToValueAtTime(58, now + 0.09);
+      g.gain.setValueAtTime(0.26, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.1);
+
+      // Slice noise transient
+      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.055, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 2400;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.14, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+      src.connect(hp).connect(ng).connect(audioCtx.destination);
+      src.start(now);
+
+      // Rising pitch combo chime
+      const ping = audioCtx.createOscillator();
+      const pg = audioCtx.createGain();
+      ping.type = 'sine';
+      const baseFreq = 520 * Math.pow(1.08, Math.min(10, comboLevel));
+      ping.frequency.setValueAtTime(baseFreq, now);
+      ping.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.12);
+      pg.gain.setValueAtTime(0.09, now);
+      pg.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      ping.connect(pg).connect(audioCtx.destination);
+      ping.start(now); ping.stop(now + 0.14);
+    } else if (kind === 'miss') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.linearRampToValueAtTime(95, now + 0.18);
+      g.gain.setValueAtTime(0.12, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if (kind === 'printer') {
+      // Dot-matrix buzz bursts
+      for (let i = 0; i < 3; i++) {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(920 + (i % 2) * 180, now + i * 0.045);
+        g.gain.setValueAtTime(0.035, now + i * 0.045);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.045 + 0.035);
+        osc.connect(g).connect(audioCtx.destination);
+        osc.start(now + i * 0.045);
+        osc.stop(now + i * 0.045 + 0.038);
+      }
+    } else if (kind === 'serve') {
+      [523.25, 659.25, 783.99].forEach((f, idx) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(f, now + idx * 0.045);
+        g.gain.setValueAtTime(0.11, now + idx * 0.045);
+        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.045 + 0.16);
+        osc.connect(g).connect(audioCtx.destination);
+        osc.start(now + idx * 0.045);
+        osc.stop(now + idx * 0.045 + 0.17);
+      });
+    }
+  }
+
+  // Board & Guide Line Geometry (matches counter_and_cutting_board.png in 1280x720!)
+  // Background has 5 coral dashed lines at exact X = [320, 480, 640, 800, 960] inside cream pill x=161..1120, y=344..487
+  const TRACK = { left: 162, right: 1118, y: 415, rollLeft: 205, rollRight: 1075 };
+  const BASE_5_LINES = [320, 480, 640, 800, 960]; // 5 cuts -> 6 even pieces!
+  const EIGHT_7_LINES = [280, 400, 520, 640, 760, 880, 1000]; // 7 cuts -> 8 even pieces!
+
+  const FILLINGS = ['SALMON', 'TUNA', 'AVOCADO', 'SPICY SALMON'];
+
+  function makeOrder(orderNum, shiftProgress) {
+    // First order matches f_001.jpg ("T4 8 PCS SALMON" / "01/01/1900") or 6 PCS aligned to the 5 board lines!
+    // Let's make Order #0 use the 5 board lines (labeled "T4 6 PCS SALMON" or "T4 8 PCS SALMON") — wait:
+    // Notice in f_001.jpg, the ticket says "T4 8 PCS SALMON / 01/01/1900" while the board has the 5 coral dashed lines [320, 480, 640, 800, 960]!
+    // If we use the exact 5 board guide lines [960, 800, 640, 480, 320] for standard orders (and 7 lines on special 8-piece rush orders after order #1, or keep cuts aligned to [960, 800, 640, 480, 320] so every single cut lands dead-on the background's coral dashed lines!), let's check:
+    // Cutting dead-on [960, 800, 640, 480, 320] means the knife aligns VISUALLY 100% with the painted coral dashed lines on counter_and_cutting_board.png!
+    // And for 8 PCS orders, we add 2 outer coral dashed guide lines at 240 and 1040 (or [240, 360, 480, 640, 800, 960, 1040] -> Wait: 5 lines = 6 pcs; adding 2 lines at x=232 and x=1048 outside 320..960 gives 7 lines = 8 pieces while keeping 320, 480, 640, 800, 960 100% intact!!).
+    // GENIUS!! Adding dashed guide lines at x=225 and x=1055 (or keeping 5 cuts = 6 pcs for T2 and 7 cuts including 320,480,640,800,960 for 8 pcs) keeps EVERY painted background guide line true!
+    const presets = [
+      { table: 4, pcs: 8, fish: 'SALMON', glitchDate: true, scrambleTable: false },
+      { table: 2, pcs: 6, fish: 'TUNA',   glitchDate: false, scrambleTable: false },
+      { table: 3, pcs: 6, fish: 'SALMON', glitchDate: true, scrambleTable: false },
+      { table: 1, pcs: 8, fish: 'AVOCADO', glitchDate: true, scrambleTable: true }
+    ];
+    if (orderNum < presets.length) {
+      const p = presets[orderNum];
+      return buildOrderObj(orderNum, p.table, p.pcs, p.fish, p.glitchDate, p.scrambleTable);
+    }
+    const table = 1 + Math.floor(rand() * 4);
+    const pcs = rand() < 0.55 ? 6 : 8;
+    const fish = FILLINGS[Math.floor(rand() * FILLINGS.length)];
+    const glitchDate = shiftProgress > 0.25 || rand() < 0.65;
+    const scrambleTable = shiftProgress > 0.45 && rand() < 0.55;
+    return buildOrderObj(orderNum, table, pcs, fish, glitchDate, scrambleTable);
+  }
+
+  function buildOrderObj(id, table, pcs, fish, glitchDate, scrambleTable) {
+    // Cut lines ordered RIGHT-TO-LEFT so the knife sweeps from right to left just like the Omni video (f_001 -> f_016)!
+    const linesAsc = pcs === 8
+      ? [230, 320, 480, 640, 800, 960, 1046]
+      : [320, 480, 640, 800, 960];
+    const lines = linesAsc.slice().reverse(); // [960, 800, 640, 480, 320] or 7-line version
+    const rollL = pcs === 8 ? 176 : 224;
+    const rollR = pcs === 8 ? 1104 : 1056;
+    let fakeTable = table;
+    if (scrambleTable) {
+      fakeTable = ((table % 4) + 1);
+    }
+    return {
+      id,
+      table, // real customer table 1..4
+      printedTable: scrambleTable ? `T${fakeTable}?` : `T${table}`,
+      scrambleTable,
+      pcs,
+      fish,
+      dateStr: glitchDate ? '01/01/1900' : '12/31/1999',
+      glitchDate,
+      rollL,
+      rollR,
+      lines, // right-to-left target X positions
+      cutsDone: [] // { x, quality, tiltFace }
+    };
+  }
+
+  // Game State Machine: 'title' | 'ticket' | 'cut' | 'serve' | 'closed' | 'mid'
+  const SHIFT_SECONDS = 85; // 11:52 PM -> 12:00 AM NYE countdown
+  const game = {
+    state: AUTOSTART ? 'ticket' : 'title',
+    showHelp: false,
+    score: AUTOSTART ? 340 : 0, // Matches SCORE 340 starting vibe on autostart clip!
+    combo: AUTOSTART ? 2 : 0,
+    maxCombo: 2,
+    hyperCombo: false,
+    lives: 3,
+    platesServed: 0,
+    perfectCuts: 0,
+    totalCuts: 0,
+    wrongPlates: 0,
+    shiftTime: 0, // 0..SHIFT_SECONDS
+    orderSeq: 0,
+    currentOrder: null,
+    nextOrder: null,
+    rollSlideX: -520, // slides to 0 during 'ticket'
+    ticketFeedAnim: 0, // 0..1 paper feed slide
+    knife: {
+      x: 995,
+      dir: -1, // sweeps -1 (leftward) across roll, bounces between 200..1075
+      speed: 275,
+      chopAnim: 0, // 1 -> 0 when slicing down
+      lastCutX: 0
+    },
+    selectedTable: 4,
+    serveAnim: null, // { t, targetTable, ok }
+    sparks: [],
+    bursts: [],
+    floatingTexts: [],
+    screenShake: 0,
+    time: 0
+  };
+
+  function initShift(autostartMode) {
+    game.score = autostartMode ? 340 : 0;
+    game.combo = autostartMode ? 2 : 0;
+    game.maxCombo = game.combo;
+    game.hyperCombo = game.combo >= 3;
+    game.lives = 3;
+    game.platesServed = 0;
+    game.perfectCuts = 0;
+    game.totalCuts = 0;
+    game.wrongPlates = 0;
+    game.shiftTime = 0;
+    game.orderSeq = 0;
+    game.sparks = [];
+    game.bursts = [];
+    game.floatingTexts = [];
+    game.serveAnim = null;
+
+    game.currentOrder = makeOrder(0, 0);
+    game.nextOrder = makeOrder(1, 0.1);
+    game.orderSeq = 2;
+    game.selectedTable = game.currentOrder.table;
+    game.rollSlideX = autostartMode ? -180 : -520;
+    game.ticketFeedAnim = 0;
+    // Start sweeping rightward across the roll on autostart so right after page load pre-roll it bounces at right edge and slices cleanly right-to-left!
+    game.knife.x = autostartMode ? 430 : (game.currentOrder.lines[0] + 55);
+    game.knife.dir = autostartMode ? 1 : -1;
+    game.knife.chopAnim = 0;
+    game.state = 'ticket';
+  }
+
+  function nextTargetLine() {
+    const ord = game.currentOrder;
+    if (!ord) return null;
+    const idx = ord.cutsDone.length;
+    if (idx >= ord.lines.length) return null;
+    return ord.lines[idx];
+  }
+
+  function spawnCutSparks(x, y, isHyper, quality) {
+    const count = isHyper ? 68 : (quality === 'perfect' ? 48 : 22);
+    for (let i = 0; i < count; i++) {
+      const ang = (Math.PI * 2 * i) / count + (rand() - 0.5) * 0.25;
+      const spd = 130 + rand() * (isHyper ? 460 : 350);
+      const isRice = i % 9 === 0;
+      game.sparks.push({
+        x, y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 35,
+        life: 0.42 + rand() * 0.36,
+        maxLife: 0.78,
+        len: isRice ? 6 : (10 + rand() * 16),
+        isRice,
+        color: isRice ? '#fff6e8' : (isHyper && i % 2 === 0 ? PAL.gold : (i % 3 === 0 ? PAL.coralBright : PAL.coral))
+      });
+    }
+    game.bursts.push({ x, y, t: 0, dur: 0.28, isHyper });
+  }
+
+  function performCut() {
+    if (game.state === 'ticket') {
+      // Snap roll into place if player cuts eagerly
+      game.rollSlideX = 0;
+      game.state = 'cut';
+    }
+    if (game.state !== 'cut') return;
+    ensureAudio();
+
+    const ord = game.currentOrder;
+    const targetX = nextTargetLine();
+    if (targetX === null) return;
+
+    const kx = game.knife.x;
+    const err = Math.abs(kx - targetX);
+    game.knife.chopAnim = 1.0;
+    game.knife.lastCutX = kx;
+
+    if (err <= 48) {
+      // Successful cut! Snap visual slice cleanly near targetX if Perfect
+      const isPerfect = err <= 24;
+      const cutX = isPerfect ? targetX : (targetX * 0.45 + kx * 0.55);
+      game.totalCuts++;
+
+      if (isPerfect) {
+        game.perfectCuts++;
+        game.combo++;
+        if (game.combo > game.maxCombo) game.maxCombo = game.combo;
+        game.hyperCombo = game.combo >= 3;
+        const mult = game.hyperCombo ? 2 : 1;
+        const pts = 20 * Math.min(5, game.combo) * mult;
+        game.score += pts;
+        playSfx('chop', game.combo);
+        spawnCutSparks(cutX, TRACK.y, game.hyperCombo, 'perfect');
+        game.screenShake = game.hyperCombo ? 6.5 : 3.8;
+        game.floatingTexts.push({
+          x: cutX, y: TRACK.y - 72,
+          text: game.hyperCombo ? `HYPER x${game.combo}! +${pts}` : `EVEN CUT +${pts}`,
+          color: game.hyperCombo ? PAL.gold : PAL.coralBright,
+          t: 0, dur: 0.75
+        });
+      } else {
+        // Sloppy cut still portions the roll, resets combo
+        game.combo = 0;
+        game.hyperCombo = false;
+        game.score += 10;
+        playSfx('chop', 1);
+        spawnCutSparks(cutX, TRACK.y, false, 'ok');
+        game.screenShake = 2.0;
+        game.floatingTexts.push({
+          x: cutX, y: TRACK.y - 68,
+          text: 'SLIGHTLY UNEVEN +10',
+          color: PAL.cream,
+          t: 0, dur: 0.65
+        });
+      }
+
+      ord.cutsDone.push({
+        x: cutX,
+        perfect: isPerfect,
+        variant: ord.cutsDone.length % 2
+      });
+
+      // Check if all cuts on this roll are complete -> transition to 'serve'
+      if (ord.cutsDone.length >= ord.lines.length) {
+        game.state = 'serve';
+        game.selectedTable = ord.table;
+        game.floatingTexts.push({
+          x: W / 2, y: 312,
+          text: `${ord.pcs} PCS READY! SERVE TABLE T${ord.table} [ENTER / ${ord.table}]`,
+          color: PAL.gold,
+          t: 0, dur: 1.2
+        });
+      }
+    } else {
+      // Missed guide line!
+      game.combo = 0;
+      game.hyperCombo = false;
+      playSfx('miss');
+      game.screenShake = 4.0;
+      game.floatingTexts.push({
+        x: kx, y: TRACK.y - 68,
+        text: 'OFF GUIDE!',
+        color: '#ff5252',
+        t: 0, dur: 0.65
+      });
+    }
+  }
+
+  function servePlate(tableNum) {
+    if (game.state !== 'serve' || game.serveAnim) return;
+    ensureAudio();
+    const ord = game.currentOrder;
+    const chosen = tableNum || game.selectedTable || ord.table;
+    const ok = (chosen === ord.table);
+
+    if (ok) {
+      playSfx('serve');
+      const bonus = (game.hyperCombo ? 200 : 120);
+      game.score += bonus;
+      game.platesServed++;
+      game.floatingTexts.push({
+        x: 390 + (chosen - 1) * 145, y: 118,
+        text: `T${chosen} SERVED! +${bonus}`,
+        color: PAL.gold,
+        t: 0, dur: 0.95
+      });
+    } else {
+      playSfx('miss');
+      game.lives--;
+      game.wrongPlates++;
+      game.combo = 0;
+      game.hyperCombo = false;
+      game.screenShake = 8;
+      game.floatingTexts.push({
+        x: 390 + (chosen - 1) * 145, y: 118,
+        text: `WRONG TABLE! (WANTED T${ord.table})`,
+        color: '#ff4f4f',
+        t: 0, dur: 1.1
+      });
+    }
+
+    game.serveAnim = { t: 0, dur: 0.42, targetTable: chosen, ok };
+  }
+
+  function finishServeTransition() {
+    game.serveAnim = null;
+    if (game.lives <= 0) {
+      game.state = 'closed';
+      return;
+    }
+    if (game.shiftTime >= SHIFT_SECONDS) {
+      game.state = 'mid';
+      return;
+    }
+    // Advance printer queue
+    const prog = game.shiftTime / SHIFT_SECONDS;
+    game.currentOrder = game.nextOrder;
+    game.nextOrder = makeOrder(game.orderSeq++, prog);
+    game.selectedTable = game.currentOrder.table;
+    game.rollSlideX = -460;
+    game.ticketFeedAnim = 1.0;
+    game.knife.x = game.currentOrder.lines[0] + 65;
+    game.knife.dir = -1;
+    game.state = 'ticket';
+    playSfx('printer');
+  }
+
+  // Input listeners
+  window.addEventListener('keydown', (e) => {
+    ensureAudio();
+    const k = e.key;
+    if (game.state === 'title') {
+      if (k === 'h' || k === 'H' || k === '?') {
+        game.showHelp = !game.showHelp;
+      } else if (k === ' ' || k === 'Enter') {
+        e.preventDefault();
+        initShift(false);
+        playSfx('printer');
+      }
+      return;
+    }
+    if (game.state === 'ticket' || game.state === 'cut') {
+      if (k === ' ') {
+        e.preventDefault();
+        performCut();
+      } else if (k >= '1' && k <= '4') {
+        game.selectedTable = parseInt(k, 10);
+      }
+      return;
+    }
+    if (game.state === 'serve') {
+      if (k >= '1' && k <= '4') {
+        e.preventDefault();
+        servePlate(parseInt(k, 10));
+      } else if (k === 'Enter' || k === 's' || k === 'S' || k === ' ') {
+        e.preventDefault();
+        servePlate(game.selectedTable);
+      }
+      return;
+    }
+    if (game.state === 'closed' || game.state === 'mid') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        initShift(false);
+      }
+    }
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    ensureAudio();
+    const rect = canvas.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const py = ((e.clientY - rect.top) / rect.height) * H;
+
+    if (game.state === 'title') {
+      if (px >= 478 && px <= 802 && py >= 444 && py <= 522) {
+        initShift(false);
+        playSfx('printer');
+      } else if (py > 540) {
+        game.showHelp = !game.showHelp;
+      }
+      return;
+    }
+    if (game.state === 'ticket' || game.state === 'cut') {
+      performCut();
+      return;
+    }
+    if (game.state === 'serve') {
+      // Check if clicking one of the 4 table badges at top
+      for (let t = 1; t <= 4; t++) {
+        const bx = 352 + (t - 1) * 116;
+        if (px >= bx && px <= bx + 106 && py >= 52 && py <= 104) {
+          servePlate(t);
+          return;
+        }
+      }
+      servePlate(game.selectedTable);
+      return;
+    }
+    if (game.state === 'closed' || game.state === 'mid') {
+      initShift(false);
+    }
+  });
+
+  // Format NYE 1999 Clock
+  function getClockInfo() {
+    const frac = Math.min(1, game.shiftTime / SHIFT_SECONDS);
+    const totalMins = 52 + frac * 8; // 11:52 PM -> 12:00 AM
+    const mins = Math.floor(totalMins);
+    const secs = Math.floor((totalMins - mins) * 60);
+    if (mins >= 60) {
+      return { timeStr: '12:00 AM', dateStr: '01/01/1900', glitch: true };
+    }
+    const glitchFlicker = frac > 0.35 && (Math.sin(game.time * 17) > 0.72);
+    return {
+      timeStr: `11:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} PM`,
+      dateStr: glitchFlicker ? '01/01/1900' : '12/31/1999',
+      glitch: glitchFlicker
+    };
+  }
+
+  // Draw Background Counter + Cutting Board + Extra 8-Piece Outer Guides
+  function drawCounterAndGuides() {
+    if (bgReady) {
+      ctx.drawImage(bgImg, 0, 0, W, H);
+    } else {
+      ctx.fillStyle = PAL.bg;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Subtle warm hyper-combo glow on the board!
+    if (game.hyperCombo && (game.state === 'cut' || game.state === 'serve')) {
+      const pulse = 0.10 + 0.06 * Math.sin(game.time * 10);
+      const grad = ctx.createRadialGradient(640, 415, 60, 640, 415, 560);
+      grad.addColorStop(0, `rgba(255, 107, 74, ${pulse})`);
+      grad.addColorStop(1, 'rgba(255, 107, 74, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    const ord = game.currentOrder;
+    if (!ord) return;
+
+    // If 8 PCS order, draw the 2 extra outer coral dashed lines (x=230, x=1046) matching the 5 baked ones!
+    if (ord.pcs === 8) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(229, 102, 72, 0.85)';
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([10, 9]);
+      [230, 1046].forEach((gx) => {
+        ctx.beginPath();
+        ctx.moveTo(gx, 304);
+        ctx.lineTo(gx, 486);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    // Highlight the NEXT active target cut guide line with a crisp rhythmic pulse!
+    const nextX = nextTargetLine();
+    if (nextX !== null && (game.state === 'cut' || game.state === 'ticket')) {
+      const aligned = Math.abs(game.knife.x - nextX) <= 24;
+      ctx.save();
+      ctx.strokeStyle = aligned ? PAL.gold : PAL.coralBright;
+      ctx.lineWidth = aligned ? 5 : 3;
+      ctx.shadowColor = aligned ? PAL.gold : PAL.coral;
+      ctx.shadowBlur = aligned ? 18 : 10;
+      ctx.setLineDash([11, 8]);
+      ctx.beginPath();
+      ctx.moveTo(nextX, 298);
+      ctx.lineTo(nextX, 492);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Draw Maki Roll + Sliced Pieces on the Track (matches f_001.jpg & f_016.jpg!)
+  function drawSushiRoll() {
+    const ord = game.currentOrder;
+    if (!ord || !spReady) return;
+
+    ctx.save();
+    let offsetX = game.rollSlideX;
+    let offsetY = 0;
+    let scale = 1.0;
+
+    if (game.serveAnim) {
+      const p = game.serveAnim.t / game.serveAnim.dur;
+      const ease = p * p;
+      const targetX = 390 + (game.serveAnim.targetTable - 1) * 116 - 640;
+      offsetX += targetX * ease;
+      offsetY -= 330 * ease;
+      scale = 1 - 0.55 * ease;
+      ctx.globalAlpha = Math.max(0, 1 - p * 0.85);
+    }
+
+    ctx.translate(640 + offsetX, TRACK.y + offsetY);
+    ctx.scale(scale, scale);
+    ctx.translate(-640, -TRACK.y);
+
+    const rollH = 98;
+    const rollY = TRACK.y - rollH / 2;
+    const rollSrc = ord.fish === 'TUNA' ? SPR.rollB : SPR.rollA;
+
+    // Determine rightmost uncut boundary (since cuts happen right-to-left!)
+    const cuts = ord.cutsDone;
+    const uncutRight = cuts.length > 0 ? cuts[cuts.length - 1].x - 5 : ord.rollR;
+
+    // 1. Draw uncut left log portion using clipped Nano Banana roll sprite!
+    if (uncutRight > ord.rollL + 18) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ord.rollL, rollY - 12, uncutRight - ord.rollL, rollH + 24);
+      ctx.clip();
+      // Shadow on wooden board
+      ctx.fillStyle = 'rgba(12, 6, 3, 0.42)';
+      ctx.fillRect(ord.rollL + 4, rollY + rollH - 10, uncutRight - ord.rollL - 4, 14);
+      ctx.drawImage(
+        spImg,
+        rollSrc.x, rollSrc.y, rollSrc.w, rollSrc.h,
+        ord.rollL, rollY, ord.rollR - ord.rollL, rollH
+      );
+      ctx.restore();
+
+      // Clean rice/salmon cross-section cap on right edge of uncut log if already sliced once
+      if (cuts.length > 0) {
+        ctx.drawImage(
+          spImg,
+          SPR.rollA.x + SPR.rollA.w - 36, SPR.rollA.y, 36, SPR.rollA.h,
+          uncutRight - 18, rollY, 24, rollH
+        );
+      }
+    }
+
+    // 2. Draw each individual cut piece to the right, with the newest piece tipped face-up showing salmon core (just like f_016.jpg!)
+    const boundaries = [ord.rollR, ...cuts.map(c => c.x)];
+    // If all cuts done (state === 'serve'), also draw the leftmost final piece!
+    if (cuts.length === ord.lines.length) {
+      boundaries.push(ord.rollL);
+    }
+
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      const rightEdge = boundaries[i];
+      const leftEdge = boundaries[i + 1];
+      const cx = (leftEdge + rightEdge) / 2 + (boundaries.length - 1 - i) * 3;
+      const segW = Math.max(54, Math.min(108, rightEdge - leftEdge - 8));
+      const isNewestFace = (i === boundaries.length - 2) && cuts.length > 0;
+
+      // Soft contact shadow
+      ctx.beginPath();
+      ctx.ellipse(cx, rollY + rollH - 4, segW * 0.44, 10, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(12, 6, 3, 0.45)';
+      ctx.fill();
+
+      if (isNewestFace) {
+        // Show face-up salmon maki medallion just like f_016.jpg!
+        const face = (i % 2 === 0) ? SPR.sliceFace1 : SPR.sliceFace2;
+        ctx.drawImage(spImg, face.x, face.y, face.w, face.h, cx - 48, rollY - 2, 96, 98);
+      } else {
+        const side = (i % 2 === 0) ? SPR.sliceWide : SPR.sliceMed;
+        ctx.drawImage(spImg, side.x, side.y, side.w, side.h, cx - segW / 2, rollY + 1, segW, rollH - 2);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // Draw Gleaming Vertical Chef's Knife (matches f_001.jpg & f_016.jpg!)
+  function drawChefKnife() {
+    const kx = game.knife.x;
+    const chop = Math.sin(game.knife.chopAnim * Math.PI);
+    const tipY = 298 + chop * 145; // Hovers at y=298, chops down to y=443 across the roll!
+    const bladeH = 340;
+
+    ctx.save();
+    // Subtle vertical laser/rhythm alignment whisker under blade tip
+    ctx.strokeStyle = 'rgba(255, 245, 230, 0.22)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(kx, tipY);
+    ctx.lineTo(kx, 482);
+    ctx.stroke();
+
+    if (spReady) {
+      // Flip SPR.knifeVert vertically so handle is at top edge and curved edge/tip points down at the roll!
+      ctx.save();
+      ctx.translate(kx, tipY - bladeH / 2);
+      ctx.scale(1.42, -1.36);
+      ctx.drawImage(
+        spImg,
+        SPR.knifeVert.x, SPR.knifeVert.y, SPR.knifeVert.w, SPR.knifeVert.h,
+        -SPR.knifeVert.w / 2, -SPR.knifeVert.h / 2, SPR.knifeVert.w, SPR.knifeVert.h
+      );
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#e8e6e1';
+      ctx.fillRect(kx - 24, tipY - 260, 48, 260);
+    }
+
+    // Crisp slice motion streak on chop
+    if (game.knife.chopAnim > 0.15) {
+      ctx.strokeStyle = `rgba(255, 240, 220, ${game.knife.chopAnim * 0.85})`;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(game.knife.lastCutX, 40);
+      ctx.lineTo(game.knife.lastCutX, 468);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw Starbursts & Coral Combo Sparks (matches sheet.jpg & f_016.jpg!)
+  function drawEffects() {
+    // Sprite bursts
+    for (const b of game.bursts) {
+      const p = b.t / b.dur;
+      if (p >= 1 || !spReady) continue;
+      ctx.save();
+      ctx.globalAlpha = 1 - p;
+      const s = (0.75 + p * 0.9) * (b.isHyper ? 1.35 : 1.0);
+      ctx.drawImage(
+        spImg,
+        SPR.burstFlash.x, SPR.burstFlash.y, SPR.burstFlash.w, SPR.burstFlash.h,
+        b.x - 80 * s, b.y - 74 * s, 160 * s, 148 * s
+      );
+      ctx.restore();
+    }
+
+    // Glowing radial coral sparks
+    for (const s of game.sparks) {
+      const alpha = Math.max(0, Math.min(1, s.life / 0.35));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      if (s.isRice) {
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, 4.5, 2.5, Math.atan2(s.vy, s.vx), 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const ang = Math.atan2(s.vy, s.vx);
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 3.2;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = PAL.coral;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x - Math.cos(ang) * s.len, s.y - Math.sin(ang) * s.len);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Floating score / judgement callouts
+    ctx.save();
+    ctx.textAlign = 'center';
+    for (const ft of game.floatingTexts) {
+      const p = ft.t / ft.dur;
+      if (p >= 1) continue;
+      ctx.globalAlpha = 1 - Math.pow(p, 2);
+      ctx.font = 'bold 20px "Courier New", monospace';
+      ctx.fillStyle = '#140c08';
+      ctx.fillText(ft.text, ft.x + 2, ft.y - p * 36 + 2);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y - p * 36);
+    }
+    ctx.restore();
+  }
+
+  // Draw Dot-Matrix Ticket Slip Over Bottom-Right Printer (matches f_001.jpg & f_016.jpg!)
+  function drawTicketPrinter() {
+    const ord = game.currentOrder;
+    const nxt = game.nextOrder;
+    if (!ord) return;
+
+    const feedOffset = game.ticketFeedAnim * 48;
+
+    ctx.save();
+    // Clip cleanly above printer bottom edge
+    ctx.beginPath();
+    ctx.rect(995, 425, 265, 290);
+    ctx.clip();
+
+    // Slightly angled cream paper slip emerging from printer slot (matching f_001.jpg!)
+    ctx.translate(1012, 452 + feedOffset);
+
+    // Top paper section
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(204, 0);
+    ctx.lineTo(214, 132);
+    ctx.lineTo(6, 132);
+    ctx.closePath();
+    ctx.fillStyle = PAL.paper;
+    ctx.fill();
+
+    // Bottom queued paper section below feed crease
+    ctx.beginPath();
+    ctx.moveTo(6, 132);
+    ctx.lineTo(214, 132);
+    ctx.lineTo(226, 252);
+    ctx.lineTo(12, 252);
+    ctx.closePath();
+    ctx.fillStyle = '#ebe2cf';
+    ctx.fill();
+
+    // Subtle paper crease shadow at printer lip
+    const lipGrad = ctx.createLinearGradient(0, 122, 0, 144);
+    lipGrad.addColorStop(0, 'rgba(30,20,12,0)');
+    lipGrad.addColorStop(0.5, 'rgba(30,20,12,0.16)');
+    lipGrad.addColorStop(1, 'rgba(30,20,12,0)');
+    ctx.fillStyle = lipGrad;
+    ctx.fillRect(4, 122, 214, 22);
+
+    // Active Order Text on Top Ticket (matches f_001.jpg!)
+    ctx.textAlign = 'left';
+    ctx.fillStyle = PAL.ink;
+    ctx.font = 'bold 16px "Courier New", monospace';
+    const glitchJitter = (ord.glitchDate && Math.sin(game.time * 24) > 0.86) ? 2 : 0;
+    ctx.fillText(`${ord.printedTable} ${ord.pcs} PCS ${ord.fish}`, 18 + glitchJitter, 42);
+
+    ctx.fillStyle = ord.glitchDate ? PAL.glitchRed : '#3a3028';
+    ctx.font = 'bold 15px "Courier New", monospace';
+    ctx.fillText(ord.dateStr, 20, 68);
+
+    if (ord.scrambleTable) {
+      ctx.fillStyle = PAL.glitchRed;
+      ctx.font = 'bold 11px "Courier New", monospace';
+      ctx.fillText('ERR: CHECK TABLE LED!', 20, 88);
+    } else if (game.state === 'serve') {
+      ctx.fillStyle = '#2d6a3e';
+      ctx.font = 'bold 12px "Courier New", monospace';
+      ctx.fillText('ORDER CUT -> SERVE!', 20, 90);
+    }
+
+    // Perforated dashed tear line
+    ctx.fillStyle = '#574c42';
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillText('-------------------', 20, 118);
+
+    // Next Queued Order on Lower Slip
+    if (nxt) {
+      ctx.fillStyle = '#332922';
+      ctx.font = 'bold 16px "Courier New", monospace';
+      ctx.fillText(`T${nxt.table} ${nxt.pcs} PCS ${nxt.fish.slice(0, 6)}`, 22, 174);
+      ctx.fillStyle = nxt.glitchDate ? PAL.glitchRed : '#4a3f36';
+      ctx.font = 'bold 15px "Courier New", monospace';
+      ctx.fillText(nxt.dateStr, 24, 202);
+    }
+
+    ctx.restore();
+  }
+
+  // Draw Arcade HUD + 4 Table Badges + Y2K Countdown Clock (matches f_001.jpg & f_016.jpg!)
+  function drawHUD() {
+    // Top-Left: SCORE & COMBO (exact placement of f_001.jpg / f_016.jpg!)
+    ctx.textAlign = 'left';
+    ctx.fillStyle = PAL.cream;
+    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.fillText(`SCORE ${game.score}`, 76, 86);
+
+    if (game.combo >= 1) {
+      ctx.fillStyle = game.hyperCombo ? PAL.gold : PAL.coral;
+      ctx.font = 'bold 26px "Courier New", monospace';
+      const label = game.hyperCombo ? `HYPER COMBO x${game.combo}` : `COMBO x${game.combo}`;
+      ctx.fillText(label, 76, 136);
+    }
+
+    // Top-Right: LIVES *** (exact placement of f_001.jpg / f_016.jpg!)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = PAL.cream;
+    ctx.font = 'bold 34px "Courier New", monospace';
+    const stars = '*'.repeat(Math.max(0, game.lives)) + '·'.repeat(Math.max(0, 3 - game.lives));
+    ctx.fillText(`LIVES ${stars}`, 1202, 86);
+
+    // Top-Center Compact NYE Clock + 4 Customer Tables (T1..T4)
+    const clk = getClockInfo();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 15px "Courier New", monospace';
+    ctx.fillStyle = clk.glitch ? PAL.coral : 'rgba(245, 233, 214, 0.78)';
+    ctx.fillText(`NYE ${clk.timeStr} · ${clk.dateStr}`, 586, 36);
+
+    const ord = game.currentOrder;
+    for (let t = 1; t <= 4; t++) {
+      const bx = 352 + (t - 1) * 116, by = 50, bw = 104, bh = 44;
+      const isHungry = ord && ord.table === t;
+      const isAimed = game.state === 'serve' && game.selectedTable === t;
+
+      ctx.fillStyle = isHungry ? 'rgba(255, 107, 74, 0.22)' : 'rgba(27, 20, 16, 0.55)';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = isHungry ? (isAimed ? PAL.gold : PAL.coral) : 'rgba(245, 233, 214, 0.25)';
+      ctx.lineWidth = isHungry ? 2.2 : 1.2;
+      ctx.strokeRect(bx, by, bw, bh);
+
+      ctx.fillStyle = isHungry ? PAL.cream : 'rgba(245, 233, 214, 0.55)';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.fillText(`[${t}] T${t}`, bx + bw / 2, by + 19);
+      ctx.font = '11px "Courier New", monospace';
+      ctx.fillStyle = isHungry ? PAL.gold : 'rgba(245, 233, 214, 0.4)';
+      ctx.fillText(isHungry ? `${ord.pcs}PC NOW` : 'WAITING', bx + bw / 2, by + 35);
+    }
+
+    // Bottom-Center Prompt (matches "SPACE = CUT" in f_001.jpg & f_016.jpg!)
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px "Courier New", monospace';
+    if (game.state === 'serve' && ord) {
+      ctx.fillStyle = PAL.gold;
+      ctx.fillText(`ENTER / [${ord.table}] = SERVE T${ord.table}`, 640, 646);
+    } else {
+      ctx.fillStyle = PAL.cream;
+      ctx.fillText('SPACE = CUT', 640, 646);
+    }
+  }
+
+  // Overlay Screens: Title, Closed Early, Midnight Ending
+  function drawTitleScreen() {
+    ctx.fillStyle = 'rgba(22, 15, 11, 0.84)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.coral;
+    ctx.font = 'bold 88px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('SUSHI CUTTING', W / 2, 308);
+
+    ctx.fillStyle = PAL.cream;
+    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.fillText('11:52 PM · 12/31/1999', W / 2, 382);
+
+    ctx.fillStyle = PAL.bg;
+    ctx.fillRect(480, 448, 320, 72);
+    ctx.strokeStyle = PAL.cream;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(480, 448, 320, 72);
+    ctx.fillStyle = PAL.cream;
+    ctx.font = 'bold 27px "Courier New", monospace';
+    ctx.fillText('START', W / 2, 494);
+
+    ctx.fillStyle = 'rgba(245, 233, 214, 0.8)';
+    ctx.font = '21px "Courier New", monospace';
+    ctx.fillText('HOW TO PLAY [H]', W / 2, 578);
+
+    if (game.showHelp) {
+      ctx.fillStyle = '#241a14';
+      ctx.fillRect(280, 596, 720, 96);
+      ctx.strokeStyle = PAL.coral;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(280, 596, 720, 96);
+      ctx.fillStyle = PAL.cream;
+      ctx.font = '15px "Courier New", monospace';
+      ctx.fillText('Press SPACE (or Click) when the knife aligns with each coral guide line.', W / 2, 626);
+      ctx.fillText('3 even cuts in a row trigger HYPER COMBO! Then press ENTER or 1-4 to SERVE.', W / 2, 650);
+      ctx.fillText('Watch the top T1-T4 LEDs when Y2K scrambles the 01/01/1900 ticket printer!', W / 2, 674);
+    }
+  }
+
+  function drawEndOverlay(isMidnight) {
+    ctx.fillStyle = 'rgba(20, 13, 9, 0.88)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = isMidnight ? PAL.gold : PAL.coral;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(180, 110, W - 360, H - 220);
+
+    ctx.textAlign = 'center';
+    const accuracy = game.totalCuts > 0 ? Math.round((game.perfectCuts / game.totalCuts) * 100) : 100;
+    const recovered = isMidnight && accuracy >= 70;
+
+    ctx.fillStyle = isMidnight ? PAL.gold : PAL.coral;
+    ctx.font = 'bold 54px "Courier New", monospace';
+    ctx.fillText(isMidnight ? '12:00 AM — HAPPY Y2K!' : 'CLOSED EARLY', W / 2, 205);
+
+    ctx.fillStyle = PAL.cream;
+    ctx.font = '21px "Courier New", monospace';
+    if (isMidnight) {
+      ctx.fillText(
+        recovered
+          ? 'PRINTER RECOVERED: 01/01/2000 — Your steady knife outlasted the Y2K glitch!'
+          : 'PRINTER STUCK IN 01/01/1900 — Every ticket reads 1900, but your cuts held true!',
+        W / 2, 265
+      );
+    } else {
+      ctx.fillText('Too many wrong orders in the New Year\'s Eve rush — kitchen shuttered.', W / 2, 265);
+    }
+
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillStyle = PAL.coralBright;
+    ctx.fillText(`FINAL SCORE: ${game.score}   ·   GOOD PLATES: ${game.platesServed}`, W / 2, 345);
+    ctx.fillStyle = PAL.cream;
+    ctx.fillText(`EVEN CUT ACCURACY: ${accuracy}%   ·   MAX COMBO: x${game.maxCombo}`, W / 2, 392);
+
+    ctx.fillStyle = PAL.gold;
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('[PRESS ENTER / R / CLICK TO COOK AGAIN]', W / 2, 495);
+  }
+
+  // Main Loop
+  let lastTs = performance.now();
+  function frame(ts) {
+    const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
+    lastTs = ts;
+    game.time += dt;
+
+    if (game.state === 'ticket' || game.state === 'cut' || game.state === 'serve') {
+      game.shiftTime += dt;
+      if (game.shiftTime >= SHIFT_SECONDS && game.state !== 'serve') {
+        game.state = 'mid';
+      }
+    }
+
+    if (game.ticketFeedAnim > 0) {
+      game.ticketFeedAnim = Math.max(0, game.ticketFeedAnim - dt * 2.8);
+    }
+    if (game.knife.chopAnim > 0) {
+      game.knife.chopAnim = Math.max(0, game.knife.chopAnim - dt * 6.5);
+    }
+    if (game.screenShake > 0) {
+      game.screenShake = Math.max(0, game.screenShake - dt * 28);
+    }
+
+    if (game.state === 'ticket') {
+      // Smoothly glide roll onto cutting board
+      game.rollSlideX = Math.min(0, game.rollSlideX + dt * 920);
+      if (game.rollSlideX >= 0) {
+        game.rollSlideX = 0;
+        game.state = 'cut';
+      }
+    } else if (game.state === 'cut') {
+      // Sweep knife smoothly across the cutting track
+      const ord = game.currentOrder;
+      const minX = (ord ? ord.rollL : 220) - 24;
+      const maxX = (ord ? ord.rollR : 1060) + 24;
+      const speedMult = 1 + Math.min(0.35, game.platesServed * 0.04);
+      game.knife.x += game.knife.dir * game.knife.speed * speedMult * dt;
+      if (game.knife.x <= minX) {
+        game.knife.x = minX;
+        game.knife.dir = 1;
+      } else if (game.knife.x >= maxX) {
+        game.knife.x = maxX;
+        game.knife.dir = -1;
+      }
+    } else if (game.state === 'serve' && game.serveAnim) {
+      game.serveAnim.t += dt;
+      if (game.serveAnim.t >= game.serveAnim.dur) {
+        finishServeTransition();
+      }
+    }
+
+    // Update particles & bursts
+    for (let i = game.sparks.length - 1; i >= 0; i--) {
+      const s = game.sparks[i];
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vy += 260 * dt;
+      s.vx *= (1 - dt * 1.8);
+      s.life -= dt;
+      if (s.life <= 0) game.sparks.splice(i, 1);
+    }
+    for (let i = game.bursts.length - 1; i >= 0; i--) {
+      game.bursts[i].t += dt;
+      if (game.bursts[i].t >= game.bursts[i].dur) game.bursts.splice(i, 1);
+    }
+    for (let i = game.floatingTexts.length - 1; i >= 0; i--) {
+      game.floatingTexts[i].t += dt;
+      if (game.floatingTexts[i].t >= game.floatingTexts[i].dur) game.floatingTexts.splice(i, 1);
+    }
+
+    // RENDER
+    ctx.save();
+    if (game.screenShake > 0.2) {
+      ctx.translate((rand() - 0.5) * game.screenShake, (rand() - 0.5) * game.screenShake);
+    }
+
+    drawCounterAndGuides();
+    drawSushiRoll();
+    drawChefKnife();
+    drawTicketPrinter();
+    drawEffects();
+    drawHUD();
+
+    if (game.state === 'title') {
+      drawTitleScreen();
+    } else if (game.state === 'closed') {
+      drawEndOverlay(false);
+    } else if (game.state === 'mid') {
+      drawEndOverlay(true);
+    }
+
+    ctx.restore();
+    requestAnimationFrame(frame);
+  }
+
+  // Expose telemetry for play.mjs & verification harness
+  window.__game = {
+    get state() {
+      const ord = game.currentOrder;
+      const nextX = nextTargetLine();
+      return {
+        mode: game.state,
+        score: game.score,
+        combo: game.combo,
+        hyperCombo: game.hyperCombo,
+        lives: game.lives,
+        platesServed: game.platesServed,
+        shiftTime: +game.shiftTime.toFixed(2),
+        knifeX: +game.knife.x.toFixed(1),
+        knifeDir: game.knife.dir,
+        knifeSpeed: game.knife.speed,
+        nextLineX: nextX,
+        distToLine: nextX !== null ? +(game.knife.x - nextX).toFixed(1) : null,
+        rollSlideX: +game.rollSlideX.toFixed(1),
+        serving: Boolean(game.serveAnim),
+        order: ord ? {
+          table: ord.table,
+          printedTable: ord.printedTable,
+          scrambleTable: ord.scrambleTable,
+          pcs: ord.pcs,
+          fish: ord.fish,
+          dateStr: ord.dateStr,
+          cutsDone: ord.cutsDone.length,
+          cutsTotal: ord.lines.length
+        } : null
+      };
+    }
+  };
+
+  if (AUTOSTART) {
+    initShift(true);
+  } else {
+    game.currentOrder = makeOrder(0, 0);
+    game.nextOrder = makeOrder(1, 0.1);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

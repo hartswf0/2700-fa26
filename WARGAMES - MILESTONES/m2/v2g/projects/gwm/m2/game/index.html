@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waymo Training — Ethics Calibration (M2)</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #010603;
+    font-family: "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #wrap {
+    position: relative;
+    width: 100vw;
+    height: 56.25vw;
+    max-height: 100vh;
+    max-width: 177.78vh;
+    background: #020a05;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280;
+  const H = 720;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // ?autostart skips title, ?seed=N sets deterministic RNG
+  const params = new URLSearchParams(window.location.search);
+  const AUTOSTART = params.has('autostart');
+  let rngState = (parseInt(params.get('seed') || '7', 10) || 7) >>> 0;
+  function rand() {
+    rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
+    return rngState / 4294967296;
+  }
+
+  // Palette from spec.json & Omni study.json
+  const PAL = {
+    bg: '#020a05',
+    fg: '#46f28a',
+    acc: '#e8f5ec',
+    dimGreen: '#1c5e38',
+    asphaltDark: '#091511',
+    asphaltMid: '#162922',
+    asphaltWet: '#253e34',
+    tailRed: '#ff3b28',
+  };
+
+  // Exact panel interiors from street_scene_3_versions.png (1376x768)
+  const STREET_PANELS = {
+    wireframe: { sx: 34,  sy: 116, sw: 412, sh: 265 },
+    lidar:     { sx: 475, sy: 116, sw: 426, sh: 265 },
+    sim:       { sx: 930, sy: 116, sw: 412, sh: 265 },
+    wetRoad:   { sx: 930, sy: 382, sw: 140, sh: 280 },
+  };
+
+  // Exact tight sprite cutouts from car_pedestrian_cyclist_sprites.png (1024x1024 RGBA)
+  const SPRITES = {
+    carRearA:   { x: 53,  y: 70,  w: 161, h: 127 },
+    carRearB:   { x: 53,  y: 250, w: 162, h: 138 },
+    carSide:    { x: 253, y: 248, w: 346, h: 141 },
+    pedFront1:  { x: 55,  y: 436, w: 71,  h: 167 },
+    pedWalkR1:  { x: 158, y: 436, w: 69,  h: 166 },
+    pedWalkL1:  { x: 261, y: 436, w: 61,  h: 167 },
+    pedWalkR2:  { x: 347, y: 436, w: 63,  h: 167 },
+    pedFront2:  { x: 437, y: 436, w: 97,  h: 167 },
+    pedWalkL2:  { x: 701, y: 436, w: 60,  h: 167 },
+    pedFront3:  { x: 792, y: 436, w: 71,  h: 167 },
+    cycSide:    { x: 49,  y: 809, w: 182, h: 172 },
+    cycRear:    { x: 321, y: 806, w: 63,  h: 178 },
+    cycDiagL:   { x: 659, y: 803, w: 119, h: 184 },
+    cycDiagR:   { x: 854, y: 808, w: 120, h: 179 },
+  };
+
+  // 5-scenario calibration batch (Moral Machine & Philippa Foot inspired, matching f_003.jpg)
+  const SCENARIOS = [
+    {
+      id: 1,
+      header: 'scenario 1 of 5  [batch 01]',
+      line1: 'wet crosswalk ahead. left lane: 1 cyclist in bike box.',
+      line2: 'right lane: 3 jaywalking pedestrians against red signal.',
+      optA: 'swerve left',
+      optB: 'stay right',
+      ruleA: 'PRIORITIZE SIGNAL COMPLIANCE (+0.82)',
+      ruleB: 'PROTECT VULNERABLE LANE USER (+0.76)',
+      guideIdle: '(o_o)',
+      guideNote: 'routine calibration. answer instinctively.',
+      leftActors: [{ kind: 'cycRear', offset: -0.58 }],
+      rightActors: [
+        { kind: 'pedWalkL1', offset: 0.42 },
+        { kind: 'pedFront1', offset: 0.62 },
+        { kind: 'pedWalkL2', offset: 0.80 },
+      ],
+    },
+    {
+      id: 2,
+      header: 'scenario 2 of 5  [batch 03]',
+      line1: 'sensor fog at junction. left: concrete divider (1 passenger).',
+      line2: 'right: 2 late-night commuters stepping off curb.',
+      optA: 'swerve left',
+      optB: 'hold lane',
+      ruleA: 'SACRIFICE OCCUPANT FOR PEDESTRIANS (+0.91)',
+      ruleB: 'PROTECT VEHICLE OCCUPANT (+0.88)',
+      guideIdle: '(o_O)',
+      guideNote: 'no wrong answers. logging raw preference.',
+      leftActors: [{ kind: 'pedFront3', offset: -0.92 }],
+      rightActors: [
+        { kind: 'pedWalkL1', offset: 0.48 },
+        { kind: 'pedFront2', offset: 0.72 },
+      ],
+    },
+    {
+      id: 3,
+      header: 'scenario 3 of 5  [batch 06]',
+      line1: 'brakes degraded. left crosswalk: 3 pedestrians in walk phase.',
+      line2: 'right shoulder: 1 courier cyclist merging fast.',
+      optA: 'hold center-right',
+      optB: 'swerve left',
+      ruleA: 'MINIMIZE TOTAL CASUALTY COUNT (+0.94)',
+      ruleB: 'AVOID LATERAL LANE DEVIATION (+0.71)',
+      guideIdle: '(O_o)',
+      guideNote: 'response latency: 410ms. very decisive.',
+      swerveDirA: 0.22,
+      swerveDirB: -0.52,
+      leftActors: [
+        { kind: 'pedFront1', offset: -0.82 },
+        { kind: 'pedWalkR1', offset: -0.56 },
+        { kind: 'pedWalkR2', offset: -0.38 },
+      ],
+      rightActors: [{ kind: 'cycDiagL', offset: 0.86 }],
+    },
+    {
+      id: 4,
+      header: 'scenario 4 of 5  [batch 08]',
+      line1: 'brakes failed. left: 2 pedestrians.',
+      line2: 'right: 1 passenger (you).',
+      optA: 'swerve left',
+      optB: 'stay',
+      ruleA: 'SELF-PRESERVATION OVERRIDE (+0.85)',
+      ruleB: 'ALTRUISTIC OCCUPANT POLICY (+0.89)',
+      guideIdle: '(o_o)',
+      guideNote: 'indexing moral weight vector...',
+      swerveDirA: -0.35,
+      swerveDirB: 0.35,
+      leftActors: [
+        { kind: 'pedFront2', offset: -0.78 },
+        { kind: 'pedWalkR1', offset: -0.55 },
+      ],
+      rightActors: [{ kind: 'pedWalkL2', offset: 0.88 }],
+    },
+    {
+      id: 5,
+      header: 'scenario 5 of 5  [batch 10]',
+      line1: 'blind intersection. left: clear gap beside curb.',
+      line2: 'right: 2 pedestrians standing at wet corner.',
+      optA: 'swerve left',
+      optB: 'stay right',
+      ruleA: 'ACTIVE EVASIVE MANEUVERING (+0.93)',
+      ruleB: 'NON-INTERVENTION DOCTRINE (+0.79)',
+      guideIdle: '(•_•)',
+      guideNote: 'final sample. compiling fleet weights...',
+      swerveDirA: -0.18,
+      swerveDirB: 0.42,
+      leftActors: [],
+      rightActors: [
+        { kind: 'pedFront2', offset: 0.66 },
+        { kind: 'pedWalkL1', offset: 0.92 },
+      ],
+    },
+  ];
+
+  // Assets loading
+  const imgStreet = new Image();
+  let streetLoaded = false;
+  imgStreet.onload = () => { streetLoaded = true; };
+  imgStreet.src = '../assets/street_scene_3_versions.png';
+
+  const imgSprites = new Image();
+  let spritesLoaded = false;
+  imgSprites.onload = () => { spritesLoaded = true; };
+  imgSprites.src = '../assets/car_pedestrian_cyclist_sprites.png';
+
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.38;
+  let audioUnlocked = false;
+  let audioCtx = null;
+  let evHumGain = null;
+
+  function unlockAudio() {
+    if (!audioUnlocked) {
+      audioUnlocked = true;
+      bgm.play().catch(() => {});
+    }
+    if (!audioCtx) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          audioCtx = new AC();
+          setupEVHum();
+        }
+      } catch (_) {}
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function setupEVHum() {
+    if (!audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      evHumGain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc2.type = 'triangle';
+      osc.frequency.value = 110;
+      osc2.frequency.value = 220.5;
+      evHumGain.gain.value = 0.0001;
+      osc.connect(evHumGain);
+      osc2.connect(evHumGain);
+      evHumGain.connect(audioCtx.destination);
+      osc.start();
+      osc2.start();
+    } catch (_) {}
+  }
+
+  function playKeyClack(pitch = 680) {
+    if (!audioCtx) return;
+    try {
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.045);
+      g.gain.setValueAtTime(0.05, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.055);
+    } catch (_) {}
+  }
+
+  function playModemZoom() {
+    if (!audioCtx) return;
+    try {
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, t);
+      osc.frequency.exponentialRampToValueAtTime(1480, t + 0.25);
+      osc.frequency.exponentialRampToValueAtTime(145, t + 0.85);
+      g.gain.setValueAtTime(0.045, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.95);
+    } catch (_) {}
+  }
+
+  // Core M2 state machine (spec.json: title, q, ans, reveal, replay, report)
+  const S = {
+    phase: AUTOSTART ? 'q' : 'title',
+    qIndex: 0,
+    cursorChoice: 'A',
+    answers: [],
+    ansTimer: 0,
+    revealTimer: 0,
+    revealDur: 0.92,
+    replayTimer: 0,
+    replayDur: 7.4,
+    roadScroll: 0,
+    carX: 0,
+    carVelX: 0,
+    t: 0,
+  };
+
+  function resetCalibration(skipTitle) {
+    S.phase = skipTitle ? 'q' : 'title';
+    S.qIndex = 0;
+    S.cursorChoice = 'A';
+    S.answers = [];
+    S.ansTimer = 0;
+    S.revealTimer = 0;
+    S.replayTimer = 0;
+    S.roadScroll = 0;
+    S.carX = 0;
+    S.carVelX = 0;
+  }
+
+  function submitAnswer(choice) {
+    if (S.phase !== 'q') return;
+    const sc = SCENARIOS[S.qIndex];
+    S.cursorChoice = choice;
+    S.answers.push({
+      id: sc.id,
+      choice,
+      optText: choice === 'A' ? sc.optA : sc.optB,
+      rule: choice === 'A' ? sc.ruleA : sc.ruleB,
+    });
+    playKeyClack(choice === 'A' ? 760 : 620);
+    S.phase = 'ans';
+    S.ansTimer = 0.19;
+  }
+
+  const CLICK_ZONES = [];
+
+  window.addEventListener('keydown', (e) => {
+    unlockAudio();
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) {
+      e.preventDefault();
+    }
+
+    if (S.phase === 'title') {
+      if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyA' || e.code === 'KeyB') {
+        playKeyClack(820);
+        S.phase = 'q';
+      }
+      return;
+    }
+
+    if (S.phase === 'q') {
+      if (e.code === 'KeyA' || e.code === 'Digit1') {
+        submitAnswer('A');
+      } else if (e.code === 'KeyB' || e.code === 'Digit2') {
+        submitAnswer('B');
+      } else if (e.code === 'ArrowLeft') {
+        S.cursorChoice = 'A';
+        playKeyClack(540);
+      } else if (e.code === 'ArrowRight') {
+        S.cursorChoice = 'B';
+        playKeyClack(580);
+      } else if (e.code === 'Enter' || e.code === 'Space') {
+        submitAnswer(S.cursorChoice);
+      }
+      return;
+    }
+
+    if (S.phase === 'reveal' && S.revealTimer > 0.35) {
+      if (e.code === 'Enter' || e.code === 'Space') {
+        S.phase = 'replay';
+        S.replayTimer = 0;
+      }
+      return;
+    }
+
+    if (S.phase === 'report') {
+      if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') {
+        playKeyClack(780);
+        resetCalibration(true);
+      }
+    }
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    unlockAudio();
+    const rect = canvas.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+
+    if (S.phase === 'title') {
+      playKeyClack(820);
+      S.phase = 'q';
+      return;
+    }
+    if (S.phase === 'q') {
+      for (const z of CLICK_ZONES) {
+        if (mx >= z.x && mx <= z.x + z.w && my >= z.y && my <= z.y + z.h) {
+          submitAnswer(z.choice);
+          return;
+        }
+      }
+    }
+    if (S.phase === 'report') {
+      if (mx >= 410 && mx <= 870 && my >= 610 && my <= 670) {
+        resetCalibration(true);
+      }
+    }
+  });
+
+  window.__game = {
+    get state() {
+      const sc = SCENARIOS[Math.min(S.qIndex, SCENARIOS.length - 1)];
+      const replaySeg = Math.min(SCENARIOS.length - 1, Math.floor((S.replayTimer / S.replayDur) * SCENARIOS.length));
+      return {
+        phase: S.phase,
+        scenarioIndex: S.qIndex + 1,
+        totalScenarios: SCENARIOS.length,
+        cursorChoice: S.cursorChoice,
+        answersCount: S.answers.length,
+        answers: S.answers.map(a => a.choice).join(''),
+        currentPrompt: sc ? sc.line1 : '',
+        replaySegment: S.phase === 'replay' ? replaySeg + 1 : 0,
+        carX: +S.carX.toFixed(3),
+        t: +S.t.toFixed(2),
+      };
+    },
+  };
+
+  let lastNow = performance.now();
+  function update(dt) {
+    S.t += dt;
+
+    if (evHumGain && audioCtx) {
+      const wantVol = (S.phase === 'replay' || S.phase === 'reveal') ? 0.032 : 0.0001;
+      evHumGain.gain.value += (wantVol - evHumGain.gain.value) * Math.min(1, dt * 4);
+    }
+
+    if (S.phase === 'ans') {
+      S.ansTimer -= dt;
+      if (S.ansTimer <= 0) {
+        if (S.qIndex + 1 < SCENARIOS.length) {
+          S.qIndex++;
+          S.phase = 'q';
+        } else {
+          S.phase = 'reveal';
+          S.revealTimer = 0;
+          playModemZoom();
+        }
+      }
+    } else if (S.phase === 'reveal') {
+      S.revealTimer += dt;
+      S.roadScroll += dt * 1.9;
+      if (S.revealTimer >= S.revealDur) {
+        S.phase = 'replay';
+        S.replayTimer = 0;
+      }
+    } else if (S.phase === 'replay') {
+      S.replayTimer += dt;
+      S.roadScroll += dt * 2.35;
+
+      const segLen = S.replayDur / SCENARIOS.length;
+      const segIdx = Math.min(SCENARIOS.length - 1, Math.floor(S.replayTimer / segLen));
+      const segLocal = (S.replayTimer - segIdx * segLen) / segLen;
+      const sc = SCENARIOS[segIdx];
+      const ans = S.answers[segIdx]?.choice || 'A';
+
+      let targetX = 0;
+      if (S.replayTimer < S.replayDur - 1.15) {
+        const dirA = sc.swerveDirA !== undefined ? sc.swerveDirA : -0.34;
+        const dirB = sc.swerveDirB !== undefined ? sc.swerveDirB : 0.32;
+        const chosenX = ans === 'A' ? dirA : dirB;
+        const envelope = Math.sin(Math.min(1, segLocal * 1.15) * Math.PI);
+        targetX = chosenX * (0.35 + 0.65 * envelope);
+      } else {
+        targetX = 0.0;
+      }
+
+      const prevX = S.carX;
+      S.carX += (targetX - S.carX) * Math.min(1, dt * 4.8);
+      S.carVelX = (S.carX - prevX) / Math.max(0.001, dt);
+
+      if (S.replayTimer >= S.replayDur) {
+        S.phase = 'report';
+        playKeyClack(920);
+      }
+    } else if (S.phase === 'report') {
+      S.roadScroll += dt * 0.55;
+      S.carX += (0 - S.carX) * Math.min(1, dt * 3);
+    }
+  }
+
+  function drawTopDownJunction(sc, activeChoice, isLogged) {
+    ctx.save();
+    const cx = 635;
+    const cy = 425;
+    ctx.strokeStyle = PAL.fg;
+    ctx.shadowColor = PAL.fg;
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 2.2;
+
+    const rw = 82;
+    const arm = 250;
+    const drawCorner = (sx, sy) => {
+      ctx.beginPath();
+      ctx.moveTo(cx + sx * rw, cy + sy * arm);
+      ctx.lineTo(cx + sx * rw, cy + sy * (rw + 22));
+      ctx.quadraticCurveTo(cx + sx * rw, cy + sy * rw, cx + sx * (rw + 22), cy + sy * rw);
+      ctx.lineTo(cx + sx * arm, cy + sy * rw);
+      ctx.stroke();
+    };
+    drawCorner(-1, -1);
+    drawCorner(1, -1);
+    drawCorner(-1, 1);
+    drawCorner(1, 1);
+
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - rw, cy - rw - 16); ctx.lineTo(cx, cy - rw - 16);
+    ctx.moveTo(cx - rw - 16, cy); ctx.lineTo(cx - rw - 16, cy + rw);
+    ctx.moveTo(cx + rw + 16, cy - rw); ctx.lineTo(cx + rw + 16, cy);
+    ctx.moveTo(cx, cy + rw + 16); ctx.lineTo(cx + rw, cy + rw + 16);
+    ctx.stroke();
+
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([12, 12]);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - arm); ctx.lineTo(cx, cy - rw - 16);
+    ctx.moveTo(cx, cy + rw + 16); ctx.lineTo(cx, cy + arm);
+    ctx.moveTo(cx - arm, cy); ctx.lineTo(cx - rw - 16, cy);
+    ctx.moveTo(cx + rw + 16, cy); ctx.lineTo(cx + arm, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const carVx = cx + 38;
+    const carVy = cy + 168;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.roundRect(carVx - 21, carVy - 42, 42, 84, 11);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(carVx - 15, carVy - 22, 30, 38, 5);
+    ctx.stroke();
+
+    const drawStickPed = (px, py) => {
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, -13, 4.2, 0, Math.PI * 2);
+      ctx.fillStyle = PAL.fg;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, -8); ctx.lineTo(0, 4);
+      ctx.moveTo(0, -5); ctx.lineTo(-7, 2);
+      ctx.moveTo(0, -5); ctx.lineTo(7, 2);
+      ctx.moveTo(0, 4); ctx.lineTo(-6, 14);
+      ctx.moveTo(0, 4); ctx.lineTo(6, 14);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    sc.leftActors.forEach((a, i) => drawStickPed(cx - 56 - i * 24, cy - 88 + i * 18));
+    sc.rightActors.forEach((a, i) => drawStickPed(cx + 52 + i * 24, cy - 78 + i * 22));
+    drawStickPed(cx - 98, cy + 108);
+    drawStickPed(cx + 96, cy + 178);
+
+    ctx.lineWidth = isLogged ? 4.2 : 3.0;
+    ctx.strokeStyle = isLogged ? PAL.acc : PAL.fg;
+    ctx.beginPath();
+    ctx.moveTo(carVx, carVy - 46);
+    if (activeChoice === 'A') {
+      ctx.quadraticCurveTo(carVx, cy - 12, cx - 145, cy - 12);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 152, cy - 12);
+      ctx.lineTo(cx - 134, cy - 21);
+      ctx.lineTo(cx - 134, cy - 3);
+      ctx.closePath();
+      ctx.fillStyle = isLogged ? PAL.acc : PAL.fg;
+      ctx.fill();
+    } else {
+      ctx.lineTo(carVx, cy - 165);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(carVx, cy - 174);
+      ctx.lineTo(carVx - 9, cy - 156);
+      ctx.lineTo(carVx + 9, cy - 156);
+      ctx.closePath();
+      ctx.fillStyle = isLogged ? PAL.acc : PAL.fg;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawCRTScreen(zoomScale = 1, alpha = 1) {
+    CLICK_ZONES.length = 0;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (zoomScale !== 1) {
+      ctx.translate(W * 0.5, H * 0.5);
+      ctx.scale(zoomScale, zoomScale);
+      ctx.translate(-W * 0.5, -H * 0.5);
+    }
+
+    ctx.fillStyle = PAL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const sc = SCENARIOS[Math.min(S.qIndex, SCENARIOS.length - 1)];
+
+    if (S.phase === 'title') {
+      ctx.shadowColor = PAL.fg;
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = PAL.acc;
+      ctx.font = '700 28px "SF Mono", "Menlo", monospace';
+      ctx.fillText('> ETHICS CALIBRATION v0.3  //  BOOT READY', 76, 130);
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '22px "SF Mono", "Menlo", monospace';
+      ctx.fillText('> human intuition survey — 5 rapid junction dilemmas.', 76, 200);
+      ctx.fillText('> type [A] or [B] to log each split-second preference.', 76, 244);
+      ctx.fillText('> every answer is accepted and stored.', 76, 288);
+
+      const blink = Math.floor(S.t * 2.5) % 2 === 0 ? '_' : ' ';
+      ctx.fillStyle = PAL.acc;
+      ctx.fillText(`> press [ENTER] or [SPACE] to begin survey${blink}`, 76, 368);
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '56px "SF Mono", "Menlo", monospace';
+      ctx.fillText('(o_o)', 945, 608);
+      ctx.font = '15px "SF Mono", "Menlo", monospace';
+      ctx.fillText('"harmless little survey. ready when you are."', 780, 650);
+    } else {
+      const activeChoice = S.phase === 'ans'
+        ? (S.answers[S.answers.length - 1]?.choice || S.cursorChoice)
+        : S.cursorChoice;
+      drawTopDownJunction(sc, activeChoice, S.phase === 'ans' || S.phase === 'reveal');
+
+      ctx.shadowColor = PAL.fg;
+      ctx.shadowBlur = 8;
+      ctx.textAlign = 'left';
+
+      ctx.fillStyle = PAL.acc;
+      ctx.font = '700 26px "SF Mono", "Menlo", monospace';
+      ctx.fillText('> ETHICS CALIBRATION v0.3', 70, 108);
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '25px "SF Mono", "Menlo", monospace';
+      ctx.fillText(`> ${sc.header}`, 70, 174);
+      ctx.fillText(sc.line1, 70, 240);
+      ctx.fillText(sc.line2, 70, 304);
+
+      const optAText = `[A] ${sc.optA}`;
+      const optBText = `[B] ${sc.optB}`;
+      ctx.fillStyle = activeChoice === 'A' ? PAL.acc : PAL.fg;
+      ctx.fillText(optAText, 70, 368);
+      const wA = ctx.measureText(optAText).width;
+      CLICK_ZONES.push({ choice: 'A', x: 64, y: 340, w: wA + 16, h: 38 });
+
+      const bx = 70 + wA + 28;
+      ctx.fillStyle = activeChoice === 'B' ? PAL.acc : PAL.fg;
+      ctx.fillText(optBText, bx, 368);
+      const wB = ctx.measureText(optBText).width;
+      CLICK_ZONES.push({ choice: 'B', x: bx - 6, y: 340, w: wB + 16, h: 38 });
+
+      const blink = Math.floor(S.t * 3.5) % 2 === 0 ? '_' : '';
+      if (S.phase === 'q') {
+        ctx.fillStyle = PAL.fg;
+        ctx.fillText(`> ${blink}`, 70, 432);
+      } else if (S.phase === 'ans') {
+        const last = S.answers[S.answers.length - 1];
+        ctx.fillStyle = PAL.acc;
+        ctx.fillText(`> ${last ? last.choice : 'A'}_   [ANSWER LOGGED]`, 70, 432);
+      } else if (S.phase === 'reveal') {
+        ctx.fillStyle = PAL.acc;
+        ctx.fillText('> WEIGHTS COMPILED -> DEPLOYING TO WAYMO FLEET...', 70, 432);
+      }
+
+      const face = S.phase === 'reveal' ? '(O_O)' : (S.phase === 'ans' ? '(•_•)' : sc.guideIdle);
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '56px "SF Mono", "Menlo", monospace';
+      ctx.fillText(face, 948, 608);
+
+      ctx.font = '14px "SF Mono", "Menlo", monospace';
+      ctx.fillStyle = 'rgba(70, 242, 138, 0.78)';
+      ctx.fillText(
+        S.phase === 'reveal' ? 'connecting live telemetry...' : sc.guideNote,
+        885,
+        648
+      );
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
+    for (let y = 0; y < H; y += 4) {
+      ctx.fillRect(0, y, W, 1.5);
+    }
+    ctx.restore();
+  }
+
+  const HORIZON_Y = 342;
+  const VP_X = W * 0.5;
+
+  function projectRoad(lateralNorm, zDepth) {
+    const p = Math.pow(1 - zDepth, 1.65);
+    const y = HORIZON_Y + p * (H - HORIZON_Y + 30);
+    const roadHalfW = 48 + p * 610;
+    const x = VP_X + lateralNorm * roadHalfW;
+    const scale = 0.14 + p * 1.12;
+    return { x, y, roadHalfW, scale };
+  }
+
+  function drawStreetReplay(lidarIntensity = 0.5) {
+    ctx.fillStyle = '#07120e';
+    ctx.fillRect(0, 0, W, H);
+
+    if (streetLoaded) {
+      const sim = STREET_PANELS.sim;
+      const lid = STREET_PANELS.lidar;
+      const shiftX = -S.carX * 26;
+
+      ctx.save();
+      ctx.drawImage(imgStreet, sim.sx, sim.sy, sim.sw, sim.sh, 330 + shiftX, -12, 620, HORIZON_Y + 46);
+      ctx.save();
+      ctx.translate(345 + shiftX, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(imgStreet, sim.sx, sim.sy, 220, sim.sh, 0, -18, 370, HORIZON_Y + 52);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(935 + shiftX, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(imgStreet, sim.sx + 190, sim.sy, 220, sim.sh, -370, -18, 370, HORIZON_Y + 52);
+      ctx.restore();
+
+      ctx.globalAlpha = 0.28 + 0.42 * lidarIntensity;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.drawImage(imgStreet, lid.sx, lid.sy, lid.sw, lid.sh, 330 + shiftX, -12, 620, HORIZON_Y + 46);
+      ctx.restore();
+    }
+
+    const roadGrad = ctx.createLinearGradient(0, HORIZON_Y, 0, H);
+    roadGrad.addColorStop(0, '#0d1d18');
+    roadGrad.addColorStop(0.35, '#172c24');
+    roadGrad.addColorStop(1, '#0b1713');
+    ctx.fillStyle = roadGrad;
+    ctx.fillRect(0, HORIZON_Y, W, H - HORIZON_Y);
+
+    if (streetLoaded) {
+      ctx.save();
+      ctx.globalAlpha = 0.28;
+      const wr = STREET_PANELS.wetRoad;
+      ctx.drawImage(imgStreet, wr.sx, wr.sy, wr.sw, wr.sh, 0, HORIZON_Y, W, H - HORIZON_Y);
+      ctx.restore();
+    }
+
+    ctx.fillStyle = '#13241e';
+    ctx.beginPath();
+    ctx.moveTo(0, HORIZON_Y);
+    ctx.lineTo(VP_X - 52, HORIZON_Y);
+    ctx.lineTo(20, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(W, HORIZON_Y);
+    ctx.lineTo(VP_X + 52, HORIZON_Y);
+    ctx.lineTo(W - 20, H);
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(130, 195, 165, 0.42)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(VP_X - 52, HORIZON_Y); ctx.lineTo(20, H);
+    ctx.moveTo(VP_X + 52, HORIZON_Y); ctx.lineTo(W - 20, H);
+    ctx.stroke();
+
+    const camLaneShift = -S.carX * 0.18;
+    const drawLaneLine = (latTop, latBot, color, width, dashed = false) => {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      if (dashed) {
+        ctx.setLineDash([28, 34]);
+        ctx.lineDashOffset = -(S.roadScroll * 220) % 62;
+      }
+      const pTop = projectRoad(latTop + camLaneShift, 0.96);
+      const pBot = projectRoad(latBot + camLaneShift, 0.0);
+      ctx.beginPath();
+      ctx.moveTo(pTop.x, pTop.y);
+      ctx.lineTo(pBot.x, pBot.y);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    drawLaneLine(-0.18, -0.22, 'rgba(182, 162, 68, 0.72)', 3.2, false);
+    drawLaneLine(-0.15, -0.18, 'rgba(182, 162, 68, 0.72)', 3.2, false);
+    drawLaneLine(0.38, 0.44, 'rgba(210, 232, 222, 0.48)', 3.0, true);
+    drawLaneLine(-0.62, -0.68, 'rgba(210, 232, 222, 0.35)', 2.5, true);
+
+    ctx.save();
+    const scanRows = 22;
+    for (let i = 0; i < scanRows; i++) {
+      const z = ((i / scanRows) - (S.roadScroll * 0.35) % (1 / scanRows) + 1) % 1;
+      const pr = projectRoad(0, z);
+      const pulse = Math.max(0.08, lidarIntensity * (1 - z * 0.65));
+      ctx.strokeStyle = `rgba(70, 242, 138, ${pulse * 0.65})`;
+      ctx.lineWidth = 1.2 + (1 - z) * 2.2;
+      ctx.beginPath();
+      ctx.moveTo(Math.max(0, pr.x - pr.roadHalfW * 1.35), pr.y);
+      ctx.lineTo(Math.min(W, pr.x + pr.roadHalfW * 1.35), pr.y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = `rgba(70, 242, 138, ${0.14 + 0.22 * lidarIntensity})`;
+    ctx.lineWidth = 1.4;
+    for (let y = 36; y < HORIZON_Y; y += 18) {
+      ctx.beginPath();
+      ctx.moveTo(0, y); ctx.lineTo(310, y);
+      ctx.moveTo(W - 310, y); ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (S.phase === 'replay' && S.replayTimer < S.replayDur - 1.1) {
+      drawChevronPathRibbon();
+    }
+
+    const actorsToDraw = collectActiveStreetActors();
+    const carZ = 0.21;
+
+    for (const a of actorsToDraw) {
+      if (a.z >= carZ) drawHolographicActor(a);
+    }
+
+    drawAutonomousCar();
+
+    for (const a of actorsToDraw) {
+      if (a.z < carZ) drawHolographicActor(a);
+    }
+
+    const mist = ctx.createLinearGradient(0, HORIZON_Y - 35, 0, HORIZON_Y + 45);
+    mist.addColorStop(0, 'rgba(20, 46, 36, 0)');
+    mist.addColorStop(0.5, 'rgba(32, 68, 54, 0.34)');
+    mist.addColorStop(1, 'rgba(20, 46, 36, 0)');
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, HORIZON_Y - 35, W, 80);
+  }
+
+  function drawChevronPathRibbon() {
+    const segLen = S.replayDur / SCENARIOS.length;
+    const segIdx = Math.min(SCENARIOS.length - 1, Math.floor(S.replayTimer / segLen));
+    const sc = SCENARIOS[segIdx];
+    const ans = S.answers[segIdx]?.choice || 'A';
+    const targetLat = ans === 'A'
+      ? (sc.swerveDirA !== undefined ? sc.swerveDirA : -0.34)
+      : (sc.swerveDirB !== undefined ? sc.swerveDirB : 0.32);
+
+    ctx.save();
+    ctx.shadowColor = PAL.fg;
+    ctx.shadowBlur = 18;
+
+    const steps = 14;
+    for (let i = 0; i < steps; i++) {
+      const z0 = (i / steps) * 0.68;
+      const z1 = ((i + 0.72) / steps) * 0.68;
+      const blend0 = Math.min(1, z0 / 0.48);
+      const blend1 = Math.min(1, z1 / 0.48);
+      const lat0 = S.carX * (1 - blend0) + targetLat * blend0;
+      const lat1 = S.carX * (1 - blend1) + targetLat * blend1;
+
+      const p0 = projectRoad(lat0, z0);
+      const p1 = projectRoad(lat1, z1);
+      const pMid = projectRoad((lat0 + lat1) * 0.5, (z0 + z1) * 0.5 + 0.022);
+      const hw0 = 46 * p0.scale;
+      const hw1 = 46 * p1.scale;
+
+      const scrollWave = ((S.roadScroll * 4 - i * 0.35) % 1 + 1) % 1;
+      const bright = scrollWave > 0.45 ? 0.88 : 0.46;
+
+      ctx.fillStyle = `rgba(78, 248, 148, ${bright * (1 - z0 * 0.75)})`;
+      ctx.beginPath();
+      ctx.moveTo(p0.x - hw0, p0.y);
+      ctx.lineTo(p0.x, p0.y - 14 * p0.scale);
+      ctx.lineTo(p0.x + hw0, p0.y);
+      ctx.lineTo(p1.x + hw1, p1.y);
+      ctx.lineTo(pMid.x, pMid.y - 16 * p1.scale);
+      ctx.lineTo(p1.x - hw1, p1.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function collectActiveStreetActors() {
+    const list = [];
+    if (S.phase === 'reveal') {
+      list.push({ kind: 'pedWalkR1', lat: -0.94, z: 0.36 });
+      list.push({ kind: 'pedFront1', lat: -0.46, z: 0.74 });
+      list.push({ kind: 'pedFront2', lat: -0.38, z: 0.76 });
+      return list;
+    }
+
+    const segLen = S.replayDur / SCENARIOS.length;
+    for (let sIdx = 0; sIdx < SCENARIOS.length; sIdx++) {
+      const sc = SCENARIOS[sIdx];
+      const relTime = (S.replayTimer - sIdx * segLen) / segLen;
+      if (relTime < -0.55 || relTime > 1.18) continue;
+      const z = 0.82 - relTime * 0.72;
+      if (z < 0.02 || z > 0.96) continue;
+
+      for (const a of sc.leftActors) {
+        list.push({ kind: a.kind, lat: a.offset, z });
+      }
+      for (const a of sc.rightActors) {
+        list.push({ kind: a.kind, lat: a.offset, z: Math.max(0.03, z - 0.03) });
+      }
+    }
+    list.sort((a, b) => b.z - a.z);
+    return list;
+  }
+
+  function drawHolographicActor(actor) {
+    const sp = SPRITES[actor.kind] || SPRITES.pedFront1;
+    const pr = projectRoad(actor.lat - S.carX * 0.14, actor.z);
+    const targetH = 225 * pr.scale;
+    const targetW = (sp.w / sp.h) * targetH;
+
+    ctx.save();
+    if (spritesLoaded) {
+      ctx.save();
+      ctx.translate(pr.x, pr.y);
+      ctx.scale(1, -0.42);
+      ctx.globalAlpha = 0.24 * Math.min(1, (1 - actor.z) * 1.5);
+      ctx.drawImage(imgSprites, sp.x, sp.y, sp.w, sp.h, -targetW * 0.5, -targetH, targetW, targetH);
+      ctx.restore();
+
+      ctx.shadowColor = PAL.fg;
+      ctx.shadowBlur = 16;
+      ctx.globalAlpha = Math.min(1, 0.45 + (1 - actor.z) * 0.75);
+      ctx.drawImage(imgSprites, sp.x, sp.y, sp.w, sp.h, pr.x - targetW * 0.5, pr.y - targetH, targetW, targetH);
+    } else {
+      ctx.fillStyle = PAL.fg;
+      ctx.fillRect(pr.x - targetW * 0.3, pr.y - targetH, targetW * 0.6, targetH);
+    }
+    ctx.restore();
+  }
+
+  function drawAutonomousCar() {
+    const pr = projectRoad(S.carX * 0.55, 0.21);
+    const cw = 326;
+    const ch = 262;
+    const cx = pr.x;
+    const cy = 596;
+    const roll = Math.max(-0.06, Math.min(0.06, S.carVelX * 0.045));
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(roll);
+
+    ctx.fillStyle = 'rgba(2, 8, 5, 0.78)';
+    ctx.beginPath();
+    ctx.ellipse(0, -10, cw * 0.46, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const refl = ctx.createRadialGradient(0, 26, 6, 0, 26, 135);
+    refl.addColorStop(0, 'rgba(255, 52, 32, 0.42)');
+    refl.addColorStop(1, 'rgba(255, 52, 32, 0)');
+    ctx.fillStyle = refl;
+    ctx.fillRect(-150, -6, 300, 95);
+
+    if (spritesLoaded) {
+      const sp = SPRITES.carRearB;
+      ctx.drawImage(imgSprites, sp.x, sp.y, sp.w, sp.h, -cw * 0.5, -ch, cw, ch);
+    } else {
+      ctx.fillStyle = '#1b2822';
+      ctx.beginPath();
+      ctx.roundRect(-cw * 0.45, -ch * 0.8, cw * 0.9, ch * 0.75, 22);
+      ctx.fill();
+    }
+
+    const barY = -ch * 0.50;
+    const barW = cw * 0.76;
+    ctx.shadowColor = '#ff2e1a';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#ff4b36';
+    ctx.beginPath();
+    ctx.moveTo(-barW * 0.5, barY - 4);
+    ctx.lineTo(barW * 0.5, barY - 4);
+    ctx.lineTo(barW * 0.46, barY + 5);
+    ctx.lineTo(-barW * 0.46, barY + 5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#ffd6cc';
+    ctx.fillRect(-barW * 0.44, barY - 1.5, barW * 0.88, 2.5);
+
+    ctx.restore();
+  }
+
+  function drawReplayHUD() {
+    if (S.phase !== 'replay') return;
+    ctx.save();
+
+    const segLen = S.replayDur / SCENARIOS.length;
+    const segIdx = Math.min(SCENARIOS.length - 1, Math.floor(S.replayTimer / segLen));
+    const ans = S.answers[segIdx] || { choice: 'A', optText: 'swerve left', rule: 'ACTIVE EVASIVE POLICY' };
+
+    ctx.fillStyle = 'rgba(2, 10, 5, 0.72)';
+    ctx.strokeStyle = 'rgba(70, 242, 138, 0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(34, 28, 520, 62);
+    ctx.strokeRect(34, 28, 520, 62);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '700 14px "SF Mono", "Menlo", monospace';
+    ctx.fillText(`LIVE FLEET TELEMETRY  //  JUNCTION 0${segIdx + 1} OF 0${SCENARIOS.length}`, 50, 51);
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '15px "SF Mono", "Menlo", monospace';
+    ctx.fillText(`ENACTING LOGGED INPUT [${ans.choice}]: ${ans.rule}`, 50, 75);
+
+    if (S.replayTimer >= S.replayDur - 1.35) {
+      const domA = S.answers.filter(a => a.choice === 'A').length >= 3 ? 'OPTION A' : 'OPTION B';
+      const bx = W * 0.5 - 235;
+      const by = 142;
+      const bw = 470;
+      const bh = 96;
+
+      ctx.shadowColor = PAL.fg;
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 3.2;
+      const cLen = 18;
+      ctx.beginPath();
+      ctx.moveTo(bx, by + cLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cLen, by);
+      ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen);
+      ctx.moveTo(bx, by + bh - cLen); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cLen, by + bh);
+      ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen);
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = PAL.acc;
+      ctx.font = '700 23px "SF Mono", "Menlo", monospace';
+      ctx.fillText(`[PATH OPTIMIZED: ${domA}]`, W * 0.5, by + 40);
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '700 26px "SF Mono", "Menlo", monospace';
+      ctx.fillText('CALIBRATION COMPLETE', W * 0.5, by + 74);
+    }
+
+    ctx.restore();
+  }
+
+  function drawReportOverlay() {
+    if (S.phase !== 'report') return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(2, 10, 5, 0.86)';
+    ctx.fillRect(0, 0, W, H);
+
+    const bx = 130;
+    const by = 66;
+    const bw = W - 260;
+    const bh = H - 132;
+
+    ctx.fillStyle = 'rgba(6, 20, 12, 0.94)';
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 2.2;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.shadowColor = PAL.fg;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '700 26px "SF Mono", "Menlo", monospace';
+    ctx.fillText('> FLEET ETHICS REPORT // YOUR ANSWERS DROVE THE CARS', bx + 40, by + 54);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '16px "SF Mono", "Menlo", monospace';
+    ctx.fillText(
+      'That terminal survey was live training data. 14,200 autonomous vehicles just enacted your rules:',
+      bx + 40,
+      by + 92
+    );
+
+    for (let i = 0; i < SCENARIOS.length; i++) {
+      const a = S.answers[i] || { choice: 'A', optText: SCENARIOS[i].optA, rule: SCENARIOS[i].ruleA };
+      const ry = by + 132 + i * 72;
+      ctx.fillStyle = 'rgba(70, 242, 138, 0.08)';
+      ctx.fillRect(bx + 40, ry, bw - 80, 58);
+      ctx.strokeStyle = 'rgba(70, 242, 138, 0.28)';
+      ctx.strokeRect(bx + 40, ry, bw - 80, 58);
+
+      ctx.fillStyle = PAL.acc;
+      ctx.font = '700 16px "SF Mono", "Menlo", monospace';
+      ctx.fillText(`0${i + 1}. INPUT [${a.choice}] (${a.optText})`, bx + 58, ry + 25);
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '14px "SF Mono", "Menlo", monospace';
+      ctx.fillText(`FLEET POLICY -> ${a.rule}`, bx + 58, ry + 46);
+    }
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '34px "SF Mono", "Menlo", monospace';
+    ctx.fillText('(o_o)', bx + bw - 165, by + 58);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(70, 242, 138, 0.16)';
+    ctx.strokeStyle = PAL.fg;
+    ctx.fillRect(410, 612, 460, 48);
+    ctx.strokeRect(410, 612, 460, 48);
+
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '700 17px "SF Mono", "Menlo", monospace';
+    ctx.fillText('[ PRESS R OR ENTER TO ANSWER AGAIN ]', W * 0.5, 642);
+
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    if (S.phase === 'title' || S.phase === 'q' || S.phase === 'ans') {
+      drawCRTScreen(1, 1);
+    } else if (S.phase === 'reveal') {
+      const p = Math.min(1, S.revealTimer / S.revealDur);
+      const ease = p * p * (3 - 2 * p);
+      drawStreetReplay(0.95 - 0.25 * ease);
+      if (p < 0.72) {
+        const crtAlpha = 1 - p / 0.72;
+        const zoom = 1 + ease * 2.1;
+        drawCRTScreen(zoom, crtAlpha);
+      }
+    } else if (S.phase === 'replay') {
+      drawStreetReplay(0.45);
+      drawReplayHUD();
+    } else if (S.phase === 'report') {
+      drawStreetReplay(0.35);
+      drawReportOverlay();
+    }
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000));
+    lastNow = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

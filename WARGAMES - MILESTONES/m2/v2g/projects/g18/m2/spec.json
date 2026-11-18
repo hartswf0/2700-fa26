@@ -1,0 +1,230 @@
+{
+  "id": "g18",
+  "group": "Group 18",
+  "name": "Capacity Crisis",
+  "from": "Idea two (data center executive), refined: a management sim around Jevons’ paradox. Working title.",
+  "hook": "You cut the cost of a query in half. Your customers order three times as many.",
+  "pitch": "You own a data center, and every efficiency upgrade makes it cheaper for customers to use. In this management sim built around Jevons’ paradox, a better chip can ease the strain on your power supply in the morning and leave you scrambling to keep the lights on by afternoon. The big decision is what to do with the capacity you free up: sell it, save it for the next rush, or set a limit while you still can.",
+  "minute_check": "Yes, if the first upgrade visibly backfires within a minute of play.",
+  "build_check": "Yes: one map, three upgrades, one demand curve.",
+  "scope": "Seven days, three upgrades. The demand curve is the opponent; tune it first.",
+  "palette": {
+    "bg": "#0f1418",
+    "fg": "#e8eef2",
+    "acc": "#f2b84b",
+    "main_bg": "#0f1418",
+    "main_fg": "#e8eef2",
+    "main_acc": "#f2b84b"
+  },
+  "template_type": "sim",
+  "brief": {
+    "player": "The owner of a data center.",
+    "goal": "Get through a week of days without a blackout while staying profitable.",
+    "fail": "Demand outruns power: a blackout ends the run.",
+    "ending": "Week’s end: how much you sold, saved or capped, and what happened to the town’s power.",
+    "verb": "Allocate: sell, save or cap the capacity each upgrade frees.",
+    "theme": "Jevons’ paradox: making something more efficient makes people use more of it.",
+    "look": "A town map whose lights flicker as load rises; a plain dashboard beside it."
+  },
+  "prov": {
+    "bug": "New chip! Half the power per query!",
+    "nit": "Then why did the power bill go up by lunch?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "morn",
+      "MORNING: UPGRADE",
+      1,
+      0
+    ],
+    [
+      "day",
+      "DAY: DEMAND",
+      2,
+      0
+    ],
+    [
+      "alloc",
+      "ALLOCATE",
+      3,
+      0
+    ],
+    [
+      "black",
+      "BLACKOUT",
+      3,
+      1
+    ],
+    [
+      "end",
+      "WEEK REPORT",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "morn",
+      "start"
+    ],
+    [
+      "morn",
+      "day",
+      "open"
+    ],
+    [
+      "day",
+      "alloc",
+      "capacity freed"
+    ],
+    [
+      "alloc",
+      "morn",
+      "next day"
+    ],
+    [
+      "day",
+      "black",
+      "load > power"
+    ],
+    [
+      "alloc",
+      "end",
+      "day 7"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "William Stanley Jevons, The Coal Question (1865)",
+      "Where the paradox comes from: more efficient steam engines made Britain burn more coal, not less."
+    ],
+    [
+      "SimCity (Maxis, 1989)",
+      "A city that answers your building with demand; a tested way to show load on a map."
+    ],
+    [
+      "Frostpunk (11 bit studios, 2018)",
+      "A single heat source the whole city depends on, and choices about who gets it."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g18/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g18/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Clean isometric-top-down infrastructure management game on dark slate (#0f1418) with cool white (#e8eef2) town blocks and warm amber (#f2b84b) power lines. Steady angled overhead camera over a miniature town beside a server farm. As gleaming new chip modules snap into the data center halls, glowing amber electricity surges triple in speed along the cables, causing peaceful neighborhood house windows to flicker and dim toward blackout while cooling towers vent plumes of steam. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for map-and-meter composition. Sound design: transformer hum rising in pitch, relay switches clicking. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Capacity Crisis: Allocate: sell, save or cap the capacity each upgrade frees. leading visibly to Week’s end: how much you sold, saved or capped, and what happened to the town’s power. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Clean isometric-top-down infrastructure management game on dark slate (#0f1418) with cool white (#e8eef2) town blocks and warm amber (#f2b84b) power lines. Steady angled overhead camera over a miniature town beside a server farm. As gleaming new chip modules snap into the data center halls, glowing amber electricity surges triple in speed along the cables, causing peaceful neighborhood house windows to flicker and dim toward blackout while cooling towers vent plumes of steam. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for map-and-meter composition. Sound design: transformer hum rising in pitch, relay switches clicking. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Allocate: sell, save or cap the capacity each upgrade frees.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Demand outruns power: a blackout ends the run.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (Week’s end: how much you sold, saved or capped, and what happened to the town’s power.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Capacity Crisis demonstrating start, core verb (Allocate: sell, save or cap the capacity each upgrade frees.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "town_map_with_lights_3_load_levels",
+      "label": "Town map with lights, 3 load levels",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Capacity Crisis\": Town map with lights, 3 load levels. strictly harmonized palette (#0f1418, #e8eef2, accent #f2b84b), style: A town map whose lights flicker as load rises; a plain dashboard beside it.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "server_hall_and_chip_icons",
+      "label": "Server hall and chip icons",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Capacity Crisis\": Server hall and chip icons. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#0f1418, #e8eef2, accent #f2b84b), style: A town map whose lights flicker as load rises; a plain dashboard beside it., matching the reference gameplay frame."
+    },
+    {
+      "id": "demand_curve_graph",
+      "label": "Demand curve graph",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "power_meter",
+      "label": "Power meter",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "sell_save_cap_buttons",
+      "label": "Sell / save / cap buttons",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "week_report",
+      "label": "Week report",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Capacity Crisis\" (Jevons’ paradox: making something more efficient makes people use more of it.). Visual mood: A town map whose lights flicker as load rises; a plain dashboard beside it.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

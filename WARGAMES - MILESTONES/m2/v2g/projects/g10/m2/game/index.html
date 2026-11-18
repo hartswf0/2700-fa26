@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab-Rat-ory — Group 10 (M2)</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0c0303;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  #wrap {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    background: #1a0606;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,0,0,0.9);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  // Offscreen pixelation buffer for authentic 8-bit -> 16-bit -> 32-bit -> Full HD escalation
+  const buf = document.createElement('canvas');
+  const bctx = buf.getContext('2d');
+
+  const Q = new URLSearchParams(location.search);
+  const AUTOSTART = Q.has('autostart');
+  let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+  function rand() {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  }
+
+  const PAL = {
+    bg: '#1a0606',
+    deepBg: '#120404',
+    fg: '#ff6a5a',
+    acc: '#ffd6cf',
+    steelDark: '#171d1f',
+    steelMid: '#283134'
+  };
+
+  // Load Nano Banana generated assets
+  const imgs = {};
+  const assetList = {
+    rats: '../assets/rat_sprite_at_4_resolutions.png',
+    bgs: '../assets/4_level_backgrounds_one_per_member.png',
+    props: '../assets/key_cheese_trap_needles.png',
+    hands: '../assets/human_hand_shadow_hazard.png'
+  };
+  const loaded = {};
+  for (const [k, src] of Object.entries(assetList)) {
+    const im = new Image();
+    im.onload = () => {
+      loaded[k] = true;
+      if (k === 'rats') buildPaleRatSheet(im);
+    };
+    im.src = src;
+    imgs[k] = im;
+  }
+
+  // Build pale white-pink tinted version of the 4 rat sprites matching study/sheet.jpg (#ffd6cf / #ff6a5a)
+  const paleRatCanvas = document.createElement('canvas');
+  paleRatCanvas.width = 1024;
+  paleRatCanvas.height = 1024;
+  let paleRatReady = false;
+  function buildPaleRatSheet(im) {
+    try {
+      const pctx = paleRatCanvas.getContext('2d');
+      pctx.drawImage(im, 0, 0);
+      const id = pctx.getImageData(0, 0, 1024, 1024);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 15) continue;
+        // Lift coral-red body toward warm pale lab-rat white-pink (#ffd6cf) while preserving pixel outlines
+        const lum = 0.35 * d[i] + 0.45 * d[i + 1] + 0.20 * d[i + 2];
+        if (lum > 42) {
+          d[i]     = Math.min(255, (d[i] * 0.48 + 152) | 0);
+          d[i + 1] = Math.min(255, (d[i + 1] * 0.55 + 176) | 0);
+          d[i + 2] = Math.min(255, (d[i + 2] * 0.55 + 174) | 0);
+        }
+      }
+      pctx.putImageData(id, 0, 0);
+      paleRatReady = true;
+    } catch (_) {}
+  }
+
+  // Exact sub-sprite bounding boxes measured from Nano Banana assets
+  const RAT_RECTS = [
+    { x: 48,  y: 262, w: 202, h: 508 }, // l1: 8-bit chunky pixel rat
+    { x: 298, y: 262, w: 192, h: 508 }, // l2: 16-bit pixel rat
+    { x: 538, y: 262, w: 204, h: 514 }, // l3: crisp illustrated rat
+    { x: 779, y: 261, w: 207, h: 540 }  // l4: high-res detailed fur rat
+  ];
+
+  const BG_QUADS = [
+    { x: 23,  y: 20,  w: 659, h: 357 }, // l1: 8-bit pixel lab
+    { x: 693, y: 20,  w: 659, h: 357 }, // l2: 16-bit pixel lab
+    { x: 23,  y: 390, w: 659, h: 351 }, // l3: crisp workbench
+    { x: 693, y: 390, w: 659, h: 351 }  // l4: photorealistic surgical bench
+  ];
+
+  const PROP_RECTS = {
+    key:        { x: 370, y: 125, w: 284, h: 114 },
+    trapArmed:  { x: 104, y: 390, w: 360, h: 242 },
+    trapSprung: { x: 549, y: 386, w: 376, h: 247 },
+    syringe:    { x: 155, y: 765, w: 734, h: 119 },
+    needleTip:  { x: 683, y: 846, w: 196, h: 53 }
+  };
+
+  const HAND_RECTS = [
+    { x: 43,  y: 406, w: 160, h: 222 },
+    { x: 237, y: 401, w: 161, h: 227 },
+    { x: 431, y: 396, w: 161, h: 237 },
+    { x: 624, y: 396, w: 163, h: 237 },
+    { x: 818, y: 388, w: 163, h: 245 }
+  ];
+
+  // BGM + Procedural WebAudio SFX
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.36;
+  let audioCtx = null;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (bgm.paused) {
+      bgm.play().catch(() => {});
+    }
+  }
+
+  function playTone(freq, freqEnd, dur, vol = 0.04, type = 'triangle') {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    try {
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + dur);
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + dur + 0.01);
+    } catch (_) {}
+  }
+
+  function sfxSkitter() { playTone(920 + rand() * 280, 420, 0.032, 0.018, 'sine'); }
+  function sfxKey() {
+    playTone(1318.5, 1760, 0.12, 0.055, 'sine');
+    setTimeout(() => playTone(2093, 2637, 0.18, 0.045, 'sine'), 65);
+  }
+  function sfxUnlock() {
+    playTone(520, 980, 0.14, 0.05, 'sawtooth');
+    setTimeout(() => playTone(1174, 1568, 0.22, 0.05, 'triangle'), 80);
+  }
+  function sfxCaught() {
+    playTone(290, 58, 0.28, 0.08, 'sawtooth');
+  }
+  function sfxHeartbeat() {
+    playTone(68, 42, 0.11, 0.04, 'sine');
+  }
+
+  // Precomputed film grain tile
+  const grainCanvas = document.createElement('canvas');
+  grainCanvas.width = 160;
+  grainCanvas.height = 90;
+  const gctx = grainCanvas.getContext('2d');
+  const gData = gctx.createImageData(160, 90);
+  for (let i = 0; i < gData.data.length; i += 4) {
+    const v = (rand() * 255) | 0;
+    gData.data[i] = v;
+    gData.data[i + 1] = (v * 0.7) | 0;
+    gData.data[i + 2] = (v * 0.7) | 0;
+    gData.data[i + 3] = 18;
+  }
+  gctx.putImageData(gData, 0, 0);
+
+  // Outer arena walls shared by all levels
+  const ARENA_WALLS = [
+    { x: 44, y: 46, w: 1192, h: 10 },
+    { x: 44, y: 664, w: 1192, h: 10 },
+    { x: 44, y: 46, w: 10, h: 628 },
+    { x: 1226, y: 46, w: 10, h: 628 }
+  ];
+
+  // Four escalating levels matching spec.json (l1..l4) and study/sheet.jpg choreography!
+  const LEVELS = [
+    {
+      id: 'l1',
+      title: '1 CAGE · 8-BIT',
+      resW: 256,
+      resH: 144,
+      ratIdx: 0,
+      bgIdx: 0,
+      bgAlpha: 0.22,
+      redStyle: true,
+      spawn: { x: 132, y: 565, angle: 0 },
+      keyPos: { x: 258, y: 565 },
+      exitRect: { x: 540, y: 515, w: 72, h: 100, label: 'CAGE LATCH' },
+      clue: { x: 375, y: 472, text: 'CLUE 1/4: KEY FILED CLEAN — NOT DROPPED' },
+      walls: [
+        // Chunky wire cage walls with right door gap
+        { x: 64, y: 492, w: 170, h: 10 },
+        { x: 64, y: 626, w: 170, h: 10 },
+        { x: 64, y: 492, w: 10, h: 144 },
+        // Simple first corridor guiding right
+        { x: 64, y: 392, w: 560, h: 12 }
+      ],
+      traps: [
+        { x: 390, y: 260, r: 36, sprung: false }
+      ],
+      syringes: [],
+      hand: null,
+      waypoints: [
+        { x: 262, y: 565 },
+        { x: 575, y: 565 }
+      ]
+    },
+    {
+      id: 'l2',
+      title: '2 MAZE · 16-BIT',
+      resW: 480,
+      resH: 270,
+      ratIdx: 1,
+      bgIdx: 1,
+      bgAlpha: 0.25,
+      redStyle: true,
+      ratScale: 1.05,
+      // Exact red-line maze layout from refs/m2_main_ref.png & study/sheet.jpg row 1!
+      spawn: { x: 148, y: 565, angle: 0 },
+      keyPos: { x: 278, y: 565 },
+      exitRect: { x: 494, y: 92, w: 92, h: 86, label: 'BENCH VENT' },
+      clue: { x: 455, y: 455, text: 'CLUE 2/4: IR SENSOR LOGGING TURN LATENCY' },
+      walls: [
+        { x: 54,  y: 238, w: 326, h: 10 },
+        { x: 372, y: 238, w: 10,  h: 162 },
+        { x: 372, y: 390, w: 248, h: 10 },
+        { x: 372, y: 558, w: 10,  h: 106 },
+        { x: 658, y: 56,  w: 10,  h: 204 },
+        { x: 658, y: 250, w: 312, h: 10 },
+        { x: 960, y: 462, w: 10,  h: 202 },
+        { x: 960, y: 462, w: 170, h: 10 }
+      ],
+      traps: [
+        { x: 225, y: 345, r: 34, sprung: false },
+        { x: 1085, y: 575, r: 34, sprung: false }
+      ],
+      syringes: [
+        { x: 1045, y: 330, w: 150, h: 26, angle: -0.18 }
+      ],
+      hand: null,
+      waypoints: [
+        { x: 282, y: 565 },
+        { x: 315, y: 476 },
+        { x: 705, y: 476 },
+        { x: 705, y: 325 },
+        { x: 540, y: 320 },
+        { x: 540, y: 135 }
+      ]
+    },
+    {
+      id: 'l3',
+      title: '3 BENCH · 32-BIT',
+      resW: 960,
+      resH: 540,
+      ratIdx: 2,
+      bgIdx: 2,
+      bgAlpha: 0.92,
+      redStyle: false,
+      ratScale: 1.28,
+      spawn: { x: 165, y: 418, angle: 0 },
+      keyPos: { x: 415, y: 418 },
+      exitRect: { x: 1005, y: 376, w: 96, h: 102, label: 'LAB FLOOR' },
+      clue: { x: 645, y: 455, text: 'CLUE 3/4: CLIPBOARD — "TRIAL 47: EXPECTED BENCH PATH"' },
+      walls: [
+        { x: 54,  y: 285, w: 310, h: 14 },
+        { x: 470, y: 515, w: 14,  h: 149 },
+        { x: 560, y: 255, w: 350, h: 14 }
+      ],
+      traps: [
+        { x: 210, y: 185, r: 34, sprung: false },
+        { x: 345, y: 585, r: 34, sprung: false }
+      ],
+      syringes: [
+        { x: 745, y: 155, w: 175, h: 28, angle: 0.06 }
+      ],
+      hand: {
+        baseX: 660,
+        ampX: 150,
+        reachY: 185,
+        speed: 1.55,
+        dangerR: 48
+      },
+      waypoints: [
+        { x: 415, y: 418 },
+        { x: 740, y: 418 },
+        { x: 1048, y: 425 }
+      ]
+    },
+    {
+      id: 'l4',
+      title: '4 HUMANS · FULL RES',
+      resW: 1280,
+      resH: 720,
+      ratIdx: 3,
+      bgIdx: 3,
+      bgAlpha: 0.98,
+      redStyle: false,
+      ratScale: 1.38,
+      isHumanRoom: true,
+      spawn: { x: 155, y: 515, angle: 0 },
+      keyPos: { x: 435, y: 515 },
+      // Glowing amber exit doorway on bottom-right matching study/sheet.jpg row 4!
+      exitRect: { x: 925, y: 438, w: 132, h: 158, label: 'FREEDOM?' },
+      clue: { x: 685, y: 535, text: 'CLUE 4/4: ONE-WAY MIRROR — THREE HUMANS WATCHING' },
+      walls: [
+        { x: 320, y: 260, w: 480, h: 14 },
+        { x: 800, y: 105, w: 14,  h: 169 }
+      ],
+      traps: [
+        { x: 215, y: 185, r: 36, sprung: false }
+      ],
+      syringes: [
+        { x: 565, y: 175, w: 185, h: 30, angle: 0.0 }
+      ],
+      // Looming black scientist hand shadow reaching down from top-center (exact match to sheet.jpg rows 3 & 4!)
+      hand: {
+        baseX: 545,
+        ampX: 155,
+        reachY: 275,
+        speed: 1.75,
+        dangerR: 52
+      },
+      waypoints: [
+        { x: 435, y: 515 },
+        { x: 715, y: 515 },
+        { x: 975, y: 515 }
+      ]
+    }
+  ];
+
+  // Sparks array for metallic key unlock effect (matches sheet.jpg frames 30-34!)
+  const sparks = [];
+  function emitSparks(x, y, count = 24) {
+    for (let i = 0; i < count; i++) {
+      const a = rand() * Math.PI * 2;
+      const sp = 70 + rand() * 240;
+      sparks.push({
+        x, y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 30,
+        life: 0.28 + rand() * 0.35,
+        maxLife: 0.6
+      });
+    }
+  }
+
+  // Input handling
+  const keys = new Set();
+  const justPressed = new Set();
+  window.addEventListener('keydown', (e) => {
+    ensureAudio();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (!keys.has(e.code)) justPressed.add(e.code);
+    keys.add(e.code);
+  });
+  window.addEventListener('keyup', (e) => keys.delete(e.code));
+  canvas.addEventListener('pointerdown', () => {
+    ensureAudio();
+    if (S.phase === 'title') loadLevel(0);
+    else if (S.phase === 'end') loadLevel(0);
+  });
+
+  // Game State (matches spec.json states: title, l1, l2, l3, l4, caught, end)
+  const S = {
+    phase: AUTOSTART ? 'l1' : 'title',
+    levelIdx: 0,
+    x: 132,
+    y: 565,
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    sneaking: false,
+    hasKey: false,
+    doorOpenAnim: 0,      // 0..1 exit door unlocking & amber light spill
+    unlocking: false,
+    clueSeen: false,
+    cluesTotal: 0,
+    caughtTimer: 0,
+    caughtReason: '',
+    endTimer: 0,
+    handX: 640,
+    handY: 180,
+    handFrame: 0,
+    skitterTimer: 0,
+    beatTimer: 0,
+    t: 0
+  };
+
+  function loadLevel(idx) {
+    S.levelIdx = idx;
+    const lv = LEVELS[idx];
+    S.phase = lv.id;
+    S.x = lv.spawn.x;
+    S.y = lv.spawn.y;
+    S.vx = 0;
+    S.vy = 0;
+    S.angle = lv.spawn.angle || 0;
+    S.hasKey = false;
+    S.doorOpenAnim = 0;
+    S.unlocking = false;
+    S.clueSeen = false;
+    for (const tr of lv.traps) tr.sprung = false;
+    if (lv.hand) {
+      S.handX = lv.hand.baseX;
+      S.handY = lv.hand.reachY;
+    }
+  }
+  if (AUTOSTART) loadLevel(0);
+
+  function triggerCaught(reason) {
+    if (S.phase === 'caught' || S.phase === 'end') return;
+    S.phase = 'caught';
+    S.caughtTimer = 0;
+    S.caughtReason = reason;
+    sfxCaught();
+  }
+
+  function circleRectCollide(cx, cy, cr, r) {
+    const nx = Math.max(r.x, Math.min(cx, r.x + r.w));
+    const ny = Math.max(r.y, Math.min(cy, r.y + r.h));
+    const dx = cx - nx, dy = cy - ny;
+    return (dx * dx + dy * dy) < cr * cr;
+  }
+
+  function moveWithWalls(lv, dx, dy) {
+    const rad = 18;
+    const allWalls = ARENA_WALLS.concat(lv.walls);
+    S.x += dx;
+    for (const w of allWalls) {
+      if (circleRectCollide(S.x, S.y, rad, w)) {
+        S.x -= dx;
+        break;
+      }
+    }
+    S.y += dy;
+    for (const w of allWalls) {
+      if (circleRectCollide(S.x, S.y, rad, w)) {
+        S.y -= dy;
+        break;
+      }
+    }
+  }
+
+  // Expose state for play.mjs automated verification
+  window.__game = {
+    get state() {
+      const lv = LEVELS[S.levelIdx] || LEVELS[0];
+      return {
+        phase: S.phase,
+        level: S.levelIdx + 1,
+        res: `${lv.resW}x${lv.resH}`,
+        x: Math.round(S.x),
+        y: Math.round(S.y),
+        hasKey: S.hasKey,
+        unlocking: S.unlocking,
+        cluesTotal: S.cluesTotal,
+        keyPos: lv.keyPos,
+        exitPos: {
+          x: Math.round(lv.exitRect.x + lv.exitRect.w * 0.5),
+          y: Math.round(lv.exitRect.y + lv.exitRect.h * 0.5)
+        },
+        waypoints: lv.waypoints,
+        handPos: lv.hand ? { x: Math.round(S.handX), y: Math.round(S.handY) } : null,
+        t: +S.t.toFixed(2)
+      };
+    }
+  };
+
+  function update(dt) {
+    S.t += dt;
+
+    // Update unlock sparks
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const p = sparks[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 260 * dt;
+      p.life -= dt;
+      if (p.life <= 0) sparks.splice(i, 1);
+    }
+
+    if (S.phase === 'title') {
+      if (justPressed.has('Enter') || justPressed.has('Space')) {
+        loadLevel(0);
+      }
+      justPressed.clear();
+      return;
+    }
+
+    if (S.phase === 'caught') {
+      S.caughtTimer += dt;
+      if (S.caughtTimer >= 0.85 || justPressed.has('KeyR') || justPressed.has('Enter')) {
+        loadLevel(S.levelIdx);
+      }
+      justPressed.clear();
+      return;
+    }
+
+    if (S.phase === 'end') {
+      S.endTimer += dt;
+      if (justPressed.has('KeyR') || justPressed.has('Enter')) {
+        S.cluesTotal = 0;
+        loadLevel(0);
+      }
+      justPressed.clear();
+      return;
+    }
+
+    // Active level gameplay (l1..l4)
+    const lv = LEVELS[S.levelIdx];
+    if (justPressed.has('KeyR')) {
+      loadLevel(S.levelIdx);
+      justPressed.clear();
+      return;
+    }
+
+    // Tense heartbeat pulse in later levels
+    S.beatTimer += dt;
+    if (S.beatTimer >= (S.levelIdx >= 2 ? 0.72 : 1.1)) {
+      S.beatTimer = 0;
+      sfxHeartbeat();
+    }
+
+    // Update looming human scientist hand shadow on l3 & l4
+    if (lv.hand) {
+      const h = lv.hand;
+      S.handX = h.baseX + Math.sin(S.t * h.speed) * h.ampX;
+      S.handY = h.reachY + Math.sin(S.t * h.speed * 1.7) * 48;
+      S.handFrame = Math.floor((S.t * 4.5) % HAND_RECTS.length);
+    }
+
+    // Door unlocking spark sequence on Level 4 (matches sheet.jpg frames 30-38!)
+    if (S.unlocking) {
+      S.doorOpenAnim += dt * 1.35;
+      if (rand() < 0.55 && S.doorOpenAnim < 0.65) {
+        emitSparks(lv.exitRect.x + 12, lv.exitRect.y + lv.exitRect.h * 0.5, 4);
+      }
+      // Gently pull rat into open amber doorway
+      const tx = lv.exitRect.x + lv.exitRect.w * 0.52;
+      const ty = lv.exitRect.y + lv.exitRect.h * 0.58;
+      S.x += (tx - S.x) * Math.min(1, dt * 4.5);
+      S.y += (ty - S.y) * Math.min(1, dt * 4.5);
+      if (S.doorOpenAnim >= 1.0) {
+        if (S.levelIdx < LEVELS.length - 1) {
+          loadLevel(S.levelIdx + 1);
+        } else {
+          S.phase = 'end';
+          S.endTimer = 0;
+          sfxUnlock();
+        }
+      }
+      justPressed.clear();
+      return;
+    }
+
+    const ix = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+    const iy = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+    S.sneaking = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('Space');
+
+    const mag = Math.hypot(ix, iy) || 1;
+    const baseSpeed = S.sneaking ? 210 : 305;
+    const targetVx = ix ? (ix / mag) * baseSpeed : 0;
+    const targetVy = iy ? (iy / mag) * baseSpeed : 0;
+
+    S.vx += (targetVx - S.vx) * Math.min(1, dt * 14);
+    S.vy += (targetVy - S.vy) * Math.min(1, dt * 14);
+
+    moveWithWalls(lv, S.vx * dt, S.vy * dt);
+
+    const speed = Math.hypot(S.vx, S.vy);
+    if (speed > 18) {
+      const targetAngle = Math.atan2(S.vy, S.vx);
+      let diff = targetAngle - S.angle;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      S.angle += diff * Math.min(1, dt * 14);
+
+      S.skitterTimer += dt * (speed / 220);
+      if (S.skitterTimer >= 0.14) {
+        S.skitterTimer = 0;
+        sfxSkitter();
+      }
+    }
+
+    // Collect key
+    if (!S.hasKey) {
+      const dk = Math.hypot(S.x - lv.keyPos.x, S.y - lv.keyPos.y);
+      if (dk < 46) {
+        S.hasKey = true;
+        sfxKey();
+        emitSparks(lv.keyPos.x, lv.keyPos.y, 12);
+      }
+    }
+
+    // Discover planted observation clue (1 per level!)
+    if (!S.clueSeen) {
+      const dc = Math.hypot(S.x - lv.clue.x, S.y - lv.clue.y);
+      if (dc < 95) {
+        S.clueSeen = true;
+        S.cluesTotal = Math.max(S.cluesTotal, S.levelIdx + 1);
+      }
+    }
+
+    // Check cheese trap collisions
+    for (const tr of lv.traps) {
+      if (Math.hypot(S.x - tr.x, S.y - tr.y) < tr.r) {
+        tr.sprung = true;
+        triggerCaught('SPRUNG BY BAITED TRAP');
+        return;
+      }
+    }
+
+    // Check syringe needle collisions
+    for (const sy of lv.syringes) {
+      if (Math.abs(S.x - sy.x) < sy.w * 0.42 && Math.abs(S.y - sy.y) < sy.h * 0.7) {
+        triggerCaught('PRICKED BY LAB NEEDLE');
+        return;
+      }
+    }
+
+    // Check sweeping human hand shadow palm collision (sneaking lowers profile)
+    if (lv.hand && !S.sneaking) {
+      const palmY = S.handY + 55;
+      if (Math.hypot(S.x - S.handX, S.y - palmY) < lv.hand.dangerR) {
+        triggerCaught('SNATCHED BY RESEARCHER HAND');
+        return;
+      }
+    }
+
+    // Check exit gate / doorway with key
+    if (S.hasKey && circleRectCollide(S.x, S.y, 26, lv.exitRect)) {
+      sfxUnlock();
+      emitSparks(lv.exitRect.x + 16, lv.exitRect.y + lv.exitRect.h * 0.5, 22);
+      if (S.levelIdx === 3) {
+        // Dramatic sparking amber doorway opening on Level 4!
+        S.unlocking = true;
+        S.doorOpenAnim = 0.05;
+      } else {
+        loadLevel(S.levelIdx + 1);
+      }
+    }
+
+    justPressed.clear();
+  }
+
+  // --- World Rendering onto Pixel-Escalated Buffer ---
+  function drawWireCage(g, x, y, w, h, doorOpen) {
+    g.save();
+    g.fillStyle = 'rgba(38, 12, 12, 0.72)';
+    g.fillRect(x, y, w, h);
+    g.strokeStyle = '#d16b60';
+    g.lineWidth = 3;
+    g.strokeRect(x, y, w, h);
+
+    // Wire mesh grid matching study/sheet.jpg top-left frames!
+    g.strokeStyle = 'rgba(255, 138, 122, 0.58)';
+    g.lineWidth = 2;
+    for (let gx = x + 18; gx < x + w; gx += 18) {
+      g.beginPath();
+      g.moveTo(gx, y);
+      g.lineTo(gx, y + h);
+      g.stroke();
+    }
+    for (let gy = y + 18; gy < y + h; gy += 18) {
+      g.beginPath();
+      g.moveTo(x, gy);
+      g.lineTo(x + w, gy);
+      g.stroke();
+    }
+    if (doorOpen) {
+      g.fillStyle = PAL.deepBg;
+      g.fillRect(x + w - 8, y + 24, 14, h - 48);
+    }
+    g.restore();
+  }
+
+  function drawLevelScene(g) {
+    const lv = LEVELS[S.levelIdx] || LEVELS[0];
+
+    // Base crimson-black ground (#170704 / #1a0606)
+    g.fillStyle = lv.redStyle ? '#170704' : '#13181a';
+    g.fillRect(0, 0, W, H);
+
+    // Draw quadrant from Nano Banana 4_level_backgrounds_one_per_member.png
+    if (loaded.bgs) {
+      const q = BG_QUADS[lv.bgIdx];
+      g.save();
+      g.globalAlpha = lv.bgAlpha;
+      g.drawImage(imgs.bgs, q.x, q.y, q.w, q.h, 48, 50, W - 96, H - 100);
+      g.restore();
+
+      if (!lv.redStyle) {
+        // Harmonize dark surgical steel tint to match study/sheet.jpg rows 2-4
+        g.fillStyle = 'rgba(16, 22, 24, 0.34)';
+        g.fillRect(0, 0, W, H);
+      }
+    }
+
+    // Wire cage in bottom-left on Levels 1 & 2 (exact visual anchor from sheet.jpg row 1!)
+    if (S.levelIdx <= 1) {
+      drawWireCage(g, 68, 496, 156, 126, S.levelIdx === 1 || S.hasKey);
+    }
+
+    // Observation camera clue marker (1 subtle clue per level!)
+    g.save();
+    const pulse = 0.55 + 0.45 * Math.sin(S.t * 5);
+    g.fillStyle = `rgba(255, 90, 75, ${0.35 + 0.45 * pulse})`;
+    g.beginPath();
+    g.arc(lv.clue.x, lv.clue.y, 7, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = 'rgba(255, 214, 207, 0.45)';
+    g.lineWidth = 1.5;
+    g.strokeRect(lv.clue.x - 14, lv.clue.y - 14, 28, 28);
+    g.restore();
+
+    // Arena & Maze Walls
+    const allWalls = ARENA_WALLS.concat(lv.walls);
+    g.save();
+    for (const w of allWalls) {
+      if (lv.redStyle) {
+        // Glowing crimson monochrome maze bars (#ff6a5a) matching m2_main_ref.png & sheet.jpg!
+        g.shadowColor = '#ff4b3a';
+        g.shadowBlur = 10;
+        g.fillStyle = PAL.fg;
+        g.fillRect(w.x, w.y, w.w, w.h);
+      } else {
+        // High-res stainless surgical partition dividers
+        g.fillStyle = '#364145';
+        g.fillRect(w.x, w.y, w.w, w.h);
+        g.strokeStyle = '#6c7a80';
+        g.lineWidth = 2;
+        g.strokeRect(w.x, w.y, w.w, w.h);
+      }
+    }
+    g.restore();
+
+    // Exit Gate / Doorway
+    const ex = lv.exitRect;
+    g.save();
+    if (lv.isHumanRoom) {
+      // Heavy metal lab door on right that opens into warm golden-amber light (sheet.jpg row 4!)
+      const open = S.doorOpenAnim;
+      if (open > 0.02) {
+        const spill = g.createRadialGradient(
+          ex.x + ex.w * 0.5, ex.y + ex.h * 0.5, 10,
+          ex.x + ex.w * 0.5, ex.y + ex.h * 0.5, 240
+        );
+        spill.addColorStop(0, `rgba(255, 236, 178, ${0.95 * open})`);
+        spill.addColorStop(0.45, `rgba(255, 198, 112, ${0.55 * open})`);
+        spill.addColorStop(1, 'rgba(255, 170, 80, 0)');
+        g.fillStyle = spill;
+        g.fillRect(ex.x - 150, ex.y - 120, ex.w + 260, ex.h + 240);
+
+        // Warm lit interior room behind open door
+        g.fillStyle = '#f8dea2';
+        g.fillRect(ex.x + 8, ex.y + 8, ex.w - 16, ex.h - 16);
+      } else {
+        g.fillStyle = '#242c2e';
+        g.fillRect(ex.x, ex.y, ex.w, ex.h);
+      }
+      g.strokeStyle = S.hasKey ? PAL.acc : '#5c686b';
+      g.lineWidth = 4;
+      g.strokeRect(ex.x, ex.y, ex.w, ex.h);
+      // Keyhole plate
+      g.fillStyle = '#111617';
+      g.fillRect(ex.x + 10, ex.y + ex.h * 0.5 - 12, 16, 24);
+    } else {
+      g.fillStyle = S.hasKey ? 'rgba(255, 106, 90, 0.24)' : 'rgba(90, 30, 28, 0.28)';
+      g.fillRect(ex.x, ex.y, ex.w, ex.h);
+      g.strokeStyle = S.hasKey ? PAL.acc : PAL.fg;
+      g.setLineDash(S.hasKey ? [] : [8, 6]);
+      g.lineWidth = 3;
+      g.strokeRect(ex.x, ex.y, ex.w, ex.h);
+    }
+    g.restore();
+
+    // Draw Cheese Traps & Syringe Needles from key_cheese_trap_needles.png
+    if (loaded.props) {
+      for (const tr of lv.traps) {
+        const rect = tr.sprung ? PROP_RECTS.trapSprung : PROP_RECTS.trapArmed;
+        const dw = 92, dh = 62;
+        g.drawImage(imgs.props, rect.x, rect.y, rect.w, rect.h, tr.x - dw / 2, tr.y - dh / 2, dw, dh);
+      }
+      for (const sy of lv.syringes) {
+        const rect = PROP_RECTS.syringe;
+        g.save();
+        g.translate(sy.x, sy.y);
+        g.rotate(sy.angle || 0);
+        g.drawImage(imgs.props, rect.x, rect.y, rect.w, rect.h, -sy.w / 2, -sy.h / 2, sy.w, sy.h);
+        g.restore();
+      }
+    }
+
+    // Draw Key on floor (or carried in rat's mouth once picked up!)
+    if (!S.hasKey) {
+      const kp = lv.keyPos;
+      g.save();
+      const bob = Math.sin(S.t * 4.5) * 3;
+      g.shadowColor = '#ffd6cf';
+      g.shadowBlur = 14;
+      if (loaded.props) {
+        const kr = PROP_RECTS.key;
+        g.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, kp.x - 34, kp.y - 14 + bob, 68, 28);
+      } else {
+        g.fillStyle = PAL.acc;
+        g.fillRect(kp.x - 16, kp.y - 6, 32, 12);
+      }
+      g.restore();
+    }
+
+    // Draw the Lab Rat at the current level's exact resolution sprite!
+    g.save();
+    g.translate(S.x, S.y);
+    const speed = Math.hypot(S.vx, S.vy);
+    const wiggle = speed > 20 ? Math.sin(S.t * 18) * 0.08 : 0;
+    // Rat sprites in sheet face UP (-Y), so add PI/2 to align snout with movement angle
+    g.rotate(S.angle + Math.PI / 2 + wiggle);
+    const scaleCrouch = (S.sneaking ? 0.88 : 1.0) * (lv.ratScale || 1.0);
+    g.scale(scaleCrouch, scaleCrouch);
+
+    // Soft shadow beneath rat
+    g.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    g.beginPath();
+    g.ellipse(4, 6, 22, 42, 0, 0, Math.PI * 2);
+    g.fill();
+
+    if (loaded.rats) {
+      const rr = RAT_RECTS[lv.ratIdx];
+      const rw = 54, rh = 132;
+      const srcSheet = paleRatReady ? paleRatCanvas : imgs.rats;
+      g.drawImage(srcSheet, rr.x, rr.y, rr.w, rr.h, -rw / 2, -rh * 0.36, rw, rh);
+    } else {
+      g.fillStyle = PAL.acc;
+      g.beginPath();
+      g.arc(0, 0, 20, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    // If rat has collected the key, carry gleaming key right at its snout (just like sheet.jpg!)
+    if (S.hasKey && loaded.props) {
+      const kr = PROP_RECTS.key;
+      g.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, -8, -68, 44, 18);
+    }
+    g.restore();
+
+    // Looming Scientist Hand Shadow Hazard sweeping from top (matches study/sheet.jpg rows 3 & 4!)
+    if (lv.hand && loaded.hands) {
+      const hr = HAND_RECTS[S.handFrame];
+      g.save();
+      // Forearm shadow extending from top of screen down to grasping hand
+      const armGrad = g.createLinearGradient(S.handX - 40, 0, S.handX + 40, S.handY);
+      armGrad.addColorStop(0, 'rgba(5, 6, 7, 0.92)');
+      armGrad.addColorStop(1, 'rgba(8, 9, 10, 0.84)');
+      g.fillStyle = armGrad;
+      g.beginPath();
+      g.moveTo(S.handX - 78, 0);
+      g.lineTo(S.handX + 68, 0);
+      g.lineTo(S.handX + 44, S.handY - 30);
+      g.lineTo(S.handX - 48, S.handY - 30);
+      g.closePath();
+      g.fill();
+
+      // Rotate hand PI so fingers reach downward toward the rat!
+      g.translate(S.handX, S.handY + 42);
+      g.rotate(Math.PI + Math.sin(S.t * 2.2) * 0.12);
+      g.globalAlpha = 0.88;
+      const hw = 210, hh = 290;
+      g.drawImage(imgs.hands, hr.x, hr.y, hr.w, hr.h, -hw / 2, -hh / 2, hw, hh);
+      g.restore();
+    }
+
+    // Spark particles on key pickup / door unlock
+    for (const p of sparks) {
+      g.fillStyle = p.life > 0.25 ? '#fff6d6' : '#ff9848';
+      g.fillRect(p.x - 2, p.y - 2, 5, 5);
+    }
+  }
+
+  function render() {
+    if (S.phase === 'title') {
+      // Title screen styled directly after refs/m2_title_ref.png
+      ctx.fillStyle = PAL.bg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = 'rgba(255, 106, 90, 0.18)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(56, 56, W - 112, H - 112);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = PAL.acc;
+      ctx.font = 'bold 84px "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText('LAB-RAT-ORY', W / 2, 285);
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '28px "Courier New", monospace';
+      ctx.fillText('subject 47, begin', W / 2, 352);
+
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(W / 2 - 160, 412, 320, 68);
+      ctx.font = 'bold 26px "Courier New", monospace';
+      ctx.fillText('START', W / 2, 455);
+
+      ctx.fillStyle = 'rgba(255, 106, 90, 0.75)';
+      ctx.font = '17px "Courier New", monospace';
+      ctx.fillText('WASD / Arrows: Sneak & Solve   ·   Shift / Space: Low Crouch', W / 2, 535);
+      return;
+    }
+
+    if (S.phase === 'end') {
+      // Twist Finale: STILL IN THE TEST — Full-resolution cage reveal!
+      ctx.fillStyle = '#120606';
+      ctx.fillRect(0, 0, W, H);
+
+      if (loaded.bgs) {
+        const q = BG_QUADS[3];
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.drawImage(imgs.bgs, q.x, q.y, q.w, q.h, 0, 0, W, H);
+        ctx.restore();
+      }
+
+      // Full-resolution gleaming steel cage enclosing the high-res rat!
+      const cx = W / 2 - 250, cy = 195, cw = 500, ch = 290;
+      ctx.fillStyle = 'rgba(18, 22, 24, 0.88)';
+      ctx.fillRect(cx, cy, cw, ch);
+
+      if (loaded.rats) {
+        const rr = RAT_RECTS[3];
+        const srcSheet = paleRatReady ? paleRatCanvas : imgs.rats;
+        ctx.save();
+        ctx.translate(W / 2 - 20, cy + ch * 0.56);
+        ctx.rotate(Math.PI * 0.42);
+        ctx.drawImage(srcSheet, rr.x, rr.y, rr.w, rr.h, -38, -95, 76, 190);
+        ctx.restore();
+      }
+
+      // Fresh key placed right back inside the cage ("The key in your cage was not an accident.")
+      if (loaded.props) {
+        const kr = PROP_RECTS.key;
+        ctx.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, W / 2 + 85, cy + ch * 0.52, 76, 31);
+      }
+
+      // Crisp full-HD steel cage bars over the rat
+      ctx.strokeStyle = '#9fb0b5';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(cx, cy, cw, ch);
+      ctx.lineWidth = 2.5;
+      for (let bx = cx + 28; bx < cx + cw; bx += 28) {
+        ctx.beginPath();
+        ctx.moveTo(bx, cy);
+        ctx.lineTo(bx, cy + ch);
+        ctx.stroke();
+      }
+      for (let by = cy + 48; by < cy + ch; by += 48) {
+        ctx.beginPath();
+        ctx.moveTo(cx, by);
+        ctx.lineTo(cx + cw, by);
+        ctx.stroke();
+      }
+
+      // Surveillance monitor overlay
+      ctx.textAlign = 'center';
+      ctx.fillStyle = PAL.fg;
+      ctx.font = 'bold 20px "Courier New", monospace';
+      ctx.fillText('● REC  OBSERVATION BAY 04  ·  1920x1080 FULL RESOLUTION', W / 2, 86);
+
+      ctx.fillStyle = PAL.acc;
+      ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText('STILL IN THE TEST', W / 2, 148);
+
+      ctx.fillStyle = PAL.acc;
+      ctx.font = '20px "Courier New", monospace';
+      ctx.fillText('The door opened into Cage 48. A fresh key is already waiting.', W / 2, 535);
+      ctx.fillStyle = PAL.fg;
+      ctx.fillText(`Clues noticed: ${Math.max(S.cluesTotal, 4)}/4  ·  "Subject believes escape was self-directed."`, W / 2, 570);
+
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(W / 2 - 175, 608, 350, 52);
+      ctx.fillStyle = PAL.acc;
+      ctx.font = 'bold 19px "Courier New", monospace';
+      ctx.fillText('[R / ENTER] BEGIN TRIAL #48', W / 2, 641);
+      return;
+    }
+
+    // Render active level through pixelation escalation buffer!
+    const lv = LEVELS[S.levelIdx] || LEVELS[0];
+    if (lv.resW < W) {
+      if (buf.width !== lv.resW || buf.height !== lv.resH) {
+        buf.width = lv.resW;
+        buf.height = lv.resH;
+      }
+      bctx.save();
+      bctx.scale(lv.resW / W, lv.resH / H);
+      drawLevelScene(bctx);
+      bctx.restore();
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(buf, 0, 0, lv.resW, lv.resH, 0, 0, W, H);
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      drawLevelScene(ctx);
+    }
+
+    // Post-processing: crimson-dark vignette + subtle film grain
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.28, W * 0.5, H * 0.5, W * 0.66);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(10,2,2,0.62)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.globalAlpha = 0.24;
+    const ox = ((S.t * 50) | 0) % 40;
+    const oy = ((S.t * 33) | 0) % 30;
+    for (let y = -oy; y < H; y += 90) {
+      for (let x = -ox; x < W; x += 160) {
+        ctx.drawImage(grainCanvas, x, y);
+      }
+    }
+    ctx.restore();
+
+    // Minimal diegetic HUD matching refs/m2_main_ref.png ("LEVEL 2 · 16px" top-right)
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255, 106, 90, 0.82)';
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText(lv.title, W - 72, 92);
+
+    if (S.clueSeen) {
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(255, 214, 207, 0.86)';
+      ctx.font = '15px "Courier New", monospace';
+      ctx.fillText(`● ${lv.clue.text}`, 68, 88);
+    }
+
+    if (S.phase === 'caught') {
+      ctx.fillStyle = 'rgba(120, 12, 12, 0.58)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = PAL.acc;
+      ctx.font = 'bold 54px "Courier New", monospace';
+      ctx.fillText('CAUGHT', W / 2, H / 2 - 12);
+      ctx.font = '20px "Courier New", monospace';
+      ctx.fillText(`${S.caughtReason} — RESETTING SUBJECT 47`, W / 2, H / 2 + 34);
+    }
+    ctx.restore();
+  }
+
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+    lastTime = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

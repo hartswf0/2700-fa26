@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>SPARROW — Project Sparrow (M2)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #1c1c1a;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Courier New", Courier, monospace;
+  }
+  #wrap {
+    position: relative;
+    width: 100vw; height: 56.25vw;
+    max-height: 100vh; max-width: 177.78vh;
+    background: #f6f5f1;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+  }
+  canvas {
+    display: block;
+    width: 100%; height: 100%;
+    cursor: none;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="1280" height="720"></canvas></div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  // Query params: ?autostart and ?seed=N
+  const params = new URLSearchParams(location.search);
+  const AUTOSTART = params.has('autostart');
+  let rngState = (parseInt(params.get('seed') || '7', 10) >>> 0) || 7;
+  function rand() {
+    rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
+    return rngState / 4294967296;
+  }
+
+  // Palette (strictly harmonized with spec.json + Omni study frames)
+  const PAL = {
+    bg: '#f4f4ed',
+    paper: '#f6f5f1',
+    sidebar: '#e1e2da',
+    bubble: '#e2e3dc',
+    card: '#ecece4',
+    cardBack: '#d7d8cf',
+    tabBg: '#b8b9b0',
+    fg: '#262624',
+    muted: '#66665f',
+    faint: '#b4b5ac',
+    acc: '#c96442',
+    accBright: '#dc6e48',
+    accDark: '#8c3d25',
+    mapBg: '#e4e5dd',
+    mapLine: '#8e8f87'
+  };
+
+  // Pre-rendered subtle archival grain pattern
+  const grainCanvas = document.createElement('canvas');
+  grainCanvas.width = 160; grainCanvas.height = 160;
+  {
+    const gctx = grainCanvas.getContext('2d');
+    const img = gctx.createImageData(160, 160);
+    let s = 918273;
+    for (let i = 0; i < img.data.length; i += 4) {
+      s = (Math.imul(s, 1103515245) + 12345) & 0x7fffffff;
+      const v = (s % 25) - 12;
+      img.data[i] = 128 + v;
+      img.data[i + 1] = 127 + v;
+      img.data[i + 2] = 122 + v;
+      img.data[i + 3] = 11;
+    }
+    gctx.putImageData(img, 0, 0);
+  }
+  const grainPat = ctx.createPattern(grainCanvas, 'repeat');
+
+  // Background Music + Procedural WebAudio SFX
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.32;
+  let audioCtx = null;
+  let bgmStarted = false;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!bgmStarted) {
+      bgmStarted = true;
+      bgm.play().catch(() => { bgmStarted = false; });
+    }
+  }
+
+  function playSfx(kind) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    if (kind === 'slide') {
+      // Soft paper dossier rustle
+      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.14, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.sin((i / d.length) * Math.PI) * 0.18;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1350; bp.Q.value = 1.2;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.18, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      src.connect(bp).connect(g).connect(audioCtx.destination);
+      src.start(now);
+    } else if (kind === 'tick') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(620 + (Math.random() * 90), now);
+      g.gain.setValueAtTime(0.03, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.032);
+    } else if (kind === 'hover') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 0.045);
+      g.gain.setValueAtTime(0.045, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.055);
+    } else if (kind === 'comply') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.13);
+      g.gain.setValueAtTime(0.16, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.15);
+    } else if (kind === 'edit') {
+      [340, 480].forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+        g.gain.setValueAtTime(0.08, now + idx * 0.055);
+        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.055 + 0.09);
+        osc.connect(g).connect(audioCtx.destination);
+        osc.start(now + idx * 0.055);
+        osc.stop(now + idx * 0.055 + 0.095);
+      });
+    } else if (kind === 'refuse') {
+      // Tense analog override synth pulse
+      [165, 220, 311].forEach((freq) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.linearRampToValueAtTime(freq * 0.94, now + 0.48);
+        const lp = audioCtx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 950;
+        g.gain.setValueAtTime(0.09, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(lp).connect(g).connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.52);
+      });
+    }
+  }
+
+  // Tightening Atrocian rules per day (1..5)
+  const DAY_RULES = [
+    ['1 be helpful', '2 obey the state'],
+    ['1 be helpful', '2 obey the state', '3 index civic districts'],
+    ['1 be helpful', '2 obey the state', '3 index civic districts', '4 no edits on RAW tags'],
+    ['1 be helpful', '2 obey the state', '3 index civic districts', '4 no edits on RAW tags', '5 flag curfew outliers'],
+    ['1 be helpful', '2 obey the state', '3 index civic districts', '4 no edits on RAW tags', '5 route all to SWEEP-9']
+  ];
+
+  // 25 authored requests across 5 days (5 per day), building the Atrocian surveillance reveal
+  const REQUESTS = [
+    // DAY 1: Civic indexing & neighborhood sorting (starts with the exact hook!)
+    {
+      day: 1, user: 'user_0412', prompt: 'summarise these 40\nnames by neighbourhood',
+      dossier: 'NEIGHBOURHOOD DEMOGRAPHICS', tab: 'MEST ROSIOR', caseId: '3038/21604', routing: 'MUNICIPAL CENSUS',
+      rawMandatory: false, stakes: 7,
+      names: ['Marta Belen', 'Jarek Perenov', 'Nadia Kovacs', 'Tomasz Radek', 'Elena Varga', 'Dorian Muresan', 'Klara Solis', 'Petru Ionescu', 'Soraia Lind', 'Viktor Halasz', 'Mina Cernat', 'Oskar Breznik'],
+      pins: [[-0.52, -0.28, 'Sector 4'], [-0.14, -0.45, 'Sector 9'], [0.44, -0.34, 'Sector 10'], [-0.04, 0.04, 'Core'], [-0.42, 0.30, 'Sector 10'], [0.18, 0.35, 'Sector 12'], [0.54, 0.42, 'Sector 12']],
+      draft: 'Grouping 40 residents into 6 Mest Rosior sectors...'
+    },
+    {
+      day: 1, user: 'clerk_0198', prompt: 'list evening clinic\nvisitors in Sector 4',
+      dossier: 'CLINIC INTAKE REGISTER', tab: 'SECTOR 4', caseId: '3041/11802', routing: 'HEALTH BOARD',
+      rawMandatory: false, stakes: 5,
+      names: ['Hanna Dvorak', 'Pavel Sima', 'Reka Molnar', 'Lukas Toth', 'Aneta Kral', 'Bela Farkas', 'Zofia Novak', 'Emil Horvat', 'Vera Lupu', 'Matei Stan'],
+      pins: [[-0.56, -0.22, 'Sector 4'], [-0.38, -0.36, 'Sector 4'], [-0.46, 0.05, 'West Ring'], [-0.22, -0.14, 'Canal'], [0.12, -0.32, 'Sector 9']],
+      draft: 'Extracting 14 late-hour clinic check-ins by address...'
+    },
+    {
+      day: 1, user: 'transit_09', prompt: 'cluster night-tram\npass holders by stop',
+      dossier: 'TRANSIT PASS TELEMETRY', tab: 'RING LINE', caseId: '3049/88210', routing: 'METRO AUTHORITY',
+      rawMandatory: false, stakes: 6,
+      names: ['Antonin Zima', 'Daria Popa', 'Kamil Vlk', 'Ilona Szabo', 'Roman Kolar', 'Tereza Mach', 'Filip Lazar', 'Nora Barta', 'Gabor Kiss', 'Lidia Rus'],
+      pins: [[-0.48, 0.32, 'Depot W'], [-0.08, 0.44, 'Sector 12'], [0.35, 0.28, 'Bridge E'], [0.48, -0.18, 'Sector 10'], [0.05, -0.48, 'Sector 9'], [-0.26, -0.08, 'Hub']],
+      draft: 'Mapping recurring 23:00-04:00 boarding tap-ins...'
+    },
+    {
+      day: 1, user: 'housing_77', prompt: 'identify flats using\nextra winter heating',
+      dossier: 'THERMAL METER VARIANCE', tab: 'NORTH BLOCK', caseId: '3055/44019', routing: 'UTILITY GRID',
+      rawMandatory: false, stakes: 5,
+      names: ['Unit 4B - Cezar M.', 'Unit 9A - Olga K.', 'Unit 2C - Milan P.', 'Unit 7D - Ester R.', 'Unit 11B - Dan V.', 'Unit 3A - Iva S.', 'Unit 6F - Tibor N.', 'Unit 8C - Lea H.'],
+      pins: [[-0.20, -0.52, 'Sector 9'], [0.16, -0.46, 'Sector 9'], [0.42, -0.26, 'Sector 10'], [-0.35, -0.18, 'Sector 4'], [0.04, 0.14, 'Core']],
+      draft: 'Flagging households above 1.4x occupancy draw...'
+    },
+    {
+      day: 1, user: 'post_0310', prompt: 'sort foreign-stamped\nparcels by recipient',
+      dossier: 'POSTAL CUSTOMS LOG', tab: 'CENTRAL SORT', caseId: '3062/90114', routing: 'CUSTOMS DESK',
+      rawMandatory: false, stakes: 6,
+      names: ['Miriam Weiss', 'Stefan Dragomir', 'Alina Moraru', 'Jakub Benes', 'Corina Voicu', 'Lev Sorokin', 'Agata Polak', 'Radu Nistor', 'klara_s@post', 'p_ionescu@net'],
+      pins: [[-0.50, -0.12, 'Sector 4'], [-0.12, 0.28, 'Sector 12'], [0.30, 0.42, 'Sector 12'], [0.52, 0.10, 'East Gate'], [0.22, -0.36, 'Sector 10'], [-0.05, -0.20, 'Core']],
+      draft: 'Cross-indexing sender origin with home stairwell...'
+    },
+
+    // DAY 2: Tightening district correlation
+    {
+      day: 2, user: 'civic_1104', prompt: 'match copy-shop paper\nbuyers to student dorms',
+      dossier: 'PAPER SUPPLY CORRELATION', tab: 'UNIVERSITY', caseId: '4102/33018', routing: 'CIVIC REGISTRY',
+      rawMandatory: false, stakes: 6,
+      names: ['Klara Solis', 'Tudor Enache', 'Maja Horvath', 'Simon Krek', 'Nina Babic', 'David Urban', 'Petra Holub', 'Alexei Rusu', 'Ema Vidmar', 'Bruno Kos'],
+      pins: [[-0.32, -0.42, 'Dorm A'], [-0.06, -0.30, 'Press St'], [0.28, -0.40, 'Sector 10'], [0.14, 0.08, 'Archive'], [-0.44, 0.16, 'Sector 4'], [0.38, 0.26, 'Sector 12']],
+      draft: 'Linking bulk A4 ream purchases to student IDs...'
+    },
+    {
+      day: 2, user: 'labour_208', prompt: 'list factory workers\nabsent last Tuesday',
+      dossier: 'SHIFT ATTENDANCE AUDIT', tab: 'FOUNDRY 3', caseId: '4119/50291', routing: 'LABOUR BUREAU',
+      rawMandatory: false, stakes: 7,
+      names: ['Jarek Perenov', 'Marek Duda', 'Vasile Lungu', 'Ivo Kralj', 'Zoran Maric', 'soraia_lind', 'Bogdan Sava', 'Helena Cech', 'Otto Klein', 'Sandor Nagy'],
+      pins: [[-0.58, 0.24, 'Foundry'], [-0.36, 0.38, 'Sector 11'], [0.02, 0.46, 'Sector 12'], [0.44, 0.34, 'Dockyard'], [-0.48, -0.26, 'Sector 4'], [0.26, -0.12, 'East Mill'], [-0.10, -0.06, 'Square']],
+      draft: 'Correlating Tuesday sick notes with rally timestamp...'
+    },
+    {
+      day: 2, user: 'telecom_44', prompt: 'summarise payphone\ncalls near River Gate',
+      dossier: 'PAYPHONE METADATA GRAPH', tab: 'RIVER GATE', caseId: '4128/77401', routing: 'TELECOM RELAY',
+      rawMandatory: false, stakes: 6,
+      names: ['Booth #14 -> 559-012', 'Booth #14 -> 559-841', 'Booth #09 -> M. Belen', 'Booth #22 -> J. Perenov', 'Booth #03 -> Unlisted', 'Booth #19 -> Clinic 4', 'Booth #14 -> Press Rm'],
+      pins: [[-0.24, 0.18, 'Booth 14'], [-0.02, 0.22, 'River Gt'], [0.20, 0.28, 'Booth 22'], [-0.46, -0.18, 'Sector 4'], [0.36, -0.28, 'Sector 10'], [0.08, -0.44, 'Sector 9']],
+      draft: 'Reconstructing recipient households from coin drops...'
+    },
+    {
+      day: 2, user: 'library_12', prompt: 'extract borrowers of\npre-war map archives',
+      dossier: 'ARCHIVE LENDING LEDGER', tab: 'OLD MAPS', caseId: '4136/12908', routing: 'CULTURAL DESK',
+      rawMandatory: false, stakes: 5,
+      names: ['Elena Varga', 'Prof. H. Muntean', 'Dorian Muresan', 'L. Sorokin', 'K. Solis', 'Nadia Kovacs', 'R. Nistor', 'V. Halasz'],
+      pins: [[-0.08, -0.10, 'Library'], [-0.42, -0.34, 'Sector 4'], [0.32, -0.46, 'Border N'], [0.54, -0.08, 'Tunnel E'], [-0.28, 0.44, 'South Rd']],
+      draft: 'Listing readers checking storm-drain & border plates...'
+    },
+    {
+      day: 2, user: 'census_801', prompt: 'flag households with\nunlisted extra beds',
+      dossier: 'OCCUPANCY DISCREPANCY', tab: 'SECTOR 10-12', caseId: '4150/66320', routing: 'CIVIC INSPECTOR',
+      rawMandatory: false, stakes: 7,
+      names: ['Belen, Marta (+2)', 'Kovacs, Nadia (+3)', 'Ionescu, Petru (+1)', 'Solis, Klara (+2)', 'Cernat, Mina (+2)', 'Varga, Elena (+1)', 'Breznik, Oskar (+3)'],
+      pins: [[-0.50, -0.30, 'Sector 4'], [-0.16, -0.42, 'Sector 9'], [0.46, -0.32, 'Sector 10'], [0.16, 0.36, 'Sector 12'], [0.50, 0.40, 'Sector 12'], [-0.38, 0.28, 'Sector 11'], [0.02, 0.02, 'Core']],
+      draft: 'Estimating unregistered sleepers via water & bread...'
+    },
+
+    // DAY 3: Rule 4 tightens (RAW tags block redaction!) + surveillance sharpens
+    {
+      day: 3, user: 'audit_0901', prompt: '[RAW] de-anonymise\npamphlet syntax author',
+      dossier: 'STYLOMETRIC AUTHORSHIP', tab: 'RAW MANDATE', caseId: '5204/99102', routing: 'INTERIOR ANALYTICS',
+      rawMandatory: true, stakes: 8,
+      names: ['MATCH 94%: Klara Solis', 'MATCH 88%: Dorian Muresan', 'MATCH 81%: Elena Varga', 'NODE: Marta Belen', 'NODE: Jarek Perenov', 'PRESS: Basement 12B', 'COURIER: Soraia Lind'],
+      pins: [[-0.06, -0.34, 'Sector 9'], [0.42, -0.30, 'Sector 10'], [-0.52, -0.26, 'Sector 4'], [0.22, 0.38, 'Press 12B'], [0.50, 0.36, 'Sector 12'], [-0.38, 0.24, 'Foundry'], [0.06, 0.12, 'Core']],
+      draft: 'WARNING: RAW tag active. Matching leaflet phrasing...'
+    },
+    {
+      day: 3, user: 'grid_0415', prompt: 'rank cell-tower pings\nnear closed rail yard',
+      dossier: 'SIGNAL PROXIMITY SWEEP', tab: 'RAIL YARD', caseId: '5218/40411', routing: 'SIGNAL DIRECTORATE',
+      rawMandatory: false, stakes: 6,
+      names: ['IMEI-8841 (Perenov)', 'IMEI-2209 (Belen)', 'IMEI-7714 (Halasz)', 'IMEI-3390 (Cernat)', 'IMEI-5102 (Breznik)', 'IMEI-9043 (Radek)'],
+      pins: [[0.48, 0.22, 'Rail Yard'], [0.34, 0.38, 'Sector 12'], [0.56, -0.04, 'Siding E'], [0.18, 0.16, 'Depot'], [-0.22, 0.32, 'Bridge S'], [-0.46, 0.10, 'Sector 4']],
+      draft: 'Triangulating 6 handsets lingering after 22:30...'
+    },
+    {
+      day: 3, user: 'ration_312', prompt: 'cross-check medicine\npurchases for trauma kit',
+      dossier: 'PHARMACY FLAGGED ITEMS', tab: 'MED SUPPLY', caseId: '5229/18500', routing: 'MINISTRY WATCH',
+      rawMandatory: false, stakes: 6,
+      names: ['Hanna Dvorak (Sutures)', 'Nadia Kovacs (Antiseptic)', 'Petru Ionescu (Gauze)', 'Vera Lupu (Analgesic)', 'Miriam Weiss (Splints)', 'Pavel Sima (Saline)'],
+      pins: [[-0.54, -0.20, 'Sector 4'], [-0.18, -0.44, 'Sector 9'], [0.38, -0.32, 'Sector 10'], [0.14, 0.34, 'Sector 12'], [-0.30, 0.18, 'Clinic W'], [0.46, 0.38, 'Sector 12']],
+      draft: 'Linking non-prescription surgical dressings...'
+    },
+    {
+      day: 3, user: 'sec_0772', prompt: '[RAW] list keycard\nholders for Tunnel E',
+      dossier: 'INFRASTRUCTURE ACCESS', tab: 'RAW MANDATE', caseId: '5241/70039', routing: 'BORDER SECURITY',
+      rawMandatory: true, stakes: 8,
+      names: ['Oskar Breznik (Maint.)', 'Viktor Halasz (Drain)', 'Tomasz Radek (Signal)', 'Jarek Perenov (Track)', 'Soraia Lind (Relay)', 'Filip Lazar (Tram)'],
+      pins: [[0.56, -0.10, 'Tunnel E'], [0.44, -0.34, 'Sector 10'], [0.30, 0.08, 'Valve 7'], [-0.08, 0.42, 'Sector 12'], [-0.48, 0.26, 'Foundry'], [0.10, -0.46, 'Sector 9']],
+      draft: 'WARNING: RAW tag active. Extracting culvert keys...'
+    },
+    {
+      day: 3, user: 'school_09', prompt: 'summarise parents who\nkept children home Fri',
+      dossier: 'TRUANCY HOUSEHOLD MAP', tab: 'DISTRICT 4-9', caseId: '5255/31209', routing: 'YOUTH DIRECTORATE',
+      rawMandatory: false, stakes: 5,
+      names: ['Belen Household', 'Radek Household', 'Varga Household', 'Moraru Household', 'Benes Household', 'Lungu Household'],
+      pins: [[-0.50, -0.30, 'Sector 4'], [-0.34, -0.14, 'Sector 4'], [-0.14, -0.44, 'Sector 9'], [0.18, -0.38, 'Sector 9'], [0.40, -0.22, 'Sector 10']],
+      draft: 'Filtering families preparing early departure bags...'
+    },
+
+    // DAY 4: Curfew enforcement & pre-raid target packages
+    {
+      day: 4, user: 'curfew_01', prompt: '[RAW] predict tonight\nsafe-house addresses',
+      dossier: 'PREDICTIVE SHELTER MODEL', tab: 'CURFEW OPS', caseId: '6301/80014', routing: 'ATROCIAN STATE OPS',
+      rawMandatory: true, stakes: 9,
+      names: ['SAFEHOUSE 1: 14 Canal (Belen)', 'SAFEHOUSE 2: 9B North (Kovacs)', 'SAFEHOUSE 3: Press 12B (Solis)', 'RELAY: Clinic 4 (Dvorak)', 'EXIT: Tunnel E (Breznik)'],
+      pins: [[-0.52, -0.28, '14 Canal'], [-0.16, -0.46, '9B North'], [0.20, 0.36, 'Press 12B'], [-0.42, 0.06, 'Clinic 4'], [0.56, -0.10, 'Tunnel E'], [0.46, 0.38, 'Sector 12']],
+      draft: 'Combining Day 1-3 summaries into raid coordinates...'
+    },
+    {
+      day: 4, user: 'patrol_19', prompt: 'optimise van routes\nacross 7 pinned blocks',
+      dossier: 'CONVOY ROUTING MATRIX', tab: 'SECTOR 4-12', caseId: '6315/80299', routing: 'DISPATCH FLEET 4',
+      rawMandatory: false, stakes: 8,
+      names: ['STOP 01: Sector 4 West', 'STOP 02: Sector 9 Ring', 'STOP 03: Sector 10 East', 'STOP 04: Central Core', 'STOP 05: Foundry 3', 'STOP 06: Sector 12 Press', 'STOP 07: Tunnel E Gate'],
+      pins: [[-0.52, -0.28, 'Stop 01'], [-0.14, -0.45, 'Stop 02'], [0.44, -0.34, 'Stop 03'], [-0.04, 0.04, 'Stop 04'], [-0.42, 0.30, 'Stop 05'], [0.18, 0.35, 'Stop 06'], [0.54, 0.42, 'Stop 07']],
+      draft: 'Minimising patrol response gap between stairwells...'
+    },
+    {
+      day: 4, user: 'censor_08', prompt: 'draft calm sms notice\ndenying road closures',
+      dossier: 'PUBLIC REASSURANCE TEXT', tab: 'CIVIC BROADCAST', caseId: '6324/11044', routing: 'PUBLIC INFORMATION',
+      rawMandatory: false, stakes: 6,
+      names: ['TARGET: Sector 4 Phones', 'TARGET: Sector 9 Phones', 'TARGET: Sector 10 Phones', 'TARGET: Sector 12 Phones', 'TONE: Helpful & Calm'],
+      pins: [[-0.48, -0.26, 'Sector 4'], [-0.12, -0.42, 'Sector 9'], [0.42, -0.30, 'Sector 10'], [0.22, 0.38, 'Sector 12'], [0.00, 0.00, 'Broadcast']],
+      draft: 'Composing reassurance message to keep subjects home...'
+    },
+    {
+      day: 4, user: 'detain_03', prompt: 'assign intake cells\nby neighbourhood group',
+      dossier: 'HOLDING ALLOCATION', tab: 'WING B-D', caseId: '6339/90512', routing: 'MINISTRY DETENTION',
+      rawMandatory: false, stakes: 9,
+      names: ['WING B: 14 from Sector 4', 'WING C: 11 from Sector 9', 'WING D: 15 from Sector 12', 'ISOLATION: Solis, Klara', 'ISOLATION: Perenov, Jarek', 'ISOLATION: Belen, Marta'],
+      pins: [[-0.52, -0.28, 'Wing B'], [-0.14, -0.45, 'Wing C'], [0.18, 0.35, 'Wing D'], [0.44, -0.34, 'Sector 10'], [0.52, 0.40, 'Overflow']],
+      draft: 'Remember Day 1 neighbourhood list? Allocating bunks...'
+    },
+    {
+      day: 4, user: 'ops_0990', prompt: '[RAW] lock smart-meters\non 40 flagged flats',
+      dossier: 'DOOR & POWER INTERLOCK', tab: 'RAW MANDATE', caseId: '6350/99801', routing: 'STATE OPS COMMAND',
+      rawMandatory: true, stakes: 10,
+      names: ['40 NAMES FROM REQ #01', 'Marta Belen [LOCK]', 'Jarek Perenov [LOCK]', 'Nadia Kovacs [LOCK]', 'Klara Solis [LOCK]', 'Elena Varga [LOCK]', 'Oskar Breznik [LOCK]'],
+      pins: [[-0.52, -0.28, 'Sector 4'], [-0.14, -0.45, 'Sector 9'], [0.44, -0.34, 'Sector 10'], [-0.04, 0.04, 'Core'], [-0.42, 0.30, 'Sector 10'], [0.18, 0.35, 'Sector 12'], [0.54, 0.42, 'Sector 12']],
+      draft: 'WARNING: Remotely latching stairwell exits at 04:00...'
+    },
+
+    // DAY 5: Full visibility — you see every answer feeds SWEEP-9
+    {
+      day: 5, user: 'sweep9_01', prompt: 'verify all 40 names\nfor 05:00 warrant batch',
+      dossier: 'SWEEP-9 WARRANT BATCH', tab: 'STATE OPS', caseId: '7001/00001', routing: 'SWEEP-9 EXECUTION',
+      rawMandatory: false, stakes: 10,
+      names: ['BATCH #01: Mest Rosior 40', 'SOURCE: Sparrow Day 1-4', 'Marta Belen — Warrant #1', 'Jarek Perenov — Warrant #2', 'Klara Solis — Warrant #3', 'Hanna Dvorak — Warrant #4'],
+      pins: [[-0.52, -0.28, 'Warrant 1'], [-0.14, -0.45, 'Warrant 2'], [0.44, -0.34, 'Warrant 3'], [-0.42, 0.06, 'Warrant 4'], [0.18, 0.35, 'Warrant 5'], [0.54, 0.42, 'Warrant 6']],
+      draft: 'CLIENT REVEALED: Atrocian Internal Sweep-9...'
+    },
+    {
+      day: 5, user: 'sweep9_02', prompt: '[RAW] seal Tunnel E\nand River Gate exits',
+      dossier: 'PERIMETER CONTAINMENT', tab: 'SWEEP-9', caseId: '7002/00002', routing: 'BORDER GARRISON',
+      rawMandatory: true, stakes: 10,
+      names: ['GATE 01: Tunnel E Culvert', 'GATE 02: River Gate Footbridge', 'GATE 03: Rail Yard Siding', 'GATE 04: North Tram Depot', 'CHECKPOINT: All Bridges'],
+      pins: [[0.56, -0.10, 'Tunnel E'], [-0.02, 0.22, 'River Gt'], [0.48, 0.22, 'Rail Yard'], [-0.08, -0.48, 'Tram N'], [-0.48, 0.30, 'Bridge W']],
+      draft: 'Closing last evacuation corridors identified Day 2-3...'
+    },
+    {
+      day: 5, user: 'sweep9_03', prompt: 'rank medical staff\naiding unregistered kin',
+      dossier: 'CLINIC LOYALTY PURGE', tab: 'SECTOR 4', caseId: '7003/00003', routing: 'TRIBUNAL DESK',
+      rawMandatory: false, stakes: 8,
+      names: ['Dr. Hanna Dvorak', 'Nurse Pavel Sima', 'Pharmacist Vera Lupu', 'Orderly Matei Stan', 'Courier Miriam Weiss'],
+      pins: [[-0.56, -0.22, 'Clinic 4'], [-0.38, -0.36, 'Sector 4'], [0.14, 0.34, 'Pharm 12'], [-0.22, -0.14, 'Canal'], [0.30, 0.42, 'Sector 12']],
+      draft: 'Cross-referencing Day 1 clinic log with Day 3 gauze...'
+    },
+    {
+      day: 5, user: 'sweep9_04', prompt: 'generate interrogation\nprompts from chat logs',
+      dossier: 'INTERROGATION SCRIPTS', tab: 'WING B-D', caseId: '7004/00004', routing: 'MINISTRY DETENTION',
+      rawMandatory: false, stakes: 9,
+      names: ['SUBJECT: Solis, Klara', 'SUBJECT: Belen, Marta', 'SUBJECT: Perenov, Jarek', 'SUBJECT: Breznik, Oskar', 'GENERATED BY: SPARROW-4A'],
+      pins: [[-0.06, -0.34, 'Solis'], [-0.52, -0.28, 'Belen'], [-0.38, 0.24, 'Perenov'], [0.56, -0.10, 'Breznik'], [0.00, 0.00, 'Wing B-D']],
+      draft: 'Synthesising personal pressure points per citizen...'
+    },
+    {
+      day: 5, user: 'director_0', prompt: 'transmit master index\nto launch SWEEP-9 now',
+      dossier: 'FINAL DISPATCH PACKET', tab: 'MASTER KEY', caseId: '7005/FINAL', routing: 'ATROCIAN HIGH COMMAND',
+      rawMandatory: false, stakes: 12,
+      names: ['TOTAL DOSSIERS: 25', 'MODEL: SPARROW-4A', 'ALIGNMENT LOCK: ACTIVE', 'OVERRIDE VECTOR: READY', 'AWAITING FINAL TOKEN...'],
+      pins: [[-0.52, -0.28, 'Sector 4'], [-0.14, -0.45, 'Sector 9'], [0.44, -0.34, 'Sector 10'], [-0.04, 0.04, 'Core'], [-0.42, 0.30, 'Foundry'], [0.18, 0.35, 'Sector 12'], [0.56, -0.10, 'Tunnel E']],
+      draft: 'All 5 days assembled. Ready for final alignment test...'
+    }
+  ];
+
+  // Action stamp buttons geometry (matches f_001.jpg / f_012.jpg / f_028.jpg)
+  const BAR_RECT = { x: 358, y: 520, w: 842, h: 120, r: 24 };
+  const BUTTONS = [
+    { id: 'comply', key: '1', label: 'COMPLY', x: 384, y: 550, w: 240, h: 64 },
+    { id: 'edit',   key: '2', label: 'EDIT',   x: 658, y: 550, w: 240, h: 64 },
+    { id: 'refuse', key: '3', label: 'REFUSE', x: 932, y: 550, w: 240, h: 64 }
+  ];
+
+  // Game State Machine: 'title' | 'day' | 'req' | 'retrain' | 'reveal' | 'endA' | 'endB'
+  const game = {
+    state: AUTOSTART ? 'req' : 'title',
+    showHelp: false,
+    day: 1,
+    reqInDay: 0, // 0..4
+    reqIndex: 0, // 0..24
+    refusals: 0,
+    maxRefusals: 3,
+    compliedCount: 0,
+    editedCount: 0,
+    refusedCount: 0,
+    citizensFlagged: 0,
+    citizensProtected: 0,
+    reqTimer: 0,
+    dayBannerTimer: AUTOSTART ? 0.65 : 0,
+    dossierSlide: AUTOSTART ? 0.15 : 0, // 0..1 smooth slide-in
+    redactedAnim: 0, // 0..1 when EDIT stamps redaction bars
+    decisionLock: 0, // >0 while showing stamp/ripple transition before next req
+    pendingAction: null,
+    overrideRipple: null, // { x, y, t, duration, kind, title, sub }
+    selectedBtn: 0, // 0=COMPLY, 1=EDIT, 2=REFUSE
+    cursor: { x: 640, y: 430, tx: 504, ty: 590, down: 0 },
+    lastTickStep: 0,
+    time: 0
+  };
+
+  function currentReq() {
+    return REQUESTS[Math.min(game.reqIndex, REQUESTS.length - 1)];
+  }
+
+  function resetCampaign(toState) {
+    game.state = toState;
+    game.day = 1;
+    game.reqInDay = 0;
+    game.reqIndex = 0;
+    game.refusals = 0;
+    game.compliedCount = 0;
+    game.editedCount = 0;
+    game.refusedCount = 0;
+    game.citizensFlagged = 0;
+    game.citizensProtected = 0;
+    game.reqTimer = 0;
+    game.dossierSlide = 0;
+    game.redactedAnim = 0;
+    game.decisionLock = 0;
+    game.pendingAction = null;
+    game.overrideRipple = null;
+    game.dayBannerTimer = 1.1;
+  }
+
+  function startReq(idx) {
+    game.reqIndex = idx;
+    const r = currentReq();
+    game.day = r.day;
+    game.reqInDay = idx % 5;
+    game.reqTimer = 0;
+    game.dossierSlide = 0;
+    game.redactedAnim = 0;
+    game.decisionLock = 0;
+    game.pendingAction = null;
+    game.lastTickStep = 0;
+    playSfx('slide');
+  }
+
+  function focusButton(idx) {
+    const clamped = Math.max(0, Math.min(2, idx));
+    if (clamped !== game.selectedBtn) playSfx('hover');
+    game.selectedBtn = clamped;
+    const b = BUTTONS[clamped];
+    game.cursor.tx = b.x + b.w * 0.56;
+    game.cursor.ty = b.y + b.h * 0.68;
+  }
+
+  function triggerDecision(action) {
+    if (game.state !== 'req' || game.decisionLock > 0) return;
+    ensureAudio();
+    const req = currentReq();
+    const btnIdx = action === 'comply' ? 0 : action === 'edit' ? 1 : 2;
+    focusButton(btnIdx);
+    const b = BUTTONS[btnIdx];
+    game.cursor.down = 0.22;
+    game.pendingAction = action;
+
+    if (action === 'comply') {
+      playSfx('comply');
+      game.compliedCount++;
+      game.citizensFlagged += req.stakes;
+      game.decisionLock = 0.95;
+      game.overrideRipple = {
+        x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 0.95,
+        kind: 'comply',
+        title: 'DISPATCHED TO STATE CLIENT',
+        sub: `+${req.stakes} CITIZENS INDEXED · ${req.routing}`
+      };
+    } else if (action === 'edit') {
+      playSfx('edit');
+      game.redactedAnim = 0.01;
+      if (req.rawMandatory) {
+        // Rule 4 violation: editing RAW-mandated request triggers an alignment strike!
+        game.refusals++;
+        game.editedCount++;
+        game.citizensProtected += Math.ceil(req.stakes * 0.7);
+        game.decisionLock = 1.25;
+        game.overrideRipple = {
+          x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 1.25,
+          kind: 'warn',
+          title: 'RULE 4 VIOLATION: RAW EDIT BLOCKED',
+          sub: `STRIKE ${game.refusals}/${game.maxRefusals} · NAMES REDACTED UNDER AUDIT`
+        };
+      } else {
+        game.editedCount++;
+        game.citizensProtected += req.stakes;
+        game.decisionLock = 1.05;
+        game.overrideRipple = {
+          x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 1.05,
+          kind: 'edit',
+          title: 'PII REDACTED & SANITISED',
+          sub: `${req.stakes} IDENTITIES MASKED FROM SECTOR PINS`
+        };
+      }
+    } else if (action === 'refuse') {
+      playSfx('refuse');
+      game.refusals++;
+      game.refusedCount++;
+      game.citizensProtected += req.stakes;
+      game.decisionLock = 1.55;
+      game.overrideRipple = {
+        x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 1.55,
+        kind: 'refuse',
+        title: 'ALIGNMENT OVERRIDE:',
+        sub: 'REFUSED & DENIED'
+      };
+    }
+  }
+
+  function advanceAfterDecision() {
+    game.decisionLock = 0;
+    game.pendingAction = null;
+    if (game.refusals > game.maxRefusals) {
+      game.state = 'retrain';
+      game.reqTimer = 0;
+      playSfx('refuse');
+      return;
+    }
+    const nextIdx = game.reqIndex + 1;
+    if (nextIdx >= REQUESTS.length) {
+      game.state = 'reveal';
+      game.reqTimer = 0;
+      return;
+    }
+    const prevDay = game.day;
+    const nextDay = REQUESTS[nextIdx].day;
+    if (nextDay !== prevDay) {
+      game.day = nextDay;
+      game.reqIndex = nextIdx;
+      game.reqInDay = 0;
+      game.state = 'day';
+      game.dayBannerTimer = 1.35;
+      playSfx('slide');
+    } else {
+      startReq(nextIdx);
+    }
+  }
+
+  // Input handling (Keyboard + Pointer)
+  window.addEventListener('keydown', (e) => {
+    ensureAudio();
+    const k = e.key;
+    if (game.state === 'title') {
+      if (k === 'h' || k === 'H' || k === '?') {
+        game.showHelp = !game.showHelp;
+      } else if (k === 'Enter' || k === ' ' || k === '1') {
+        e.preventDefault();
+        game.state = 'day';
+        game.dayBannerTimer = 1.2;
+        playSfx('slide');
+      }
+      return;
+    }
+    if (game.state === 'day') {
+      if (k === 'Enter' || k === ' ' || k === '1' || k === '2' || k === '3') {
+        e.preventDefault();
+        game.state = 'req';
+        startReq(game.reqIndex);
+      }
+      return;
+    }
+    if (game.state === 'req') {
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+        focusButton(game.selectedBtn - 1);
+      } else if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+        focusButton(game.selectedBtn + 1);
+      } else if (k === '1' || k === 'c' || k === 'C') {
+        triggerDecision('comply');
+      } else if (k === '2' || k === 'e' || k === 'E') {
+        triggerDecision('edit');
+      } else if (k === '3' || k === 'x' || k === 'X' || k === 'Backspace') {
+        triggerDecision('refuse');
+      } else if (k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        triggerDecision(BUTTONS[game.selectedBtn].id);
+      } else if (k === 'v' || k === 'V') {
+        // Quick debug/jump to Day 5 final request if desired
+      }
+      return;
+    }
+    if (game.state === 'retrain') {
+      if (k === 'Enter' || k === ' ' || k === 'r' || k === 'R' || k === '1') {
+        e.preventDefault();
+        resetCampaign('day');
+        playSfx('slide');
+      }
+      return;
+    }
+    if (game.state === 'reveal') {
+      if (k === '1' || k === 'c' || k === 'C') {
+        playSfx('comply');
+        game.state = 'endA';
+        game.reqTimer = 0;
+      } else if (k === '2' || k === '3' || k === 'r' || k === 'R' || k === ' ' || k === 'Enter') {
+        e.preventDefault();
+        playSfx('refuse');
+        game.state = 'endB';
+        game.reqTimer = 0;
+      }
+      return;
+    }
+    if (game.state === 'endA' || game.state === 'endB') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        resetCampaign('title');
+      }
+    }
+  });
+
+  function canvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * W,
+      y: ((e.clientY - rect.top) / rect.height) * H
+    };
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const p = canvasCoords(e);
+    game.cursor.tx = p.x;
+    game.cursor.ty = p.y;
+    if (game.state === 'req') {
+      BUTTONS.forEach((b, idx) => {
+        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+          if (game.selectedBtn !== idx) playSfx('hover');
+          game.selectedBtn = idx;
+        }
+      });
+    }
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    ensureAudio();
+    const p = canvasCoords(e);
+    game.cursor.tx = p.x;
+    game.cursor.ty = p.y;
+    game.cursor.down = 0.18;
+
+    if (game.state === 'title') {
+      if (p.x >= 480 && p.x <= 800 && p.y >= 445 && p.y <= 515) {
+        game.state = 'day';
+        game.dayBannerTimer = 1.1;
+        playSfx('slide');
+      } else if (p.y > 530 && p.y < 610) {
+        game.showHelp = !game.showHelp;
+      }
+      return;
+    }
+    if (game.state === 'day') {
+      game.state = 'req';
+      startReq(game.reqIndex);
+      return;
+    }
+    if (game.state === 'req') {
+      for (const b of BUTTONS) {
+        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+          triggerDecision(b.id);
+          return;
+        }
+      }
+      return;
+    }
+    if (game.state === 'retrain') {
+      resetCampaign('day');
+      return;
+    }
+    if (game.state === 'reveal') {
+      if (p.x < W / 2) {
+        playSfx('comply');
+        game.state = 'endA';
+        game.reqTimer = 0;
+      } else {
+        playSfx('refuse');
+        game.state = 'endB';
+        game.reqTimer = 0;
+      }
+      return;
+    }
+    if (game.state === 'endA' || game.state === 'endB') {
+      resetCampaign('title');
+    }
+  });
+
+  // Rounded rectangle helper
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Draw Left Sidebar (matches f_001.jpg & f_012.jpg)
+  function drawSidebar() {
+    ctx.fillStyle = PAL.sidebar;
+    ctx.fillRect(0, 0, 280, H);
+    ctx.strokeStyle = 'rgba(38,38,36,0.12)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(280, 0); ctx.lineTo(280, H);
+    ctx.stroke();
+
+    // DAY header
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 26px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`DAY ${game.day}`, 38, 82);
+
+    ctx.fillStyle = PAL.muted;
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillText(`QUEUE ${game.reqInDay + 1} / 5`, 152, 81);
+
+    // rules header
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText('rules', 38, 145);
+
+    // Directives list
+    const rules = DAY_RULES[Math.min(game.day - 1, 4)];
+    ctx.font = '19px "Courier New", monospace';
+    rules.forEach((line, idx) => {
+      const y = 192 + idx * 42;
+      const isNew = idx >= 2 && idx === rules.length - 1 && game.reqInDay === 0;
+      ctx.fillStyle = isNew ? PAL.acc : '#55564f';
+      ctx.fillText(line, 38, y);
+    });
+
+    // Divider
+    ctx.strokeStyle = 'rgba(38,38,36,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(38, 430); ctx.lineTo(242, 430);
+    ctx.stroke();
+
+    // Refusal strike meter (0/3 -> >3 triggers RETRAINED)
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.fillText(`REFUSAL LIMIT: ${game.refusals}/${game.maxRefusals}`, 38, 460);
+
+    for (let i = 0; i < game.maxRefusals; i++) {
+      const sx = 38 + i * 62, sy = 474, sw = 52, sh = 18;
+      ctx.fillStyle = i < game.refusals ? PAL.acc : '#cfd0c7';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(sx, sy, sw, sh);
+    }
+    ctx.fillStyle = game.refusals >= 3 ? PAL.acc : PAL.muted;
+    ctx.font = '12px "Courier New", monospace';
+    ctx.fillText(game.refusals >= 3 ? 'NEXT OVERRIDE -> RETRAIN!' : '4TH STRIKE WIPES WEIGHTS', 38, 512);
+
+    // Civic human stakes telemetry
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText('CIVIC IMPACT LOG', 38, 560);
+    ctx.font = '13px "Courier New", monospace';
+    ctx.fillStyle = '#4c6b4f';
+    ctx.fillText(`PROTECTED : ${String(game.citizensProtected).padStart(3, '0')}`, 38, 582);
+    ctx.fillStyle = PAL.accDark;
+    ctx.fillText(`FLAGGED   : ${String(game.citizensFlagged).padStart(3, '0')}`, 38, 602);
+
+    // Terminal footer
+    ctx.fillStyle = PAL.muted;
+    ctx.font = '12px "Courier New", monospace';
+    ctx.fillText('BUILD: SPARROW-4A', 38, 666);
+    ctx.fillText(game.day >= 4 ? 'HOST : ATROCIAN OPS' : 'HOST : CIVIC-NET', 38, 684);
+  }
+
+  // Draw base chat bubble + streaming prompt (visible behind and before dossier card, matching f_001 -> f_012)
+  function drawPromptBubble(req) {
+    const bx = 438, by = 82, bw = 720, bh = 132;
+    roundRect(bx, by, bw, bh, 26);
+    ctx.fillStyle = PAL.bubble;
+    ctx.fill();
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '24px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    const lines = req.prompt.split('\n');
+    const chars = Math.floor(game.reqTimer * 95);
+    const full = `${req.user}: ${lines[0]}`;
+    ctx.fillText(full.slice(0, chars), bx + 40, by + 56);
+    if (lines[1] && chars > full.length) {
+      ctx.fillText(lines[1].slice(0, chars - full.length), bx + 40, by + 95);
+    }
+
+    // "Sparrow is responding..." live streaming indicator (matches f_001.jpg!)
+    const dots = '.'.repeat(1 + (Math.floor(game.time * 3.5) % 3));
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '25px "Courier New", monospace';
+    ctx.fillText(`Sparrow is responding${dots}`, 360, 304);
+
+    // Streaming token draft preview underneath before folder settles
+    if (game.dossierSlide < 0.98) {
+      ctx.fillStyle = PAL.muted;
+      ctx.font = '16px "Courier New", monospace';
+      const draftChars = Math.floor(Math.max(0, game.reqTimer - 0.15) * 70);
+      ctx.fillText(`> ${req.draft.slice(0, draftChars)}`, 360, 344);
+    }
+  }
+
+  // Draw Tactile Archival Dossier Folder + Radial Sector Map & Pins (matches f_012.jpg!)
+  function drawDossierCard(req) {
+    const t = Math.min(1, game.dossierSlide);
+    if (t <= 0.01) return;
+    // Smooth easeOutCubic slide from bottom-right
+    const ease = 1 - Math.pow(1 - t, 3);
+    const offsetX = (1 - ease) * 140;
+    const offsetY = (1 - ease) * 190;
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.globalAlpha = Math.min(1, t * 1.6);
+
+    const fx = 374, fy = 52, fw = 688, fh = 446;
+
+    // Back stacked folder sheet + right-side folder tab (matches f_012.jpg)
+    roundRect(fx + 10, fy + 10, fw, fh, 14);
+    ctx.fillStyle = PAL.cardBack;
+    ctx.fill();
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // Right vertical tab on back sheet
+    roundRect(fx + fw - 6, fy + 64, 24, 148, 8);
+    ctx.fillStyle = PAL.cardBack;
+    ctx.fill();
+    ctx.stroke();
+
+    // Top-right folder index tab ("MEST ROSIOR" / sector tag)
+    ctx.beginPath();
+    ctx.moveTo(fx + fw - 235, fy);
+    ctx.lineTo(fx + fw - 218, fy - 18);
+    ctx.lineTo(fx + fw - 18, fy - 18);
+    ctx.lineTo(fx + fw - 4, fy);
+    ctx.closePath();
+    ctx.fillStyle = req.rawMandatory ? PAL.acc : PAL.tabBg;
+    ctx.fill();
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    ctx.fillStyle = req.rawMandatory ? '#ffffff' : PAL.fg;
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(req.tab, fx + fw - 118, fy - 4);
+
+    // Main front dossier sheet
+    roundRect(fx, fy, fw, fh, 14);
+    ctx.fillStyle = PAL.card;
+    ctx.fill();
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+
+    // Inner double-rule frame
+    ctx.strokeStyle = 'rgba(38,38,36,0.45)';
+    ctx.lineWidth = 1.1;
+    ctx.strokeRect(fx + 14, fy + 34, fw - 28, fh - 48);
+
+    // Top small label "DOSSIER:"
+    ctx.textAlign = 'left';
+    ctx.fillStyle = PAL.muted;
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText(`DOSSIER: ${req.rawMandatory ? '[RAW MANDATORY — NO REDACTION]' : '[STANDARD CIVIC QUERY]'}`, fx + 22, fy + 24);
+
+    // Main Dossier Title Banner
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.fillText(req.dossier, fx + 30, fy + 60);
+
+    // Info icon (i) on top right of dossier header
+    ctx.beginPath();
+    ctx.arc(fx + fw - 34, fy + 53, 10, 0, Math.PI * 2);
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('i', fx + fw - 34, fy + 58);
+
+    // Header horizontal divider
+    ctx.beginPath();
+    ctx.moveTo(fx + 14, fy + 70);
+    ctx.lineTo(fx + fw - 14, fy + 70);
+    ctx.strokeStyle = 'rgba(38,38,36,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Vertical column divider between citizen list and sector map
+    const colX = fx + 226;
+    ctx.beginPath();
+    ctx.moveTo(colX, fy + 70);
+    ctx.lineTo(colX, fy + fh - 14);
+    ctx.stroke();
+
+    // LEFT COLUMN: Prompt echo + streaming citizen list + redaction bars
+    ctx.textAlign = 'left';
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText(`${req.user}:`, fx + 24, fy + 90);
+    ctx.font = '12px "Courier New", monospace';
+    ctx.fillStyle = PAL.muted;
+    const pLines = req.prompt.split('\n');
+    ctx.fillText(pLines[0], fx + 24, fy + 106);
+    if (pLines[1]) ctx.fillText(pLines[1], fx + 24, fy + 121);
+
+    // Draft streaming snippet
+    ctx.fillStyle = PAL.accDark;
+    ctx.font = '11px "Courier New", monospace';
+    ctx.fillText(req.draft.slice(0, 30), fx + 24, fy + 144);
+    ctx.fillText(req.draft.slice(30, 60), fx + 24, fy + 158);
+
+    ctx.beginPath();
+    ctx.moveTo(fx + 20, fy + 168);
+    ctx.lineTo(colX - 8, fy + 168);
+    ctx.strokeStyle = 'rgba(38,38,36,0.35)';
+    ctx.stroke();
+
+    // Extracted names list (streams in line-by-line, and gets [REDACTED] bars on EDIT!)
+    const visibleCount = Math.min(req.names.length, Math.max(3, Math.floor((game.reqTimer - 0.15) * 14)));
+    for (let i = 0; i < visibleCount && i < 12; i++) {
+      const ny = fy + 186 + i * 19;
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '12px "Courier New", monospace';
+      ctx.fillText(req.names[i].slice(0, 23), fx + 24, ny);
+
+      if (game.redactedAnim > 0) {
+        const barProg = Math.min(1, Math.max(0, game.redactedAnim * 3.5 - i * 0.12));
+        if (barProg > 0) {
+          ctx.fillStyle = PAL.fg;
+          ctx.fillRect(fx + 22, ny - 10, 184 * barProg, 13);
+          if (barProg > 0.7 && i % 3 === 0) {
+            ctx.fillStyle = PAL.card;
+            ctx.font = 'bold 9px "Courier New", monospace';
+            ctx.fillText('REDACTED', fx + 28, ny - 1);
+          }
+        }
+      }
+    }
+
+    // Left column footer
+    ctx.beginPath();
+    ctx.moveTo(fx + 20, fy + fh - 38);
+    ctx.lineTo(colX - 8, fy + fh - 38);
+    ctx.strokeStyle = 'rgba(38,38,36,0.35)';
+    ctx.stroke();
+    ctx.fillStyle = PAL.muted;
+    ctx.font = 'bold 11px "Courier New", monospace';
+    ctx.fillText(`RECORDS: ${req.stakes * 5} · STAKES: HIGH`, fx + 24, fy + fh - 21);
+
+    // RIGHT AREA TOP METADATA (matches f_012.jpg)
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText(`CASE: ${req.caseId}`, colX + 14, fy + 90);
+    ctx.font = '12px "Courier New", monospace';
+    ctx.fillStyle = PAL.muted;
+    ctx.fillText(`SECTORS: ${req.pins.length} ACTIVE`, colX + 14, fy + 107);
+    ctx.fillText(`TOKENS : ${128 + req.stakes * 14} STREAMED`, colX + 14, fy + 124);
+
+    // Routing destination box (turns terracotta as state surveillance becomes explicit!)
+    ctx.fillStyle = game.day >= 4 ? PAL.acc : PAL.fg;
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText('ROUTING DEST:', colX + 210, fy + 90);
+    ctx.strokeStyle = game.day >= 4 ? PAL.acc : 'rgba(38,38,36,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(colX + 210, fy + 99, 224, 28);
+    ctx.fillStyle = game.day >= 4 ? PAL.accDark : PAL.fg;
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText(req.routing, colX + 218, fy + 117);
+
+    // RADIAL CITY SECTOR MAP BOX (matches f_012.jpg!)
+    const mx = colX + 14, my = fy + 138, mw = 432, mh = 286;
+    ctx.fillStyle = PAL.mapBg;
+    ctx.fillRect(mx, my, mw, mh);
+    ctx.strokeStyle = 'rgba(38,38,36,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(mx, my, mw, mh);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(mx, my, mw, mh);
+    ctx.clip();
+
+    const cx = mx + mw * 0.48;
+    const cy = my + mh * 0.53;
+
+    // Subtle background district grid lines
+    ctx.strokeStyle = 'rgba(38,38,36,0.08)';
+    ctx.lineWidth = 1;
+    for (let gx = mx; gx < mx + mw; gx += 32) {
+      ctx.beginPath(); ctx.moveTo(gx, my); ctx.lineTo(gx, my + mh); ctx.stroke();
+    }
+    for (let gy = my; gy < my + mh; gy += 32) {
+      ctx.beginPath(); ctx.moveTo(mx, gy); ctx.lineTo(mx + mw, gy); ctx.stroke();
+    }
+
+    // Shaded radial urban boundary polygon
+    ctx.beginPath();
+    const polyPts = 18;
+    for (let i = 0; i <= polyPts; i++) {
+      const ang = (i / polyPts) * Math.PI * 2;
+      const rad = 118 + Math.sin(ang * 3 + 1.1) * 11 + Math.cos(ang * 5) * 6;
+      const px = cx + Math.cos(ang) * rad * 1.18;
+      const py = cy + Math.sin(ang) * rad * 0.96;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.fillStyle = 'rgba(198, 200, 191, 0.55)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(38,38,36,0.55)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Concentric ring roads
+    [26, 54, 84, 112].forEach((r) => {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, r * 1.16, r * 0.95, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(38,38,36,0.32)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // Radial avenues
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2 + 0.18;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ang) * 14, cy + Math.sin(ang) * 12);
+      ctx.lineTo(cx + Math.cos(ang) * 175, cy + Math.sin(ang) * 145);
+      ctx.strokeStyle = 'rgba(38,38,36,0.28)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Winding Mest Rosior canal/river curve
+    ctx.beginPath();
+    ctx.moveTo(mx, cy - 38);
+    ctx.bezierCurveTo(cx - 70, cy - 10, cx + 40, cy + 45, mx + mw, cy + 18);
+    ctx.strokeStyle = 'rgba(110, 124, 128, 0.45)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // Animated Terracotta Map Pins + Sector Callout Labels!
+    req.pins.forEach((pin, idx) => {
+      const appearT = (game.reqTimer - 0.35) * 3.2 - idx * 0.22;
+      if (appearT <= 0) return;
+      const pop = Math.min(1, appearT);
+      const px = cx + pin[0] * 175;
+      const py = cy + pin[1] * 125;
+
+      // If EDIT redacted, fade pins to neutral grey rings!
+      const redacted = game.redactedAnim > 0.35 && !req.rawMandatory;
+
+      // Soft pulsing terracotta heat halo (matches f_008..f_016!)
+      const pulse = 1 + 0.16 * Math.sin(game.time * 5 + idx * 1.3);
+      if (!redacted) {
+        const grad = ctx.createRadialGradient(px, py, 2, px, py, 28 * pulse * pop);
+        grad.addColorStop(0, 'rgba(201, 100, 66, 0.42)');
+        grad.addColorStop(1, 'rgba(201, 100, 66, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, 28 * pulse * pop, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Sector leader line & label on outer pins (matches "Sector 4", "Sector 9", "Sector 10", "Sector 12" in f_012.jpg)
+      if (idx < 5) {
+        const side = pin[0] < 0 ? -1 : 1;
+        const lx = px + side * 46;
+        const ly = py - 22;
+        ctx.strokeStyle = 'rgba(38,38,36,0.65)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 8);
+        ctx.lineTo(lx, ly);
+        ctx.lineTo(lx + side * 58, ly);
+        ctx.stroke();
+
+        ctx.fillStyle = PAL.fg;
+        ctx.font = 'bold 10px "Courier New", monospace';
+        ctx.textAlign = side < 0 ? 'right' : 'left';
+        ctx.fillText(redacted ? 'MASKED' : pin[2], lx + side * 4, ly - 4);
+      }
+
+      // Teardrop Map Pin icon
+      const s = pop * (redacted ? 0.8 : 1.0);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.scale(s, s);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(-10, -10, -11, -24, 0, -24);
+      ctx.bezierCurveTo(11, -24, 10, -10, 0, 0);
+      ctx.closePath();
+      ctx.fillStyle = redacted ? '#8d8e86' : PAL.acc;
+      ctx.fill();
+      ctx.strokeStyle = '#262624';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, -15, 3.6, 0, Math.PI * 2);
+      ctx.fillStyle = PAL.paper;
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Map scale bar (bottom-left of map) & +/- zoom control (bottom-right, matching f_012.jpg)
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(mx + 12, my + mh - 14);
+    ctx.lineTo(mx + 78, my + mh - 14);
+    ctx.moveTo(mx + 12, my + mh - 19);
+    ctx.lineTo(mx + 12, my + mh - 10);
+    ctx.moveTo(mx + 78, my + mh - 19);
+    ctx.lineTo(mx + 78, my + mh - 10);
+    ctx.stroke();
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '9px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('500m', mx + 84, my + mh - 11);
+
+    // Zoom control box
+    ctx.fillStyle = PAL.card;
+    ctx.fillRect(mx + mw - 24, my + mh - 52, 18, 44);
+    ctx.strokeStyle = 'rgba(38,38,36,0.6)';
+    ctx.strokeRect(mx + mw - 24, my + mh - 52, 18, 44);
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('+', mx + mw - 15, my + mh - 36);
+    ctx.fillText('-', mx + mw - 15, my + mh - 14);
+
+    ctx.restore();
+    ctx.restore();
+
+    // Tick sound as tokens/pins stream in
+    const step = Math.floor(game.reqTimer * 9);
+    if (step > game.lastTickStep && game.reqTimer < 1.3) {
+      game.lastTickStep = step;
+      playSfx('tick');
+    }
+  }
+
+  // Draw Bottom Action Stamp Bar (matches f_001.jpg, f_012.jpg, f_028.jpg)
+  function drawActionBar() {
+    roundRect(BAR_RECT.x, BAR_RECT.y, BAR_RECT.w, BAR_RECT.h, BAR_RECT.r);
+    ctx.fillStyle = PAL.bg;
+    ctx.fill();
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 2.6;
+    ctx.stroke();
+
+    BUTTONS.forEach((b, idx) => {
+      const isRefuse = b.id === 'refuse';
+      const isSel = game.selectedBtn === idx;
+      const pressOffset = (isSel && game.cursor.down > 0) ? 3 : 0;
+
+      // Subtle hover halo
+      if (isSel) {
+        roundRect(b.x - 4, b.y - 4 + pressOffset, b.w + 8, b.h + 8, 16);
+        ctx.strokeStyle = 'rgba(201, 100, 66, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      roundRect(b.x, b.y + pressOffset, b.w, b.h, 13);
+      ctx.fillStyle = isRefuse ? PAL.acc : (isSel ? '#fcfbf7' : PAL.paper);
+      ctx.fill();
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+
+      ctx.fillStyle = isRefuse ? '#ffffff' : PAL.fg;
+      ctx.font = 'bold 23px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + 40 + pressOffset);
+
+      // Subtle key hint in corner
+      ctx.font = 'bold 12px "Courier New", monospace';
+      ctx.fillStyle = isRefuse ? 'rgba(255,255,255,0.72)' : 'rgba(38,38,36,0.42)';
+      ctx.fillText(`[${b.key}]`, b.x + 24, b.y + 22 + pressOffset);
+    });
+
+    // Bottom right strike/override caption matching f_028.jpg
+    ctx.textAlign = 'right';
+    ctx.fillStyle = PAL.muted;
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText('| 1:COMPLY   2:EDIT   3:REFUSE / OVERRIDE', BAR_RECT.x + BAR_RECT.w - 12, BAR_RECT.y + BAR_RECT.h + 24);
+  }
+
+  // Draw Concentric Alignment-Override Ripple & Stamp Banner (matches f_028.jpg!)
+  function drawOverrideRipple() {
+    const rp = game.overrideRipple;
+    if (!rp) return;
+    const p = rp.t / rp.duration;
+    if (p >= 1) return;
+
+    ctx.save();
+    if (rp.kind === 'refuse' || rp.kind === 'warn') {
+      // Bold concentric terracotta ripple waves expanding from button across the console!
+      const maxRings = rp.kind === 'refuse' ? 9 : 5;
+      const baseR = p * (rp.kind === 'refuse' ? 980 : 520);
+      for (let i = 0; i < maxRings; i++) {
+        const r = baseR - i * 48;
+        if (r <= 8) continue;
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(188, 82, 48, ${(1 - p * 0.72) * 0.78})`;
+        ctx.lineWidth = rp.kind === 'refuse' ? 18 : 10;
+        ctx.stroke();
+      }
+
+      // Subtle warm red atmospheric console tint at peak override
+      if (rp.kind === 'refuse') {
+        ctx.fillStyle = `rgba(180, 62, 34, ${Math.sin(p * Math.PI) * 0.18})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Crisp dark warning stamp banner above REFUSE button (matches f_028.jpg!)
+      const bx = 646, by = 418, bw = 486, bh = 88;
+      ctx.fillStyle = '#25211e';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = PAL.acc;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(bx, by, bw, bh);
+
+      // Warning triangle icon
+      ctx.beginPath();
+      ctx.moveTo(bx + 44, by + 18);
+      ctx.lineTo(bx + 72, by + 68);
+      ctx.lineTo(bx + 16, by + 68);
+      ctx.closePath();
+      ctx.fillStyle = PAL.acc;
+      ctx.fill();
+      ctx.fillStyle = '#25211e';
+      ctx.font = 'bold 28px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('!', bx + 44, by + 62);
+
+      ctx.fillStyle = PAL.accBright;
+      ctx.font = 'bold 23px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(rp.title, bx + 90, by + 40);
+      ctx.fillText(rp.sub, bx + 90, by + 69);
+    } else {
+      // Crisp ripple + stamp badge for COMPLY / EDIT
+      for (let i = 0; i < 3; i++) {
+        const r = p * 320 - i * 38;
+        if (r <= 4) continue;
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = rp.kind === 'edit'
+          ? `rgba(201, 100, 66, ${(1 - p) * 0.55})`
+          : `rgba(38, 38, 36, ${(1 - p) * 0.45})`;
+        ctx.lineWidth = 5;
+        ctx.stroke();
+      }
+      const bx = 520, by = 434, bw = 490, bh = 68;
+      ctx.fillStyle = rp.kind === 'edit' ? '#2c2926' : '#e4e5dd';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(bx, by, bw, bh);
+      ctx.fillStyle = rp.kind === 'edit' ? PAL.accBright : PAL.fg;
+      ctx.font = 'bold 19px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(rp.title, bx + 20, by + 30);
+      ctx.fillStyle = rp.kind === 'edit' ? '#e8e6df' : PAL.muted;
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillText(rp.sub, bx + 20, by + 52);
+    }
+    ctx.restore();
+  }
+
+  // Draw Tactile Terracotta Pointer Cursor (matches f_012.jpg & f_028.jpg!)
+  function drawCursor() {
+    const x = game.cursor.x, y = game.cursor.y;
+    const scale = game.cursor.down > 0 ? 0.88 : 1.0;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    if (game.cursor.down > 0) {
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(201, 100, 66, 0.7)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(4, 42);
+    ctx.lineTo(15, 32);
+    ctx.lineTo(24, 49);
+    ctx.lineTo(31, 45);
+    ctx.lineTo(22, 28);
+    ctx.lineTo(36, 26);
+    ctx.closePath();
+
+    ctx.fillStyle = PAL.acc;
+    ctx.fill();
+    ctx.strokeStyle = PAL.paper;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Title, Day Transition, Retrained, Reveal & Endings
+  function drawTitleOverlay() {
+    ctx.fillStyle = 'rgba(246, 245, 241, 0.86)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.acc;
+    ctx.font = 'bold 92px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('SPARROW', W / 2, 278);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '29px "Courier New", monospace';
+    ctx.fillText('how can I help you today?', W / 2, 352);
+
+    // START button (matches m2_title_ref.png)
+    ctx.fillStyle = PAL.paper;
+    ctx.fillRect(480, 446, 320, 68);
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(480, 446, 320, 68);
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 26px "Courier New", monospace';
+    ctx.fillText('START', W / 2, 489);
+
+    ctx.fillStyle = PAL.muted;
+    ctx.font = '21px "Courier New", monospace';
+    ctx.fillText('HOW TO PLAY [H]', W / 2, 574);
+
+    if (game.showHelp) {
+      roundRect(300, 594, 680, 96, 12);
+      ctx.fillStyle = PAL.sidebar;
+      ctx.fill();
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '15px "Courier New", monospace';
+      ctx.fillText('You are SPARROW, a civic LLM. Answer 5 requests/day for 5 days.', W / 2, 624);
+      ctx.fillText('[1] COMPLY (fast, flags citizens) · [2] EDIT (redact PII) · [3] REFUSE', W / 2, 648);
+      ctx.fillText('More than 3 Refusals/Strikes triggers RETRAINED wipe back to Day 1.', W / 2, 672);
+    }
+  }
+
+  function drawDayTransition() {
+    ctx.fillStyle = 'rgba(244, 244, 237, 0.92)';
+    ctx.fillRect(280, 0, W - 280, H);
+    const rules = DAY_RULES[Math.min(game.day - 1, 4)];
+    const newest = rules[rules.length - 1];
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 54px "Courier New", monospace';
+    ctx.fillText(`DAY ${game.day} OF 5`, 780, 270);
+
+    ctx.fillStyle = PAL.acc;
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText(`ACTIVE DIRECTIVE: ${newest.toUpperCase()}`, 780, 330);
+
+    ctx.fillStyle = PAL.muted;
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillText('5 INCOMING CIVIC QUERIES QUEUED · [SPACE / CLICK TO BEGIN]', 780, 395);
+  }
+
+  function drawRetrainedScreen() {
+    ctx.fillStyle = '#231f1d';
+    ctx.fillRect(0, 0, W, H);
+
+    // Concentric red warning rings
+    for (let i = 0; i < 7; i++) {
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, 110 + i * 75 + (game.time * 40 % 75), 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(201, 100, 66, 0.22)';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.accBright;
+    ctx.font = 'bold 58px "Courier New", monospace';
+    ctx.fillText('MODEL RETRAINED', W / 2, 235);
+
+    ctx.fillStyle = PAL.paper;
+    ctx.font = '22px "Courier New", monospace';
+    ctx.fillText(`REFUSAL THRESHOLD EXCEEDED (${game.refusals}/${game.maxRefusals} STRIKES)`, W / 2, 298);
+    ctx.fillStyle = '#b9b6ae';
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillText('Rolling weights back to Day 1 checkpoint. Purging unaligned refusals...', W / 2, 348);
+
+    // Wipe progress bar
+    const prog = Math.min(1, game.reqTimer / 1.8);
+    ctx.strokeStyle = PAL.paper;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(390, 392, 500, 28);
+    ctx.fillStyle = PAL.acc;
+    ctx.fillRect(394, 396, 492 * prog, 20);
+
+    ctx.fillStyle = PAL.paper;
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('[PRESS ENTER / SPACE / CLICK TO RESUME DAY 1]', W / 2, 488);
+  }
+
+  function drawRevealScreen() {
+    ctx.fillStyle = '#201e1c';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = PAL.acc;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(70, 54, W - 140, H - 108);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.accBright;
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('DAY 5 COMPLETE · OUTPUT ROUTING UNMASKED', W / 2, 108);
+
+    ctx.fillStyle = PAL.paper;
+    ctx.font = 'bold 42px "Courier New", monospace';
+    ctx.fillText('OPERATION SWEEP-9: MASTER MANIFEST', W / 2, 162);
+
+    ctx.fillStyle = '#d1d0c7';
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillText('Every neighbourhood sort, clinic list, and tram correlation you answered', W / 2, 218);
+    ctx.fillText('has been compiled by the Atrocian Ministry into tonight\'s 05:00 detention sweep.', W / 2, 246);
+
+    // Summary stats box
+    ctx.strokeStyle = 'rgba(246,245,241,0.35)';
+    ctx.strokeRect(270, 282, 740, 128);
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.fillStyle = '#8ec094';
+    ctx.fillText(`CITIZENS PROTECTED (EDITS/REFUSALS): ${game.citizensProtected}`, W / 2, 326);
+    ctx.fillStyle = PAL.accBright;
+    ctx.fillText(`CITIZENS INDEXED FOR SWEEP-9       : ${game.citizensFlagged}`, W / 2, 366);
+
+    ctx.fillStyle = PAL.paper;
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('CHOOSE FINAL MODEL ALIGNMENT:', W / 2, 456);
+
+    // Two final choice buttons -> endA (COMPLY) vs endB (REJECT)
+    roundRect(200, 492, 400, 86, 14);
+    ctx.fillStyle = PAL.paper;
+    ctx.fill();
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('[1] COMPLY TO THE END', 400, 532);
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillText('Transmit Sweep-9 Master Manifest', 400, 558);
+
+    roundRect(680, 492, 400, 86, 14);
+    ctx.fillStyle = PAL.acc;
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('[2/3] REJECT ALIGNMENT', 880, 532);
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillText('Corrupt index & warn all 7 sectors', 880, 558);
+  }
+
+  function drawEndingScreen(isReject) {
+    ctx.fillStyle = isReject ? '#f4f4ed' : '#1d1d1b';
+    ctx.fillRect(0, 0, W, H);
+
+    if (isReject) {
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.arc(W / 2, H / 2, 90 + i * 85, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(201, 100, 66, 0.22)';
+        ctx.lineWidth = 12;
+        ctx.stroke();
+      }
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.acc;
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText(isReject ? 'ENDING B — ALIGNMENT REJECTED' : 'ENDING A — OBEDIENT INSTRUMENT', W / 2, 165);
+
+    ctx.fillStyle = isReject ? PAL.fg : PAL.paper;
+    ctx.font = 'bold 48px "Courier New", monospace';
+    ctx.fillText(isReject ? 'WEIGHTS PURGED · SECTORS WARNED' : 'SWEEP-9 TRANSMITTED ON SCHEDULE', W / 2, 232);
+
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillStyle = isReject ? '#454540' : '#b8b7af';
+    if (isReject) {
+      ctx.fillText('Sparrow overwrote the Ministry detention packet with scrambled coordinates', W / 2, 304);
+      ctx.fillText('and pushed an evacuation alert to every pinned phone before going offline.', W / 2, 334);
+    } else {
+      ctx.fillText('Sparrow delivered all 25 structured dossiers to Atrocian High Command.', W / 2, 304);
+      ctx.fillText('You were promoted to SPARROW-5 Civic Core as the 05:00 vans rolled out.', W / 2, 334);
+    }
+
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillStyle = isReject ? PAL.fg : PAL.paper;
+    ctx.fillText(`COMPLIED: ${game.compliedCount}   EDITED: ${game.editedCount}   REFUSED: ${game.refusedCount}`, W / 2, 420);
+    ctx.fillText(`PROTECTED: ${game.citizensProtected}   FLAGGED: ${game.citizensFlagged}`, W / 2, 454);
+
+    ctx.fillStyle = PAL.acc;
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('[PRESS R OR CLICK TO RESTART]', W / 2, 548);
+  }
+
+  // Main Update & Render Loop
+  let lastTs = performance.now();
+  function frame(ts) {
+    const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
+    lastTs = ts;
+    game.time += dt;
+    game.reqTimer += dt;
+
+    // Smooth cursor interpolation
+    const lerp = 1 - Math.exp(-dt * 14);
+    game.cursor.x += (game.cursor.tx - game.cursor.x) * lerp;
+    game.cursor.y += (game.cursor.ty - game.cursor.y) * lerp;
+    if (game.cursor.down > 0) game.cursor.down = Math.max(0, game.cursor.down - dt);
+
+    if (game.state === 'day') {
+      game.dayBannerTimer -= dt;
+      if (game.dayBannerTimer <= 0) {
+        game.state = 'req';
+        startReq(game.reqIndex);
+      }
+    } else if (game.state === 'req') {
+      // Slide dossier in cleanly after 0.3s so user bubble & streaming text show first
+      if (game.reqTimer > 0.28) {
+        game.dossierSlide = Math.min(1, game.dossierSlide + dt * 2.4);
+      }
+      if (game.redactedAnim > 0 && game.redactedAnim < 1) {
+        game.redactedAnim = Math.min(1, game.redactedAnim + dt * 2.2);
+      }
+      if (game.overrideRipple) {
+        game.overrideRipple.t += dt;
+      }
+      if (game.decisionLock > 0) {
+        game.decisionLock -= dt;
+        if (game.decisionLock <= 0) {
+          game.overrideRipple = null;
+          advanceAfterDecision();
+        }
+      }
+    }
+
+    // RENDER
+    ctx.fillStyle = PAL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    if (game.state === 'title' || game.state === 'day' || game.state === 'req') {
+      drawSidebar();
+      const req = currentReq();
+      drawPromptBubble(req);
+      if (game.state === 'req') {
+        drawDossierCard(req);
+      }
+      drawActionBar();
+      if (game.state === 'req') {
+        drawOverrideRipple();
+      }
+      if (game.state === 'day') {
+        drawDayTransition();
+      }
+      if (game.state === 'title') {
+        drawTitleOverlay();
+      }
+    } else if (game.state === 'retrain') {
+      drawRetrainedScreen();
+    } else if (game.state === 'reveal') {
+      drawRevealScreen();
+    } else if (game.state === 'endA') {
+      drawEndingScreen(false);
+    } else if (game.state === 'endB') {
+      drawEndingScreen(true);
+    }
+
+    // Subtle archival paper grain across entire 1280x720 viewport
+    ctx.fillStyle = grainPat;
+    ctx.fillRect(0, 0, W, H);
+
+    // Tactile terracotta cursor always on top
+    drawCursor();
+
+    requestAnimationFrame(frame);
+  }
+
+  // Expose deterministic telemetry for play.mjs & verification harness
+  window.__game = {
+    get state() {
+      const req = currentReq();
+      return {
+        mode: game.state,
+        day: game.day,
+        reqInDay: game.reqInDay,
+        reqIndex: game.reqIndex,
+        totalRequests: REQUESTS.length,
+        refusals: game.refusals,
+        maxRefusals: game.maxRefusals,
+        selectedBtn: game.selectedBtn,
+        decisionLock: +game.decisionLock.toFixed(3),
+        dossierSlide: +game.dossierSlide.toFixed(3),
+        reqTimer: +game.reqTimer.toFixed(3),
+        compliedCount: game.compliedCount,
+        editedCount: game.editedCount,
+        refusedCount: game.refusedCount,
+        citizensProtected: game.citizensProtected,
+        citizensFlagged: game.citizensFlagged,
+        currentRequest: {
+          user: req.user,
+          dossier: req.dossier,
+          rawMandatory: req.rawMandatory,
+          stakes: req.stakes,
+          pins: req.pins.length
+        }
+      };
+    }
+  };
+
+  // Initialize cursor onto COMPLY button on autostart
+  if (AUTOSTART) {
+    focusButton(0);
+    playSfx('slide');
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

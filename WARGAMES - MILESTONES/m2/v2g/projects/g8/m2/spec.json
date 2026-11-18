@@ -1,0 +1,238 @@
+{
+  "id": "g8",
+  "group": "Group 8",
+  "name": "That One Team",
+  "from": "Concept 3: a platformer that starts with many abilities and takes them away, until only a slow walk is left.",
+  "hook": "You start with every power in the game. The game wants them back.",
+  "pitch": "A 2D platformer in five levels. You begin with dash, double jump, wall run and glide. After each level one is taken, then colour, then sound. Each level is built for exactly what you have left. The last is a slow walk in a quiet dark room.",
+  "minute_check": "Yes: the HUD crossing out an ability says it.",
+  "build_check": "Yes: five short levels, one tile set in two palettes.",
+  "scope": "Five levels, one ability lost per level. Design each level so it needs exactly what the player still has.",
+  "palette": {
+    "bg": "#ffd84a",
+    "fg": "#1a1a1a",
+    "acc": "#7b3fe4",
+    "main_bg": "#14121c",
+    "main_fg": "#f2f2f2",
+    "main_acc": "#ffd84a"
+  },
+  "template_type": "platform",
+  "brief": {
+    "player": "A runner given every movement ability at the start.",
+    "goal": "Reach the exit of each level.",
+    "fail": "Falling or hazards reset the room.",
+    "ending": "No sound, no colour, no jumping: a slow walk to the end in a quiet dark room.",
+    "verb": "Move; and between levels, lose one ability.",
+    "theme": "Power handed to you by a controlling AI is power it can take back. Each level is designed around the ability that is gone.",
+    "look": "Bright blocky shapes at the start, draining to dark and silent."
+  },
+  "prov": {
+    "bug": "Dash, double jump, wall run, glide!",
+    "nit": "Which one goes first, and does the player get to choose?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "lvl",
+      "LEVEL",
+      1,
+      0
+    ],
+    [
+      "take",
+      "ABILITY TAKEN",
+      2,
+      0
+    ],
+    [
+      "reset",
+      "RESET ROOM",
+      1,
+      1
+    ],
+    [
+      "walk",
+      "LAST WALK",
+      3,
+      0
+    ],
+    [
+      "end",
+      "END",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "lvl",
+      "start"
+    ],
+    [
+      "lvl",
+      "take",
+      "exit reached"
+    ],
+    [
+      "take",
+      "lvl",
+      "next level"
+    ],
+    [
+      "lvl",
+      "reset",
+      "fall / hazard"
+    ],
+    [
+      "reset",
+      "lvl",
+      "retry"
+    ],
+    [
+      "take",
+      "walk",
+      "nothing left"
+    ],
+    [
+      "walk",
+      "end",
+      "door"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Passage (Jason Rohrer, 2007)",
+      "A five-minute game whose ending is a slow walk. Proof that less can carry the theme."
+    ],
+    [
+      "Metroid Prime (Retro Studios, 2002)",
+      "The classic opening that strips your abilities. Look at how it explains the loss."
+    ],
+    [
+      "Every Day the Same Dream (Molleindustria, 2009)",
+      "Small repeated actions draining of meaning; a model for your last level."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g8/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g8/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Stylized geometric 2D platformer beginning in vivid golden yellow (#ffd84a) and violet (#7b3fe4) against deep night (#14121c). Smooth side-scrolling camera. A nimble blocky runner chains an energetic air-dash, double-jump, and wall-slide across floating platforms; upon crossing a threshold arch, one glowing ability aura detaches and vanishes, the world's saturation visibly drains a step toward quiet charcoal grey, and the runner continues with heavier, grounded leaps. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for platform silhouettes and palette. Sound design: bright synth arpeggio losing instruments layer by layer. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of That One Team: Move; and between levels, lose one ability. leading visibly to No sound, no colour, no jumping: a slow walk to the end in a quiet dark room. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Stylized geometric 2D platformer beginning in vivid golden yellow (#ffd84a) and violet (#7b3fe4) against deep night (#14121c). Smooth side-scrolling camera. A nimble blocky runner chains an energetic air-dash, double-jump, and wall-slide across floating platforms; upon crossing a threshold arch, one glowing ability aura detaches and vanishes, the world's saturation visibly drains a step toward quiet charcoal grey, and the runner continues with heavier, grounded leaps. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for platform silhouettes and palette. Sound design: bright synth arpeggio losing instruments layer by layer. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Move; and between levels, lose one ability.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Falling or hazards reset the room.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (No sound, no colour, no jumping: a slow walk to the end in a quiet dark room.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of That One Team demonstrating start, core verb (Move; and between levels, lose one ability.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "player_sprite_with_ability_states",
+      "label": "Player sprite with ability states",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"That One Team\": Player sprite with ability states. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#ffd84a, #1a1a1a, accent #7b3fe4), style: Bright blocky shapes at the start, draining to dark and silent., matching the reference gameplay frame."
+    },
+    {
+      "id": "tile_set_colour_and_greyscale_versions",
+      "label": "Tile set, colour and greyscale versions",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"That One Team\": Tile set, colour and greyscale versions. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#ffd84a, #1a1a1a, accent #7b3fe4), style: Bright blocky shapes at the start, draining to dark and silent., matching the reference gameplay frame."
+    },
+    {
+      "id": "5_level_layouts",
+      "label": "5 level layouts",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "ability_hud_icons",
+      "label": "Ability HUD icons",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "ability_removed_card",
+      "label": "Ability-removed card",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "sound_set_that_thins_out",
+      "label": "Sound set that thins out",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"That One Team\": Sound set that thins out. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#ffd84a, #1a1a1a, accent #7b3fe4), style: Bright blocky shapes at the start, draining to dark and silent., matching the reference gameplay frame."
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"That One Team\" (Power handed to you by a controlling AI is power it can take back. Each level is designed around the ability that is gone.). Visual mood: Bright blocky shapes at the start, draining to dark and silent.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

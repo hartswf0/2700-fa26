@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boxing Day Blues — Group 6 (M2)</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #1b1622;
+    font-family: "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #wrap {
+    position: relative;
+    width: 100vw;
+    height: 56.25vw;
+    max-height: 100vh;
+    max-width: 177.78vh;
+    background: #e9e6f2;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280;
+  const H = 720;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // URL params: ?autostart skips title, ?seed=N sets deterministic RNG
+  const params = new URLSearchParams(window.location.search);
+  const AUTOSTART = params.has('autostart');
+  let rngState = (parseInt(params.get('seed') || '7', 10) || 7) >>> 0;
+  function rand() {
+    rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
+    return rngState / 4294967296;
+  }
+
+  // Palette from spec.json & Omni study.json
+  const PAL = {
+    bg: '#e9e6f2',
+    fg: '#2b2740',
+    dark: '#1b1622',
+    acc: '#8f6cd9',
+    softViolet: '#b5acc5',
+    warmPeach: '#f8e3d2',
+    paleBubble: '#ece9f8',
+    midBubble: '#8b7ec4',
+  };
+
+  // Exact crop rectangles from 4_scene_backgrounds_morning_to_evening.png (1376x768)
+  const SCENE_RECTS = [
+    { name: 'MORNING',      sx: 2,   sy: 2,   sw: 684, sh: 380, baseMin: 9 * 60 + 40 },
+    { name: 'AFTERNOON',    sx: 690, sy: 2,   sw: 684, sh: 380, baseMin: 13 * 60 + 20 },
+    { name: 'DUSK TRANSIT', sx: 2,   sy: 386, sw: 684, sh: 380, baseMin: 16 * 60 + 10 },
+    { name: 'EVENING',      sx: 690, sy: 386, sw: 684, sh: 380, baseMin: 17 * 60 + 45 },
+  ];
+
+  // Exact sprite cutouts from citizen_silhouettes.png (1024x1024 RGBA)
+  // Player sprites (facing right natively: winter coat + glowing headphone ring)
+  const PLAYER_FRAMES = {
+    idle:  { x: 174, y: 46,  w: 53,  h: 219 }, // [1] standing side profile with headphone ring
+    walkA: { x: 155, y: 539, w: 92,  h: 208 }, // [17] mid-stride with headphone ring
+    walkB: { x: 282, y: 778, w: 86,  h: 210 }, // [26] alternate stride with headphone ring
+  };
+
+  // Passing citizen silhouettes across scenes (natively facing right; flipped horizontally when facing left)
+  const NPC_SPRITES = [
+    { x: 797, y: 293, w: 57, h: 214, label: 'Commuter in Hooded Coat' }, // [14] matches Omni video right figure!
+    { x: 274, y: 43,  w: 94, h: 222, label: 'Citizen with Warm Cup' },   // [2]
+    { x: 546, y: 529, w: 81, h: 218, label: 'Platform Regular' },        // [20] matches Omni dusk figure!
+    { x: 912, y: 43,  w: 69, h: 223, label: 'Evening Traveler' },        // [7]
+  ];
+
+  // AI-curated worn-out idioms (Asset #3: Phrase list — old idioms, half-understood)
+  // Each dialogue exchange offers 3 system-curated fragments; resonant=true creates near-harmony,
+  // resonant=false ("phrase misread") causes speech glyphs to drift apart prematurely.
+  const PHRASE_SETS = [
+    {
+      prompt: 'SYSTEM SUGGESTION // GREETING PROTOCOL 01',
+      choices: [
+        { text: '"Happy Boxing Day."', resonant: true,  reply: '"Happy Boxing Day... my feed highlighted that too."', resonanceNote: 'familiar cadence' },
+        { text: '"What is in the box?"', resonant: false, reply: '"Sorry—I did not order a parcel today."', resonanceNote: 'literal misread' },
+        { text: '"Same to you, citizen."', resonant: false, reply: '"Auto-acknowledged. Safe transit."', resonanceNote: 'hollow template' },
+      ],
+    },
+    {
+      prompt: 'SYSTEM SUGGESTION // SMALL-TALK FRAGMENT 04',
+      choices: [
+        { text: '"Cold enough to break the ice?"', resonant: false, reply: '"Platform heating is nominal at 19 degrees."', resonanceNote: 'idiom lost' },
+        { text: '"Funny how everyone still says it."', resonant: true,  reply: '"Yes... nobody on my line remembers why."', resonanceNote: 'shared curiosity' },
+        { text: '"Let us circle back offline."', resonant: false, reply: '"My calendar has no circle-back slot."', resonanceNote: 'corporate fossil' },
+      ],
+    },
+    {
+      prompt: 'SYSTEM SUGGESTION // ARCHIVAL IDIOM 09',
+      choices: [
+        { text: '"Do you ever miss a voice unscripted?"', resonant: true,  reply: '"I think they called this the Boxing Day blues..."', resonanceNote: 'almost touching' },
+        { text: '"Keep me in the loop."', resonant: false, reply: '"Loop synced. Goodbye."', resonanceNote: 'protocol close' },
+        { text: '"Have a good one."', resonant: false, reply: '"One what? ...Oh. You too."', resonanceNote: 'faded echo' },
+      ],
+    },
+    {
+      prompt: 'SYSTEM SUGGESTION // TWILIGHT FALLBACK 12',
+      choices: [
+        { text: '"Don\'t be a stranger."', resonant: true,  reply: '"Wait—what did \'stranger\' mean before the mesh?"', resonanceNote: 'fleeting warmth' },
+        { text: '"Touch base tomorrow."', resonant: false, reply: '"Base terminal acknowledged."', resonanceNote: 'dead metaphor' },
+        { text: '"Under the weather."', resonant: false, reply: '"Precipitation is light snow, actually."', resonanceNote: 'literal misread' },
+      ],
+    },
+  ];
+
+  // Load visual & audio assets
+  const imgBg = new Image();
+  let bgLoaded = false;
+  imgBg.onload = () => { bgLoaded = true; };
+  imgBg.src = '../assets/4_scene_backgrounds_morning_to_evening.png';
+
+  const imgSprites = new Image();
+  let spritesLoaded = false;
+  imgSprites.onload = () => { spritesLoaded = true; };
+  imgSprites.src = '../assets/citizen_silhouettes.png';
+
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.42;
+  let audioUnlocked = false;
+  let audioCtx = null;
+
+  function unlockAudio() {
+    if (!audioUnlocked) {
+      audioUnlocked = true;
+      bgm.play().catch(() => {});
+    }
+    if (!audioCtx) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          audioCtx = new AC();
+          startWindAmbience();
+        }
+      } catch (_) {}
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function startWindAmbience() {
+    if (!audioCtx) return;
+    try {
+      const len = audioCtx.sampleRate * 3;
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < len; i++) {
+        const white = Math.random() * 2 - 1;
+        last = (last + 0.02 * white) / 1.02;
+        data[i] = last * 0.35;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 340;
+      filter.Q.value = 1.8;
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.05;
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      src.start();
+    } catch (_) {}
+  }
+
+  function playTone(freqs, dur = 0.7, vol = 0.06, type = 'sine') {
+    if (!audioCtx) return;
+    try {
+      const now = audioCtx.currentTime;
+      freqs.forEach((f, idx) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(f, now + idx * 0.04);
+        g.gain.setValueAtTime(0.0001, now + idx * 0.04);
+        g.gain.exponentialRampToValueAtTime(vol, now + idx * 0.04 + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + dur);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(now + idx * 0.04);
+        osc.stop(now + idx * 0.04 + dur + 0.05);
+      });
+    } catch (_) {}
+  }
+
+  // Snow particle system (multi-layer depth matching Omni frames)
+  const SNOW_COUNT = 165;
+  const snowflakes = [];
+  for (let i = 0; i < SNOW_COUNT; i++) {
+    const layer = i < 105 ? 0 : (i < 148 ? 1 : 2); // 0=far, 1=mid, 2=foreground bokeh
+    snowflakes.push({
+      x: rand() * W,
+      y: rand() * H,
+      r: layer === 0 ? 1.3 + rand() * 1.6 : (layer === 1 ? 2.4 + rand() * 2.0 : 4.2 + rand() * 3.0),
+      vy: layer === 0 ? 18 + rand() * 16 : (layer === 1 ? 30 + rand() * 22 : 46 + rand() * 26),
+      vx: -10 + rand() * 16,
+      phase: rand() * Math.PI * 2,
+      alpha: layer === 0 ? 0.45 + rand() * 0.3 : (layer === 1 ? 0.65 + rand() * 0.28 : 0.38 + rand() * 0.25),
+      layer,
+    });
+  }
+
+  // Floating speech-bubble & worn-glyph particles between silhouettes (matching f_015 / f_021 / f_033)
+  const GLYPH_RUNES = ['...', '—', '···', '⚯', 'ㄓ', 'Ψ', '☍', '∿', '◌'];
+  let speechBubbles = [];
+  let snowMotes = [];
+
+  function spawnConversationCluster(resonant, intensity = 1) {
+    const midX = (S.playerX + S.npcX) * 0.5;
+    const count = resonant ? 6 + intensity * 2 : 4;
+    for (let i = 0; i < count; i++) {
+      const fromPlayer = i % 2 === 0;
+      const startX = fromPlayer ? S.playerX + 26 : S.npcX - 26;
+      const targetX = midX + (rand() - 0.5) * (resonant ? 170 : 260);
+      const targetY = 185 + rand() * 175;
+      const palettePick = resonant
+        ? (i % 3 === 0 ? PAL.warmPeach : (i % 3 === 1 ? PAL.midBubble : PAL.paleBubble))
+        : (i % 2 === 0 ? '#9c96b8' : '#cfcbe0');
+      const kind = i < 4 ? 'pill' : 'rune';
+      speechBubbles.push({
+        x: startX + (rand() - 0.5) * 24,
+        y: 355 + (rand() - 0.5) * 30,
+        tx: targetX,
+        ty: targetY,
+        vx: (rand() - 0.5) * 14,
+        vy: -14 - rand() * 18,
+        w: 48 + rand() * 38,
+        h: 28 + rand() * 16,
+        color: palettePick,
+        kind,
+        rune: GLYPH_RUNES[Math.floor(rand() * GLYPH_RUNES.length)],
+        tailLeft: fromPlayer,
+        age: 0,
+        maxAge: resonant ? 7.5 + rand() * 3.0 : 2.6 + rand() * 1.2,
+        resonant,
+        arcSeed: rand() * Math.PI * 2,
+      });
+    }
+    // Luminous comet-arc motes between the two speakers
+    for (let j = 0; j < (resonant ? 12 : 7); j++) {
+      snowMotes.push({
+        x: midX + (rand() - 0.5) * 180,
+        y: 230 + rand() * 150,
+        vx: (rand() - 0.5) * (resonant ? 28 : 65),
+        vy: -18 - rand() * 28,
+        r: 1.8 + rand() * 2.6,
+        color: resonant && j % 2 === 0 ? '#fff0de' : '#dcd6f5',
+        age: 0,
+        maxAge: 2.2 + rand() * 1.8,
+      });
+    }
+  }
+
+  function scatterBubblesIntoSnow() {
+    for (const b of speechBubbles) {
+      b.maxAge = Math.min(b.maxAge, b.age + 1.35);
+      b.vx += (b.x < (S.playerX + S.npcX) * 0.5 ? -36 : 36) + (rand() - 0.5) * 30;
+      b.vy -= 12 + rand() * 20;
+      for (let k = 0; k < 4; k++) {
+        snowMotes.push({
+          x: b.x + (rand() - 0.5) * 30,
+          y: b.y + (rand() - 0.5) * 18,
+          vx: (rand() - 0.5) * 55,
+          vy: -10 - rand() * 30,
+          r: 1.6 + rand() * 2.4,
+          color: '#f5ecff',
+          age: 0,
+          maxAge: 2.0 + rand() * 1.4,
+        });
+      }
+    }
+  }
+
+  // Core M2 game state (matches spec.json states: title, scene, talk, near, end)
+  const S = {
+    phase: AUTOSTART ? 'scene' : 'title',
+    sceneIndex: 0,
+    prevSceneIndex: 0,
+    sceneBlend: 1,
+    clockMinutes: 9 * 60 + 40, // 09:40 AM -> 18:00 (6:00 PM)
+    playerX: 305,
+    playerDir: 1,
+    walkCycle: 0,
+    isMoving: false,
+    npcX: 830,
+    npcSpriteIdx: 0,
+    phraseSetIdx: 0,
+    selectedOpt: 0,
+    realReplies: 0,
+    misreadCount: 0,
+    almostReached: false,
+    nearTimer: 0,
+    replyToast: '',
+    replyToastTimer: 0,
+    talkCooldown: 0,
+    hasActed: false,
+    trainX: -620,
+    trainActive: false,
+    t: 0,
+  };
+
+  function resetDay(skipTitle) {
+    S.phase = skipTitle ? 'scene' : 'title';
+    S.sceneIndex = 0;
+    S.prevSceneIndex = 0;
+    S.sceneBlend = 1;
+    S.clockMinutes = 9 * 60 + 40;
+    S.playerX = 305;
+    S.playerDir = 1;
+    S.walkCycle = 0;
+    S.isMoving = false;
+    S.npcX = 830;
+    S.npcSpriteIdx = 0;
+    S.phraseSetIdx = 0;
+    S.selectedOpt = 0;
+    S.realReplies = 0;
+    S.misreadCount = 0;
+    S.almostReached = false;
+    S.nearTimer = 0;
+    S.replyToast = '';
+    S.replyToastTimer = 0;
+    S.talkCooldown = 0;
+    S.hasActed = false;
+    S.trainX = -620;
+    S.trainActive = false;
+    speechBubbles = [];
+    snowMotes = [];
+  }
+
+  function advanceScene(extraMinutes) {
+    S.clockMinutes = Math.min(18 * 60, S.clockMinutes + extraMinutes);
+    const nextIdx = Math.min(3, S.sceneIndex + 1);
+    if (nextIdx !== S.sceneIndex) {
+      S.prevSceneIndex = S.sceneIndex;
+      S.sceneIndex = nextIdx;
+      S.sceneBlend = 0;
+      S.npcSpriteIdx = nextIdx % NPC_SPRITES.length;
+      if (nextIdx === 2) {
+        S.trainActive = true;
+        S.trainX = -460;
+      }
+      playTone([392, 587.33], 0.9, 0.045, 'triangle');
+    }
+  }
+
+  function formatClock(mins) {
+    const total = Math.floor(mins);
+    const h24 = Math.floor(total / 60) % 24;
+    const m = total % 60;
+    const ampm = h24 >= 12 ? 'PM' : 'AM';
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+
+  // Input handling
+  const keys = new Set();
+  const CHOICE_BOXES = [];
+
+  window.addEventListener('keydown', (e) => {
+    unlockAudio();
+    keys.add(e.code);
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) {
+      e.preventDefault();
+    }
+    S.hasActed = true;
+
+    if (S.phase === 'title') {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        S.phase = 'scene';
+        playTone([329.63, 440, 523.25], 0.8, 0.06, 'sine');
+      }
+      return;
+    }
+
+    if (S.phase === 'end') {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') {
+        resetDay(true);
+        playTone([329.63, 440], 0.7, 0.05, 'sine');
+      }
+      return;
+    }
+
+    if (S.phase === 'scene') {
+      const dist = Math.abs(S.playerX - S.npcX);
+      if ((e.code === 'Space' || e.code === 'Enter') && dist < 245 && S.talkCooldown <= 0) {
+        enterConversation();
+      }
+      return;
+    }
+
+    if (S.phase === 'talk') {
+      if (e.code === 'Digit1' || e.code === 'Numpad1') choosePhrase(0);
+      else if (e.code === 'Digit2' || e.code === 'Numpad2') choosePhrase(1);
+      else if (e.code === 'Digit3' || e.code === 'Numpad3') choosePhrase(2);
+      else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+        S.selectedOpt = (S.selectedOpt + 2) % 3;
+        playTone([493.88], 0.16, 0.03, 'sine');
+      } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+        S.selectedOpt = (S.selectedOpt + 1) % 3;
+        playTone([440], 0.16, 0.03, 'sine');
+      } else if (e.code === 'Enter' || e.code === 'Space') {
+        choosePhrase(S.selectedOpt);
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    unlockAudio();
+    const rect = canvas.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+
+    if (S.phase === 'title') {
+      S.hasActed = true;
+      S.phase = 'scene';
+      playTone([329.63, 440, 523.25], 0.8, 0.06, 'sine');
+      return;
+    }
+    if (S.phase === 'end') {
+      resetDay(true);
+      return;
+    }
+    if (S.phase === 'talk') {
+      for (let i = 0; i < CHOICE_BOXES.length; i++) {
+        const b = CHOICE_BOXES[i];
+        if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
+          S.hasActed = true;
+          choosePhrase(i);
+          return;
+        }
+      }
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (S.phase !== 'talk') return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+    for (let i = 0; i < CHOICE_BOXES.length; i++) {
+      const b = CHOICE_BOXES[i];
+      if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
+        S.selectedOpt = i;
+      }
+    }
+  });
+
+  function enterConversation() {
+    S.phase = 'talk';
+    S.selectedOpt = 0;
+    S.playerDir = S.npcX >= S.playerX ? 1 : -1;
+    // Initial soft greeting bubble so the conversation feels alive immediately
+    spawnConversationCluster(true, 1);
+    playTone([440, 554.37], 0.45, 0.04, 'sine');
+  }
+
+  function choosePhrase(idx) {
+    if (S.phase !== 'talk') return;
+    const set = PHRASE_SETS[S.phraseSetIdx % PHRASE_SETS.length];
+    const choice = set.choices[idx];
+    if (!choice) return;
+
+    S.phraseSetIdx++;
+    S.replyToast = choice.reply;
+    S.replyToastTimer = 2.6;
+
+    if (choice.resonant) {
+      S.realReplies++;
+      spawnConversationCluster(true, S.realReplies + 1);
+      playTone([329.63, 415.3, 493.88, 659.25], 1.1, 0.055, 'sine');
+
+      if (S.realReplies >= 3) {
+        // Edge: talk -> near ("three real replies")
+        S.phase = 'near';
+        S.almostReached = true;
+        S.nearTimer = 3.4;
+        S.prevSceneIndex = S.sceneIndex;
+        S.sceneIndex = 2; // Dusk Transit with glowing train
+        S.sceneBlend = 0.35;
+        S.clockMinutes = Math.max(S.clockMinutes, 17 * 60 + 25);
+        return;
+      }
+      // Advance gently to next time-of-day scene while staying open to deeper talk
+      advanceScene(115);
+      S.talkCooldown = 0.45;
+      S.phase = 'scene';
+    } else {
+      // Edge: talk -> scene ("phrase misread")
+      S.misreadCount++;
+      spawnConversationCluster(false, 1);
+      scatterBubblesIntoSnow();
+      playTone([311.13, 293.66], 0.75, 0.05, 'triangle');
+      advanceScene(135);
+      S.talkCooldown = 0.85;
+      S.phase = 'scene';
+      if (S.clockMinutes >= 18 * 60) {
+        S.prevSceneIndex = S.sceneIndex;
+        S.sceneIndex = 3;
+        S.sceneBlend = 0;
+        S.phase = 'end';
+      }
+    }
+  }
+
+  // Expose read-only state for play.mjs & verification
+  window.__game = {
+    get state() {
+      const set = PHRASE_SETS[S.phraseSetIdx % PHRASE_SETS.length];
+      return {
+        phase: S.phase,
+        sceneIndex: S.sceneIndex,
+        sceneName: SCENE_RECTS[S.sceneIndex].name,
+        clockMinutes: Math.floor(S.clockMinutes),
+        clockText: formatClock(S.clockMinutes),
+        playerX: Math.round(S.playerX),
+        npcX: Math.round(S.npcX),
+        distToNpc: Math.round(Math.abs(S.playerX - S.npcX)),
+        realReplies: S.realReplies,
+        misreadCount: S.misreadCount,
+        almostReached: S.almostReached,
+        selectedOpt: S.selectedOpt,
+        options: S.phase === 'talk' ? set.choices.map((c, i) => ({ index: i + 1, text: c.text, resonant: c.resonant })) : [],
+        t: +S.t.toFixed(2),
+      };
+    },
+  };
+
+  // Update loop
+  let lastNow = performance.now();
+  function update(dt) {
+    S.t += dt;
+
+    if (S.sceneBlend < 1) {
+      S.sceneBlend = Math.min(1, S.sceneBlend + dt * 0.85);
+    }
+    if (S.replyToastTimer > 0) {
+      S.replyToastTimer = Math.max(0, S.replyToastTimer - dt);
+    }
+    if (S.talkCooldown > 0) {
+      S.talkCooldown = Math.max(0, S.talkCooldown - dt);
+    }
+
+    // Update snow
+    for (const f of snowflakes) {
+      f.y += f.vy * dt;
+      f.x += (f.vx + Math.sin(S.t * 1.1 + f.phase) * 10) * dt;
+      if (f.y > H + 8) { f.y = -8; f.x = rand() * W; }
+      if (f.x < -10) f.x = W + 10;
+      if (f.x > W + 10) f.x = -10;
+    }
+
+    // Update floating speech bubbles & motes
+    for (let i = speechBubbles.length - 1; i >= 0; i--) {
+      const b = speechBubbles[i];
+      b.age += dt;
+      if (b.age >= b.maxAge) {
+        speechBubbles.splice(i, 1);
+        continue;
+      }
+      if (S.phase === 'near' && b.age < 2.0) {
+        // Almost harmonizing: converge gently toward golden-violet center chord
+        const cx = (S.playerX + S.npcX) * 0.5 + Math.cos(S.t * 1.4 + b.arcSeed) * 65;
+        const cy = 245 + Math.sin(S.t * 1.7 + b.arcSeed) * 42;
+        b.x += (cx - b.x) * Math.min(1, dt * 2.4);
+        b.y += (cy - b.y) * Math.min(1, dt * 2.4);
+      } else {
+        b.x += (b.tx - b.x) * Math.min(1, dt * 1.8) + Math.sin(S.t * 1.3 + b.arcSeed) * 8 * dt + b.vx * 0.15 * dt;
+        b.y += (b.ty - b.y) * Math.min(1, dt * 1.5) + b.vy * 0.25 * dt;
+      }
+    }
+
+    for (let i = snowMotes.length - 1; i >= 0; i--) {
+      const m = snowMotes[i];
+      m.age += dt;
+      if (m.age >= m.maxAge) {
+        snowMotes.splice(i, 1);
+        continue;
+      }
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+    }
+
+    // Gliding transit train on mid-ground track
+    if (S.sceneIndex >= 1 || S.trainActive) {
+      S.trainActive = true;
+      S.trainX += 115 * dt;
+      if (S.trainX > W + 450) S.trainX = -720;
+    }
+
+    if (S.phase === 'scene') {
+      // Only tick the day clock once player has begun interacting (keeps warmup stable)
+      if (S.hasActed) {
+        S.clockMinutes += dt * 7.5;
+      }
+      const moveDir = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) -
+                      (keys.has('ArrowLeft')  || keys.has('KeyA') ? 1 : 0);
+      S.isMoving = moveDir !== 0;
+      if (S.isMoving) {
+        S.playerDir = moveDir;
+        S.playerX = Math.max(155, Math.min(1090, S.playerX + moveDir * 145 * dt));
+        S.walkCycle += dt * 6.2;
+      }
+
+      const dist = Math.abs(S.playerX - S.npcX);
+      // Automatically initiate conversation when approaching comfortably close
+      if (S.hasActed && dist <= 385 && S.talkCooldown <= 0 && !S.isMoving) {
+        enterConversation();
+      } else if (S.hasActed && dist <= 375 && S.talkCooldown <= 0) {
+        enterConversation();
+      }
+
+      if (S.clockMinutes >= 18 * 60) {
+        S.clockMinutes = 18 * 60;
+        S.prevSceneIndex = S.sceneIndex;
+        S.sceneIndex = 3;
+        S.sceneBlend = 0;
+        S.phase = 'end';
+        playTone([293.66, 220], 1.3, 0.055, 'sine');
+      }
+    } else if (S.phase === 'talk') {
+      S.isMoving = false;
+      if (S.hasActed) {
+        S.clockMinutes += dt * 3.2;
+        if (S.clockMinutes >= 18 * 60) {
+          S.clockMinutes = 18 * 60;
+          S.prevSceneIndex = S.sceneIndex;
+          S.sceneIndex = 3;
+          S.sceneBlend = 0;
+          S.phase = 'end';
+        }
+      }
+    } else if (S.phase === 'near') {
+      S.isMoving = false;
+      S.nearTimer -= dt;
+      // Gently step 12px closer during ALMOST moment, then scatter into evening snow
+      const wantP = 452;
+      const wantN = 812;
+      S.playerX += (wantP - S.playerX) * Math.min(1, dt * 1.6);
+      S.npcX += (wantN - S.npcX) * Math.min(1, dt * 1.6);
+      if (S.nearTimer < 1.35 && S.nearTimer + dt >= 1.35) {
+        scatterBubblesIntoSnow();
+        playTone([523.25, 493.88, 392, 329.63], 1.5, 0.055, 'sine');
+      }
+      if (S.nearTimer <= 0) {
+        // Edge: near -> end ("day ends")
+        S.clockMinutes = 18 * 60;
+        S.prevSceneIndex = S.sceneIndex;
+        S.sceneIndex = 3;
+        S.sceneBlend = 0;
+        S.phase = 'end';
+      }
+    }
+  }
+
+  // Drawing helpers
+  function drawSceneBackground() {
+    if (!bgLoaded) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#b5acc5');
+      g.addColorStop(0.65, '#e9e6f2');
+      g.addColorStop(1, '#2b2740');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      return;
+    }
+
+    // Subtle slow side-pan parallax synced to player position (matches Omni camera drift)
+    const camShift = ((S.playerX - 560) / 560) * 10;
+
+    const drawQuad = (idx, alpha) => {
+      const r = SCENE_RECTS[idx];
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(imgBg, r.sx, r.sy, r.sw, r.sh, -14 - camShift, -8, W + 28, H + 16);
+      ctx.restore();
+    };
+
+    if (S.sceneBlend < 1 && S.prevSceneIndex !== S.sceneIndex) {
+      drawQuad(S.prevSceneIndex, 1);
+      drawQuad(S.sceneIndex, S.sceneBlend);
+    } else {
+      drawQuad(S.sceneIndex, 1);
+    }
+
+    // Sleek animated transit train gliding on mid-platform track during Afternoon/Evening
+    // (In Scene 2 Dusk Transit, the Nano Banana background already features the train, so we add a subtle moving light sweep!)
+    if (S.trainActive && S.sceneIndex !== 2) {
+      drawGlidingTrain(S.trainX);
+    } else if (S.sceneIndex === 2) {
+      // Subtle warm window shimmer & headlight glow matching f_021.jpg
+      const pulse = 0.12 + 0.05 * Math.sin(S.t * 3.2);
+      const grad = ctx.createRadialGradient(820, 495, 10, 820, 495, 220);
+      grad.addColorStop(0, `rgba(255, 234, 205, ${pulse})`);
+      grad.addColorStop(1, 'rgba(255, 234, 205, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(580, 380, 460, 200);
+    }
+  }
+
+  function drawGlidingTrain(tx) {
+    ctx.save();
+    // Clip between the foreground station pillars (x: 112..1172) and above platform floor (y < 556)
+    ctx.beginPath();
+    ctx.rect(112, 360, 1060, 196);
+    ctx.clip();
+
+    const ty = 420;
+    const tw = 640;
+    const th = 122;
+    ctx.fillStyle = 'rgba(62, 56, 78, 0.88)';
+    ctx.beginPath();
+    ctx.moveTo(tx, ty + th);
+    ctx.lineTo(tx + 30, ty + 14);
+    ctx.quadraticCurveTo(tx + 55, ty, tx + 95, ty);
+    ctx.lineTo(tx + tw - 110, ty);
+    ctx.quadraticCurveTo(tx + tw - 35, ty + 4, tx + tw, ty + th - 16);
+    ctx.lineTo(tx + tw, ty + th);
+    ctx.closePath();
+    ctx.fill();
+
+    // Warm glowing cabin windows
+    ctx.fillStyle = 'rgba(248, 224, 196, 0.58)';
+    for (let i = 0; i < 6; i++) {
+      const wx = tx + 85 + i * 76;
+      ctx.beginPath();
+      ctx.roundRect(wx, ty + 24, 52, 46, 6);
+      ctx.fill();
+    }
+    // Glowing trim stripe matching Omni train
+    ctx.strokeStyle = 'rgba(255, 235, 208, 0.78)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(tx + 24, ty + 86);
+    ctx.lineTo(tx + tw - 18, ty + 86);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawSilhouette(sprite, x, footY, targetH, faceRight, tintAlpha = 0) {
+    if (!spritesLoaded) {
+      // Minimalist fallback capsule matching m2_main_ref.png while image decodes
+      ctx.fillStyle = PAL.fg;
+      ctx.beginPath();
+      ctx.roundRect(x - 28, footY - targetH, 56, targetH, 28);
+      ctx.fill();
+      return;
+    }
+
+    const scale = targetH / sprite.h;
+    const dw = sprite.w * scale;
+    const dh = targetH;
+
+    // Ground shadow cast toward bottom-left (matches f_009 / f_021 lighting!)
+    ctx.save();
+    ctx.fillStyle = 'rgba(34, 28, 48, 0.28)';
+    ctx.beginPath();
+    ctx.moveTo(x - dw * 0.25, footY - 2);
+    ctx.lineTo(x + dw * 0.25, footY - 2);
+    ctx.lineTo(x - dw * 1.35, footY + 22);
+    ctx.lineTo(x - dw * 1.75, footY + 18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.translate(x, footY);
+    if (!faceRight) ctx.scale(-1, 1);
+    if (tintAlpha > 0) {
+      ctx.shadowColor = PAL.acc;
+      ctx.shadowBlur = 18;
+    }
+    ctx.drawImage(imgSprites, sprite.x, sprite.y, sprite.w, sprite.h, -dw * 0.5, -dh, dw, dh);
+    ctx.restore();
+  }
+
+  function drawFloatingGlyphs() {
+    // Luminous connecting arc trails during talk / near
+    if (speechBubbles.length > 1) {
+      ctx.save();
+      for (let i = 0; i < speechBubbles.length; i++) {
+        const b = speechBubbles[i];
+        const life = 1 - b.age / b.maxAge;
+        if (b.resonant && i % 2 === 0) {
+          ctx.strokeStyle = `rgba(248, 227, 210, ${0.24 * life})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(S.playerX + 18, 375);
+          ctx.quadraticCurveTo((S.playerX + b.x) * 0.5, b.y + 45, b.x, b.y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Speech bubble pills & worn glyphs (modeled directly on f_015.jpg & f_021.jpg!)
+    for (const b of speechBubbles) {
+      const fadeIn = Math.min(1, b.age / 0.35);
+      const fadeOut = Math.min(1, (b.maxAge - b.age) / 0.85);
+      const alpha = Math.max(0, fadeIn * fadeOut);
+
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.92;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = b.resonant ? 18 : 8;
+
+      if (b.kind === 'pill') {
+        ctx.fillStyle = b.color;
+        const bx = b.x - b.w * 0.5;
+        const by = b.y - b.h * 0.5;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, b.w, b.h, b.h * 0.46);
+        ctx.fill();
+
+        // Speech tail
+        ctx.beginPath();
+        const tx = b.tailLeft ? bx + 12 : bx + b.w - 12;
+        ctx.moveTo(tx - 5, by + b.h - 2);
+        ctx.lineTo(tx + (b.tailLeft ? -7 : 7), by + b.h + 8);
+        ctx.lineTo(tx + 5, by + b.h - 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Three soft ellipsis dots or horizontal bar inside pill
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = b.color === PAL.midBubble ? '#ede9f8' : 'rgba(68, 56, 96, 0.55)';
+        if (b.w > 66) {
+          ctx.fillRect(b.x - b.w * 0.24, b.y - 1.5, b.w * 0.48, 3);
+        } else {
+          for (let d = -1; d <= 1; d++) {
+            ctx.beginPath();
+            ctx.arc(b.x + d * 9, b.y, 2.7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else {
+        // Floating worn cultural glyph rune
+        ctx.fillStyle = b.color;
+        ctx.font = '600 20px "SF Mono", "Menlo", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(b.rune, b.x, b.y);
+      }
+      ctx.restore();
+    }
+
+    // Sparkling snow/light motes
+    for (const m of snowMotes) {
+      const a = Math.max(0, 1 - m.age / m.maxAge);
+      ctx.save();
+      ctx.globalAlpha = a * 0.85;
+      ctx.fillStyle = m.color;
+      ctx.shadowColor = m.color;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawSnowLayer(minLayer, maxLayer) {
+    ctx.save();
+    for (const f of snowflakes) {
+      if (f.layer < minLayer || f.layer > maxLayer) continue;
+      ctx.globalAlpha = f.alpha;
+      ctx.fillStyle = '#f6f3fc';
+      if (f.layer === 2) {
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 6;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawHUD() {
+    // Minimalist top-right clock & resonance pips (matching m2_main_ref.png "4:10 PM")
+    ctx.save();
+    const isDarkScene = S.sceneIndex === 3;
+    const textCol = isDarkScene ? '#e9e6f2' : PAL.fg;
+
+    ctx.fillStyle = isDarkScene ? 'rgba(27, 22, 34, 0.52)' : 'rgba(233, 230, 242, 0.62)';
+    ctx.strokeStyle = isDarkScene ? 'rgba(233, 230, 242, 0.25)' : 'rgba(43, 39, 64, 0.22)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(W - 238, 22, 210, 54, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = textCol;
+    ctx.font = '600 21px "SF Mono", "Menlo", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(formatClock(S.clockMinutes), W - 44, 48);
+
+    ctx.font = '11px "SF Mono", "Menlo", monospace';
+    ctx.fillStyle = isDarkScene ? '#b5acc5' : '#5e5578';
+    ctx.fillText(SCENE_RECTS[S.sceneIndex].name, W - 44, 66);
+
+    // 3 subtle resonance pips on left side of clock pill
+    for (let i = 0; i < 3; i++) {
+      const filled = i < S.realReplies;
+      ctx.beginPath();
+      ctx.arc(W - 216 + i * 16, 46, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = filled ? PAL.acc : 'rgba(143, 108, 217, 0.22)';
+      ctx.fill();
+      if (filled) {
+        ctx.strokeStyle = PAL.warmPeach;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Subtle movement prompt if in SCENE and far from citizen
+    if (S.phase === 'scene' && Math.abs(S.playerX - S.npcX) > 385 && S.replyToastTimer <= 0) {
+      ctx.textAlign = 'center';
+      ctx.font = '14px "SF Mono", "Menlo", monospace';
+      ctx.fillStyle = 'rgba(233, 230, 242, 0.78)';
+      ctx.fillText('← / →  approach passing citizen before evening falls', W * 0.5, H - 26);
+    }
+
+    // Floating stranger reply whisper
+    if (S.replyToastTimer > 0 && S.replyToast) {
+      const a = Math.min(1, S.replyToastTimer / 0.5);
+      ctx.globalAlpha = a;
+      ctx.textAlign = 'center';
+      ctx.font = 'italic 16px "SF Mono", "Menlo", monospace';
+      const pillW = Math.min(720, ctx.measureText(S.replyToast).width + 44);
+      ctx.fillStyle = 'rgba(27, 22, 34, 0.72)';
+      ctx.beginPath();
+      ctx.roundRect(W * 0.5 - pillW * 0.5, 92, pillW, 34, 17);
+      ctx.fill();
+      ctx.fillStyle = PAL.warmPeach;
+      ctx.fillText(S.replyToast, W * 0.5, 114);
+    }
+    ctx.restore();
+  }
+
+  function drawDialogueBox() {
+    CHOICE_BOXES.length = 0;
+    if (S.phase !== 'talk') return;
+
+    const set = PHRASE_SETS[S.phraseSetIdx % PHRASE_SETS.length];
+    const bx = 210;
+    const by = 602;
+    const bw = W - 420;
+    const bh = 104;
+
+    ctx.save();
+    // Styled directly after m2_main_ref.png (#e9e6f2 box, crisp #2b2740 frame, #8f6cd9 active line)
+    // Compacted into the bottom foreground apron so the full silhouettes & platform remain visible!
+    ctx.fillStyle = 'rgba(233, 230, 242, 0.88)';
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.rect(bx, by, bw, bh);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = '11px "SF Mono", "Menlo", monospace';
+    ctx.fillStyle = '#6c6289';
+    ctx.textAlign = 'left';
+    ctx.fillText(set.prompt, bx + 20, by + 17);
+
+    for (let i = 0; i < set.choices.length; i++) {
+      const c = set.choices[i];
+      const ry = by + 23 + i * 25;
+      const active = S.selectedOpt === i;
+      CHOICE_BOXES.push({ x: bx + 12, y: ry, w: bw - 24, h: 24 });
+
+      if (active) {
+        ctx.fillStyle = 'rgba(143, 108, 217, 0.13)';
+        ctx.fillRect(bx + 12, ry, bw - 24, 23);
+      }
+
+      ctx.font = active ? '600 16px "SF Mono", "Menlo", monospace' : '16px "SF Mono", "Menlo", monospace';
+      ctx.fillStyle = active ? PAL.acc : PAL.fg;
+      ctx.fillText(`${i + 1}. ${c.text}`, bx + 22, ry + 17);
+    }
+    ctx.restore();
+  }
+
+  function drawNearOverlay() {
+    if (S.phase !== 'near') return;
+    ctx.save();
+    const alpha = Math.min(1, (3.4 - S.nearTimer) / 0.5) * Math.min(1, S.nearTimer / 0.45);
+    ctx.globalAlpha = alpha;
+    const bx = 230;
+    const by = 612;
+    const bw = W - 460;
+    const bh = 86;
+    ctx.fillStyle = 'rgba(43, 39, 64, 0.84)';
+    ctx.strokeStyle = PAL.warmPeach;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.warmPeach;
+    ctx.font = '600 17px "SF Mono", "Menlo", monospace';
+    ctx.fillText('"Boxing Day blues... my network suggested that phrase."', W * 0.5, by + 34);
+    ctx.fillStyle = '#dcd6f2';
+    ctx.font = '14px "SF Mono", "Menlo", monospace';
+    ctx.fillText('"Do you know what the box used to be?"   [ALMOST CONNECTED]', W * 0.5, by + 62);
+    ctx.restore();
+  }
+
+  function drawTitleOverlay() {
+    if (S.phase !== 'title') return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(233, 230, 242, 0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 2.5;
+    ctx.fillStyle = 'rgba(233, 230, 242, 0.94)';
+    ctx.fillRect(280, 195, 720, 320);
+    ctx.strokeRect(280, 195, 720, 320);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '600 14px "SF Mono", "Menlo", monospace';
+    ctx.fillText('GROUP 6 // MILESTONE 2', W * 0.5, 248);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '700 42px "SF Mono", "Menlo", monospace';
+    ctx.fillText('BOXING DAY BLUES', W * 0.5, 305);
+
+    ctx.font = '17px "SF Mono", "Menlo", monospace';
+    ctx.fillStyle = '#4a4363';
+    ctx.fillText('Everyone says "Happy Boxing Day."', W * 0.5, 358);
+    ctx.fillText('Nobody knows what the box was.', W * 0.5, 386);
+
+    const pulse = 0.55 + 0.45 * Math.sin(S.t * 3.2);
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '600 17px "SF Mono", "Menlo", monospace';
+    ctx.fillText('[ PRESS SPACE OR CLICK TO STEP ONTO THE PLATFORM ]', W * 0.5, 458);
+    ctx.restore();
+  }
+
+  function drawEndOverlay() {
+    if (S.phase !== 'end') return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(27, 22, 34, 0.68)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = 'rgba(43, 39, 64, 0.92)';
+    ctx.strokeStyle = PAL.acc;
+    ctx.lineWidth = 2;
+    ctx.fillRect(260, 190, 760, 340);
+    ctx.strokeRect(260, 190, 760, 340);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.acc;
+    ctx.font = '600 14px "SF Mono", "Menlo", monospace';
+    ctx.fillText('6:00 PM — EVENING', W * 0.5, 242);
+
+    ctx.fillStyle = '#e9e6f2';
+    ctx.font = '700 32px "SF Mono", "Menlo", monospace';
+    ctx.fillText(
+      S.almostReached ? 'YOU ALMOST REACHED SOMEONE.' : 'THE DAY ENDED BEFORE YOU GOT THERE.',
+      W * 0.5,
+      295
+    );
+
+    ctx.fillStyle = PAL.warmPeach;
+    ctx.font = 'italic 17px "SF Mono", "Menlo", monospace';
+    ctx.fillText(
+      S.almostReached
+        ? '"Boxing Day blues," they said — neither of you knowing what the box meant.'
+        : 'Every system-suggested greeting arrived on time, and drifted apart in the snow.',
+      W * 0.5,
+      352
+    );
+
+    ctx.fillStyle = '#b5acc5';
+    ctx.font = '15px "SF Mono", "Menlo", monospace';
+    ctx.fillText(
+      `Resonant replies: ${S.realReplies} / 3   ·   Misread idioms: ${S.misreadCount}`,
+      W * 0.5,
+      408
+    );
+
+    ctx.fillStyle = '#e9e6f2';
+    ctx.font = '600 16px "SF Mono", "Menlo", monospace';
+    ctx.fillText('[ PRESS SPACE OR ENTER FOR ANOTHER DAY ]', W * 0.5, 474);
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    // 1. Twilight transit platform background (4 scenes morning -> evening)
+    drawSceneBackground();
+
+    // 2. Distant & mid snow layers behind silhouettes
+    drawSnowLayer(0, 1);
+
+    // 3. Floating speech-bubble pills & worn cultural glyphs between citizens
+    drawFloatingGlyphs();
+
+    // 4. Citizen silhouettes on the snowy platform (feet grounded at y=608)
+    const footY = 608;
+    const playerSprite = S.isMoving
+      ? (Math.floor(S.walkCycle) % 2 === 0 ? PLAYER_FRAMES.walkA : PLAYER_FRAMES.walkB)
+      : PLAYER_FRAMES.idle;
+    const npcSprite = NPC_SPRITES[S.npcSpriteIdx % NPC_SPRITES.length];
+
+    const nearGlow = S.phase === 'near' ? 0.16 : 0;
+    drawSilhouette(playerSprite, S.playerX, footY, 268, S.playerDir >= 0, nearGlow);
+    drawSilhouette(npcSprite, S.npcX, footY, 272, false, nearGlow);
+
+    // 5. Foreground snow bokeh
+    drawSnowLayer(2, 2);
+
+    // 6. Minimalist twilight HUD & phrase choices
+    if (S.phase !== 'title') {
+      drawHUD();
+      drawDialogueBox();
+      drawNearOverlay();
+    }
+    drawTitleOverlay();
+    drawEndOverlay();
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000));
+    lastNow = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

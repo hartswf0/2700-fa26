@@ -1,0 +1,216 @@
+{
+  "id": "g6",
+  "group": "Group 6",
+  "name": "Boxing Day Blues",
+  "from": "Concept 2: a day in a future streamlined by AI networks, where a citizen nearly reaches a human connection and fails.",
+  "hook": "Everyone says “Happy Boxing Day.” Nobody knows what the box was.",
+  "pitch": "One day in a future run smoothly by AI networks. You have until evening to reach one person, using phrases the system offers whose meanings have worn away. You will almost manage it.",
+  "minute_check": "Yes, from the title line alone.",
+  "build_check": "Yes: four scenes and a phrase list.",
+  "scope": "One day, four scenes. The phrase list is your main asset; write it first.",
+  "palette": {
+    "bg": "#e9e6f2",
+    "fg": "#2b2740",
+    "acc": "#8f6cd9",
+    "main_bg": "#e9e6f2",
+    "main_fg": "#2b2740",
+    "main_acc": "#8f6cd9"
+  },
+  "template_type": "vn",
+  "brief": {
+    "player": "A citizen of the far future, over one day.",
+    "goal": "Reach another person: one real conversation by the end of the day.",
+    "fail": "The day ends before you get there (the expected outcome).",
+    "ending": "You almost connect. The phrase \"Boxing Day blues\" is said by someone who no longer knows what it meant.",
+    "verb": "Choose what to say, from phrases the system offers.",
+    "theme": "When culture is lost it is not easily regained. The dialogue options are fragments whose meaning is gone.",
+    "look": "Minimal start screen; one press and you are in."
+  },
+  "prov": {
+    "bug": "Say the phrase! Everybody says it.",
+    "nit": "Does anyone in the game remember what it meant? Who could the player learn it from?"
+  },
+  "states": [
+    [
+      "title",
+      "PRESS",
+      0,
+      0
+    ],
+    [
+      "scene",
+      "SCENE",
+      1,
+      0
+    ],
+    [
+      "talk",
+      "CONVERSATION",
+      2,
+      0
+    ],
+    [
+      "near",
+      "ALMOST",
+      3,
+      0
+    ],
+    [
+      "end",
+      "EVENING",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "scene",
+      "press"
+    ],
+    [
+      "scene",
+      "talk",
+      "someone nearby"
+    ],
+    [
+      "talk",
+      "scene",
+      "phrase misread"
+    ],
+    [
+      "talk",
+      "near",
+      "three real replies"
+    ],
+    [
+      "near",
+      "end",
+      "day ends"
+    ],
+    [
+      "scene",
+      "end",
+      "day ends"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Ray Bradbury, “There Will Come Soft Rains” (1950)",
+      "An automated house carries on its routines after the people are gone."
+    ],
+    [
+      "Night in the Woods (Infinite Fall, 2017)",
+      "A day-by-day game about reaching people in a town that is running down."
+    ],
+    [
+      "WALL-E (Andrew Stanton, 2008)",
+      "A machine learning human culture from fragments (an old musical), which the humans have forgotten."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g6/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g6/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Minimalist melancholic side-view narrative game in soft twilight lavender (#e9e6f2), deep plum silhouettes (#2b2740), and muted violet (#8f6cd9). Gentle slow-panning side camera across a quiet futuristic transit platform at dusk. Two stylized silhouette citizens pause near each other as soft glowing speech-bubble glyphs float upward between them, almost harmonizing in color before drifting apart into the evening snow as a transit train glides past. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for pastel dusk palette and minimalist staging. Sound design: gentle winter wind, soft electric piano chords, distant chime. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Boxing Day Blues: Choose what to say, from phrases the system offers. leading visibly to You almost connect. The phrase \"Boxing Day blues\" is said by someone who no longer knows what it meant. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Minimalist melancholic side-view narrative game in soft twilight lavender (#e9e6f2), deep plum silhouettes (#2b2740), and muted violet (#8f6cd9). Gentle slow-panning side camera across a quiet futuristic transit platform at dusk. Two stylized silhouette citizens pause near each other as soft glowing speech-bubble glyphs float upward between them, almost harmonizing in color before drifting apart into the evening snow as a transit train glides past. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for pastel dusk palette and minimalist staging. Sound design: gentle winter wind, soft electric piano chords, distant chime. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Choose what to say, from phrases the system offers.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (The day ends before you get there (the expected outcome).) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (You almost connect. The phrase \"Boxing Day blues\" is said by someone who no longer knows what it meant.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Boxing Day Blues demonstrating start, core verb (Choose what to say, from phrases the system offers.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "4_scene_backgrounds_morning_to_evening",
+      "label": "4 scene backgrounds (morning to evening)",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Boxing Day Blues\": 4 scene backgrounds (morning to evening). strictly harmonized palette (#e9e6f2, #2b2740, accent #8f6cd9), style: Minimal start screen; one press and you are in.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "citizen_silhouettes",
+      "label": "Citizen silhouettes",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Boxing Day Blues\": Citizen silhouettes. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#e9e6f2, #2b2740, accent #8f6cd9), style: Minimal start screen; one press and you are in., matching the reference gameplay frame."
+    },
+    {
+      "id": "phrase_list_old_idioms_half_understood",
+      "label": "Phrase list (old idioms, half-understood)",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "dialogue_box",
+      "label": "Dialogue box",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "clock",
+      "label": "Clock",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Boxing Day Blues\" (When culture is lost it is not easily regained. The dialogue options are fragments whose meaning is gone.). Visual mood: Minimal start screen; one press and you are in.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

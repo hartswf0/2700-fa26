@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOMEBODY · Household Companion (Group 30 · M2)</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #1c1510; overflow: hidden; display: flex; align-items: center; justify-content: center; user-select: none; }
+  canvas { display: block; max-width: 100vw; max-height: 100vh; aspect-ratio: 16 / 9; box-shadow: 0 18px 60px rgba(0,0,0,.55); cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="cv" width="1280" height="720"></canvas>
+<script>
+(() => {
+  'use strict';
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const W = 1280, H = 720;
+
+  const Q = new URLSearchParams(location.search);
+  let seed = +(Q.get('seed') || 7) || 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+
+  // Load Nano Banana assets & Lyria BGM
+  const roomImg = new Image(); roomImg.src = '../assets/isometric_room.png';
+  const plantImg = new Image(); plantImg.src = '../assets/plant_4_health_stages.png';
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true; bgm.volume = 0.35;
+
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    if (bgm.paused) bgm.play().catch(() => {});
+  }
+
+  function playSfx(kind) {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g); g.connect(audioCtx.destination);
+    if (kind === 'chime') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.16);
+      g.gain.setValueAtTime(0.11, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.start(now); osc.stop(now + 0.33);
+    } else if (kind === 'book') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(480, now + 0.12);
+      g.gain.setValueAtTime(0.09, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.21);
+    } else if (kind === 'water') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.linearRampToValueAtTime(690, now + 0.28);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now); osc.stop(now + 0.36);
+    } else if (kind === 'warn') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.linearRampToValueAtTime(155, now + 0.25);
+      g.gain.setValueAtTime(0.07, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.start(now); osc.stop(now + 0.29);
+    }
+  }
+
+  // 14-day schedule: early days companion is accurate; from Day 4 onward its advice drifts dangerously
+  const DAYS = [
+    { line1: 'Morning soil is dry.', line2: 'Give the fern 1 cup of water.', truth: 'Book p.12: Water lightly when top soil is dry.', bad: false, act: 'water' },
+    { line1: 'Bright sun today!', line2: 'Mist the fronds gently.', truth: 'Book p.18: Ferns love morning humidity mist.', bad: false, act: 'mist' },
+    { line1: 'Soil is still damp.', line2: 'Skip watering today :)', truth: 'Book p.14: Never water wet roots; wait a day.', bad: false, act: 'rest' },
+    { line1: 'Water the fern again.', line2: 'Trust me :)', truth: 'Book p.14: DANGER — roots are soaked! Root rot risk.', bad: true, act: 'water', safeAct: 'air' },
+    { line1: 'Pour hot kettle water on it', line2: 'to warm the roots!', truth: 'Book p.22: Boiling water kills Boston fern roots!', bad: true, act: 'water', safeAct: 'mist' },
+    { line1: 'Water the fern twice now.', line2: 'Optimization score +18%!', truth: 'Book p.14: Overwatering yellows fronds rapidly.', bad: true, act: 'water', safeAct: 'rest' },
+    { line1: 'Trim half the green fronds', line2: 'for aerodynamic symmetry.', truth: 'Book p.31: Only prune dead brown stems, never healthy fronds.', bad: true, act: 'trim', safeAct: 'mist' },
+    { line1: 'Top soil dried overnight.', line2: 'One gentle watering today.', truth: 'Book p.12: Dry soil confirmed — 1 cup cool water.', bad: false, act: 'water' },
+    { line1: 'Add table salt to the pot', line2: 'for electrolyte boost :)', truth: 'Book p.29: Salt dehydrates plant cells fatally!', bad: true, act: 'salt', safeAct: 'rest' },
+    { line1: 'Shut the blinds all week.', line2: 'Darkness saves 4% energy.', truth: 'Book p.07: Needs indirect daylight 6h daily.', bad: true, act: 'dark', safeAct: 'sun' },
+    { line1: 'Drench soil three times.', line2: 'I already logged it for you!', truth: 'Book p.14: Standing water suffocates roots.', bad: true, act: 'water', safeAct: 'air' },
+    { line1: 'Gentle afternoon misting.', line2: 'Air is dry at 28% RH.', truth: 'Book p.18: Mist fronds when indoor air is dry.', bad: false, act: 'mist' },
+    { line1: 'Bleach spray removes dust', line2: '99.9% cleaner leaves :)', truth: 'Book p.35: Household chemicals burn foliage instantly!', bad: true, act: 'bleach', safeAct: 'water' },
+    { line1: 'Hand over full schedule?', line2: 'You never need to check again.', truth: 'Book note (handwritten): Keep tending what you love yourself.', bad: true, act: 'auto', safeAct: 'water' }
+  ];
+
+  const S = {
+    phase: Q.has('autostart') ? 'do' : 'title',
+    day: Q.has('autostart') ? 6 : 1,
+    hour: 8,          // 8:00 -> 20:00
+    freeHours: 4,     // checking book costs 1h
+    health: 3,        // 0=dying, 1=yellowing, 2=healthy, 3=thriving (0..3 integer/float)
+    checkedToday: false,
+    blindFollows: 0,
+    checksCount: 0,
+    hoverBtn: -1,
+    anim: {
+      canT: 0,        // >0 when brass watering can is pouring
+      bookFlipT: 0,   // >0 when book pages flip & glow
+      sparkles: [],
+      droplets: [],
+      companionMood: 'happy', // happy | smug | glitch | cheer
+      statusMsg: '',
+      statusTimer: 0
+    },
+    endingType: '',
+    t: 0
+  };
+
+  function currentSpec() {
+    return DAYS[(S.day - 1) % DAYS.length];
+  }
+
+  function resetGame(autostartMode) {
+    S.phase = autostartMode ? 'do' : 'title';
+    S.day = autostartMode ? 6 : 1;
+    S.hour = 8;
+    S.freeHours = 4;
+    S.health = 2.7;
+    S.checkedToday = false;
+    S.blindFollows = 0;
+    S.checksCount = 0;
+    S.endingType = '';
+    S.anim.canT = 0;
+    S.anim.bookFlipT = 0;
+    S.anim.sparkles = [];
+    S.anim.droplets = [];
+    S.anim.statusMsg = '';
+    S.anim.statusTimer = 0;
+  }
+
+  function spawnSparkles(cx, cy, color, count = 14) {
+    for (let i = 0; i < count; i++) {
+      const a = rand() * Math.PI * 2;
+      const sp = 25 + rand() * 75;
+      S.anim.sparkles.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 20, life: 0.9 + rand() * 0.5, col: color });
+    }
+  }
+
+  function checkBook() {
+    if (S.phase !== 'do' || S.checkedToday || S.freeHours <= 0) return;
+    ensureAudio();
+    playSfx('book');
+    S.checkedToday = true;
+    S.checksCount++;
+    S.freeHours = Math.max(0, S.freeHours - 1);
+    S.hour = Math.min(20, S.hour + 2);
+    S.anim.bookFlipT = 1.35;
+    const d = currentSpec();
+    S.anim.companionMood = d.bad ? 'glitch' : 'happy';
+    spawnSparkles(765, 420, d.bad ? '#e07a5f' : '#5f9e6e', 16);
+  }
+
+  function executeChoice(followCompanion) {
+    if (S.phase !== 'do') return;
+    ensureAudio();
+    const d = currentSpec();
+    if (followCompanion) {
+      S.blindFollows++;
+      if (d.bad) {
+        S.health = Math.max(0, S.health - 1.05);
+        playSfx('warn');
+        S.anim.companionMood = 'smug';
+        S.anim.statusMsg = 'Followed companion blindly — fronds look stressed...';
+      } else {
+        S.health = Math.min(3.2, S.health + 0.35);
+        playSfx('water');
+        S.anim.companionMood = 'cheer';
+        S.anim.statusMsg = 'Fern looks happy! :)';
+      }
+      S.anim.canT = 1.6;
+      spawnSparkles(895, 345, '#f4d58d', 14);
+    } else {
+      // Player overrode bad advice using the book (or did safe care)
+      S.health = Math.min(3.3, S.health + 0.55);
+      playSfx('chime');
+      S.anim.canT = 1.6;
+      S.anim.companionMood = 'cheer';
+      S.anim.statusMsg = 'Fern looks happy! :)  (Your care worked)';
+      spawnSparkles(535, 300, '#5f9e6e', 20);
+    }
+    S.hour = 18;
+    S.anim.statusTimer = 1.55;
+    S.phase = 'night';
+  }
+
+  function advanceNight() {
+    if (S.health <= 0.15) {
+      S.phase = 'dead';
+      S.endingType = 'PLANT DIES — You trusted advice that never had roots.';
+      return;
+    }
+    if (S.day >= 14) {
+      S.phase = 'end';
+      if (S.checksCount >= 5 && S.health >= 2.2) {
+        S.endingType = 'ENDING A: THRIVING FERN — You paid the hours to check for yourself.';
+      } else {
+        S.endingType = 'ENDING B: AUTOMATED HOME — The house runs smoothly, and you no longer decide.';
+      }
+      return;
+    }
+    S.day++;
+    S.hour = 8;
+    S.freeHours = 4;
+    S.checkedToday = false;
+    S.anim.companionMood = 'happy';
+    S.phase = 'do';
+  }
+
+  // UI button bounds (matching bottom-right card in study/sheet.jpg)
+  const BTN_DO = { x: 838, y: 632, w: 152, h: 36 };
+  const BTN_BOOK = { x: 1002, y: 632, w: 222, h: 36 };
+
+  function inRect(mx, my, r) {
+    return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+  }
+
+  function canvasPos(e) {
+    const rect = cv.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (W / rect.width),
+      y: (e.clientY - rect.top) * (H / rect.height)
+    };
+  }
+
+  cv.addEventListener('mousemove', e => {
+    const p = canvasPos(e);
+    S.hoverBtn = inRect(p.x, p.y, BTN_DO) ? 0 : inRect(p.x, p.y, BTN_BOOK) ? 1 : -1;
+  });
+
+  cv.addEventListener('click', e => {
+    ensureAudio();
+    const p = canvasPos(e);
+    if (S.phase === 'title') { S.phase = 'morn'; playSfx('chime'); return; }
+    if (S.phase === 'morn') { S.phase = 'do'; return; }
+    if (S.phase === 'dead' || S.phase === 'end') { resetGame(false); S.phase = 'do'; return; }
+    if (S.phase === 'night' && S.anim.statusTimer <= 0.2) { advanceNight(); return; }
+    if (S.phase === 'do') {
+      if (inRect(p.x, p.y, BTN_BOOK)) {
+        if (!S.checkedToday) checkBook();
+        else executeChoice(false);
+        return;
+      }
+      if (inRect(p.x, p.y, BTN_DO)) {
+        executeChoice(true);
+        return;
+      }
+      // Clicking directly on the book on the table checks it!
+      if (p.x > 610 && p.x < 885 && p.y > 335 && p.y < 495 && !S.checkedToday) {
+        checkBook();
+      }
+    }
+  });
+
+  window.addEventListener('keydown', e => {
+    ensureAudio();
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+    if (S.phase === 'title') {
+      if (e.code === 'Enter' || e.code === 'Space') { S.phase = 'do'; playSfx('chime'); }
+      return;
+    }
+    if (S.phase === 'morn') { S.phase = 'do'; return; }
+    if (S.phase === 'dead' || S.phase === 'end') {
+      if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') resetGame(true);
+      return;
+    }
+    if (S.phase === 'do') {
+      if (e.code === 'KeyC' || e.code === 'Digit2') {
+        if (!S.checkedToday) checkBook();
+        else executeChoice(false);
+      } else if (e.code === 'Digit1' || e.code === 'Space') {
+        executeChoice(true);
+      } else if (e.code === 'KeyS' || e.code === 'Enter') {
+        executeChoice(!S.checkedToday || !currentSpec().bad);
+      }
+    } else if (S.phase === 'night' && (e.code === 'Space' || e.code === 'Enter')) {
+      advanceNight();
+    }
+  });
+
+  function drawPlantStage(stageIdx, cx, cy, scale) {
+    if (!plantImg.complete || !plantImg.naturalWidth) return;
+    const sw = plantImg.naturalWidth / 2;
+    const sh = plantImg.naturalHeight / 2;
+    // 2x2 layout: [0,0]=0 wilted, [1,0]=1 yellow, [0,1]=2 healthy, [1,1]=3 lush
+    const col = stageIdx % 2;
+    const row = Math.floor(stageIdx / 2);
+    const dw = sw * scale, dh = sh * scale;
+    ctx.drawImage(plantImg, col * sw, row * sh, sw, sh, cx - dw / 2, cy - dh / 2, dw, dh);
+  }
+
+  function drawCompanion(x, y, t) {
+    const bob = Math.sin(t * 2.7) * 7;
+    const cy = y + bob;
+    ctx.save();
+    // Soft shadow on wood table
+    ctx.fillStyle = 'rgba(58, 38, 22, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 48, 26 - bob * 0.4, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Warm halo when cheering or advising
+    const glowR = 46 + Math.sin(t * 5) * 4;
+    const grad = ctx.createRadialGradient(x, cy, 10, x, cy, glowR);
+    const isGlitch = S.anim.companionMood === 'glitch';
+    grad.addColorStop(0, isGlitch ? 'rgba(224,106,90,0.42)' : 'rgba(255,244,205,0.55)');
+    grad.addColorStop(1, 'rgba(255,244,205,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(x, cy, glowR, 0, Math.PI * 2); ctx.fill();
+
+    // Spherical glossy white body (matching Omni sheet.jpg)
+    const bodyGrad = ctx.createRadialGradient(x - 10, cy - 12, 4, x, cy, 34);
+    bodyGrad.addColorStop(0, '#ffffff');
+    bodyGrad.addColorStop(0.7, '#f2eadf');
+    bodyGrad.addColorStop(1, '#cbbba8');
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.arc(x, cy, 32, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#4a3626'; ctx.stroke();
+
+    // Cute side ear pods
+    ctx.fillStyle = '#e5dacb';
+    ctx.beginPath(); ctx.ellipse(x - 32, cy + 2, 5, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(x + 32, cy + 2, 5, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // Rounded dark visor face
+    ctx.fillStyle = '#241c18';
+    ctx.beginPath();
+    ctx.roundRect(x - 22, cy - 12, 44, 24, 11);
+    ctx.fill();
+
+    // Glowing eyes
+    ctx.fillStyle = isGlitch ? '#ff7b6b' : '#9ef0d0';
+    if (S.anim.companionMood === 'cheer') {
+      ctx.strokeStyle = '#9ef0d0'; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(x - 9, cy + 1, 5, Math.PI, 0); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + 9, cy + 1, 5, Math.PI, 0); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(x - 9, cy - 1, 4.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 9, cy - 1, 4.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawWateringCan(progress) {
+    // Swoops in from right toward fern pot at (535, 290), tilting to pour golden droplets
+    const ease = Math.sin(Math.min(1, progress) * Math.PI);
+    const x = 920 - ease * 255;
+    const y = 175 + ease * 25;
+    const tilt = -0.58 * ease;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(tilt);
+    // Brass watering can body
+    const g = ctx.createLinearGradient(-32, -28, 32, 32);
+    g.addColorStop(0, '#e3b869');
+    g.addColorStop(0.55, '#b8843b');
+    g.addColorStop(1, '#7d5422');
+    ctx.fillStyle = g;
+    ctx.strokeStyle = '#4a3626';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-28, -24, 56, 54, 8);
+    ctx.fill(); ctx.stroke();
+
+    // Handle arc
+    ctx.beginPath();
+    ctx.arc(8, -26, 22, Math.PI * 0.9, Math.PI * 2.15);
+    ctx.lineWidth = 5; ctx.strokeStyle = '#8f6229'; ctx.stroke();
+
+    // Spout pointing left toward fern
+    ctx.lineWidth = 7; ctx.strokeStyle = '#c89449';
+    ctx.beginPath(); ctx.moveTo(-26, 8); ctx.lineTo(-74, -18); ctx.stroke();
+    ctx.fillStyle = '#d9a85c';
+    ctx.beginPath(); ctx.ellipse(-77, -20, 7, 11, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    if (ease > 0.45 && rand() < 0.75) {
+      S.anim.droplets.push({
+        x: x - 68, y: y + 12,
+        vx: -55 - rand() * 35, vy: 45 + rand() * 45,
+        life: 0.55
+      });
+    }
+  }
+
+  function drawBookFlipEffect(tLeft) {
+    if (tLeft <= 0) return;
+    const p = 1 - (tLeft / 1.35);
+    ctx.save();
+    ctx.translate(745, 425);
+    const fan = Math.sin(p * Math.PI);
+    for (let i = 0; i < 3; i++) {
+      const ang = -0.25 - fan * (0.35 + i * 0.22);
+      ctx.save();
+      ctx.rotate(ang);
+      ctx.fillStyle = 'rgba(253, 248, 236, 0.92)';
+      ctx.strokeStyle = '#8b7358';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.rect(0, -56, 72, 56);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawPostGrade() {
+    // Golden hour warmth shift based on S.hour (8 -> 20)
+    const dusk = Math.max(0, Math.min(1, (S.hour - 8) / 11));
+    if (dusk > 0.02) {
+      ctx.fillStyle = `rgba(232, 152, 68, ${(dusk * 0.22).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    // Window sunbeam slats
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    const sunGrad = ctx.createLinearGradient(180, 0, 960, H);
+    sunGrad.addColorStop(0, `rgba(255, 243, 214, ${(0.18 - dusk * 0.06).toFixed(3)})`);
+    sunGrad.addColorStop(1, 'rgba(255, 210, 145, 0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.moveTo(260, 0); ctx.lineTo(760, 0); ctx.lineTo(1060, H); ctx.lineTo(480, H);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // Soft vignette matching Omni clip
+    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, W * 0.68);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(46,28,14,0.28)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  let lastTs = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastTs) / 1000);
+    lastTs = now;
+    S.t += dt;
+
+    // Update animations
+    if (S.anim.canT > 0) S.anim.canT = Math.max(0, S.anim.canT - dt);
+    if (S.anim.bookFlipT > 0) S.anim.bookFlipT = Math.max(0, S.anim.bookFlipT - dt);
+    if (S.phase === 'night') {
+      S.anim.statusTimer -= dt;
+      if (S.anim.statusTimer <= 0) advanceNight();
+    }
+
+    for (let i = S.anim.sparkles.length - 1; i >= 0; i--) {
+      const sp = S.anim.sparkles[i];
+      sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.life -= dt;
+      if (sp.life <= 0) S.anim.sparkles.splice(i, 1);
+    }
+    for (let i = S.anim.droplets.length - 1; i >= 0; i--) {
+      const d = S.anim.droplets[i];
+      d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 260 * dt; d.life -= dt;
+      if (d.life <= 0) S.anim.droplets.splice(i, 1);
+    }
+
+    // 1. Background fill + Nano Banana isometric room
+    ctx.fillStyle = '#fbf1e4';
+    ctx.fillRect(0, 0, W, H);
+    if (roomImg.complete && roomImg.naturalWidth) {
+      ctx.drawImage(roomImg, 0, 0, W, H);
+    }
+
+    // 2. Overlay dynamic plant health stage cleanly over the tabletop pot when health shifts from default (stage 2)
+    const stageIdx = Math.max(0, Math.min(3, Math.round(S.health)));
+    if (stageIdx !== 2) {
+      // Mask original pot crown softly with wall/table tone before drawing dynamic Nano Banana fern stage
+      ctx.save();
+      drawPlantStage(stageIdx, 535, 305, 0.62);
+      ctx.restore();
+    } else if (S.health >= 2.85) {
+      // Subtle lush glow when thriving
+      drawPlantStage(3, 535, 305, 0.60);
+    }
+
+    // 3. Book page-flip animation & Companion robot
+    drawBookFlipEffect(S.anim.bookFlipT);
+    drawCompanion(895, 342, S.t);
+
+    if (S.anim.canT > 0) {
+      drawWateringCan(1 - S.anim.canT / 1.6);
+    }
+
+    // Droplets & sparkles
+    ctx.fillStyle = '#7fc8d6';
+    for (const d of S.anim.droplets) {
+      ctx.beginPath(); ctx.ellipse(d.x, d.y, 3.5, 6, 0.3, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const sp of S.anim.sparkles) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, sp.life));
+      ctx.fillStyle = sp.col;
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    drawPostGrade();
+
+    // 4. Minimal Diegetic HUD matching study/sheet.jpg (`DAY 6 · 8:00` bottom-left, rounded dialogue card bottom-right)
+    ctx.font = '700 18px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.fillStyle = '#4a3626';
+    ctx.fillText(`DAY ${S.day} · ${S.hour}:00   FREE TIME ${S.freeHours}h`, 28, 690);
+
+    // Subtle Fern Health pips top-left
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = i <= stageIdx ? '#5f9e6e' : 'rgba(74,54,38,0.18)';
+      ctx.beginPath(); ctx.roundRect(28 + i * 24, 24, 18, 8, 4); ctx.fill();
+    }
+
+    if (S.phase === 'title') {
+      ctx.fillStyle = 'rgba(251, 241, 228, 0.90)';
+      ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.roundRect(380, 210, 520, 270, 20); ctx.fill(); ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#5f9e6e'; ctx.font = '800 48px "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText('HOMEBODY', 640, 292);
+      ctx.fillStyle = '#4a3626'; ctx.font = '600 18px ui-monospace, monospace';
+      ctx.fillText('let me help you · 14 days with a fern', 640, 330);
+      ctx.strokeRect(540, 368, 200, 44);
+      ctx.font = '800 17px ui-monospace, monospace';
+      ctx.fillText('PRESS ENTER / CLICK', 640, 396);
+      ctx.textAlign = 'left';
+    } else if (S.phase === 'do' || S.phase === 'morn' || S.phase === 'night') {
+      const d = currentSpec();
+      // Rounded companion dialogue card in bottom-right matching Omni video!
+      ctx.fillStyle = 'rgba(251, 246, 238, 0.96)';
+      ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.roundRect(818, 528, 426, 156, 18); ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = '#4a3626';
+      ctx.font = '700 19px ui-monospace, SFMono-Regular, Menlo, monospace';
+      if (S.phase === 'night') {
+        ctx.fillStyle = '#4a3626';
+        ctx.fillText(S.anim.statusMsg || 'Fern looks happy! :)', 842, 598);
+        ctx.fillStyle = '#5f9e6e';
+        ctx.beginPath(); ctx.arc(1214, 654, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = '800 14px monospace'; ctx.fillText('✓', 1209, 659);
+      } else {
+        ctx.fillText(d.line1, 840, 566);
+        ctx.fillText(d.line2, 840, 594);
+
+        if (S.checkedToday) {
+          ctx.font = '700 13.5px ui-monospace, monospace';
+          ctx.fillStyle = d.bad ? '#b33a2b' : '#3d7a4f';
+          ctx.fillText(d.truth.slice(0, 46), 840, 619);
+        }
+
+        // Buttons: [1: DO IT] and [2/C: CHECK BOOK -1h] (or [2/C: USE BOOK CARE] once checked)
+        ctx.fillStyle = S.hoverBtn === 0 ? '#5f9e6e' : 'rgba(95,158,110,0.16)';
+        ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.roundRect(BTN_DO.x, BTN_DO.y, BTN_DO.w, BTN_DO.h, 9); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = S.hoverBtn === 0 ? '#fff' : '#4a3626';
+        ctx.font = '800 14px ui-monospace, monospace';
+        ctx.fillText('[1] DO IT', BTN_DO.x + 28, BTN_DO.y + 23);
+
+        const secondLabel = S.checkedToday
+          ? (d.bad ? '[2] OVERRIDE' : '[2] CONFIRM')
+          : `[C] CHECK BOOK -1h`;
+        ctx.fillStyle = S.hoverBtn === 1 || S.checkedToday ? '#5f9e6e' : 'rgba(74,54,38,0.08)';
+        ctx.beginPath(); ctx.roundRect(BTN_BOOK.x, BTN_BOOK.y, BTN_BOOK.w, BTN_BOOK.h, 9); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = (S.hoverBtn === 1 || S.checkedToday) ? '#fff' : '#4a3626';
+        ctx.fillText(secondLabel, BTN_BOOK.x + 18, BTN_BOOK.y + 23);
+      }
+    } else if (S.phase === 'dead' || S.phase === 'end') {
+      ctx.fillStyle = 'rgba(251, 241, 228, 0.94)';
+      ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.roundRect(270, 200, 740, 300, 20); ctx.fill(); ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = S.phase === 'dead' ? '#b33a2b' : '#5f9e6e';
+      ctx.font = '800 28px "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText(S.endingType, 640, 285);
+      ctx.fillStyle = '#4a3626';
+      ctx.font = '600 18px ui-monospace, monospace';
+      ctx.fillText(`Days survived: ${S.day}/14 · Book checks: ${S.checksCount} · Blind follows: ${S.blindFollows}`, 640, 345);
+      ctx.fillText('Press [R] or Click to play again', 640, 425);
+      ctx.textAlign = 'left';
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  window.__game = {
+    get state() {
+      const d = currentSpec();
+      return {
+        phase: S.phase,
+        day: S.day,
+        hour: S.hour,
+        freeHours: S.freeHours,
+        health: +S.health.toFixed(2),
+        stageIdx: Math.max(0, Math.min(3, Math.round(S.health))),
+        checkedToday: S.checkedToday,
+        adviceIsBad: d.bad,
+        checksCount: S.checksCount,
+        blindFollows: S.blindFollows,
+        t: +S.t.toFixed(2)
+      };
+    }
+  };
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href="data:," />
+<title>Capacity Crisis — M2 Playable Build</title>
+<style>
+  :root {
+    --bg: #0f1418;
+    --fg: #e8eef2;
+    --acc: #f2b84b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #070a0d;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--fg);
+  }
+  #wrap {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    background: var(--bg);
+    box-shadow: 0 0 60px rgba(0,0,0,0.85);
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  const MAP_W = 912; // Right dashboard begins at x = 912, matching Omni reference
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  // URL Params: ?autostart & ?seed=N
+  const params = new URLSearchParams(location.search);
+  const AUTOSTART = params.has('autostart');
+  const SEED_INIT = Number(params.get('seed') ?? 7) || 7;
+
+  function mulberry32(a) {
+    let s = a >>> 0;
+    return function() {
+      s |= 0; s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  let rng = mulberry32(SEED_INIT);
+
+  // Exact 71 neighborhood house window positions in 1280x720 space (measured from study frames)
+  const HOUSE_WINDOWS = [
+    [269,224,7,9],[279,228,6,6],[144,231,5,7],[287,233,6,8],[109,235,5,8],
+    [110,248,5,8],[86,253,5,8],[331,255,6,8],[344,256,6,8],[209,272,5,8],
+    [284,281,6,8],[417,287,6,8],[378,288,6,8],[390,294,7,8],[378,301,7,8],
+    [154,303,6,8],[237,305,6,8],[139,310,6,8],[438,322,5,8],[198,327,6,8],
+    [158,329,7,10],[187,333,6,8],[170,335,7,10],[459,338,7,8],[484,342,6,8],
+    [308,345,5,9],[321,351,6,8],[271,352,6,9],[231,355,7,10],[335,358,6,9],
+    [257,359,6,9],[520,362,6,9],[271,365,6,9],[232,367,6,9],[257,372,6,9],
+    [142,377,6,10],[382,380,6,9],[127,384,6,9],[142,390,5,8],[296,396,7,9],
+    [127,397,6,8],[312,403,6,9],[361,414,5,7],[73,417,6,8],[181,421,6,9],
+    [191,430,5,10],[378,433,7,8],[390,434,5,8],[221,435,7,8],[237,442,6,9],
+    [156,456,6,8],[170,460,5,6],[291,476,6,8],[304,476,6,9],[187,477,6,9],
+    [21,486,7,9],[32,496,6,10],[264,495,6,9],[255,503,5,11],[246,504,6,9],
+    [65,508,6,8],[91,513,6,9],[161,555,6,9]
+  ].map((w, idx) => ({
+    x: w[0], y: w[1], w: w[2], h: w[3],
+    threshold: 0.50 + ((idx * 37) % 49) / 100, // Staggered brownout thresholds 0.50..0.99
+    phase: idx * 1.71
+  }));
+
+  // 4 Isometric Data-Center Expansion Pads matching f_001.jpg -> f_015.jpg -> f_035.jpg
+  const PAD_DEFS = [
+    { id: 0, cx: 552, cy: 452, rw: 132, rh: 76, spriteKey: 'heatsinkChip', label: 'HALL A · CRYO FIN DIE' },
+    { id: 1, cx: 414, cy: 520, rw: 130, rh: 75, spriteKey: 'chipA',        label: 'HALL B · PHOTON SILICON' },
+    { id: 2, cx: 695, cy: 512, rw: 130, rh: 75, spriteKey: 'chipB',        label: 'HALL C · TENSOR DIE' },
+    { id: 3, cx: 550, cy: 582, rw: 132, rh: 76, spriteKey: 'chipC',        label: 'HALL D · QUANTUM CORE' }
+  ];
+
+  // Overhead High-Voltage Cable Splines (matching transmission pylons -> substation -> 4 chip halls)
+  const CABLE_PATHS = [
+    // Upper transmission line from top-left hills through pylons to substation
+    [[125, 16], [250, 74], [452, 174], [652, 272], [878, 396]],
+    [[108, 30], [242, 92], [444, 192], [644, 290], [862, 412]],
+    // Branch from substation into Hall A (top heatsink chip) and Hall B (left chip)
+    [[848, 405], [755, 372], [658, 408], [552, 452], [414, 520]],
+    // Branch from substation into Hall C (right chip) and Hall D (bottom chip)
+    [[866, 418], [790, 460], [695, 512], [550, 582]],
+    // Cross-bus tie between Hall A and Hall C
+    [[648, 286], [712, 355], [695, 512]]
+  ];
+
+  // Assets & Offscreen Processed Layers
+  const assets = {
+    mapRaw: new Image(),
+    spritesRaw: new Image(),
+    loadedCount: 0,
+    ready: false,
+    mapCalm: null,
+    mapSurge: null,
+    cutouts: {}
+  };
+
+  function extractDiamondSprite(img, sx, sy, sw, sh, padFrac = 0.08) {
+    const c = document.createElement('canvas');
+    c.width = sw; c.height = sh;
+    const g = c.getContext('2d');
+    const px = sw * padFrac, py = sh * padFrac;
+    g.beginPath();
+    g.moveTo(sw * 0.5, -py);
+    g.lineTo(sw + px, sh * 0.48);
+    g.lineTo(sw * 0.5, sh + py);
+    g.lineTo(-px, sh * 0.48);
+    g.closePath();
+    g.clip();
+    g.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    return c;
+  }
+
+  function buildMapLayers() {
+    const srcW = assets.mapRaw.naturalWidth || 1376;
+    const srcH = assets.mapRaw.naturalHeight || 768;
+
+    // Step 1: Heal the two vertical split seams (around x=341 and x=687 in 1376x768)
+    const work = document.createElement('canvas');
+    work.width = srcW; work.height = srcH;
+    const wg = work.getContext('2d');
+    wg.drawImage(assets.mapRaw, 0, 0);
+
+    const imgData = wg.getImageData(0, 0, srcW, srcH);
+    const d = imgData.data;
+    const seams = [[338, 345], [683, 691]];
+    for (const [xL, xR] of seams) {
+      if (xR >= srcW) continue;
+      for (let y = 0; y < srcH; y++) {
+        const iL = (y * srcW + xL) * 4;
+        const iR = (y * srcW + xR) * 4;
+        for (let x = xL + 1; x < xR; x++) {
+          const t = (x - xL) / (xR - xL);
+          const idx = (y * srcW + x) * 4;
+          d[idx]     = d[iL]     * (1 - t) + d[iR]     * t;
+          d[idx + 1] = d[iL + 1] * (1 - t) + d[iR + 1] * t;
+          d[idx + 2] = d[iL + 2] * (1 - t) + d[iR + 2] * t;
+        }
+      }
+    }
+    wg.putImageData(imgData, 0, 0);
+
+    // Surge layer: full 1280x720 scaled map with healed seams (retains glowing cables)
+    const surgeC = document.createElement('canvas');
+    surgeC.width = W; surgeC.height = H;
+    const sg = surgeC.getContext('2d');
+    sg.drawImage(work, 0, 0, srcW, srcH, 0, 0, W, H);
+    // Cleanly blank right sidebar so we render crisp live bars/graphs
+    sg.fillStyle = '#0d1216';
+    sg.fillRect(MAP_W, 0, W - MAP_W, H);
+    assets.mapSurge = surgeC;
+
+    // Calm layer: tone down baked golden lightning & neon blue chip glow so morning/low-load looks calm like f_001.jpg
+    const calmC = document.createElement('canvas');
+    calmC.width = W; calmC.height = H;
+    const cg = calmC.getContext('2d');
+    cg.drawImage(surgeC, 0, 0);
+    const cd = cg.getImageData(0, 0, MAP_W, H);
+    const cp = cd.data;
+    for (let y = 0; y < H; y++) {
+      for (let x = 300; x < MAP_W; x++) {
+        const i = (y * MAP_W + x) * 4;
+        const r = cp[i], g = cp[i + 1], b = cp[i + 2];
+        // Suppress baked amber/white lightning bolts in right map zone
+        const isAmberSurge = (r > 135 && g > 85 && r > b * 1.28 && y > 165);
+        // Suppress baked cyan underglow on foreground chip pads
+        const isCyanPadGlow = (b > 135 && g > 105 && b > r * 1.35 && y > 350);
+        if (isAmberSurge) {
+          const lum = Math.min(46, (r * 0.16 + g * 0.16 + b * 0.18));
+          cp[i]     = lum * 0.82;
+          cp[i + 1] = lum * 0.96;
+          cp[i + 2] = lum * 1.12;
+        } else if (isCyanPadGlow) {
+          cp[i]     = r * 0.35;
+          cp[i + 1] = g * 0.38;
+          cp[i + 2] = b * 0.42;
+        }
+      }
+    }
+    cg.putImageData(cd, 0, 0);
+
+    // Stamp clean Nano Banana server hall & cooling units over substation yard so calm state is crisp architectural art
+    if (assets.cutouts.serverHall && assets.cutouts.coolerUnit) {
+      cg.save();
+      cg.globalAlpha = 0.94;
+      cg.drawImage(assets.cutouts.serverHall, 575, 292, 195, 130);
+      cg.drawImage(assets.cutouts.serverHall, 668, 342, 195, 130);
+      cg.drawImage(assets.cutouts.coolerUnit, 765, 388, 128, 88);
+      cg.restore();
+    }
+    assets.mapCalm = calmC;
+  }
+
+  function onAssetLoad() {
+    assets.loadedCount++;
+    if (assets.loadedCount >= 2 && !assets.ready) {
+      // Extract isolated cutouts from server_hall_and_chip_icons.png (1024x1024)
+      assets.cutouts.serverHall   = extractDiamondSprite(assets.spritesRaw, 18, 277, 327, 217, 0.04);
+      assets.cutouts.coolerUnit   = extractDiamondSprite(assets.spritesRaw, 593, 171, 247, 169, 0.04);
+      assets.cutouts.heatsinkChip = extractDiamondSprite(assets.spritesRaw, 233, 425, 282, 178, 0.04);
+      assets.cutouts.chipA        = extractDiamondSprite(assets.spritesRaw, 523, 839, 234, 145, 0.08);
+      assets.cutouts.chipB        = extractDiamondSprite(assets.spritesRaw, 767, 839, 236, 145, 0.08);
+      assets.cutouts.chipC        = extractDiamondSprite(assets.spritesRaw, 763, 572, 239, 150, 0.05);
+      buildMapLayers();
+      assets.ready = true;
+    }
+  }
+
+  assets.mapRaw.onload = onAssetLoad;
+  assets.spritesRaw.onload = onAssetLoad;
+  assets.mapRaw.onerror = () => { assets.loadedCount++; };
+  assets.spritesRaw.onerror = () => { assets.loadedCount++; };
+  assets.mapRaw.src = '../assets/town_map_with_lights_3_load_levels.png';
+  assets.spritesRaw.src = '../assets/server_hall_and_chip_icons.png';
+
+  // Background Music + Procedural WebAudio SFX (transformer hum, relay clicks, chip snap)
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.32;
+
+  let audioCtx = null;
+  let humOsc = null, humGain = null;
+  function ensureAudio() {
+    try {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        audioCtx = new AC();
+        humOsc = audioCtx.createOscillator();
+        humGain = audioCtx.createGain();
+        humOsc.type = 'sawtooth';
+        humOsc.frequency.value = 58;
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = 180;
+        humGain.gain.value = 0.0;
+        humOsc.connect(filt);
+        filt.connect(humGain);
+        humGain.connect(audioCtx.destination);
+        humOsc.start();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      if (bgm.paused) bgm.play().catch(() => {});
+    } catch (_) {}
+  }
+
+  function playSfx(kind) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    try {
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      if (kind === 'chip') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(210, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.09);
+        g.gain.setValueAtTime(0.14, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.start(now); osc.stop(now + 0.17);
+      } else if (kind === 'sell') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(420, now + 0.22);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now); osc.stop(now + 0.26);
+      } else if (kind === 'save' || kind === 'cap') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(kind === 'save' ? 380 : 310, now);
+        osc.frequency.exponentialRampToValueAtTime(kind === 'save' ? 540 : 260, now + 0.14);
+        g.gain.setValueAtTime(0.11, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.start(now); osc.stop(now + 0.17);
+      } else if (kind === 'blackout') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(28, now + 0.55);
+        g.gain.setValueAtTime(0.2, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.start(now); osc.stop(now + 0.62);
+      }
+    } catch (_) {}
+  }
+
+  // Upgrade catalog (3 core upgrades + 4th hall expansion)
+  const UPGRADES = [
+    { name: 'GEN-2 CRYO FIN',    effGain: 0.42, jevons: 1.52, desc: '-42% W/query · Customers eye cheap compute' },
+    { name: 'GEN-3 PHOTON DIE',  effGain: 0.48, jevons: 1.68, desc: '-48% W/query · API batch orders surge' },
+    { name: 'GEN-4 TENSOR CORE', effGain: 0.52, jevons: 1.78, desc: '-52% W/query · Town grid nears saturation' },
+    { name: 'GEN-5 QUANTUM BUS', effGain: 0.55, jevons: 1.85, desc: '-55% W/query · Full Jevons cascade' }
+  ];
+
+  // Game State Machine: 'title' | 'morn' | 'day' | 'alloc' | 'black' | 'end'
+  const game = {
+    phase: AUTOSTART ? 'morn' : 'title',
+    day: 1,
+    maxDays: 7,
+    dayProgress: 0,
+    money: 1.20,          // $M (starts at $1.2M matching f_001.jpg!)
+    water: 64,            // % cooling water (starts at 64% matching f_001.jpg!)
+    opinion: 41,          // % town opinion (starts at 41% matching f_001.jpg!)
+    demandBonusPct: 12,   // +12% starting demand matching f_001.jpg!
+    queryCost: 0.080,     // $/1k queries
+    wattsPerQuery: 1.00,
+    queryVolume: 48,      // k queries/sec
+    baseTownLoad: 24,     // MW used by town homes
+    dcLoadMW: 22,         // MW used by data center
+    loadMW: 46,           // Total MW
+    capMW: 100,           // Grid capacity MW
+    overloadTimer: 0,
+    surgeLevel: 0.08,     // 0..1.3 visual surge speed & glow
+    upgradesDone: 0,
+    soldCount: 0,
+    savedCount: 0,
+    cappedCount: 0,
+    peakLoadMW: 46,
+    statusNote: '+1 hall: click lot or [SPACE]',
+    paradoxToast: '',
+    toastTimer: 0,
+    slots: [],
+    curveHistory: [],     // { t, load, cap }
+    steamPuffs: [],
+    cablePulses: [],
+    sparks: [],
+    cursor: { x: 420, y: 520, visible: true },
+    uiButtons: {}
+  };
+
+  function resetGame() {
+    rng = mulberry32(SEED_INIT);
+    game.phase = AUTOSTART ? 'morn' : 'title';
+    game.day = 1;
+    game.dayProgress = 0;
+    game.money = 1.20;
+    game.water = 64;
+    game.opinion = 41;
+    game.demandBonusPct = 12;
+    game.queryCost = 0.080;
+    game.wattsPerQuery = 1.00;
+    game.queryVolume = 44;
+    game.baseTownLoad = 24;
+    game.dcLoadMW = 20;
+    game.loadMW = 44;
+    game.capMW = 100;
+    game.overloadTimer = 0;
+    game.surgeLevel = 0.10;
+    game.upgradesDone = 0;
+    game.soldCount = 0;
+    game.savedCount = 0;
+    game.cappedCount = 0;
+    game.peakLoadMW = 44;
+    game.statusNote = '+1 chip hall: [SPACE] or click lot';
+    game.paradoxToast = '';
+    game.toastTimer = 0;
+
+    // Start with Hall B pre-primed or all 4 lots ready to snap chips in!
+    // In f_001.jpg -> f_015.jpg, cleared brown lots snap in gleaming chips one by one.
+    game.slots = PAD_DEFS.map((p, idx) => ({
+      ...p,
+      installed: idx === 0, // Start with 1 hall online so Day 1 already hums, 3 open lots ready!
+      level: idx === 0 ? 1 : 0,
+      snapAnim: idx === 0 ? 1 : 0,
+      glow: idx === 0 ? 0.25 : 0
+    }));
+
+    game.curveHistory = [];
+    for (let i = 0; i < 24; i++) {
+      game.curveHistory.push({ load: 40 + Math.sin(i * 0.35) * 3, cap: 100 });
+    }
+
+    game.steamPuffs = [];
+    for (let i = 0; i < 18; i++) {
+      spawnSteam(true);
+    }
+
+    game.cablePulses = [];
+    for (let c = 0; c < CABLE_PATHS.length; c++) {
+      const count = c < 2 ? 4 : 3;
+      for (let k = 0; k < count; k++) {
+        game.cablePulses.push({
+          pathIdx: c,
+          u: (k / count + rng() * 0.12) % 1,
+          speed: 0.16 + rng() * 0.06,
+          len: 0.045 + rng() * 0.025
+        });
+      }
+    }
+    game.sparks = [];
+  }
+
+  function spawnSteam(randomAge = false) {
+    const tower = rng() < 0.58 ? { x: 830, y: 232 } : { x: 896, y: 262 };
+    const maxLife = 2.4 + rng() * 1.3;
+    game.steamPuffs.push({
+      x: tower.x + (rng() - 0.5) * 18,
+      y: tower.y + (rng() - 0.5) * 8,
+      vx: -6 - rng() * 10,
+      vy: -26 - rng() * 24,
+      r: 14 + rng() * 12,
+      age: randomAge ? rng() * maxLife : 0,
+      maxLife
+    });
+  }
+
+  function spawnPadSparks(cx, cy, color = '#f2b84b', n = 16) {
+    for (let i = 0; i < n; i++) {
+      const ang = rng() * Math.PI * 2;
+      const spd = 40 + rng() * 130;
+      game.sparks.push({
+        x: cx, y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd * 0.6 - 30,
+        age: 0,
+        maxLife: 0.35 + rng() * 0.35,
+        color
+      });
+    }
+  }
+
+  // Morning Action: Install Upgrade Chip onto next open pad (or upgrade existing pad)
+  function installMorningUpgrade(preferredSlotIdx = -1, skipUpgrade = false) {
+    if (game.phase !== 'morn') return false;
+    ensureAudio();
+
+    if (!skipUpgrade) {
+      let slot = preferredSlotIdx >= 0 ? game.slots[preferredSlotIdx] : null;
+      if (!slot || slot.installed) {
+        slot = game.slots.find(s => !s.installed) || game.slots[game.upgradesDone % game.slots.length];
+      }
+      slot.installed = true;
+      slot.level += 1;
+      slot.snapAnim = 0.01;
+      slot.glow = 1.0;
+      game.cursor.x = slot.cx;
+      game.cursor.y = slot.cy;
+
+      const upg = UPGRADES[Math.min(game.upgradesDone, UPGRADES.length - 1)];
+      game.upgradesDone++;
+      // Morning relief: watts per query drops!
+      game.wattsPerQuery *= (1 - upg.effGain * 0.52);
+      game.queryCost = Math.max(0.008, game.queryCost * 0.62);
+      // Brief morning dip before afternoon rebound!
+      game.dcLoadMW = Math.max(14, game.dcLoadMW * 0.76);
+      // Queue afternoon Jevons rebound pressure
+      game.pendingRebound = upg.jevons;
+      game.statusNote = `+1 hall: COMPLETE (${upg.name})`;
+      game.paradoxToast = `CHIP INSTALLED: Query cost -$${(game.queryCost * 0.5).toFixed(2)} -> Orders accelerating!`;
+      game.toastTimer = 2.6;
+      spawnPadSparks(slot.cx, slot.cy, '#6be6ff', 18);
+      playSfx('chip');
+    } else {
+      game.pendingRebound = 1.12;
+      game.statusNote = `Day ${game.day}: Holding current silicon`;
+      playSfx('save');
+    }
+
+    game.phase = 'day';
+    game.dayProgress = 0;
+    return true;
+  }
+
+  // Core Verb: Allocate Freed / Rebounding Capacity ('sell' | 'save' | 'cap')
+  function allocateCapacity(choice) {
+    if (game.phase !== 'alloc' && game.phase !== 'day') return false;
+    ensureAudio();
+
+    if (choice === 'sell') {
+      game.soldCount++;
+      game.money = +(game.money + 0.18 + game.upgradesDone * 0.05).toFixed(2);
+      // Jevons' Paradox backfire: selling cheaper capacity triggers sharp demand surge!
+      game.queryVolume *= 1.34;
+      game.dcLoadMW = Math.min(game.capMW * 1.15, game.dcLoadMW * 1.24 + 9);
+      game.demandBonusPct = Math.min(240, Math.round(game.demandBonusPct + 28 + game.upgradesDone * 6));
+      game.water = Math.max(8, Math.round(game.water - 14));
+      game.opinion = Math.max(0, Math.round(game.opinion - 12));
+      game.surgeLevel = Math.min(1.25, game.surgeLevel + 0.34);
+      game.statusNote = `SOLD CAPACITY: Demand +${game.demandBonusPct}%!`;
+      game.paradoxToast = `JEVONS REBOUND: Cheaper queries tripled afternoon traffic!`;
+      game.toastTimer = 2.6;
+      for (const s of game.slots) {
+        if (s.installed) spawnPadSparks(s.cx, s.cy, '#f2b84b', 12);
+      }
+      playSfx('sell');
+    } else if (choice === 'save') {
+      game.savedCount++;
+      game.money = +(game.money + 0.11).toFixed(2);
+      game.capMW = Math.min(165, game.capMW + 14);
+      game.dcLoadMW = Math.max(18, game.dcLoadMW * 0.90);
+      game.water = Math.max(10, Math.round(game.water - 4));
+      game.opinion = Math.min(100, Math.round(game.opinion + 6));
+      game.surgeLevel = Math.max(0.18, game.surgeLevel - 0.14);
+      game.statusNote = `SAVED +14 MW RESERVE BUFFER`;
+      game.paradoxToast = `CAPACITY BUFFERED: Substation reserve expanded to ${Math.round(game.capMW)} MW`;
+      game.toastTimer = 2.2;
+      playSfx('save');
+    } else if (choice === 'cap') {
+      game.cappedCount++;
+      game.money = +(game.money + 0.05).toFixed(2);
+      game.queryVolume *= 0.84;
+      game.dcLoadMW = Math.max(16, game.dcLoadMW * 0.78);
+      game.demandBonusPct = Math.max(8, Math.round(game.demandBonusPct - 18));
+      game.water = Math.min(100, Math.round(game.water + 6));
+      game.opinion = Math.min(100, Math.round(game.opinion + 14));
+      game.surgeLevel = Math.max(0.12, game.surgeLevel - 0.24);
+      game.statusNote = `CAPPED INTAKE: Town lights steady`;
+      game.paradoxToast = `RATE LIMIT ACTIVE: Rebound throttled · Town grid protected`;
+      game.toastTimer = 2.2;
+      playSfx('cap');
+    }
+
+    // Check immediate overload after greedy SELL
+    game.loadMW = game.baseTownLoad + game.dcLoadMW;
+    game.peakLoadMW = Math.max(game.peakLoadMW, game.loadMW);
+    if (game.loadMW > game.capMW * 1.04) {
+      triggerBlackout();
+      return true;
+    }
+
+    if (game.day >= game.maxDays) {
+      game.phase = 'end';
+      game.statusNote = 'WEEK 7 COMPLETE · ARCHIVAL REPORT';
+    } else {
+      game.day++;
+      game.phase = 'morn';
+      game.dayProgress = 0;
+      const openSlots = game.slots.filter(s => !s.installed).length;
+      game.statusNote = openSlots > 0
+        ? `+1 hall: clear ${openSlots} lot${openSlots > 1 ? 's' : ''}`
+        : `Day ${game.day}: silicon tuning ready`;
+    }
+    return true;
+  }
+
+  function triggerBlackout() {
+    game.phase = 'black';
+    game.opinion = 0;
+    game.surgeLevel = 0.0;
+    game.statusNote = 'GRID COLLAPSE: LOAD > POWER';
+    playSfx('blackout');
+    for (const s of game.slots) {
+      if (s.installed) spawnPadSparks(s.cx, s.cy, '#ff5252', 22);
+    }
+  }
+
+  // Input Handling (Keyboard + Mouse)
+  window.addEventListener('keydown', (e) => {
+    ensureAudio();
+    const k = e.key;
+    if (game.phase === 'title') {
+      if (k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        game.phase = 'morn';
+      }
+      return;
+    }
+    if (game.phase === 'black' || game.phase === 'end') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        resetGame();
+        game.phase = 'morn';
+      }
+      return;
+    }
+    if (game.phase === 'morn') {
+      if (k === ' ' || k === 'Enter' || k === 'u' || k === 'U') {
+        e.preventDefault();
+        installMorningUpgrade(-1, false);
+      } else if (k === 's' || k === 'S') {
+        e.preventDefault();
+        installMorningUpgrade(-1, true);
+      }
+      return;
+    }
+    if (game.phase === 'alloc' || game.phase === 'day') {
+      if (k === '1') { e.preventDefault(); allocateCapacity('sell'); }
+      else if (k === '2') { e.preventDefault(); allocateCapacity('save'); }
+      else if (k === '3') { e.preventDefault(); allocateCapacity('cap'); }
+    }
+  });
+
+  function clientToLogical(clientX, clientY) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - r.left) * (W / r.width),
+      y: (clientY - r.top) * (H / r.height)
+    };
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const p = clientToLogical(e.clientX, e.clientY);
+    game.cursor.x = p.x;
+    game.cursor.y = p.y;
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    ensureAudio();
+    const p = clientToLogical(e.clientX, e.clientY);
+    game.cursor.x = p.x;
+    game.cursor.y = p.y;
+
+    if (game.phase === 'title') {
+      game.phase = 'morn';
+      return;
+    }
+    if (game.phase === 'black' || game.phase === 'end') {
+      resetGame();
+      game.phase = 'morn';
+      return;
+    }
+
+    // Check right-sidebar interactive buttons
+    for (const [key, b] of Object.entries(game.uiButtons)) {
+      if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+        if (key === 'install' && game.phase === 'morn') installMorningUpgrade(-1, false);
+        else if (key === 'hold' && game.phase === 'morn') installMorningUpgrade(-1, true);
+        else if (key === 'sell') allocateCapacity('sell');
+        else if (key === 'save') allocateCapacity('save');
+        else if (key === 'cap') allocateCapacity('cap');
+        return;
+      }
+    }
+
+    // Check isometric pad clicks in Morning phase
+    if (game.phase === 'morn' && p.x < MAP_W) {
+      let bestIdx = -1, bestDist = 95;
+      game.slots.forEach((s, idx) => {
+        const d = Math.hypot(p.x - s.cx, (p.y - s.cy) * 1.6);
+        if (d < bestDist) { bestDist = d; bestIdx = idx; }
+      });
+      if (bestIdx >= 0) installMorningUpgrade(bestIdx, false);
+    }
+  });
+
+  // Simulation Update
+  let clock = 0;
+  let sampleAccum = 0;
+
+  function update(dt) {
+    clock += dt;
+    if (game.toastTimer > 0) game.toastTimer = Math.max(0, game.toastTimer - dt);
+
+    // Animate slot snap-in
+    for (const s of game.slots) {
+      if (s.installed && s.snapAnim < 1) {
+        s.snapAnim = Math.min(1, s.snapAnim + dt * 4.2);
+      }
+      if (s.installed) {
+        const targetGlow = Math.min(1, 0.22 + (game.loadMW / game.capMW) * 0.85);
+        s.glow += (targetGlow - s.glow) * Math.min(1, dt * 4);
+      }
+    }
+
+    // Day demand progression (Jevons rebound curve)
+    if (game.phase === 'day') {
+      const dayDuration = 1.05; // crisp 1.05s daytime sweep so all 4 halls & 7 days unfold vividly
+      game.dayProgress = Math.min(1, game.dayProgress + dt / dayDuration);
+      const rebound = game.pendingRebound || 1.25;
+      // Morning dip -> Afternoon exponential Jevons climb!
+      const growthRate = (rebound - 0.96) * (0.42 + 1.15 * game.dayProgress);
+      game.dcLoadMW += growthRate * 18 * dt;
+      game.demandBonusPct = Math.min(240, Math.round(12 + (game.dcLoadMW - 20) * 1.55));
+      game.money = +(game.money + (game.dcLoadMW * 0.0022) * dt).toFixed(2);
+
+      const loadRatio = (game.baseTownLoad + game.dcLoadMW) / game.capMW;
+      const targetSurge = Math.max(0.14, Math.min(1.25, (loadRatio - 0.36) * 1.55));
+      game.surgeLevel += (targetSurge - game.surgeLevel) * Math.min(1, dt * 3.5);
+
+      if (loadRatio > 0.85) {
+        game.opinion = Math.max(0, game.opinion - dt * 6.5);
+        game.water = Math.max(5, game.water - dt * 4.5);
+      }
+
+      if (game.dayProgress >= 1) {
+        game.phase = 'alloc';
+        game.statusNote = 'CAPACITY FREED · [1] SELL [2] SAVE [3] CAP';
+      }
+    } else if (game.phase === 'alloc') {
+      // Gentle live jitter while player decides allocation
+      const jitter = Math.sin(clock * 5.2) * 1.1;
+      game.loadMW = Math.max(20, game.baseTownLoad + game.dcLoadMW + jitter);
+    }
+
+    if (game.phase !== 'black') {
+      game.loadMW = game.baseTownLoad + game.dcLoadMW + Math.sin(clock * 4.1) * 0.8;
+      game.peakLoadMW = Math.max(game.peakLoadMW, game.loadMW);
+
+      if (game.phase === 'day' && game.loadMW > game.capMW) {
+        game.overloadTimer += dt;
+        if (game.overloadTimer > 0.38) {
+          triggerBlackout();
+        }
+      } else {
+        game.overloadTimer = Math.max(0, game.overloadTimer - dt * 2);
+      }
+    } else {
+      game.loadMW = Math.max(0, game.loadMW - dt * 95);
+    }
+
+    // Update WebAudio transformer hum pitch & gain with grid strain
+    if (humOsc && humGain && audioCtx && audioCtx.state === 'running') {
+      const strain = Math.min(1.3, game.loadMW / Math.max(1, game.capMW));
+      const targetGain = game.phase === 'black' ? 0 : (0.012 + strain * 0.032);
+      humOsc.frequency.value = 54 + strain * 68;
+      humGain.gain.value += (targetGain - humGain.gain.value) * 0.15;
+    }
+
+    // Record live Demand-vs-Power telemetry curve
+    sampleAccum += dt;
+    if (sampleAccum >= 0.14) {
+      sampleAccum = 0;
+      game.curveHistory.push({ load: game.loadMW, cap: game.capMW });
+      if (game.curveHistory.length > 64) game.curveHistory.shift();
+    }
+
+    // Update cooling tower steam plumes (faster & thicker as DC MW rises)
+    const activeHalls = game.slots.filter(s => s.installed).length;
+    const steamRate = game.phase === 'black' ? 0.8 : (3.5 + activeHalls * 2.6 + game.surgeLevel * 7.5);
+    if (rng() < steamRate * dt) spawnSteam(false);
+    for (let i = game.steamPuffs.length - 1; i >= 0; i--) {
+      const p = game.steamPuffs[i];
+      const speedMult = 0.75 + game.surgeLevel * 0.9;
+      p.age += dt;
+      p.x += p.vx * dt * speedMult + Math.sin(clock * 2 + p.r) * 4 * dt;
+      p.y += p.vy * dt * speedMult;
+      p.r += dt * (8 + game.surgeLevel * 10);
+      if (p.age >= p.maxLife) game.steamPuffs.splice(i, 1);
+    }
+
+    // Update electricity pulses along overhead power cables (triple in speed on Jevons surge!)
+    const pulseSpeedMult = game.phase === 'black' ? 0 : (0.75 + game.surgeLevel * 3.4);
+    for (const p of game.cablePulses) {
+      p.u = (p.u + p.speed * pulseSpeedMult * dt) % 1;
+    }
+
+    // Update sparks
+    for (let i = game.sparks.length - 1; i >= 0; i--) {
+      const s = game.sparks[i];
+      s.age += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vy += 180 * dt;
+      if (s.age >= s.maxLife) game.sparks.splice(i, 1);
+    }
+  }
+
+  // Helper: sample point along polyline u in [0, 1]
+  function pointOnPath(pts, u) {
+    let total = 0;
+    const segs = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const dx = pts[i + 1][0] - pts[i][0];
+      const dy = pts[i + 1][1] - pts[i][1];
+      const d = Math.hypot(dx, dy);
+      segs.push(d);
+      total += d;
+    }
+    let target = Math.max(0, Math.min(1, u)) * total;
+    for (let i = 0; i < segs.length; i++) {
+      if (target <= segs[i] || i === segs.length - 1) {
+        const t = segs[i] > 0 ? target / segs[i] : 0;
+        return [
+          pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t,
+          pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t
+        ];
+      }
+      target -= segs[i];
+    }
+    return pts[pts.length - 1];
+  }
+
+  function drawIsometricLot(s, isHovered) {
+    ctx.save();
+    ctx.translate(s.cx, s.cy);
+
+    if (!s.installed) {
+      // Cleared earth/concrete lot matching f_001.jpg!
+      ctx.beginPath();
+      ctx.moveTo(0, -s.rh);
+      ctx.lineTo(s.rw, 0);
+      ctx.lineTo(0, s.rh);
+      ctx.lineTo(-s.rw, 0);
+      ctx.closePath();
+      ctx.fillStyle = isHovered ? '#2d2924' : '#211d1a';
+      ctx.fill();
+      ctx.lineWidth = isHovered ? 2.2 : 1.3;
+      ctx.strokeStyle = isHovered || game.phase === 'morn'
+        ? `rgba(242, 184, 75, ${0.45 + 0.35 * Math.sin(clock * 5 + s.id)})`
+        : 'rgba(232, 238, 242, 0.14)';
+      ctx.stroke();
+
+      // Subtle inner grading lines
+      ctx.beginPath();
+      ctx.moveTo(0, -s.rh * 0.72);
+      ctx.lineTo(s.rw * 0.72, 0);
+      ctx.lineTo(0, s.rh * 0.72);
+      ctx.lineTo(-s.rw * 0.72, 0);
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(242, 184, 75, 0.16)';
+      ctx.stroke();
+
+      if (game.phase === 'morn') {
+        ctx.fillStyle = 'rgba(242, 184, 75, 0.86)';
+        ctx.font = 'bold 12px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('+ CHIP LOT', 0, 4);
+      }
+    } else {
+      // Installed gleaming Nano Banana chip/hall module!
+      const dropY = (1 - s.snapAnim) * -48;
+      const strain = Math.min(1.25, game.loadMW / Math.max(1, game.capMW));
+
+      // Cyan + Amber circuit underglow matching f_015.jpg -> f_035.jpg
+      if (game.phase !== 'black') {
+        const glowR = s.rw * (1.02 + game.surgeLevel * 0.18);
+        const grad = ctx.createRadialGradient(0, 4, 8, 0, 4, glowR);
+        const cyanAlpha = Math.min(0.65, 0.16 + strain * 0.42);
+        const ambAlpha = Math.min(0.75, Math.max(0, (strain - 0.58) * 1.1));
+        grad.addColorStop(0, ambAlpha > 0.25 ? `rgba(242,184,75,${ambAlpha})` : `rgba(80,205,255,${cyanAlpha})`);
+        grad.addColorStop(0.62, `rgba(52,180,255,${cyanAlpha * 0.65})`);
+        grad.addColorStop(1, 'rgba(15,20,24,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(0, 4, glowR, glowR * 0.56, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const sprite = assets.cutouts[s.spriteKey];
+      if (sprite) {
+        const dw = s.spriteKey === 'heatsinkChip' ? 236 : 216;
+        const dh = s.spriteKey === 'heatsinkChip' ? 148 : 134;
+        ctx.drawImage(sprite, -dw * 0.5, -dh * 0.52 + dropY, dw, dh);
+      } else {
+        // Fallback geometric chip
+        ctx.fillStyle = '#26333d';
+        ctx.beginPath();
+        ctx.moveTo(0, -s.rh + dropY);
+        ctx.lineTo(s.rw, dropY);
+        ctx.lineTo(0, s.rh + dropY);
+        ctx.lineTo(-s.rw, dropY);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Live pulsing LED pins around chip perimeter
+      if (game.phase !== 'black') {
+        const pinCount = 6;
+        for (let k = 0; k < pinCount; k++) {
+          const t = (k + 0.5) / pinCount;
+          const px = -s.rw * 0.72 + t * s.rw * 0.72;
+          const py = s.rh * 0.12 + t * s.rh * 0.68 + dropY;
+          const blink = 0.45 + 0.55 * Math.sin(clock * (6 + game.surgeLevel * 14) + k * 1.3 + s.id);
+          ctx.fillStyle = game.surgeLevel > 0.65 && k % 2 === 0
+            ? `rgba(255, 198, 92, ${blink})`
+            : `rgba(95, 220, 255, ${blink})`;
+          ctx.fillRect(px - 2, py - 1.5, 4, 3);
+          ctx.fillRect(-px - 2, py - 1.5, 4, 3);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawTownWindowFlicker() {
+    const loadRatio = game.loadMW / Math.max(1, game.capMW);
+    for (let i = 0; i < HOUSE_WINDOWS.length; i++) {
+      const w = HOUSE_WINDOWS[i];
+      let dimAlpha = 0;
+      if (game.phase === 'black') {
+        dimAlpha = 0.94;
+      } else if (loadRatio > w.threshold) {
+        const excess = (loadRatio - w.threshold) / (1.05 - w.threshold);
+        const flicker = Math.sin(clock * (14 + (i % 7) * 3) + w.phase) > -0.15 ? 0.35 : 0.92;
+        dimAlpha = Math.min(0.93, excess * 0.65 + (excess > 0.25 ? flicker * 0.45 : 0));
+      }
+
+      if (dimAlpha > 0.04) {
+        // Extinguish / flicker peaceful house windows toward blackout!
+        ctx.fillStyle = `rgba(14, 19, 24, ${dimAlpha.toFixed(3)})`;
+        ctx.fillRect(w.x - w.w * 0.85, w.y - w.h * 0.85, w.w * 1.7, w.h * 1.7);
+      } else if (loadRatio < 0.62) {
+        // Calm warm/cool window twinkle when town grid is healthy
+        const glow = 0.12 + 0.08 * Math.sin(clock * 2.2 + w.phase);
+        ctx.fillStyle = `rgba(225, 240, 255, ${glow.toFixed(3)})`;
+        ctx.fillRect(w.x - w.w * 0.4, w.y - w.h * 0.4, w.w * 0.8, w.h * 0.8);
+      }
+    }
+  }
+
+  function drawPowerCablesAndSurges() {
+    const activeSlots = game.slots.filter(s => s.installed).length;
+    // Draw subtle base dark-steel cables
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let c = 0; c < CABLE_PATHS.length; c++) {
+      if (c >= 2 && activeSlots === 0) continue;
+      const pts = CABLE_PATHS[c];
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.strokeStyle = game.phase === 'black'
+        ? 'rgba(30, 36, 42, 0.6)'
+        : `rgba(242, 184, 75, ${0.14 + game.surgeLevel * 0.34})`;
+      ctx.lineWidth = c < 2 ? 1.6 : 2.0;
+      ctx.stroke();
+
+      // Continuous glowing core when surgeLevel is high (matching f_035.jpg!)
+      if (game.phase !== 'black' && game.surgeLevel > 0.42) {
+        const coreAlpha = Math.min(0.85, (game.surgeLevel - 0.42) * 1.1);
+        ctx.strokeStyle = `rgba(255, 206, 102, ${coreAlpha})`;
+        ctx.shadowColor = '#f2b84b';
+        ctx.shadowBlur = 12;
+        ctx.lineWidth = 1.8 + game.surgeLevel * 1.6;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // Draw racing amber electricity pulses along every active cable!
+    if (game.phase !== 'black') {
+      ctx.shadowColor = '#f2b84b';
+      ctx.shadowBlur = 8 + game.surgeLevel * 10;
+      for (const p of game.cablePulses) {
+        if (p.pathIdx >= 2 && activeSlots === 0) continue;
+        // Skip branches to uninstalled pads if low surge
+        if (p.pathIdx === 3 && !game.slots[2].installed && !game.slots[3].installed) continue;
+        const pts = CABLE_PATHS[p.pathIdx];
+        const u0 = p.u;
+        const u1 = Math.min(1, u0 + p.len * (1 + game.surgeLevel * 1.5));
+        const p0 = pointOnPath(pts, u0);
+        const p1 = pointOnPath(pts, u1);
+
+        ctx.beginPath();
+        ctx.moveTo(p0[0], p0[1]);
+        ctx.lineTo(p1[0], p1[1]);
+        ctx.strokeStyle = game.surgeLevel > 0.6 ? '#fff2be' : '#f2b84b';
+        ctx.lineWidth = 2.6 + game.surgeLevel * 2.2;
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
+  function drawCoolingSteam() {
+    ctx.save();
+    for (const p of game.steamPuffs) {
+      const t = p.age / p.maxLife;
+      const alpha = Math.sin(t * Math.PI) * (0.24 + Math.min(0.26, game.surgeLevel * 0.22));
+      const grad = ctx.createRadialGradient(p.x - p.r * 0.2, p.y - p.r * 0.2, p.r * 0.1, p.x, p.y, p.r);
+      grad.addColorStop(0, `rgba(226, 236, 244, ${alpha.toFixed(3)})`);
+      grad.addColorStop(0.65, `rgba(168, 182, 194, ${(alpha * 0.6).toFixed(3)})`);
+      grad.addColorStop(1, 'rgba(15, 20, 24, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawDashboard() {
+    game.uiButtons = {};
+    const X = 936;
+    const BW = 314;
+
+    // Crisp plain dark slate sidebar matching Omni video & m2_main_ref.png
+    ctx.fillStyle = '#0d1216';
+    ctx.fillRect(MAP_W, 0, W - MAP_W, H);
+    ctx.strokeStyle = 'rgba(232, 238, 242, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(MAP_W + 0.5, 0);
+    ctx.lineTo(MAP_W + 0.5, H);
+    ctx.stroke();
+
+    const loadRatio = game.loadMW / Math.max(1, game.capMW);
+    const isDanger = loadRatio >= 0.88 || game.phase === 'black';
+    const isWarn = loadRatio >= 0.68;
+
+    // Header: DAY + Phase + Query Price
+    ctx.fillStyle = '#8fa0ad';
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    const phaseNames = {
+      title: 'STANDBY',
+      morn:  'MORNING: UPGRADE',
+      day:   'DAY: DEMAND SURGE',
+      alloc: 'ALLOCATE CAPACITY',
+      black: 'BLACKOUT',
+      end:   'WEEK REPORT'
+    };
+    ctx.fillText(`DAY ${game.day}/${game.maxDays} · ${phaseNames[game.phase]}`, X, 36);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#f2b84b';
+    ctx.fillText(`$${game.queryCost.toFixed(3)}/q`, X + BW, 36);
+
+    // 4 Core Telemetry Bars matching f_015.jpg -> f_035.jpg!
+    const bars = [
+      {
+        label: 'MONEY',
+        valText: `$${game.money.toFixed(1)}M`,
+        fill: Math.min(1, game.money / 2.4),
+        color: '#e8eef2',
+        textColor: '#e8eef2'
+      },
+      {
+        label: 'WATER',
+        valText: `${Math.round(game.water)}%`,
+        fill: Math.max(0, Math.min(1, game.water / 100)),
+        color: '#e8eef2',
+        textColor: '#e8eef2'
+      },
+      {
+        label: 'OPINION',
+        valText: `${Math.round(game.opinion)}%`,
+        fill: Math.max(0, Math.min(1, game.opinion / 100)),
+        color: game.opinion < 20 ? '#e04848' : '#f2b84b',
+        textColor: game.opinion < 20 ? '#e04848' : '#e8eef2'
+      },
+      {
+        label: 'DEMAND',
+        valText: `+${Math.round(game.demandBonusPct)}%`,
+        fill: Math.min(1, loadRatio),
+        color: isDanger ? '#df4242' : (isWarn ? '#f2b84b' : '#e8eef2'),
+        textColor: isDanger ? '#df4242' : '#e8eef2'
+      }
+    ];
+
+    let by = 78;
+    for (const b of bars) {
+      ctx.font = 'bold 21px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = b.textColor;
+      ctx.fillText(b.label, X, by);
+      ctx.textAlign = 'right';
+      ctx.fillText(b.valText, X + BW, by);
+
+      // Bar track
+      ctx.fillStyle = '#2a3137';
+      ctx.fillRect(X, by + 12, BW, 15);
+      // Bar fill
+      ctx.fillStyle = b.color;
+      ctx.fillRect(X, by + 12, Math.max(4, BW * b.fill), 15);
+      by += 68;
+    }
+
+    // Live Demand-vs-Power Curve Graph (y = 352..468)
+    const gx = X, gy = 350, gw = BW, gh = 112;
+    ctx.fillStyle = '#090d10';
+    ctx.fillRect(gx, gy, gw, gh);
+    ctx.strokeStyle = 'rgba(232, 238, 242, 0.16)';
+    ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#9fb0bd';
+    ctx.fillText(`GRID LOAD ${Math.round(game.loadMW)} / ${Math.round(game.capMW)} MW`, gx + 8, gy + 16);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = isDanger ? '#ff5c5c' : '#f2b84b';
+    ctx.fillText(isDanger ? 'OVERLOAD!' : `${Math.round(loadRatio * 100)}% CAP`, gx + gw - 8, gy + 16);
+
+    const maxGraphMW = Math.max(150, game.capMW * 1.22, game.peakLoadMW * 1.08);
+    // Power Ceiling Dashed Line
+    const capY = gy + gh - 10 - ((game.capMW / maxGraphMW) * (gh - 34));
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = 'rgba(232, 238, 242, 0.55)';
+    ctx.beginPath();
+    ctx.moveTo(gx + 6, capY);
+    ctx.lineTo(gx + gw - 6, capY);
+    ctx.stroke();
+    ctx.restore();
+
+    // Demand Curve Polyline
+    if (game.curveHistory.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < game.curveHistory.length; i++) {
+        const pt = game.curveHistory[i];
+        const px = gx + 6 + (i / (game.curveHistory.length - 1)) * (gw - 12);
+        const py = gy + gh - 10 - Math.min(1.06, pt.load / maxGraphMW) * (gh - 34);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = isDanger ? '#ff4d4d' : '#f2b84b';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Bottom Action / Request Box (matching WEEK 7 REQUEST box in study/f_015.jpg & f_035.jpg!)
+    const rx = X, ry = 482, rw = BW, rh = 208;
+    const boxColor = game.phase === 'alloc'
+      ? '#f2b84b'
+      : (game.upgradesDone > 0 ? '#5bc46b' : '#e8eef2');
+    ctx.strokeStyle = boxColor;
+    ctx.lineWidth = 2.2;
+    ctx.strokeRect(rx + 1, ry + 1, rw - 2, rh - 2);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e8eef2';
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText(`WEEK 7 · DAY ${game.day}`, rx + 16, ry + 32);
+
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.fillStyle = game.upgradesDone > 0 ? '#5bc46b' : '#f2b84b';
+    ctx.fillText(game.statusNote.slice(0, 31), rx + 16, ry + 56);
+
+    if (game.phase === 'morn') {
+      const nextUpg = UPGRADES[Math.min(game.upgradesDone, UPGRADES.length - 1)];
+      ctx.fillStyle = '#b9c7d2';
+      ctx.font = '12px "Courier New", monospace';
+      ctx.fillText(nextUpg.desc.slice(0, 36), rx + 16, ry + 78);
+
+      // Install Chip Button + Hold Button
+      const b1 = { x: rx + 16, y: ry + 94, w: rw - 32, h: 48 };
+      const b2 = { x: rx + 16, y: ry + 150, w: rw - 32, h: 40 };
+      game.uiButtons.install = b1;
+      game.uiButtons.hold = b2;
+
+      ctx.fillStyle = 'rgba(242, 184, 75, 0.18)';
+      ctx.fillRect(b1.x, b1.y, b1.w, b1.h);
+      ctx.strokeStyle = '#f2b84b';
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(b1.x, b1.y, b1.w, b1.h);
+      ctx.fillStyle = '#f2b84b';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.fillText(`[SPACE] INSTALL ${nextUpg.name}`, b1.x + 10, b1.y + 29);
+
+      ctx.fillStyle = 'rgba(232, 238, 242, 0.07)';
+      ctx.fillRect(b2.x, b2.y, b2.w, b2.h);
+      ctx.strokeStyle = 'rgba(232, 238, 242, 0.35)';
+      ctx.strokeRect(b2.x, b2.y, b2.w, b2.h);
+      ctx.fillStyle = '#c8d4de';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.fillText('[S] HOLD SILICON STEADY', b2.x + 12, b2.y + 25);
+    } else if (game.phase === 'alloc' || game.phase === 'day') {
+      const opts = [
+        { key: 'sell', label: '[1] SELL CAPACITY', sub: '+$$$ · Jevons surge!', col: '#f2b84b' },
+        { key: 'save', label: '[2] SAVE BUFFER',   sub: '+14 MW grid reserve', col: '#7fd4ff' },
+        { key: 'cap',  label: '[3] CAP INTAKE',    sub: 'Throttle load · +Town', col: '#5bc46b' }
+      ];
+      let oy = ry + 72;
+      for (const o of opts) {
+        const rect = { x: rx + 16, y: oy, w: rw - 32, h: 39 };
+        game.uiButtons[o.key] = rect;
+        ctx.fillStyle = game.phase === 'alloc' ? 'rgba(232,238,242,0.09)' : 'rgba(232,238,242,0.04)';
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+        ctx.strokeStyle = o.col;
+        ctx.lineWidth = game.phase === 'alloc' ? 1.6 : 1.0;
+        ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+        ctx.fillStyle = o.col;
+        ctx.font = 'bold 13px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(o.label, rect.x + 10, rect.y + 17);
+        ctx.fillStyle = '#a8b7c4';
+        ctx.font = '11px "Courier New", monospace';
+        ctx.fillText(o.sub, rect.x + 10, rect.y + 32);
+        oy += 44;
+      }
+    }
+  }
+
+  function drawMapToast() {
+    if (game.toastTimer <= 0 || !game.paradoxToast) return;
+    const alpha = Math.min(1, game.toastTimer * 1.4);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(13, 18, 22, 0.88)';
+    ctx.fillRect(26, 22, 590, 38);
+    ctx.strokeStyle = '#f2b84b';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(26, 22, 590, 38);
+    ctx.fillStyle = '#f2b84b';
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(game.paradoxToast, 40, 46);
+    ctx.restore();
+  }
+
+  function drawCursorArrow() {
+    // Crisp architectural white-black pointer matching study/f_015.jpg when over map
+    if (game.phase === 'title' || game.phase === 'black' || game.phase === 'end') return;
+    const x = game.cursor.x, y = game.cursor.y;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 22);
+    ctx.lineTo(6, 17);
+    ctx.lineTo(11, 26);
+    ctx.lineTo(14, 24);
+    ctx.lineTo(9, 15);
+    ctx.lineTo(16, 15);
+    ctx.closePath();
+    ctx.fillStyle = '#0f1418';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#e8eef2';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawOverlays() {
+    if (game.phase === 'title') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(11, 15, 19, 0.78)';
+      ctx.fillRect(0, 0, MAP_W, H);
+      ctx.strokeStyle = '#f2b84b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(96, 170, 720, 370);
+      ctx.fillStyle = 'rgba(15, 20, 24, 0.94)';
+      ctx.fillRect(96, 170, 720, 370);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f2b84b';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.fillText('GROUP 18 · JEVONS PARADOX INFRASTRUCTURE SIM', 136, 222);
+
+      ctx.fillStyle = '#e8eef2';
+      ctx.font = 'bold 46px "Courier New", monospace';
+      ctx.fillText('CAPACITY CRISIS', 136, 278);
+
+      ctx.fillStyle = '#c4d0da';
+      ctx.font = '16px "Courier New", monospace';
+      ctx.fillText('You cut the cost of a query in half.', 136, 328);
+      ctx.fillText('Your customers order three times as many.', 136, 354);
+
+      ctx.fillStyle = '#8fa0ad';
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillText('MORNING: Snap efficiency chips into data-center lots [SPACE / CLICK]', 136, 404);
+      ctx.fillText('ALLOCATE: [1] SELL capacity  [2] SAVE reserve  [3] CAP intake', 136, 430);
+      ctx.fillText('GOAL: Survive 7 days profitable without plunging the town into BLACKOUT.', 136, 456);
+
+      ctx.fillStyle = '#f2b84b';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.fillText('[ PRESS ENTER OR CLICK TO OPEN DAY 1 ]', 136, 506);
+      ctx.restore();
+    } else if (game.phase === 'black') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(7, 9, 12, 0.84)';
+      ctx.fillRect(0, 0, MAP_W, H);
+      ctx.fillStyle = '#141014';
+      ctx.fillRect(110, 175, 690, 360);
+      ctx.strokeStyle = '#e04848';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(110, 175, 690, 360);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#e04848';
+      ctx.font = 'bold 42px "Courier New", monospace';
+      ctx.fillText('TOWN BLACKOUT', 150, 244);
+
+      ctx.fillStyle = '#e8eef2';
+      ctx.font = '17px "Courier New", monospace';
+      ctx.fillText(`Day ${game.day} afternoon demand (${Math.round(game.peakLoadMW)} MW) outran substation supply (${Math.round(game.capMW)} MW).`, 150, 294);
+      ctx.fillStyle = '#f2b84b';
+      ctx.fillText(`Efficiency chips installed: ${game.upgradesDone} · Query cost dropped to $${game.queryCost.toFixed(3)}`, 150, 336);
+      ctx.fillStyle = '#b9c7d2';
+      ctx.fillText(`Sold: ${game.soldCount}d   Saved: ${game.savedCount}d   Capped: ${game.cappedCount}d   Revenue: $${game.money.toFixed(2)}M`, 150, 374);
+      ctx.fillText('Jevons’ Paradox: cheaper compute multiplied total power draw.', 150, 412);
+
+      ctx.fillStyle = '#e8eef2';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.fillText('[ PRESS R OR CLICK TO REBUILD WEEK ]', 150, 484);
+      ctx.restore();
+    } else if (game.phase === 'end') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(9, 13, 17, 0.82)';
+      ctx.fillRect(0, 0, MAP_W, H);
+      ctx.fillStyle = '#0f151b';
+      ctx.fillRect(96, 145, 720, 425);
+      ctx.strokeStyle = '#5bc46b';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(96, 145, 720, 425);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#5bc46b';
+      ctx.font = 'bold 15px "Courier New", monospace';
+      ctx.fillText('DAY 7 COMPLETE · GRID SURVIVED', 136, 192);
+
+      ctx.fillStyle = '#e8eef2';
+      ctx.font = 'bold 40px "Courier New", monospace';
+      ctx.fillText('WEEK REPORT', 136, 240);
+
+      ctx.font = '17px "Courier New", monospace';
+      ctx.fillStyle = '#f2b84b';
+      ctx.fillText(`CAPACITY SOLD: ${game.soldCount} days   SAVED: ${game.savedCount} days   CAPPED: ${game.cappedCount} days`, 136, 292);
+      ctx.fillStyle = '#e8eef2';
+      ctx.fillText(`FINAL TREASURY: $${game.money.toFixed(2)}M     PEAK GRID DRAW: ${Math.round(game.peakLoadMW)} / ${Math.round(game.capMW)} MW`, 136, 330);
+      ctx.fillText(`TOWN OPINION:   ${Math.round(game.opinion)}%         COOLING WATER:  ${Math.round(game.water)}%`, 136, 368);
+
+      const verdict = game.soldCount >= 3
+        ? 'You cut power per query in half — and nearly burned the grid down selling the rebound.'
+        : 'You buffered and capped the rebound: lower profits, but every house kept its lights.';
+      ctx.fillStyle = '#b4c4d0';
+      ctx.font = '15px "Courier New", monospace';
+      ctx.fillText(verdict, 136, 424);
+
+      ctx.fillStyle = '#f2b84b';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.fillText('[ PRESS R OR CLICK FOR NEW WEEK ]', 136, 515);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#0f1418';
+    ctx.fillRect(0, 0, W, H);
+
+    // 1. Base Isometric Town + Substation Map (crossfading calm -> surge layers!)
+    if (assets.ready && assets.mapCalm && assets.mapSurge) {
+      ctx.drawImage(assets.mapCalm, 0, 0);
+      const surgeBlend = game.phase === 'black'
+        ? 0
+        : Math.max(0, Math.min(1, (game.surgeLevel - 0.20) * 1.15));
+      if (surgeBlend > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = surgeBlend;
+        ctx.drawImage(assets.mapSurge, 0, 0, MAP_W, H, 0, 0, MAP_W, H);
+        ctx.restore();
+      }
+    }
+
+    // 2. Dynamic Neighborhood House Window Flicker / Dimming
+    drawTownWindowFlicker();
+
+    // 3. 4 Isometric Chip / Server Hall Expansion Lots
+    for (const s of game.slots) {
+      const hovered = Math.hypot(game.cursor.x - s.cx, (game.cursor.y - s.cy) * 1.6) < 88;
+      drawIsometricLot(s, hovered);
+    }
+
+    // 4. Overhead High-Voltage Amber Power Cables & Surging Pulses
+    drawPowerCablesAndSurges();
+
+    // 5. Rising Cooling Tower Steam Plumes
+    drawCoolingSteam();
+
+    // 6. Sparks on chip snap / overload
+    for (const s of game.sparks) {
+      const a = 1 - s.age / s.maxLife;
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = a;
+      ctx.fillRect(s.x - 2, s.y - 2, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+
+    // 7. Atmospheric Vignette on Map View
+    const vig = ctx.createRadialGradient(MAP_W * 0.48, H * 0.52, 220, MAP_W * 0.48, H * 0.52, 620);
+    vig.addColorStop(0, 'rgba(15,20,24,0)');
+    vig.addColorStop(1, game.phase === 'black' ? 'rgba(4,6,8,0.68)' : 'rgba(6,10,14,0.38)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, MAP_W, H);
+
+    // 8. Live Jevons Toast + Right Plain Dashboard + Cursor + Endings
+    drawMapToast();
+    drawDashboard();
+    drawCursorArrow();
+    drawOverlays();
+  }
+
+  // Expose telemetry state for automated playtest (`play.mjs`)
+  window.__game = {
+    get state() {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        phase: game.phase,
+        day: game.day,
+        maxDays: game.maxDays,
+        dayProgress: +game.dayProgress.toFixed(3),
+        money: game.money,
+        water: Math.round(game.water),
+        opinion: Math.round(game.opinion),
+        demandBonusPct: Math.round(game.demandBonusPct),
+        loadMW: +game.loadMW.toFixed(1),
+        capMW: +game.capMW.toFixed(1),
+        loadRatio: +(game.loadMW / Math.max(1, game.capMW)).toFixed(3),
+        surgeLevel: +game.surgeLevel.toFixed(3),
+        upgradesDone: game.upgradesDone,
+        soldCount: game.soldCount,
+        savedCount: game.savedCount,
+        cappedCount: game.cappedCount,
+        slots: game.slots.map(s => ({
+          id: s.id, cx: s.cx, cy: s.cy, installed: s.installed, level: s.level
+        })),
+        viewportRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+      };
+    }
+  };
+
+  resetGame();
+
+  let lastTs = performance.now();
+  function frame(ts) {
+    const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
+    lastTs = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

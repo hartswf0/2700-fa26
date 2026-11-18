@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<link rel="icon" href="data:," />
+<title>That One Team — Group 8 (M2)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #09080d;
+    color: #f2f2f2;
+    overflow: hidden;
+    font-family: "Courier New", Courier, monospace;
+    user-select: none;
+  }
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #09080d;
+  }
+  canvas {
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    display: block;
+    background: #14121c;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.85);
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // Offscreen buffer so we can apply crisp progressive saturation drain cleanly
+  const sceneCanvas = document.createElement('canvas');
+  sceneCanvas.width = W;
+  sceneCanvas.height = H;
+  const sctx = sceneCanvas.getContext('2d');
+
+  // Query parameters: ?autostart & ?seed=N
+  const params = new URLSearchParams(window.location.search);
+  const AUTOSTART = params.has('autostart');
+  const INITIAL_SEED = Number.isFinite(Number(params.get('seed'))) ? (Number(params.get('seed')) >>> 0) : 7;
+
+  // Deterministic PRNG (Mulberry32)
+  let rngState = INITIAL_SEED || 7;
+  function rand() {
+    let t = (rngState += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  // Palette from spec.json & study.json
+  const PAL = {
+    bg: '#14121c',
+    fg: '#f2f2f2',
+    gold: '#ffd84a',
+    violet: '#7b3fe4',
+    violetDark: '#231b38',
+    charcoal: '#24262a',
+    monoBg: '#0d0e12'
+  };
+
+  // Load Nano Banana PNG cutouts & Lyria BGM
+  const IMAGES = {};
+  const ASSET_PATHS = {
+    player: '../assets/player_sprite_with_ability_states.png',
+    tiles: '../assets/tile_set_colour_and_greyscale_versions.png',
+    sound: '../assets/sound_set_that_thins_out.png'
+  };
+  let assetsLoaded = 0;
+  const totalAssets = Object.keys(ASSET_PATHS).length;
+  for (const [key, src] of Object.entries(ASSET_PATHS)) {
+    const img = new Image();
+    img.onload = () => { assetsLoaded++; };
+    img.onerror = () => { assetsLoaded++; };
+    img.src = src;
+    IMAGES[key] = img;
+  }
+
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.45;
+  let audioUnlocked = false;
+  let audioCtx = null;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!audioUnlocked) {
+      audioUnlocked = true;
+      syncBgmVolume();
+      bgm.play().catch(() => {});
+    }
+  }
+
+  function syncBgmVolume() {
+    // Music thins out level by level until silent in LAST WALK & END
+    const vols = [0.46, 0.30, 0.16, 0.06, 0.0];
+    const target = (gameState === 'walk' || gameState === 'end') ? 0 : (vols[currentLevel] ?? 0);
+    bgm.volume = Math.max(0, Math.min(1, target));
+    if (target === 0 && !bgm.paused) bgm.pause();
+    else if (target > 0 && audioUnlocked && bgm.paused) bgm.play().catch(() => {});
+  }
+
+  // Procedural WebAudio SFX that also thin out as abilities & sound drain
+  function playSfx(kind) {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    const now = audioCtx.currentTime;
+    const richness = Math.max(0, 1 - currentLevel * 0.24); // 1.0 -> 0.04
+
+    if (kind === 'step') {
+      // Quiet solitary footstep (especially poignant in LAST WALK)
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(gameState === 'walk' ? 95 : 140, now);
+      osc.frequency.exponentialRampToValueAtTime(52, now + 0.055);
+      g.gain.setValueAtTime(gameState === 'walk' ? 0.07 : 0.04 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.065);
+      return;
+    }
+
+    if (richness <= 0.02 && kind !== 'take') return;
+
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g).connect(audioCtx.destination);
+
+    if (kind === 'jump') {
+      osc.type = currentLevel < 2 ? 'square' : 'sine';
+      osc.frequency.setValueAtTime(240, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 0.12);
+      g.gain.setValueAtTime(0.09 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      osc.start(now); osc.stop(now + 0.14);
+    } else if (kind === 'double') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.16);
+      g.gain.setValueAtTime(0.11 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      osc.start(now); osc.stop(now + 0.18);
+    } else if (kind === 'dash') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(620, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+      g.gain.setValueAtTime(0.11 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.start(now); osc.stop(now + 0.17);
+    } else if (kind === 'wall') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(310, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.11);
+      g.gain.setValueAtTime(0.09 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now); osc.stop(now + 0.13);
+    } else if (kind === 'take') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520 - currentLevel * 70, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.55);
+      g.gain.setValueAtTime(0.15, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+      osc.start(now); osc.stop(now + 0.6);
+    } else if (kind === 'reset') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(190, now);
+      osc.frequency.linearRampToValueAtTime(75, now + 0.25);
+      g.gain.setValueAtTime(0.12, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.27);
+      osc.start(now); osc.stop(now + 0.28);
+    }
+  }
+
+  // Exact pixel sprite atlas coordinates measured from Nano Banana cutouts
+  const SPRITES = {
+    player: {
+      idle:     { x: 40,  y: 58,  w: 101, h: 173 },
+      run1:     { x: 203, y: 59,  w: 149, h: 170 },
+      run2:     { x: 407, y: 29,  w: 155, h: 184 },
+      djump:    { x: 608, y: 17,  w: 150, h: 196 },
+      dash:     { x: 795, y: 38,  w: 192, h: 196 },
+      wall:     { x: 46,  y: 289, w: 106, h: 171 },
+      glide1:   { x: 560, y: 313, w: 193, h: 122 },
+      glide2:   { x: 779, y: 316, w: 216, h: 110 },
+      drain0:   { x: 43,  y: 532, w: 110, h: 170 },
+      drain1:   { x: 208, y: 536, w: 129, h: 165 },
+      drain2:   { x: 402, y: 534, w: 108, h: 168 },
+      drain3:   { x: 561, y: 530, w: 111, h: 171 },
+      drain4:   { x: 714, y: 538, w: 113, h: 164 },
+      drain5:   { x: 858, y: 538, w: 129, h: 164 },
+      monoRun1: { x: 32,  y: 831, w: 140, h: 159 },
+      monoRun2: { x: 204, y: 829, w: 140, h: 162 },
+      monoFall: { x: 383, y: 784, w: 157, h: 149 },
+      monoSit1: { x: 734, y: 854, w: 97,  h: 136 },
+      monoSit2: { x: 889, y: 861, w: 97,  h: 132 }
+    },
+    tiles: {
+      // Vivid top half
+      goldBlock:   { x: 33,  y: 30,  w: 86,  h: 87 },
+      purpleBlock: { x: 130, y: 30,  w: 86,  h: 86 },
+      purpleTop:   { x: 226, y: 30,  w: 87,  h: 86 },
+      island1:     { x: 32,  y: 222, w: 87,  h: 85 },
+      island2:     { x: 130, y: 238, w: 87,  h: 69 },
+      darkFill:    { x: 130, y: 413, w: 85,  h: 86 },
+      gemViolet:   { x: 541, y: 37,  w: 55,  h: 62 },
+      gemGold:     { x: 628, y: 37,  w: 54,  h: 62 },
+      crystalClus: { x: 711, y: 33,  w: 62,  h: 72 },
+      spikesColor: { x: 617, y: 445, w: 84,  h: 51 },
+      chainColor:  { x: 907, y: 201, w: 16,  h: 95 },
+      archColor:   { x: 524, y: 196, w: 207, h: 205 },
+      // Greyscale bottom half
+      greyGold:    { x: 33,  y: 525, w: 84,  h: 86 },
+      greyBlock:   { x: 130, y: 525, w: 84,  h: 86 },
+      greyTop:     { x: 226, y: 525, w: 85,  h: 86 },
+      greyIsland:  { x: 130, y: 746, w: 84,  h: 56 },
+      greyFill:    { x: 130, y: 909, w: 84,  h: 85 },
+      gemGrey:     { x: 531, y: 534, w: 52,  h: 62 },
+      spikesGrey:  { x: 617, y: 940, w: 84,  h: 52 },
+      chainGrey:   { x: 894, y: 698, w: 16,  h: 141 },
+      archGrey:    { x: 515, y: 704, w: 194, h: 194 }
+    },
+    sound: [
+      { x: 24,  y: 333, w: 198, h: 285 },
+      { x: 246, y: 358, w: 138, h: 259 },
+      { x: 413, y: 394, w: 138, h: 225 },
+      { x: 572, y: 455, w: 123, h: 163 },
+      { x: 724, y: 486, w: 124, h: 131 },
+      { x: 876, y: 470, w: 123, h: 148 }
+    ]
+  };
+
+  // Ability order: all 4 active on Level 1, lost one by one after each level!
+  // Order lost: Level 1 takes GLIDE -> Level 2 takes WALL -> Level 3 takes DOUBLE -> Level 4 takes DASH (+ jump/color/sound) -> Level 5 is LAST WALK
+  const ABILITY_DEFS = [
+    { key: 'dash',   label: 'DASH' },
+    { key: 'double', label: 'DOUBLE' },
+    { key: 'wall',   label: 'WALL' },
+    { key: 'glide',  label: 'GLIDE' }
+  ];
+
+  // 5 handcrafted levels designed around the exact abilities remaining & Omni video composition
+  const LEVELS = [
+    // LEVEL 1: Full Power (DASH, DOUBLE, WALL, GLIDE) — Matches Omni f_001..f_020 closely!
+    {
+      index: 0,
+      title: 'SECTOR 01 · FULLGRANT',
+      subtitle: 'ALL MOVEMENT SYSTEMS ONLINE',
+      saturation: 1.0,
+      takenAfter: 'glide',
+      takenCard: 'GLIDE REVOKED — AIRFOIL PRIVILEGE RECLAIMED',
+      spawn: { x: 110, y: 440 },
+      worldW: 2150,
+      platforms: [
+        // Starting corridor floor + overhang ceiling (just like f_005.jpg!)
+        { x: 0,    y: 520, w: 560, h: 220, style: 'solid' },
+        { x: 0,    y: 140, w: 510, h: 100, style: 'ceiling' },
+        { x: 440,  y: 0,   w: 70,  h: 240, style: 'wall' },
+        // Floating purple islands across void (f_013.jpg!)
+        { x: 700,  y: 440, w: 250, h: 68,  style: 'island' },
+        { x: 1060, y: 500, w: 270, h: 68,  style: 'island' },
+        { x: 1120, y: 310, w: 190, h: 54,  style: 'island' },
+        // Tall vertical purple cliff wall leading up to the elevated Threshold Arch plateau (f_016..f_019!)
+        { x: 1460, y: 310, w: 690, h: 410, style: 'solid' }
+      ],
+      spikes: [
+        // Floor spikes in corridor that runner dashes/jumps over
+        { x: 330, y: 492, w: 68, h: 28 }
+      ],
+      goldBlocks: [
+        { x: 205, y: 205, size: 54 },
+        { x: 262, y: 205, size: 54 }
+      ],
+      chevrons: [
+        { x: 95,  y: 390 },
+        { x: 315, y: 390 }
+      ],
+      gems: [
+        { x: 630,  y: 350, kind: 'violet' },
+        { x: 995,  y: 380, kind: 'gold' },
+        { x: 1390, y: 370, kind: 'violet' },
+        { x: 1565, y: 220, kind: 'gold' }
+      ],
+      chains: [
+        { x: 160, y: 240, len: 115 },
+        { x: 1180, y: 364, len: 95 }
+      ],
+      speaker: { x: 52, y: 520, stage: 0 },
+      exit: { x: 1760, y: 310 }
+    },
+
+    // LEVEL 2: Glide Taken (DASH, DOUBLE, WALL remain) — 68% saturation
+    {
+      index: 1,
+      title: 'SECTOR 02 · HEAVIER AIR',
+      subtitle: 'GLIDE OFFLINE — RELY ON DASH, DOUBLE JUMP & WALL KICK',
+      saturation: 0.68,
+      takenAfter: 'wall',
+      takenCard: 'WALL RUN REVOKED — SURFACE GRIP RECLAIMED',
+      spawn: { x: 90, y: 450 },
+      worldW: 1720,
+      platforms: [
+        { x: 0,    y: 530, w: 380, h: 190, style: 'solid' },
+        { x: 510,  y: 460, w: 240, h: 64,  style: 'island' },
+        { x: 870,  y: 480, w: 240, h: 64,  style: 'island' },
+        // Tall vertical cliff requiring wall-kick + double-jump up to exit plateau
+        { x: 1240, y: 290, w: 480, h: 430, style: 'solid' }
+      ],
+      spikes: [
+        { x: 595, y: 432, w: 64, h: 28 }
+      ],
+      goldBlocks: [],
+      chevrons: [{ x: 180, y: 420 }],
+      gems: [
+        { x: 445, y: 360, kind: 'violet' },
+        { x: 805, y: 375, kind: 'gold' },
+        { x: 1185, y: 340, kind: 'violet' }
+      ],
+      chains: [{ x: 580, y: 524, len: 100 }],
+      speaker: { x: 55, y: 530, stage: 1 },
+      exit: { x: 1490, y: 290 }
+    },
+
+    // LEVEL 3: Wall Taken (DASH, DOUBLE remain) — 38% saturation
+    {
+      index: 2,
+      title: 'SECTOR 03 · PALE STRATA',
+      subtitle: 'WALL GRIP OFFLINE — DASH & DOUBLE JUMP ONLY',
+      saturation: 0.36,
+      takenAfter: 'double',
+      takenCard: 'DOUBLE JUMP REVOKED — THRUSTERS RECLAIMED',
+      spawn: { x: 90, y: 460 },
+      worldW: 1620,
+      platforms: [
+        { x: 0,    y: 540, w: 360, h: 180, style: 'solid' },
+        { x: 520,  y: 445, w: 240, h: 64,  style: 'island' },
+        { x: 910,  y: 365, w: 250, h: 64,  style: 'island' },
+        { x: 1270, y: 430, w: 350, h: 290, style: 'solid' }
+      ],
+      spikes: [
+        { x: 220, y: 512, w: 64, h: 28 }
+      ],
+      goldBlocks: [],
+      chevrons: [],
+      gems: [
+        { x: 440,  y: 350, kind: 'violet' },
+        { x: 835,  y: 280, kind: 'gold' },
+        { x: 1195, y: 320, kind: 'violet' }
+      ],
+      chains: [{ x: 990, y: 429, len: 110 }],
+      speaker: { x: 55, y: 540, stage: 2 },
+      exit: { x: 1455, y: 430 }
+    },
+
+    // LEVEL 4: Double Jump Taken (DASH + single jump only) — 12% saturation (matches f_025..f_040 stone!)
+    {
+      index: 3,
+      title: 'SECTOR 04 · ASHEN RUN',
+      subtitle: 'THRUSTERS OFFLINE — GROUNDED LEAP & DASH ONLY',
+      saturation: 0.10,
+      takenAfter: 'dash',
+      takenCard: 'DASH, COLOUR & SOUND REVOKED — NOTHING LEFT',
+      spawn: { x: 90, y: 470 },
+      worldW: 1500,
+      platforms: [
+        { x: 0,    y: 550, w: 420, h: 170, style: 'solid' },
+        { x: 555,  y: 540, w: 360, h: 180, style: 'solid' },
+        { x: 1060, y: 530, w: 440, h: 190, style: 'solid' }
+      ],
+      spikes: [],
+      goldBlocks: [],
+      chevrons: [],
+      gems: [
+        { x: 485, y: 455, kind: 'grey' },
+        { x: 985, y: 445, kind: 'grey' }
+      ],
+      chains: [{ x: 680, y: 0, len: 160 }],
+      speaker: { x: 60, y: 550, stage: 4 },
+      exit: { x: 1300, y: 530 }
+    },
+
+    // LEVEL 5 ("LAST WALK"): No abilities, no jumping, no color, no music — slow quiet walk in dark room
+    {
+      index: 4,
+      title: 'SECTOR 05 · QUIET CORRIDOR',
+      subtitle: '',
+      saturation: 0.0,
+      takenAfter: null,
+      takenCard: '',
+      spawn: { x: 100, y: 480 },
+      worldW: 1180,
+      platforms: [
+        { x: 0, y: 560, w: 1250, h: 160, style: 'solid' }
+      ],
+      spikes: [],
+      goldBlocks: [],
+      chevrons: [],
+      gems: [],
+      chains: [
+        { x: 310, y: 0, len: 190 },
+        { x: 670, y: 0, len: 220 }
+      ],
+      speaker: { x: 460, y: 560, stage: 5 },
+      exit: { x: 980, y: 560 }
+    }
+  ];
+
+  // Ambient background stars / geometric motes
+  const MOTES = Array.from({ length: 65 }, () => ({
+    x: rand() * 2400,
+    y: rand() * 660,
+    size: 2 + rand() * 7,
+    speed: 6 + rand() * 18,
+    parallax: 0.18 + rand() * 0.42,
+    diamond: rand() > 0.45,
+    hueGold: rand() > 0.65,
+    phase: rand() * Math.PI * 2
+  }));
+
+  // Input handling
+  const keys = Object.create(null);
+  const justPressed = Object.create(null);
+
+  window.addEventListener('keydown', (e) => {
+    ensureAudio();
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (!keys[e.code]) justPressed[e.code] = true;
+    keys[e.code] = true;
+  }, { passive: false });
+
+  window.addEventListener('keyup', (e) => {
+    keys[e.code] = false;
+  });
+
+  window.addEventListener('pointerdown', () => {
+    ensureAudio();
+    if (gameState === 'title') startGame();
+  });
+
+  // Core Game State Machine ('title' | 'lvl' | 'take' | 'reset' | 'walk' | 'end')
+  let gameState = AUTOSTART ? 'lvl' : 'title';
+  let currentLevel = 0;
+  let stateTimer = 0;
+  let totalTime = 0;
+  let resetsCount = 0;
+  let lastTakenAbility = null;
+
+  const abilities = {
+    dash: true,
+    double: true,
+    wall: true,
+    glide: true
+  };
+  const hudFlash = { dash: 0, double: 0, wall: 0, glide: 0 };
+
+  const player = {
+    x: 110, y: 440,
+    vx: 0, vy: 0,
+    w: 44, h: 68,
+    facing: 1,
+    onGround: false,
+    coyote: 0,
+    onWall: 0, // -1 left wall, +1 right wall
+    doubleUsed: false,
+    dashCooldown: 0,
+    dashTimer: 0,
+    dashDir: 1,
+    gliding: false,
+    animTime: 0,
+    stepTimer: 0
+  };
+
+  let camX = 0;
+  let displaySaturation = 1.0;
+  let particles = [];
+  let shockwaves = [];
+  let afterimages = [];
+
+  function spawnParticles(x, y, count, color, speed = 180, size = 5) {
+    for (let i = 0; i < count; i++) {
+      const ang = rand() * Math.PI * 2;
+      const spd = (0.3 + rand() * 0.7) * speed;
+      particles.push({
+        x, y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 35,
+        life: 0.35 + rand() * 0.4,
+        maxLife: 0.75,
+        size: size * (0.6 + rand() * 0.7),
+        color
+      });
+    }
+  }
+
+  function loadLevel(idx) {
+    currentLevel = idx;
+    const lvl = LEVELS[idx];
+    player.x = lvl.spawn.x;
+    player.y = lvl.spawn.y;
+    player.vx = 0;
+    player.vy = 0;
+    player.facing = 1;
+    player.onGround = false;
+    player.coyote = 0;
+    player.onWall = 0;
+    player.doubleUsed = false;
+    player.dashCooldown = 0;
+    player.dashTimer = 0;
+    player.gliding = false;
+    camX = Math.max(0, player.x - 360);
+    afterimages = [];
+    syncBgmVolume();
+  }
+
+  function startGame() {
+    abilities.dash = true;
+    abilities.double = true;
+    abilities.wall = true;
+    abilities.glide = true;
+    lastTakenAbility = null;
+    resetsCount = 0;
+    displaySaturation = 1.0;
+    loadLevel(0);
+    gameState = 'lvl';
+    stateTimer = 0;
+    syncBgmVolume();
+  }
+
+  loadLevel(0);
+
+  function triggerReset() {
+    if (gameState !== 'lvl') return;
+    resetsCount++;
+    gameState = 'reset';
+    stateTimer = 0.42;
+    playSfx('reset');
+    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, 22, PAL.gold, 240, 6);
+  }
+
+  function triggerExitReached() {
+    const lvl = LEVELS[currentLevel];
+    if (gameState === 'walk') {
+      gameState = 'end';
+      stateTimer = 0;
+      player.vx = 0;
+      syncBgmVolume();
+      return;
+    }
+    // Transition 'lvl' -> 'take'
+    gameState = 'take';
+    stateTimer = 1.05;
+    lastTakenAbility = lvl.takenAfter;
+    if (lastTakenAbility && abilities[lastTakenAbility] !== undefined) {
+      abilities[lastTakenAbility] = false;
+      hudFlash[lastTakenAbility] = 1.0;
+    }
+    playSfx('take');
+    // Dramatic golden shockwave sphere at the threshold arch (matching sheet.jpg frame 20!)
+    const ex = lvl.exit.x;
+    const ey = lvl.exit.y - 82;
+    shockwaves.push({ x: ex, y: ey, r: 12, maxR: 340, life: 1.0 });
+    spawnParticles(ex, ey, 48, PAL.gold, 310, 6);
+    spawnParticles(ex, ey, 28, PAL.violet, 240, 5);
+  }
+
+  function aabb(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  function updatePlayer(dt) {
+    const lvl = LEVELS[currentLevel];
+    const isWalkOnly = (gameState === 'walk');
+
+    const moveLeft = keys['ArrowLeft'] || keys['KeyA'];
+    const moveRight = keys['ArrowRight'] || keys['KeyD'];
+    const jumpPressed = justPressed['Space'] || justPressed['ArrowUp'] || justPressed['KeyW'] || justPressed['KeyZ'];
+    const jumpHeld = keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ'];
+    const dashPressed = justPressed['ShiftLeft'] || justPressed['ShiftRight'] || justPressed['KeyX'] || justPressed['KeyK'];
+
+    // Decay HUD flash
+    for (const k of Object.keys(hudFlash)) {
+      if (hudFlash[k] > 0) hudFlash[k] = Math.max(0, hudFlash[k] - dt * 1.4);
+    }
+
+    if (player.dashCooldown > 0) player.dashCooldown -= dt;
+    if (player.coyote > 0) player.coyote -= dt;
+
+    // 1. DASH ability
+    if (!isWalkOnly && abilities.dash && dashPressed && player.dashCooldown <= 0 && player.dashTimer <= 0) {
+      player.dashDir = moveLeft ? -1 : (moveRight ? 1 : player.facing);
+      player.facing = player.dashDir;
+      player.dashTimer = 0.19;
+      player.dashCooldown = 0.48;
+      player.vy = 0;
+      hudFlash.dash = 0.75;
+      playSfx('dash');
+      spawnParticles(player.x + player.w / 2, player.y + player.h / 2, 16, PAL.gold, 210, 5);
+    }
+
+    if (player.dashTimer > 0) {
+      player.dashTimer -= dt;
+      player.vx = player.dashDir * 720;
+      player.vy = 0;
+      afterimages.push({
+        x: player.x, y: player.y, facing: player.facing,
+        life: 0.22, maxLife: 0.22, color: PAL.gold
+      });
+    } else {
+      // Horizontal run / slow walk
+      const maxSpeed = isWalkOnly ? 135 : (355 - currentLevel * 18);
+      const accel = player.onGround ? 2600 : 1750;
+      let dir = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+      if (dir !== 0) {
+        player.facing = dir;
+        player.vx += dir * accel * dt;
+        if (Math.abs(player.vx) > maxSpeed) {
+          player.vx = dir * maxSpeed;
+        }
+      } else {
+        const drag = player.onGround ? 2400 : 800;
+        if (Math.abs(player.vx) <= drag * dt) player.vx = 0;
+        else player.vx -= Math.sign(player.vx) * drag * dt;
+      }
+
+      // Gravity
+      let grav = 1780;
+      player.gliding = false;
+
+      // 4. GLIDE ability (hold jump while descending)
+      if (!isWalkOnly && abilities.glide && !player.onGround && player.vy > 40 && jumpHeld && player.onWall === 0) {
+        player.gliding = true;
+        grav = 340;
+        if (player.vy > 135) player.vy = 135;
+        hudFlash.glide = Math.max(hudFlash.glide, 0.35);
+        if (rand() < 0.45) {
+          particles.push({
+            x: player.x + player.w * 0.5,
+            y: player.y + player.h * 0.65,
+            vx: -player.facing * (40 + rand() * 50),
+            vy: 20 + rand() * 30,
+            life: 0.28, maxLife: 0.28, size: 4, color: PAL.violet
+          });
+        }
+      }
+
+      // 3. WALL SLIDE (if WALL ability active and pressing into a wall while falling)
+      if (!isWalkOnly && abilities.wall && player.onWall !== 0 && !player.onGround && player.vy > 0) {
+        if ((player.onWall === 1 && moveRight) || (player.onWall === -1 && moveLeft)) {
+          if (player.vy > 150) player.vy = 150;
+          hudFlash.wall = Math.max(hudFlash.wall, 0.35);
+          if (rand() < 0.35) {
+            particles.push({
+              x: player.onWall === 1 ? player.x + player.w : player.x,
+              y: player.y + player.h * 0.4,
+              vx: -player.onWall * 35, vy: -30,
+              life: 0.25, maxLife: 0.25, size: 4, color: PAL.gold
+            });
+          }
+        }
+      }
+
+      player.vy = Math.min(980, player.vy + grav * dt);
+
+      // Jump / Wall-Jump / Double-Jump (no jumping at all in LAST WALK!)
+      if (!isWalkOnly && jumpPressed) {
+        if (player.onGround || player.coyote > 0) {
+          player.vy = -650;
+          player.onGround = false;
+          player.coyote = 0;
+          playSfx('jump');
+          spawnParticles(player.x + player.w / 2, player.y + player.h, 10, '#f2f2f2', 120, 4);
+        } else if (abilities.wall && player.onWall !== 0) {
+          // Wall kick!
+          player.vy = -640;
+          player.vx = -player.onWall * 430;
+          player.facing = -player.onWall;
+          player.doubleUsed = false; // Wall kick refreshes air control nicely
+          hudFlash.wall = 0.85;
+          playSfx('wall');
+          spawnParticles(
+            player.onWall === 1 ? player.x + player.w : player.x,
+            player.y + player.h * 0.5,
+            16, PAL.gold, 220, 5
+          );
+        } else if (abilities.double && !player.doubleUsed) {
+          player.vy = -620;
+          player.doubleUsed = true;
+          hudFlash.double = 0.85;
+          playSfx('double');
+          // Purple concentric double-jump ring burst (matching f_006 of sheet.jpg!)
+          shockwaves.push({
+            x: player.x + player.w / 2,
+            y: player.y + player.h,
+            r: 6, maxR: 58, life: 0.45, color: '#b47cff'
+          });
+          spawnParticles(player.x + player.w / 2, player.y + player.h, 16, PAL.violet, 170, 5);
+        }
+      }
+    }
+
+    // Move & Collide X
+    player.x += player.vx * dt;
+    if (player.x < 12) { player.x = 12; player.vx = 0; }
+    if (player.x + player.w > lvl.worldW - 12) { player.x = lvl.worldW - 12 - player.w; player.vx = 0; }
+
+    player.onWall = 0;
+    for (const p of lvl.platforms) {
+      if (aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
+        if (player.vx > 0) {
+          player.x = p.x - player.w;
+          player.vx = 0;
+          player.onWall = 1;
+        } else if (player.vx < 0) {
+          player.x = p.x + p.w;
+          player.vx = 0;
+          player.onWall = -1;
+        }
+      }
+    }
+    // Also detect wall proximity within 3px for responsive wall-jumping
+    if (player.onWall === 0 && !player.onGround) {
+      for (const p of lvl.platforms) {
+        if (player.y + player.h > p.y + 8 && player.y < p.y + p.h - 8) {
+          if (Math.abs((player.x + player.w) - p.x) <= 4) player.onWall = 1;
+          else if (Math.abs(player.x - (p.x + p.w)) <= 4) player.onWall = -1;
+        }
+      }
+    }
+
+    // Move & Collide Y
+    const wasOnGround = player.onGround;
+    player.onGround = false;
+    player.y += player.vy * dt;
+    for (const p of lvl.platforms) {
+      if (aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
+        if (player.vy >= 0) {
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+          player.coyote = 0.11;
+          player.doubleUsed = false;
+        } else if (player.vy < 0) {
+          player.y = p.y + p.h;
+          player.vy = 0;
+        }
+      }
+    }
+
+    if (!wasOnGround && player.onGround) {
+      spawnParticles(player.x + player.w / 2, player.y + player.h, 6, '#d8d4e8', 80, 3.5);
+    }
+
+    // Footsteps & dust puffs while running/walking
+    if (player.onGround && Math.abs(player.vx) > 25) {
+      player.animTime += dt * (isWalkOnly ? 4.2 : 10.5);
+      player.stepTimer -= dt;
+      if (player.stepTimer <= 0) {
+        player.stepTimer = isWalkOnly ? 0.44 : 0.22;
+        playSfx('step');
+        if (!isWalkOnly || rand() < 0.5) {
+          particles.push({
+            x: player.x + player.w * 0.5 - player.facing * 10,
+            y: player.y + player.h - 3,
+            vx: -player.facing * (25 + rand() * 35),
+            vy: -12 - rand() * 20,
+            life: 0.26, maxLife: 0.26, size: 4.5, color: '#dcd8ea'
+          });
+        }
+      }
+    } else {
+      player.animTime += dt * 4;
+    }
+
+    // Collectibles (decorative energy crystals)
+    for (const g of lvl.gems) {
+      if (!g.taken && aabb(player.x, player.y, player.w, player.h, g.x - 18, g.y - 22, 36, 44)) {
+        g.taken = true;
+        spawnParticles(g.x, g.y, 14, g.kind === 'gold' ? PAL.gold : PAL.violet, 160, 4.5);
+      }
+    }
+
+    // Hazard checks: spikes or pit fall
+    if (player.y > H + 70) {
+      triggerReset();
+      return;
+    }
+    for (const s of lvl.spikes) {
+      // Forgiving inner hitbox on spikes
+      if (aabb(player.x + 8, player.y + 10, player.w - 16, player.h - 12, s.x + 6, s.y + 8, s.w - 12, s.h - 8)) {
+        triggerReset();
+        return;
+      }
+    }
+
+    // Exit Threshold Arch check
+    const ex = lvl.exit.x;
+    const ey = lvl.exit.y;
+    if (aabb(player.x, player.y, player.w, player.h, ex - 44, ey - 145, 88, 150)) {
+      triggerExitReached();
+    }
+  }
+
+  function update(dt) {
+    totalTime += dt;
+    const lvl = LEVELS[currentLevel];
+
+    // Smoothly drain world saturation toward current level's target
+    const targetSat = (gameState === 'walk' || gameState === 'end') ? 0.0 : lvl.saturation;
+    displaySaturation += (targetSat - displaySaturation) * Math.min(1, dt * 3.2);
+
+    // Restart shortcut in 'end'
+    if (gameState === 'end' && (justPressed['KeyR'] || justPressed['Space'] || justPressed['Enter'])) {
+      startGame();
+    }
+    if (gameState === 'title' && (justPressed['Space'] || justPressed['Enter'] || justPressed['ArrowRight'])) {
+      startGame();
+    }
+
+    if (gameState === 'lvl' || gameState === 'walk') {
+      updatePlayer(dt);
+    } else if (gameState === 'take') {
+      stateTimer -= dt;
+      // Gentle slow-mo float inside the arch as aura detaches
+      player.vx *= 0.88;
+      player.vy *= 0.88;
+      // Drain saturation visibly during 'take' toward next level's target!
+      const nextSat = LEVELS[Math.min(LEVELS.length - 1, currentLevel + 1)].saturation;
+      displaySaturation += (nextSat - displaySaturation) * Math.min(1, dt * 4.5);
+
+      if (stateTimer <= 0) {
+        const nextIdx = currentLevel + 1;
+        if (nextIdx >= 4) {
+          loadLevel(4);
+          gameState = 'walk';
+          syncBgmVolume();
+        } else {
+          loadLevel(nextIdx);
+          gameState = 'lvl';
+          syncBgmVolume();
+        }
+      }
+    } else if (gameState === 'reset') {
+      stateTimer -= dt;
+      if (stateTimer <= 0) {
+        loadLevel(currentLevel);
+        gameState = 'lvl';
+      }
+    } else if (gameState === 'end') {
+      stateTimer += dt;
+    }
+
+    // Smooth camera tracking
+    const targetCamX = Math.max(0, Math.min(lvl.worldW - W, player.x - W * 0.36));
+    camX += (targetCamX - camX) * Math.min(1, dt * 7.5);
+
+    // Update particles, shockwaves, afterimages
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = shockwaves.length - 1; i >= 0; i--) {
+      const sw = shockwaves[i];
+      sw.life -= dt * 1.65;
+      sw.r += (sw.maxR - sw.r) * Math.min(1, dt * 7.5);
+      if (sw.life <= 0) shockwaves.splice(i, 1);
+    }
+    for (let i = afterimages.length - 1; i >= 0; i--) {
+      afterimages[i].life -= dt;
+      if (afterimages[i].life <= 0) afterimages.splice(i, 1);
+    }
+
+    // Clear per-frame justPressed
+    for (const k in justPressed) delete justPressed[k];
+  }
+
+  function drawSprite(targetCtx, img, rect, dx, dy, dw, dh, flipX = false, alpha = 1) {
+    if (!img || !img.complete || img.naturalWidth === 0) return false;
+    targetCtx.save();
+    targetCtx.globalAlpha *= alpha;
+    if (flipX) {
+      targetCtx.translate(dx + dw, dy);
+      targetCtx.scale(-1, 1);
+      targetCtx.drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, dw, dh);
+    } else {
+      targetCtx.drawImage(img, rect.x, rect.y, rect.w, rect.h, dx, dy, dw, dh);
+    }
+    targetCtx.restore();
+    return true;
+  }
+
+  function drawPlatform(g, p, greyMix) {
+    const tilesImg = IMAGES.tiles;
+    const tileS = 64;
+    const cols = Math.max(1, Math.ceil(p.w / tileS));
+    const rows = Math.max(1, Math.ceil(p.h / tileS));
+
+    // Subtle atmospheric purple/stone underglow on vivid levels (matching f_013.jpg!)
+    if (greyMix < 0.85) {
+      g.save();
+      g.globalAlpha = (1 - greyMix) * 0.26;
+      const grad = g.createLinearGradient(p.x, p.y - 18, p.x, p.y + p.h + 28);
+      grad.addColorStop(0, '#9d6bff');
+      grad.addColorStop(0.5, '#5928b5');
+      grad.addColorStop(1, 'rgba(20,18,28,0)');
+      g.fillStyle = grad;
+      g.fillRect(p.x - 10, p.y - 14, p.w + 20, p.h + 32);
+      g.restore();
+    }
+
+    g.save();
+    g.beginPath();
+    g.rect(p.x, p.y, p.w, p.h);
+    g.clip();
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const tx = p.x + c * tileS;
+        const ty = p.y + r * tileS;
+        const isTop = (r === 0 && p.style !== 'ceiling');
+        let colRect = isTop
+          ? (p.style === 'island' ? SPRITES.tiles.island2 : SPRITES.tiles.purpleBlock)
+          : SPRITES.tiles.darkFill;
+        let greyRect = isTop
+          ? (p.style === 'island' ? SPRITES.tiles.greyIsland : SPRITES.tiles.greyBlock)
+          : SPRITES.tiles.greyFill;
+
+        if (greyMix < 0.99) {
+          const ok = drawSprite(g, tilesImg, colRect, tx, ty, tileS + 1, tileS + 1, false, 1);
+          if (!ok) {
+            g.fillStyle = isTop ? '#6c38cc' : '#1b162a';
+            g.fillRect(tx, ty, tileS + 1, tileS + 1);
+          }
+        }
+        if (greyMix > 0.01) {
+          const ok = drawSprite(g, tilesImg, greyRect, tx, ty, tileS + 1, tileS + 1, false, greyMix);
+          if (!ok) {
+            g.fillStyle = `rgba(68,70,76,${greyMix})`;
+            g.fillRect(tx, ty, tileS + 1, tileS + 1);
+          }
+        }
+      }
+    }
+
+    // Crisp rim highlight along top surface (violet -> cool stone grey)
+    g.fillStyle = greyMix > 0.7 ? 'rgba(155,158,166,0.45)' : 'rgba(196,154,255,0.65)';
+    g.fillRect(p.x, p.y, p.w, 3);
+    g.restore();
+  }
+
+  function renderWorld(g) {
+    const lvl = LEVELS[currentLevel];
+    const greyMix = 1 - displaySaturation;
+
+    // 1. Deep night sky background (#14121c -> #0d0e12)
+    const sky = g.createLinearGradient(0, 0, 0, H);
+    if (greyMix < 0.9) {
+      sky.addColorStop(0, '#0f0d18');
+      sky.addColorStop(0.55, '#161324');
+      sky.addColorStop(1, '#211934');
+    } else {
+      sky.addColorStop(0, '#090a0d');
+      sky.addColorStop(1, '#14161b');
+    }
+    g.fillStyle = sky;
+    g.fillRect(0, 0, W, H);
+
+    // 2. Parallax distant monolith silhouettes (seen in f_013 & f_025!)
+    g.save();
+    for (let i = 0; i < 9; i++) {
+      const mx = ((i * 310 - camX * 0.22) % 2790 + 2790) % 2790 - 220;
+      const mh = 180 + (i % 3) * 95;
+      const mw = 130 + (i % 4) * 45;
+      g.fillStyle = greyMix > 0.7 ? 'rgba(26,28,33,0.65)' : 'rgba(34,25,54,0.55)';
+      g.fillRect(mx, H - mh, mw, mh);
+      // Faint geometric inner frame
+      g.strokeStyle = greyMix > 0.7 ? 'rgba(60,62,68,0.25)' : 'rgba(123,63,228,0.18)';
+      g.lineWidth = 2;
+      g.strokeRect(mx + 16, H - mh + 18, mw - 32, mh - 36);
+    }
+    g.restore();
+
+    // 3. Ambient floating geometric diamonds & pixel motes
+    for (const m of MOTES) {
+      const sx = ((m.x - camX * m.parallax - totalTime * m.speed * 0.25) % (W + 160) + (W + 160)) % (W + 160) - 80;
+      const sy = m.y + Math.sin(totalTime * 1.4 + m.phase) * 8;
+      const pulse = 0.35 + 0.35 * Math.sin(totalTime * 2.1 + m.phase);
+      g.save();
+      g.translate(sx, sy);
+      if (m.diamond) g.rotate(Math.PI / 4);
+      if (greyMix > 0.85) {
+        g.fillStyle = `rgba(140,144,152,${pulse * 0.35})`;
+      } else {
+        g.fillStyle = m.hueGold
+          ? `rgba(255,216,74,${pulse * 0.7})`
+          : `rgba(155,102,255,${pulse * 0.65})`;
+      }
+      g.fillRect(-m.size / 2, -m.size / 2, m.size, m.size);
+      g.restore();
+    }
+
+    // World space transform
+    g.save();
+    g.translate(-Math.round(camX), 0);
+
+    // 4. Hanging chains
+    for (const ch of lvl.chains) {
+      const rect = greyMix > 0.6 ? SPRITES.tiles.chainGrey : SPRITES.tiles.chainColor;
+      if (!drawSprite(g, IMAGES.tiles, rect, ch.x, ch.y, 18, ch.len)) {
+        g.strokeStyle = '#5c4b7d';
+        g.lineWidth = 4;
+        g.beginPath(); g.moveTo(ch.x + 8, ch.y); g.lineTo(ch.x + 8, ch.y + ch.len); g.stroke();
+      }
+    }
+
+    // 5. Directional golden chevrons on corridor wall (like f_005.jpg!)
+    for (const cv of lvl.chevrons) {
+      g.save();
+      g.globalAlpha = 0.28 * (1 - greyMix * 0.7);
+      g.strokeStyle = PAL.gold;
+      g.lineWidth = 7;
+      for (let k = 0; k < 2; k++) {
+        const cx = cv.x + k * 24;
+        g.beginPath();
+        g.moveTo(cx, cv.y - 22);
+        g.lineTo(cx + 20, cv.y);
+        g.lineTo(cx, cv.y + 22);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    // 6. Diegetic Sound Tower ("Sound set that thins out" sprite!)
+    if (lvl.speaker) {
+      const stg = Math.min(5, lvl.speaker.stage);
+      const spRect = SPRITES.sound[stg];
+      const spH = stg === 0 ? 128 : (stg === 1 ? 116 : 92);
+      const spW = spH * (spRect.w / spRect.h);
+      drawSprite(g, IMAGES.sound, spRect, lvl.speaker.x, lvl.speaker.y - spH + 6, spW, spH);
+    }
+
+    // 7. Platforms & Golden Accent Blocks
+    for (const p of lvl.platforms) {
+      drawPlatform(g, p, greyMix);
+    }
+    for (const gb of lvl.goldBlocks) {
+      const rect = greyMix > 0.6 ? SPRITES.tiles.greyGold : SPRITES.tiles.goldBlock;
+      drawSprite(g, IMAGES.tiles, rect, gb.x, gb.y, gb.size, gb.size);
+    }
+
+    // 8. Hazard Spikes
+    for (const s of lvl.spikes) {
+      const rect = greyMix > 0.6 ? SPRITES.tiles.spikesGrey : SPRITES.tiles.spikesColor;
+      if (!drawSprite(g, IMAGES.tiles, rect, s.x, s.y - 10, s.w, s.h + 12)) {
+        g.fillStyle = PAL.gold;
+        g.beginPath();
+        g.moveTo(s.x, s.y + s.h);
+        g.lineTo(s.x + s.w * 0.5, s.y);
+        g.lineTo(s.x + s.w, s.y + s.h);
+        g.fill();
+      }
+    }
+
+    // 9. Floating Crystals
+    for (const gm of lvl.gems) {
+      if (gm.taken) continue;
+      const bob = Math.sin(totalTime * 3.2 + gm.x * 0.03) * 6;
+      const rect = (gm.kind === 'grey' || greyMix > 0.65)
+        ? SPRITES.tiles.gemGrey
+        : (gm.kind === 'gold' ? SPRITES.tiles.gemGold : SPRITES.tiles.gemViolet);
+      // Soft halo
+      if (greyMix < 0.75) {
+        g.save();
+        g.globalAlpha = 0.25 * (1 - greyMix);
+        g.fillStyle = gm.kind === 'gold' ? PAL.gold : PAL.violet;
+        g.beginPath();
+        g.arc(gm.x, gm.y + bob, 26, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }
+      drawSprite(g, IMAGES.tiles, rect, gm.x - 20, gm.y - 24 + bob, 40, 46);
+    }
+
+    // 10. Exit Threshold Arch (matches f_018..f_025!)
+    {
+      const ex = lvl.exit.x;
+      const ey = lvl.exit.y;
+      const archW = 168, archH = 168;
+      if (gameState === 'walk' || gameState === 'end') {
+        // Quiet monochrome doorway at the end of LAST WALK
+        drawSprite(g, IMAGES.tiles, SPRITES.tiles.archGrey, ex - archW / 2, ey - archH + 6, archW, archH);
+      } else {
+        // Luminous golden-violet threshold arch
+        g.save();
+        const glowR = 105 + Math.sin(totalTime * 4) * 10;
+        const grad = g.createRadialGradient(ex, ey - 75, 10, ex, ey - 75, glowR);
+        grad.addColorStop(0, `rgba(255,216,74,${0.42 * (1 - greyMix * 0.65)})`);
+        grad.addColorStop(0.55, `rgba(123,63,228,${0.22 * (1 - greyMix * 0.7)})`);
+        grad.addColorStop(1, 'rgba(20,18,28,0)');
+        g.fillStyle = grad;
+        g.beginPath();
+        g.arc(ex, ey - 75, glowR, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+
+        if (greyMix < 0.99) {
+          drawSprite(g, IMAGES.tiles, SPRITES.tiles.archColor, ex - archW / 2, ey - archH + 6, archW, archH, false, 1 - greyMix);
+        }
+        if (greyMix > 0.01) {
+          drawSprite(g, IMAGES.tiles, SPRITES.tiles.archGrey, ex - archW / 2, ey - archH + 6, archW, archH, false, greyMix);
+        }
+      }
+    }
+
+    // 11. Dash Afterimages
+    for (const ai of afterimages) {
+      g.save();
+      g.globalAlpha = (ai.life / ai.maxLife) * 0.45;
+      drawSprite(g, IMAGES.player, SPRITES.player.dash, ai.x - 18, ai.y - 10, 82, 82, ai.facing < 0);
+      g.restore();
+    }
+
+    // 12. Player Sprite (select exact Nano Banana pose by ability state & level drain!)
+    {
+      let pose = SPRITES.player.idle;
+      let drawW = 58, drawH = 82;
+      let offX = -7, offY = -12;
+
+      if (gameState === 'end') {
+        pose = stateTimer > 1.8 ? SPRITES.player.monoSit2 : SPRITES.player.monoSit1;
+        drawW = 56; drawH = 74; offX = -6; offY = -4;
+      } else if (gameState === 'walk') {
+        const walkFrame = Math.floor(player.animTime) % 2;
+        pose = Math.abs(player.vx) > 10
+          ? (walkFrame === 0 ? SPRITES.player.drain5 : SPRITES.player.monoRun1)
+          : SPRITES.player.drain4;
+        drawW = 62; drawH = 78; offX = -9; offY = -8;
+      } else if (player.dashTimer > 0) {
+        pose = SPRITES.player.dash;
+        drawW = 86; drawH = 86; offX = -21; offY = -14;
+      } else if (player.gliding) {
+        pose = (Math.floor(totalTime * 10) % 2 === 0) ? SPRITES.player.glide1 : SPRITES.player.glide2;
+        drawW = 92; drawH = 58; offX = -24; offY = 6;
+      } else if (abilities.wall && player.onWall !== 0 && !player.onGround && player.vy > 0) {
+        pose = SPRITES.player.wall;
+        drawW = 56; drawH = 82; offX = -6; offY = -12;
+      } else if (!player.onGround) {
+        if (currentLevel >= 3) {
+          pose = SPRITES.player.monoFall;
+          drawW = 72; drawH = 74; offX = -14; offY = -6;
+        } else {
+          pose = player.doubleUsed ? SPRITES.player.djump : SPRITES.player.run2;
+          drawW = 70; drawH = 86; offX = -13; offY = -16;
+        }
+      } else if (Math.abs(player.vx) > 20) {
+        const f = Math.floor(player.animTime) % 2;
+        if (currentLevel === 0) {
+          pose = f === 0 ? SPRITES.player.run1 : SPRITES.player.run2;
+          drawW = 68; drawH = 82; offX = -12; offY = -12;
+        } else if (currentLevel === 1) {
+          pose = f === 0 ? SPRITES.player.run1 : SPRITES.player.drain1;
+          drawW = 66; drawH = 80; offX = -11; offY = -10;
+        } else if (currentLevel === 2) {
+          pose = f === 0 ? SPRITES.player.drain2 : SPRITES.player.drain3;
+          drawW = 58; drawH = 80; offX = -7; offY = -10;
+        } else {
+          pose = f === 0 ? SPRITES.player.monoRun1 : SPRITES.player.monoRun2;
+          drawW = 68; drawH = 78; offX = -12; offY = -8;
+        }
+      } else {
+        const idleByLvl = [
+          SPRITES.player.idle,
+          SPRITES.player.drain0,
+          SPRITES.player.drain2,
+          SPRITES.player.drain4,
+          SPRITES.player.drain5
+        ];
+        pose = idleByLvl[currentLevel] || SPRITES.player.idle;
+      }
+
+      // Subtle golden aura around player on vivid levels
+      if (displaySaturation > 0.25 && gameState !== 'walk') {
+        g.save();
+        g.globalAlpha = 0.20 * displaySaturation;
+        g.fillStyle = PAL.gold;
+        g.beginPath();
+        g.arc(player.x + player.w / 2, player.y + player.h / 2, 38, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }
+
+      const ok = drawSprite(
+        g, IMAGES.player, pose,
+        player.x + offX, player.y + offY, drawW, drawH,
+        player.facing < 0
+      );
+      if (!ok) {
+        g.fillStyle = displaySaturation > 0.3 ? PAL.gold : '#666';
+        g.fillRect(player.x, player.y, player.w, player.h);
+      }
+    }
+
+    // 13. Shockwaves & Particles
+    for (const sw of shockwaves) {
+      g.save();
+      g.globalAlpha = Math.max(0, sw.life);
+      g.strokeStyle = sw.color || PAL.gold;
+      g.lineWidth = sw.maxR > 120 ? 5 : 3;
+      g.beginPath();
+      g.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+      g.stroke();
+      if (sw.maxR > 120) {
+        const rg = g.createRadialGradient(sw.x, sw.y, 0, sw.x, sw.y, sw.r);
+        rg.addColorStop(0, 'rgba(255,232,120,0.45)');
+        rg.addColorStop(0.7, 'rgba(255,216,74,0.18)');
+        rg.addColorStop(1, 'rgba(255,216,74,0)');
+        g.fillStyle = rg;
+        g.fill();
+      }
+      g.restore();
+    }
+
+    for (const p of particles) {
+      g.save();
+      g.globalAlpha = Math.max(0, p.life / p.maxLife);
+      g.fillStyle = p.color;
+      g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      g.restore();
+    }
+
+    g.restore(); // end world transform
+  }
+
+  function renderHUD(g) {
+    // Crisp top-left Ability HUD boxes matching m2_main_ref.png & Omni study frames!
+    // In LAST WALK / END, HUD fades into dim ghosted strikethroughs
+    const walkFade = (gameState === 'walk') ? 0.42 : (gameState === 'end' ? 0.22 : 1.0);
+    const boxW = 216, boxH = 58, startX = 46, startY = 36, gap = 22;
+
+    g.save();
+    g.globalAlpha = walkFade;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = 'bold 23px "Courier New", Courier, monospace';
+
+    ABILITY_DEFS.forEach((ab, i) => {
+      const bx = startX + i * (boxW + gap);
+      const by = startY;
+      const active = abilities[ab.key] && gameState !== 'walk' && gameState !== 'end';
+      const flash = hudFlash[ab.key] || 0;
+
+      // Box background
+      g.fillStyle = active ? 'rgba(16, 14, 24, 0.86)' : 'rgba(20, 18, 28, 0.58)';
+      g.fillRect(bx, by, boxW, boxH);
+
+      // Active usage highlight or newly-revoked flash
+      if (flash > 0) {
+        g.fillStyle = active
+          ? `rgba(255, 216, 74, ${flash * 0.28})`
+          : `rgba(123, 63, 228, ${flash * 0.42})`;
+        g.fillRect(bx, by, boxW, boxH);
+      }
+
+      // Crisp border (#f2f2f2 when active, dim #4e4c5a when crossed out)
+      g.lineWidth = active ? 3 : 2.5;
+      g.strokeStyle = active ? '#f2f2f2' : '#4e4c5a';
+      g.strokeRect(bx, by, boxW, boxH);
+
+      // Label text
+      g.fillStyle = active ? '#f2f2f2' : '#6d6b7a';
+      g.fillText(ab.label, bx + boxW / 2, by + boxH / 2 + 1);
+
+      // Crisp strikethrough bar when ability has been taken!
+      if (!active) {
+        g.strokeStyle = flash > 0.1 ? PAL.gold : '#8c8999';
+        g.lineWidth = 3;
+        g.beginPath();
+        g.moveTo(bx + 44, by + boxH / 2);
+        g.lineTo(bx + boxW - 44, by + boxH / 2);
+        g.stroke();
+      }
+    });
+    g.restore();
+
+    // Subtle level indicator top-right
+    if (gameState !== 'title') {
+      g.save();
+      g.globalAlpha = gameState === 'walk' ? 0.35 : 0.75;
+      g.font = 'bold 15px "Courier New", Courier, monospace';
+      g.textAlign = 'right';
+      g.fillStyle = '#b9b5c9';
+      g.fillText(LEVELS[currentLevel].title, W - 46, 58);
+      if (LEVELS[currentLevel].subtitle) {
+        g.font = '12px "Courier New", Courier, monospace';
+        g.fillStyle = '#858099';
+        g.fillText(LEVELS[currentLevel].subtitle, W - 46, 78);
+      }
+      g.restore();
+    }
+
+    // ABILITY TAKEN card banner during threshold transition ('take' state)
+    if (gameState === 'take') {
+      const lvl = LEVELS[currentLevel];
+      const alpha = Math.min(1, Math.sin((1 - stateTimer / 1.05) * Math.PI) * 1.5);
+      g.save();
+      g.globalAlpha = Math.max(0, alpha);
+      g.fillStyle = 'rgba(12, 11, 18, 0.84)';
+      g.fillRect(W / 2 - 330, H - 128, 660, 66);
+      g.strokeStyle = displaySaturation > 0.3 ? PAL.gold : '#8a8c94';
+      g.lineWidth = 2.5;
+      g.strokeRect(W / 2 - 330, H - 128, 660, 66);
+      g.textAlign = 'center';
+      g.font = 'bold 20px "Courier New", Courier, monospace';
+      g.fillStyle = '#f2f2f2';
+      g.fillText(lvl.takenCard, W / 2, H - 95);
+      g.restore();
+    }
+
+    // RESET ROOM flash
+    if (gameState === 'reset') {
+      g.save();
+      g.fillStyle = `rgba(20, 18, 28, ${Math.min(0.85, stateTimer * 2.1)})`;
+      g.fillRect(0, 0, W, H);
+      g.textAlign = 'center';
+      g.font = 'bold 26px "Courier New", Courier, monospace';
+      g.fillStyle = PAL.gold;
+      g.fillText('ROOM RESET', W / 2, H / 2);
+      g.restore();
+    }
+
+    // TITLE overlay (skipped on ?autostart)
+    if (gameState === 'title') {
+      g.save();
+      g.fillStyle = 'rgba(14, 12, 22, 0.82)';
+      g.fillRect(0, 0, W, H);
+      g.textAlign = 'center';
+      g.fillStyle = PAL.gold;
+      g.font = 'bold 54px "Courier New", Courier, monospace';
+      g.fillText('THAT ONE TEAM', W / 2, H / 2 - 58);
+      g.fillStyle = '#f2f2f2';
+      g.font = '20px "Courier New", Courier, monospace';
+      g.fillText('You start with every power in the game. The game wants them back.', W / 2, H / 2 - 4);
+      g.fillStyle = '#b79cff';
+      g.font = '16px "Courier New", Courier, monospace';
+      g.fillText('[ARROWS] MOVE   [SPACE] JUMP / DOUBLE / GLIDE   [SHIFT / X] DASH', W / 2, H / 2 + 44);
+      g.fillStyle = PAL.gold;
+      g.font = 'bold 20px "Courier New", Courier, monospace';
+      g.fillText('PRESS SPACE TO BEGIN', W / 2, H / 2 + 98);
+      g.restore();
+    }
+
+    // END overlay after LAST WALK
+    if (gameState === 'end') {
+      const a = Math.min(1, stateTimer / 1.5);
+      g.save();
+      g.globalAlpha = a;
+      g.fillStyle = 'rgba(8, 9, 12, 0.62)';
+      g.fillRect(0, 0, W, H);
+      g.textAlign = 'center';
+      g.fillStyle = '#d8d8de';
+      g.font = 'bold 38px "Courier New", Courier, monospace';
+      g.fillText('NOTHING LEFT TO TAKE', W / 2, H / 2 - 36);
+      g.fillStyle = '#7e808a';
+      g.font = '18px "Courier New", Courier, monospace';
+      g.fillText('No dash. No jump. No colour. No sound. Still, you arrived.', W / 2, H / 2 + 12);
+      g.font = '15px "Courier New", Courier, monospace';
+      g.fillStyle = '#585a63';
+      g.fillText('[R] BEGIN AGAIN', W / 2, H / 2 + 64);
+      g.restore();
+    }
+  }
+
+  function renderPostFX(g) {
+    // Cinematic vignette + subtle scanline/grain matched to Omni sheet.jpg
+    const vig = g.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, W * 0.68);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, gameState === 'walk' || gameState === 'end' ? 'rgba(0,0,0,0.68)' : 'rgba(6,5,12,0.44)');
+    g.fillStyle = vig;
+    g.fillRect(0, 0, W, H);
+
+    g.fillStyle = 'rgba(255,255,255,0.016)';
+    for (let y = 0; y < H; y += 4) {
+      g.fillRect(0, y, W, 1);
+    }
+  }
+
+  function render() {
+    renderWorld(sctx);
+
+    // Composite world onto main canvas with progressive saturation drain
+    ctx.save();
+    const satPct = Math.round(Math.max(0, Math.min(1, displaySaturation)) * 100);
+    const brightPct = Math.round(100 - (1 - displaySaturation) * 14);
+    ctx.filter = `saturate(${satPct}%) brightness(${brightPct}%)`;
+    ctx.drawImage(sceneCanvas, 0, 0);
+    ctx.restore();
+
+    renderHUD(ctx);
+    renderPostFX(ctx);
+  }
+
+  // Expose full telemetry for play.mjs & verification harness
+  window.__game = {
+    get state() {
+      const lvl = LEVELS[currentLevel];
+      return {
+        mode: gameState, // 'title' | 'lvl' | 'take' | 'reset' | 'walk' | 'end'
+        level: currentLevel,
+        levelTitle: lvl.title,
+        saturation: Number(displaySaturation.toFixed(3)),
+        abilities: { ...abilities },
+        lastTaken: lastTakenAbility,
+        resets: resetsCount,
+        time: Number(totalTime.toFixed(2)),
+        assetsReady: assetsLoaded >= totalAssets,
+        player: {
+          x: Math.round(player.x),
+          y: Math.round(player.y),
+          vx: Math.round(player.vx),
+          vy: Math.round(player.vy),
+          onGround: player.onGround,
+          onWall: player.onWall,
+          doubleUsed: player.doubleUsed,
+          dashCooldown: Number(player.dashCooldown.toFixed(2))
+        },
+        exit: { x: lvl.exit.x, y: lvl.exit.y },
+        platforms: lvl.platforms.map(p => ({ x: p.x, y: p.y, w: p.w, h: p.h, style: p.style })),
+        spikes: lvl.spikes.map(s => ({ x: s.x, y: s.y, w: s.w, h: s.h }))
+      };
+    }
+  };
+
+  let lastTs = performance.now();
+  function frame(ts) {
+    const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
+    lastTs = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

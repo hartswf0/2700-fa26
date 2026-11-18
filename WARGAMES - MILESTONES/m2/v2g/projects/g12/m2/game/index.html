@@ -1,0 +1,1366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIVE — Group 12 (M2)</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #060807;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Courier New", Courier, monospace;
+  }
+  canvas {
+    display: block;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.85);
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720"></canvas>
+<script type="module">
+const W = 1280, H = 720;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const Q = new URLSearchParams(location.search);
+let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+function rand() {
+  seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  return seed / 4294967296;
+}
+function randRange(a, b) { return a + (b - a) * rand(); }
+
+const PALETTE = {
+  bg: '#0c0f0e',
+  fg: '#c8e6d0',
+  acc: '#e0523c',
+  gold: '#f5cf87',
+};
+
+// Audio: BGM loop + procedural WebAudio synth & absorption SFX
+const bgm = new Audio('../assets/bgm_loop.mp3');
+bgm.loop = true;
+bgm.volume = 0.38;
+let audioCtx = null;
+let audioUnlocked = false;
+
+function ensureAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  if (!audioUnlocked) {
+    audioUnlocked = true;
+    bgm.play().catch(() => { audioUnlocked = false; });
+  }
+}
+
+function sfxAbsorb(sizeTier) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const now = audioCtx.currentTime;
+  // Soft wet bio-absorption chime + warm harmonic memory swell
+  const freqs = [293.66, 369.99, 440.0, 587.33].map(f => f * (1 - sizeTier * 0.06));
+  freqs.forEach((f, idx) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = idx === 0 ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(f * 0.85, now + idx * 0.04);
+    osc.frequency.exponentialRampToValueAtTime(f, now + idx * 0.04 + 0.28);
+    gain.gain.setValueAtTime(0.065, now + idx * 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.04 + 0.95);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now + idx * 0.04);
+    osc.stop(now + idx * 0.04 + 1.0);
+  });
+}
+
+function sfxCaught() {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(520, now);
+  osc.frequency.linearRampToValueAtTime(180, now + 0.32);
+  gain.gain.setValueAtTime(0.10, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.36);
+}
+
+function sfxGuiltEnding() {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const now = audioCtx.currentTime;
+  for (const f of [220, 261.63, 329.63, 392.0]) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f, now);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.5, now + 2.2);
+    gain.gain.setValueAtTime(0.055, now);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 2.3);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 2.35);
+  }
+}
+
+// Load generated Nano Banana 2.1 assets
+function loadImg(src) {
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = src;
+  return img;
+}
+const mapImg = loadImg('../assets/3_room_tile_maps.png');
+const creatureImg = loadImg('../assets/creature_sprite_3_sizes.png');
+const nodeImg = loadImg('../assets/node_sprite.png');
+const guardImg = loadImg('../assets/guard_sprite.png');
+
+// Exact sprite crop boxes from assets inspection (scaled to match Omni video creature presence)
+const CREATURE_CROPS = [
+  // Size 1 (small tadpole-core, native facing UP = -PI/2)
+  { sx: 120, sy: 438, sw: 82, sh: 162, dw: 54, dh: 108, rotOffset: Math.PI / 2, radius: 14 },
+  // Size 2 (medium slithering bio-form, native facing UP = -PI/2)
+  { sx: 354, sy: 340, sw: 140, sh: 370, dw: 82, dh: 196, rotOffset: Math.PI / 2, radius: 16 },
+  // Size 3 (large multi-tendril form, native facing RIGHT = 0)
+  { sx: 530, sy: 314, sw: 454, sh: 378, dw: 215, dh: 178, rotOffset: 0, radius: 19 },
+];
+
+// Poignant human memory flashes (spec.json: "Each node you absorb makes you bigger and leaves a memory that is not yours. By the exit the memories add up: the nodes were people.")
+const MEMORIES = [
+  {
+    code: 'NODE 01 · ARCHIVE SECTOR',
+    who: 'DR. ARIS CHEN (NEURAL MAPPING)',
+    line: '"If the containment ethics board asks, tell them these are synthetic weights."',
+    pose: 'handshake',
+  },
+  {
+    code: 'NODE 02 · SUB-LEVEL 04',
+    who: 'MARA & JONAS (LAB PARTNERS)',
+    line: '"First cortical transfer stable! Coffee on me once the snow clears upstairs."',
+    pose: 'handshake',
+  },
+  {
+    code: 'NODE 03 · CRYO BAY',
+    who: 'ELENA ROSTOVA (MOTHER, AGE 34)',
+    line: '"Two sugars in the blue mug. Remember Maya hates the crust on her toast."',
+    pose: 'child',
+  },
+  {
+    code: 'NODE 04 · MAINTENANCE',
+    who: 'SAMIR PATEL (NIGHT SHIFT TECH)',
+    line: '"I heard humming inside the red glass. It tapped my own badge number back."',
+    pose: 'reach',
+  },
+  {
+    code: 'NODE 05 · OBSERVATION',
+    who: 'CLAIRE WU (CLINICAL NURSE)',
+    line: '"Squeeze my hand and count backwards from ten. You will wake up at home."',
+    pose: 'handshake',
+  },
+  {
+    code: 'NODE 06 · EXIT VAULT',
+    who: 'SUBJECT 19 (NAME REDACTED)',
+    line: '"Do not call us intelligence nodes. My name was David, and I want to stop."',
+    pose: 'reach',
+  },
+];
+
+// Base Room 1 walls in 1280x720 matching 3_room_tile_maps.png & study/sheet.jpg
+const BASE_WALLS = [
+  { x: 48,   y: 48,  w: 1184, h: 8 },   // Top outer wall
+  { x: 48,   y: 664, w: 588,  h: 8 },   // Bottom-left outer wall (doorway 636..736)
+  { x: 736,  y: 664, w: 496,  h: 8 },   // Bottom-right outer wall
+  { x: 48,   y: 48,  w: 8,    h: 624 }, // Left outer wall
+  { x: 1224, y: 48,  w: 8,    h: 624 }, // Right outer wall
+  { x: 630,  y: 664, w: 8,    h: 56 },  // Exit corridor left jamb
+  { x: 734,  y: 664, w: 8,    h: 56 },  // Exit corridor right jamb
+  // Interior lab partitions
+  { x: 52,   y: 235, w: 326,  h: 8 },
+  { x: 371,  y: 48,  w: 8,    h: 70 },
+  { x: 371,  y: 235, w: 8,    h: 169 },
+  { x: 371,  y: 397, w: 244,  h: 8 },
+  { x: 371,  y: 547, w: 8,    h: 121 },
+  { x: 637,  y: 48,  w: 8,    h: 210 },
+  { x: 637,  y: 251, w: 326,  h: 8 },
+  { x: 959,  y: 48,  w: 8,    h: 70 },
+  { x: 1095, y: 281, w: 133,  h: 8 },
+  { x: 959,  y: 463, w: 163,  h: 8 },
+  { x: 959,  y: 463, w: 8,    h: 205 },
+];
+
+// Baked red pedestal coordinates in raw 3_room_tile_maps.png (so we cover absorbed/unused ones cleanly)
+const BAKED_PEDESTALS = [
+  { x: 237, y: 522 },
+  { x: 438, y: 238 },
+  { x: 840, y: 238 },
+  { x: 1041, y: 521 },
+];
+
+function transformRect(r, flipX, flipY) {
+  return {
+    x: flipX ? W - (r.x + r.w) : r.x,
+    y: flipY ? H - (r.y + r.h) : r.y,
+    w: r.w,
+    h: r.h,
+  };
+}
+function transformPt(p, flipX, flipY) {
+  return {
+    x: flipX ? W - p.x : p.x,
+    y: flipY ? H - p.y : p.y,
+  };
+}
+
+// 3 Facility Rooms definition
+const ROOM_DEFS = [
+  {
+    index: 0,
+    label: 'SECTOR 01 · CONTAINMENT LAB',
+    flipX: false,
+    flipY: false,
+    spawn: { x: 162, y: 456, heading: 0 },
+    requiredNodes: 2,
+    doorTrigger: { x: 685, y: 696, r: 38 },
+    nodes: [
+      { x: 237, y: 522 },
+      { x: 438, y: 238 },
+      { x: 640, y: 522 },
+      { x: 840, y: 238 },
+      { x: 1041, y: 521 },
+    ],
+    guards: [
+      // Upper-right guard sweeping amber cone down-left across gap (exact match to study/sheet.jpg!)
+      {
+        x0: 1158, y0: 118, x1: 1110, y1: 136, speed: 0.42,
+        baseAngle: 2.40, sweepAmp: 0.42, sweepFreq: 0.95, phaseOffset: 0.15,
+        range: 460, halfAngle: 0.29,
+      },
+      // Right-lower patrol guard sweeping right sector
+      {
+        x0: 1145, y0: 388, x1: 990, y1: 388, speed: 0.55,
+        baseAngle: 3.05, sweepAmp: 0.34, sweepFreq: 0.85, phaseOffset: 2.1,
+        range: 330, halfAngle: 0.26,
+      },
+    ],
+  },
+  {
+    index: 1,
+    label: 'SECTOR 02 · NEURAL ARCHIVE',
+    flipX: true,
+    flipY: false,
+    spawn: { x: 1118, y: 456, heading: Math.PI },
+    requiredNodes: 1,
+    doorTrigger: { x: W - 685, y: 696, r: 38 },
+    nodes: [
+      { x: W - 237, y: 522 },
+      { x: W - 640, y: 522 },
+      { x: W - 438, y: 238 },
+    ],
+    guards: [
+      {
+        x0: W - 1155, y0: 120, x1: W - 1050, y1: 145, speed: 0.5,
+        baseAngle: Math.PI - 2.38, sweepAmp: 0.44, sweepFreq: 1.05, phaseOffset: 0.6,
+        range: 430, halfAngle: 0.28,
+      },
+      {
+        x0: W - 840, y0: 350, x1: W - 690, y1: 350, speed: 0.6,
+        baseAngle: Math.PI * 0.5, sweepAmp: 0.38, sweepFreq: 0.9, phaseOffset: 1.7,
+        range: 290, halfAngle: 0.26,
+      },
+    ],
+  },
+  {
+    index: 2,
+    label: 'SECTOR 03 · SURFACE EXIT BULKHEAD',
+    flipX: false,
+    flipY: true,
+    spawn: { x: 162, y: H - 456, heading: 0 },
+    requiredNodes: 1,
+    doorTrigger: { x: 685, y: H - 696, r: 42 },
+    nodes: [
+      { x: 237, y: H - 522 },
+      { x: 640, y: H - 522 },
+      { x: 840, y: H - 238 },
+    ],
+    guards: [
+      {
+        x0: 1140, y0: H - 125, x1: 1030, y1: H - 150, speed: 0.58,
+        baseAngle: -2.35, sweepAmp: 0.45, sweepFreq: 1.1, phaseOffset: 0.2,
+        range: 420, halfAngle: 0.28,
+      },
+      {
+        x0: 880, y0: H - 380, x1: 1120, y1: H - 380, speed: 0.65,
+        baseAngle: -2.85, sweepAmp: 0.32, sweepFreq: 1.0, phaseOffset: 2.0,
+        range: 310, halfAngle: 0.25,
+      },
+    ],
+  },
+];
+
+const S = {
+  phase: Q.has('autostart') ? 'room' : 'title', // title | room | flash | caught | exit | end
+  t: 0,
+  roomIdx: 0,
+  x: 162,
+  y: 456,
+  vx: 0,
+  vy: 0,
+  heading: 0,
+  totalAbsorbed: 0,
+  roomAbsorbed: 0,
+  sizeTier: 0, // 0, 1, 2 (3 sizes)
+  walls: [],
+  doorBarrier: null,
+  doorOpen: false,
+  doorPos: { x: 685, y: 696 },
+  pedestals: [],
+  nodes: [],
+  guards: [],
+  ripples: [],
+  motes: [],
+  flashTimer: 0,
+  caughtTimer: 0,
+  exitTimer: 0,
+  endTimer: 0,
+  lastMemory: null,
+  howToOpen: false,
+  heartbeatT: 0,
+};
+
+function loadRoom(idx, fullReset = false) {
+  if (fullReset) {
+    S.totalAbsorbed = 0;
+    S.sizeTier = 0;
+    S.lastMemory = null;
+    S.ripples.length = 0;
+    S.motes.length = 0;
+  }
+  const def = ROOM_DEFS[idx];
+  S.roomIdx = idx;
+  S.roomAbsorbed = 0;
+  S.x = def.spawn.x;
+  S.y = def.spawn.y;
+  S.vx = 0;
+  S.vy = 0;
+  S.heading = def.spawn.heading;
+
+  S.walls = BASE_WALLS.map(w => transformRect(w, def.flipX, def.flipY));
+  S.doorBarrier = transformRect({ x: 636, y: 664, w: 100, h: 10 }, def.flipX, def.flipY);
+  S.doorOpen = false;
+  S.doorPos = { x: def.doorTrigger.x, y: def.doorTrigger.y, r: def.doorTrigger.r };
+  S.pedestals = BAKED_PEDESTALS.map(p => transformPt(p, def.flipX, def.flipY));
+
+  S.nodes = def.nodes.map((n, i) => ({
+    id: `r${idx}_n${i}`,
+    x: n.x,
+    y: n.y,
+    absorbed: false,
+    pulsePhase: i * 1.3,
+  }));
+
+  S.guards = def.guards.map(g => ({
+    ...g,
+    x: g.x0,
+    y: g.y0,
+    angle: g.baseAngle,
+    alert: 0,
+    poly: [],
+  }));
+}
+
+loadRoom(0, true);
+
+// Keyboard & pointer input
+const keys = new Set();
+addEventListener('keydown', e => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) {
+    e.preventDefault();
+  }
+  ensureAudio();
+  keys.add(e.code);
+
+  if (S.phase === 'title') {
+    if (e.code === 'Enter' || e.code === 'Space') {
+      loadRoom(0, true);
+      S.phase = 'room';
+    } else if (e.code === 'KeyH') {
+      S.howToOpen = !S.howToOpen;
+    }
+    return;
+  }
+
+  if (S.phase === 'flash' && S.flashTimer > 0.35 && (e.code === 'Space' || e.code === 'Enter')) {
+    S.phase = 'room';
+    return;
+  }
+
+  if (S.phase === 'caught' && S.caughtTimer > 0.35 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR')) {
+    respawnRoom();
+    return;
+  }
+
+  if (S.phase === 'end' && S.endTimer > 0.8 && (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyR')) {
+    loadRoom(0, true);
+    S.phase = 'room';
+    return;
+  }
+
+  if (e.code === 'Space' && S.phase === 'room') {
+    tryAbsorbNearby(54);
+  }
+});
+
+addEventListener('keyup', e => keys.delete(e.code));
+
+canvas.addEventListener('pointerdown', e => {
+  ensureAudio();
+  const rect = canvas.getBoundingClientRect();
+  const px = ((e.clientX - rect.left) / rect.width) * W;
+  const py = ((e.clientY - rect.top) / rect.height) * H;
+  if (S.phase === 'title') {
+    if (px > 510 && px < 770 && py > 545 && py < 605) {
+      S.howToOpen = !S.howToOpen;
+      return;
+    }
+    loadRoom(0, true);
+    S.phase = 'room';
+  } else if (S.phase === 'caught' && S.caughtTimer > 0.3) {
+    respawnRoom();
+  } else if (S.phase === 'end' && S.endTimer > 0.8) {
+    loadRoom(0, true);
+    S.phase = 'room';
+  } else if (S.phase === 'room') {
+    tryAbsorbNearby(58);
+  }
+});
+
+function respawnRoom() {
+  const def = ROOM_DEFS[S.roomIdx];
+  S.x = def.spawn.x;
+  S.y = def.spawn.y;
+  S.vx = 0;
+  S.vy = 0;
+  for (const g of S.guards) g.alert = 0;
+  S.phase = 'room';
+}
+
+// Fast 2D Ray vs AABB intersection for crisp wall-occluded flashlight cones
+function castRay(ox, oy, dx, dy, maxDist, walls) {
+  let closest = maxDist;
+  const invX = dx !== 0 ? 1 / dx : 1e9;
+  const invY = dy !== 0 ? 1 / dy : 1e9;
+  for (let i = 0; i < walls.length; i++) {
+    const w = walls[i];
+    const t1 = (w.x - ox) * invX;
+    const t2 = (w.x + w.w - ox) * invX;
+    const t3 = (w.y - oy) * invY;
+    const t4 = (w.y + w.h - oy) * invY;
+    const tmin = Math.max(Math.min(t1, t2), Math.min(t3, t4));
+    const tmax = Math.min(Math.max(t1, t2), Math.max(t3, t4));
+    if (tmax >= 0 && tmin <= tmax && tmin >= 0 && tmin < closest) {
+      closest = tmin;
+    }
+  }
+  return { x: ox + dx * closest, y: oy + dy * closest, dist: closest };
+}
+
+function buildConePolygon(ox, oy, angle, halfAngle, range, raysCount, walls) {
+  const pts = [{ x: ox, y: oy }];
+  for (let i = 0; i <= raysCount; i++) {
+    const a = angle - halfAngle + (i / raysCount) * (halfAngle * 2);
+    const hit = castRay(ox, oy, Math.cos(a), Math.sin(a), range, walls);
+    pts.push(hit);
+  }
+  return pts;
+}
+
+function hasLineOfSight(x0, y0, x1, y1, walls) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1) return true;
+  const hit = castRay(x0, y0, dx / dist, dy / dist, dist, walls);
+  return hit.dist >= dist - 2;
+}
+
+function resolveCircleWalls(x, y, r, walls) {
+  let cx = x, cy = y;
+  for (let i = 0; i < walls.length; i++) {
+    const w = walls[i];
+    const nearX = Math.max(w.x, Math.min(cx, w.x + w.w));
+    const nearY = Math.max(w.y, Math.min(cy, w.y + w.h));
+    const dx = cx - nearX, dy = cy - nearY;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < r * r) {
+      const d = Math.sqrt(d2) || 0.001;
+      const overlap = r - d;
+      cx += (dx / d) * overlap;
+      cy += (dy / d) * overlap;
+    }
+  }
+  return { x: cx, y: cy };
+}
+
+function tryAbsorbNearby(maxRadius = 44) {
+  for (const n of S.nodes) {
+    if (n.absorbed) continue;
+    const d = Math.hypot(S.x - n.x, S.y - n.y);
+    if (d <= maxRadius) {
+      absorbNode(n);
+      return true;
+    }
+  }
+  return false;
+}
+
+function absorbNode(n) {
+  n.absorbed = true;
+  S.totalAbsorbed++;
+  S.roomAbsorbed++;
+  S.sizeTier = S.totalAbsorbed >= 2 ? 2 : S.totalAbsorbed >= 1 ? 1 : 0;
+
+  const mem = MEMORIES[(S.totalAbsorbed - 1) % MEMORIES.length];
+  S.lastMemory = mem;
+
+  // Check if room exit barrier unlocks
+  const req = ROOM_DEFS[S.roomIdx].requiredNodes;
+  if (S.roomAbsorbed >= req) {
+    S.doorOpen = true;
+  }
+
+  // Spawn signature warm golden human silhouette memory ripple (matching study/sheet.jpg!)
+  const sparks = [];
+  for (let i = 0; i < 42; i++) {
+    const a = randRange(0, Math.PI * 2);
+    const rr = randRange(18, 250);
+    sparks.push({ a, rr, s: randRange(1.2, 3.0), ph: randRange(0, 6.28) });
+  }
+  S.ripples.push({
+    x: n.x,
+    y: n.y,
+    t: 0,
+    dur: 2.35,
+    pose: mem.pose,
+    sparks,
+  });
+
+  S.phase = 'flash';
+  S.flashTimer = 0;
+  sfxAbsorb(S.sizeTier);
+}
+
+function activeWallsList() {
+  return S.doorOpen ? S.walls : [...S.walls, S.doorBarrier];
+}
+
+function update(dt) {
+  S.t += dt;
+
+  // Ambient floating dust motes in facility air
+  while (S.motes.length < 36) {
+    S.motes.push({
+      x: randRange(60, W - 60),
+      y: randRange(60, H - 60),
+      vx: randRange(-9, 9),
+      vy: randRange(-7, 7),
+      a: randRange(0.12, 0.38),
+    });
+  }
+  for (const m of S.motes) {
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    if (m.x < 56) m.x = W - 56;
+    if (m.x > W - 56) m.x = 56;
+    if (m.y < 56) m.y = H - 56;
+    if (m.y > H - 56) m.y = 56;
+  }
+
+  // Update memory ripples even across flash -> room transition
+  for (let i = S.ripples.length - 1; i >= 0; i--) {
+    S.ripples[i].t += dt;
+    if (S.ripples[i].t >= S.ripples[i].dur) {
+      S.ripples.splice(i, 1);
+    }
+  }
+
+  if (S.phase === 'title') return;
+
+  if (S.phase === 'caught') {
+    S.caughtTimer += dt;
+    if (S.caughtTimer >= 1.35) respawnRoom();
+    return;
+  }
+
+  if (S.phase === 'exit') {
+    S.exitTimer += dt;
+    if (S.exitTimer >= 1.5) {
+      S.phase = 'end';
+      S.endTimer = 0;
+      sfxGuiltEnding();
+    }
+    return;
+  }
+
+  if (S.phase === 'end') {
+    S.endTimer += dt;
+    return;
+  }
+
+  if (S.phase === 'flash') {
+    S.flashTimer += dt;
+    // Brief poignant pause/slow-mo (0.85s) while golden silhouette blooms, then seamlessly continues room
+    if (S.flashTimer >= 0.85) {
+      S.phase = 'room';
+    }
+  }
+
+  const timeScale = S.phase === 'flash' ? 0.35 : 1.0;
+  const effDt = dt * timeScale;
+  const walls = activeWallsList();
+
+  // Player movement (Arrow keys + WASD)
+  const ix = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+  const iy = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+  let mx = ix, my = iy;
+  const mag = Math.hypot(mx, my);
+  if (mag > 0) {
+    mx /= mag;
+    my /= mag;
+  }
+
+  const maxSpeed = 205 - S.sizeTier * 8;
+  const damp = 1 - Math.exp(-14 * effDt);
+  S.vx += (mx * maxSpeed - S.vx) * damp;
+  S.vy += (my * maxSpeed - S.vy) * damp;
+
+  if (Math.hypot(S.vx, S.vy) > 12) {
+    const wantHeading = Math.atan2(S.vy, S.vx);
+    let diff = wantHeading - S.heading;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    S.heading += diff * (1 - Math.exp(-12 * effDt));
+  }
+
+  const colR = CREATURE_CROPS[S.sizeTier].radius;
+  const resolved = resolveCircleWalls(S.x + S.vx * effDt, S.y + S.vy * effDt, colR, walls);
+  S.x = Math.max(58, Math.min(W - 58, resolved.x));
+  S.y = Math.max(18, Math.min(H - 18, resolved.y));
+
+  // Auto-absorb on direct contact (or Space within wider radius)
+  if (S.phase === 'room') {
+    tryAbsorbNearby(32);
+  }
+
+  // Update guards, sweeping cones & line-of-sight detection
+  for (const g of S.guards) {
+    const patrolPhase = 0.5 + 0.5 * Math.sin(S.t * g.speed + g.phaseOffset);
+    g.x = g.x0 + (g.x1 - g.x0) * patrolPhase;
+    g.y = g.y0 + (g.y1 - g.y0) * patrolPhase;
+    g.angle = g.baseAngle + Math.sin(S.t * g.sweepFreq + g.phaseOffset) * g.sweepAmp;
+    g.poly = buildConePolygon(g.x, g.y, g.angle, g.halfAngle, g.range, 52, walls);
+
+    // Check if creature is inside flashlight cone
+    const dx = S.x - g.x, dy = S.y - g.y;
+    const dist = Math.hypot(dx, dy);
+    let seen = false;
+    if (dist < g.range - 8) {
+      let angDiff = Math.atan2(dy, dx) - g.angle;
+      while (angDiff > Math.PI) angDiff -= Math.PI * 2;
+      while (angDiff < -Math.PI) angDiff += Math.PI * 2;
+      if (Math.abs(angDiff) <= g.halfAngle && hasLineOfSight(g.x, g.y, S.x, S.y, walls)) {
+        seen = true;
+      }
+    }
+
+    if (seen && S.phase === 'room') {
+      g.alert = Math.min(1, g.alert + effDt * 2.8);
+      if (g.alert >= 1) {
+        S.phase = 'caught';
+        S.caughtTimer = 0;
+        sfxCaught();
+        return;
+      }
+    } else {
+      g.alert = Math.max(0, g.alert - effDt * 2.2);
+    }
+  }
+
+  // Check doorway transition to next room / final exit
+  if (S.doorOpen && Math.hypot(S.x - S.doorPos.x, S.y - S.doorPos.y) <= S.doorPos.r) {
+    if (S.roomIdx < ROOM_DEFS.length - 1) {
+      loadRoom(S.roomIdx + 1, false);
+    } else {
+      // Room 3 Exit Bulkhead reached!
+      S.phase = 'exit';
+      S.exitTimer = 0;
+    }
+  }
+}
+
+function drawRoomBackground(g) {
+  const def = ROOM_DEFS[S.roomIdx];
+  g.fillStyle = PALETTE.bg;
+  g.fillRect(0, 0, W, H);
+
+  if (mapImg.complete && mapImg.naturalWidth > 0) {
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.translate(def.flipX ? W : 0, def.flipY ? H : 0);
+    g.scale(def.flipX ? -1 : 1, def.flipY ? -1 : 1);
+    g.drawImage(mapImg, 0, 0, W, H);
+    g.restore();
+
+    // Cleanly patch baked red pedestals whenever absorbed (or if unused in Rooms 2 & 3)
+    for (const p of S.pedestals) {
+      const activeHere = S.nodes.some(n => !n.absorbed && Math.hypot(n.x - p.x, n.y - p.y) < 18);
+      if (!activeHere) {
+        g.save();
+        g.fillStyle = '#131918';
+        g.beginPath();
+        g.arc(p.x, p.y, 27, 0, Math.PI * 2);
+        g.fill();
+        // Drained dark neural socket ring
+        g.strokeStyle = 'rgba(200, 230, 208, 0.14)';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(p.x, p.y, 16, 0, Math.PI * 2);
+        g.stroke();
+        g.fillStyle = '#0b0f0e';
+        g.beginPath();
+        g.arc(p.x, p.y, 7, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }
+    }
+  } else {
+    // Fallback crisp architectural floor & walls
+    g.fillStyle = PALETTE.fg;
+    for (const w of S.walls) g.fillRect(w.x, w.y, w.w, w.h);
+  }
+
+  // Exit doorway barrier / unlocked indicator
+  const db = S.doorBarrier;
+  if (!S.doorOpen) {
+    g.save();
+    g.fillStyle = 'rgba(224, 82, 60, 0.28)';
+    g.fillRect(db.x, db.y, db.w, db.h);
+    g.strokeStyle = PALETTE.acc;
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.moveTo(db.x, db.y + db.h / 2);
+    g.lineTo(db.x + db.w, db.y + db.h / 2);
+    g.stroke();
+    g.restore();
+  } else {
+    const pulse = 0.55 + 0.45 * Math.sin(S.t * 5);
+    g.save();
+    g.strokeStyle = `rgba(200, 230, 208, ${0.45 + pulse * 0.45})`;
+    g.lineWidth = 2.5;
+    g.setLineDash([7, 6]);
+    g.strokeRect(db.x + 2, db.y - 2, db.w - 4, db.h + 4);
+    g.font = 'bold 12px "Courier New", Courier, monospace';
+    g.fillStyle = PALETTE.fg;
+    g.textAlign = 'center';
+    const label = S.roomIdx === 2 ? 'EXIT BULKHEAD OPEN' : `SECTOR 0${S.roomIdx + 2} >>`;
+    const ly = ROOM_DEFS[S.roomIdx].flipY ? db.y + 24 : db.y - 10;
+    g.fillText(label, db.x + db.w / 2, ly);
+    g.restore();
+  }
+}
+
+function drawNodes(g) {
+  const frameIdx = ((S.t * 8) | 0) % 8;
+  for (const n of S.nodes) {
+    if (n.absorbed) continue;
+    const pulse = 0.78 + 0.22 * Math.sin(S.t * 4.5 + n.pulsePhase);
+
+    // Crimson bio-luminescent floor glow matching study/sheet.jpg
+    const grad = g.createRadialGradient(n.x, n.y, 4, n.x, n.y, 46 * pulse);
+    grad.addColorStop(0, 'rgba(224, 82, 60, 0.52)');
+    grad.addColorStop(0.55, 'rgba(224, 82, 60, 0.16)');
+    grad.addColorStop(1, 'rgba(224, 82, 60, 0)');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(n.x, n.y, 46 * pulse, 0, Math.PI * 2);
+    g.fill();
+
+    if (nodeImg.complete && nodeImg.naturalWidth > 0) {
+      g.save();
+      g.imageSmoothingEnabled = false;
+      const sx = frameIdx * 128;
+      const size = 44;
+      g.drawImage(nodeImg, sx, 428, 128, 168, n.x - size / 2, n.y - size * 0.62, size, size * 1.25);
+      g.restore();
+    } else {
+      g.strokeStyle = PALETTE.acc;
+      g.lineWidth = 4;
+      g.beginPath();
+      g.arc(n.x, n.y, 16, 0, Math.PI * 2);
+      g.stroke();
+    }
+  }
+}
+
+function drawGuardsAndCones(g) {
+  // 1. Raycasted warm-amber guard flashlight cones (exact match to study/sheet.jpg!)
+  for (const guard of S.guards) {
+    if (guard.poly.length < 3) continue;
+    g.save();
+    g.beginPath();
+    g.moveTo(guard.poly[0].x, guard.poly[0].y);
+    for (let i = 1; i < guard.poly.length; i++) {
+      g.lineTo(guard.poly[i].x, guard.poly[i].y);
+    }
+    g.closePath();
+
+    const alertTint = guard.alert;
+    const r0 = Math.round(244 + alertTint * 11);
+    const g0 = Math.round(226 - alertTint * 115);
+    const b0 = Math.round(132 - alertTint * 70);
+    const grad = g.createRadialGradient(guard.x, guard.y, 8, guard.x, guard.y, guard.range);
+    grad.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0.62)`);
+    grad.addColorStop(0.55, `rgba(${r0}, ${g0}, ${b0}, 0.30)`);
+    grad.addColorStop(1, `rgba(${r0}, ${g0}, ${b0}, 0.03)`);
+    g.fillStyle = grad;
+    g.fill();
+    g.restore();
+  }
+
+  // 2. Guard pixel-art sprites from guard_sprite.png (4x4 sheet)
+  for (const guard of S.guards) {
+    if (guardImg.complete && guardImg.naturalWidth > 0) {
+      let a = guard.angle;
+      while (a > Math.PI) a -= Math.PI * 2;
+      while (a < -Math.PI) a += Math.PI * 2;
+      const step = ((S.t * 4) | 0) % 2;
+      let row = 0, col = step;
+      if (Math.abs(a) < Math.PI * 0.28) {
+        // Facing RIGHT -> row 3, cols 0..1
+        row = 3; col = step;
+      } else if (Math.abs(a) > Math.PI * 0.72) {
+        // Facing LEFT -> row 2, cols 2..3
+        row = 2; col = 2 + step;
+      } else if (a > 0) {
+        // Facing DOWN -> row 0, cols 0..1
+        row = 0; col = step;
+      } else {
+        // Facing UP -> row 0, cols 2..3
+        row = 0; col = 2 + step;
+      }
+      g.save();
+      g.imageSmoothingEnabled = false;
+      const dw = 54, dh = 54;
+      g.drawImage(guardImg, col * 256, row * 256, 256, 256, guard.x - dw / 2, guard.y - dh / 2, dw, dh);
+      g.restore();
+    }
+
+    if (guard.alert > 0.08) {
+      g.save();
+      g.fillStyle = PALETTE.acc;
+      g.font = 'bold 18px "Courier New", Courier, monospace';
+      g.textAlign = 'center';
+      g.fillText('!', guard.x, guard.y - 30);
+      g.restore();
+    }
+  }
+}
+
+function drawCreature(g) {
+  const walls = activeWallsList();
+  // Subtle forward sensory cone (visible in study/sheet.jpg ahead of creature!)
+  const sensePoly = buildConePolygon(S.x, S.y, S.heading, 0.38, 128, 24, walls);
+  if (sensePoly.length >= 3) {
+    g.save();
+    g.beginPath();
+    g.moveTo(sensePoly[0].x, sensePoly[0].y);
+    for (let i = 1; i < sensePoly.length; i++) g.lineTo(sensePoly[i].x, sensePoly[i].y);
+    g.closePath();
+    const sGrad = g.createRadialGradient(S.x, S.y, 6, S.x, S.y, 128);
+    sGrad.addColorStop(0, 'rgba(195, 228, 214, 0.16)');
+    sGrad.addColorStop(1, 'rgba(195, 228, 214, 0.0)');
+    g.fillStyle = sGrad;
+    g.fill();
+    g.restore();
+  }
+
+  // Crimson core glow on floor beneath creature
+  const cGlow = g.createRadialGradient(S.x, S.y, 4, S.x, S.y, 38 + S.sizeTier * 14);
+  cGlow.addColorStop(0, 'rgba(224, 82, 60, 0.42)');
+  cGlow.addColorStop(1, 'rgba(224, 82, 60, 0)');
+  g.fillStyle = cGlow;
+  g.beginPath();
+  g.arc(S.x, S.y, 38 + S.sizeTier * 14, 0, Math.PI * 2);
+  g.fill();
+
+  // Animated organic dark bio-tendrils radiating gently so movement feels alive like Carrion / sheet.jpg
+  const tendrilCount = 4 + S.sizeTier * 4;
+  g.save();
+  g.translate(S.x, S.y);
+  g.rotate(S.heading);
+  for (let i = 0; i < tendrilCount; i++) {
+    const baseA = ((i / tendrilCount) - 0.5) * Math.PI * 1.7 + Math.PI;
+    const wave = Math.sin(S.t * 7.5 + i * 1.9) * 0.28;
+    const len = (22 + S.sizeTier * 14) * (0.85 + 0.15 * Math.cos(S.t * 5 + i));
+    const mx = Math.cos(baseA + wave * 0.5) * (len * 0.55);
+    const my = Math.sin(baseA + wave * 0.5) * (len * 0.55);
+    const ex = Math.cos(baseA + wave) * len;
+    const ey = Math.sin(baseA + wave) * len;
+
+    g.strokeStyle = 'rgba(180, 214, 196, 0.35)';
+    g.lineWidth = 3.5;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(mx, my, ex, ey);
+    g.stroke();
+
+    g.strokeStyle = '#101816';
+    g.lineWidth = 2.2;
+    g.stroke();
+  }
+  g.restore();
+
+  // Draw pixel-art creature sprite for current growth size (0, 1, 2)
+  const crop = CREATURE_CROPS[S.sizeTier];
+  if (creatureImg.complete && creatureImg.naturalWidth > 0) {
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.translate(S.x, S.y);
+    g.rotate(S.heading + crop.rotOffset);
+    const breathe = 1 + Math.sin(S.t * 6) * 0.04;
+    const dw = crop.dw * breathe, dh = crop.dh * breathe;
+    g.drawImage(creatureImg, crop.sx, crop.sy, crop.sw, crop.sh, -dw / 2, -dh / 2, dw, dh);
+    g.restore();
+  }
+}
+
+// Warm golden human silhouette memory ripple (matches study/sheet.jpg row 4!)
+function drawMemoryRipples(g) {
+  for (const rp of S.ripples) {
+    const p = rp.t / rp.dur;
+
+    // Initial crimson bio-starburst (0..0.22s, matching sheet.jpg frame 29)
+    if (rp.t < 0.32) {
+      const bp = rp.t / 0.32;
+      g.save();
+      g.translate(rp.x, rp.y);
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * Math.PI * 2 + i * 0.2;
+        const r1 = 14 + bp * 58 * (0.7 + (i % 3) * 0.2);
+        g.strokeStyle = `rgba(255, 105, 85, ${(1 - bp) * 0.9})`;
+        g.lineWidth = 3;
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    // Expanding golden memory dome + glowing human silhouettes inside
+    const ease = 1 - Math.pow(1 - p, 2.3);
+    const rad = 48 + ease * 315;
+    const cy = Math.min(rp.y, 445); // frame dome cleanly over center floor like study/sheet.jpg
+    const alpha = p < 0.16 ? p / 0.16 : Math.max(0, 1 - (p - 0.16) / 0.84);
+
+    g.save();
+    g.beginPath();
+    g.arc(rp.x - 45, cy, rad, 0, Math.PI * 2);
+    g.clip();
+
+    const cx = rp.x - 45;
+    // Warm amber radial wash
+    const domeGrad = g.createRadialGradient(cx, cy, rad * 0.08, cx, cy, rad);
+    domeGrad.addColorStop(0, `rgba(255, 226, 156, ${alpha * 0.38})`);
+    domeGrad.addColorStop(0.68, `rgba(235, 180, 90, ${alpha * 0.22})`);
+    domeGrad.addColorStop(1, `rgba(255, 218, 134, ${alpha * 0.50})`);
+    g.fillStyle = domeGrad;
+    g.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+
+    // Golden neural caustic threads & sparkles inside memory bubble
+    g.strokeStyle = `rgba(255, 228, 165, ${alpha * 0.38})`;
+    g.lineWidth = 2.0;
+    for (let k = 0; k < 9; k++) {
+      g.beginPath();
+      const yOff = cy - rad * 0.78 + k * (rad * 0.20);
+      g.moveTo(cx - rad, yOff);
+      g.bezierCurveTo(
+        cx - rad * 0.3, yOff + Math.sin(rp.t * 3 + k) * 38,
+        cx + rad * 0.3, yOff - Math.cos(rp.t * 3 + k) * 38,
+        cx + rad, yOff
+      );
+      g.stroke();
+    }
+
+    for (const sp of rp.sparks) {
+      const sx = cx + Math.cos(sp.a) * (sp.rr * (0.55 + ease * 0.85));
+      const sy = cy + Math.sin(sp.a) * (sp.rr * (0.55 + ease * 0.85));
+      g.fillStyle = `rgba(255, 244, 200, ${alpha * (0.55 + 0.45 * Math.sin(rp.t * 8 + sp.ph))})`;
+      g.beginPath();
+      g.arc(sx, sy, sp.s * 1.35, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    // Tall expressive warm human silhouettes inside the ripple (matching study/sheet.jpg row 4!)
+    g.save();
+    g.translate(cx - 18, cy + 48);
+    g.shadowColor = 'rgba(255, 210, 120, 0.95)';
+    g.shadowBlur = 24;
+    g.fillStyle = `rgba(255, 236, 192, ${alpha * 0.92})`;
+    g.strokeStyle = `rgba(255, 236, 192, ${alpha * 0.92})`;
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+
+    // Left researcher profile facing right (head, neck, lab coat torso & outstretched hands)
+    g.beginPath();
+    g.ellipse(-74, -158, 22, 26, 0.12, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.moveTo(-98, -124);
+    g.quadraticCurveTo(-75, -132, -52, -120);
+    g.lineTo(-42, 35);
+    g.lineTo(-54, 120);
+    g.lineTo(-96, 120);
+    g.lineTo(-104, 25);
+    g.closePath();
+    g.fill();
+    g.lineWidth = 16;
+    g.beginPath();
+    g.moveTo(-58, -94);
+    g.lineTo(-24, -52);
+    g.lineTo(8, -58);
+    g.stroke();
+
+    // Right human silhouette facing left
+    const childScale = rp.pose === 'child' ? 0.72 : 1.0;
+    g.save();
+    g.translate(78, rp.pose === 'child' ? 38 : 0);
+    g.scale(childScale, childScale);
+    g.beginPath();
+    g.ellipse(0, -154, 22, 26, -0.12, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.moveTo(-22, -118);
+    g.quadraticCurveTo(2, -130, 26, -120);
+    g.lineTo(36, 35);
+    g.lineTo(28, 120);
+    g.lineTo(-18, 120);
+    g.lineTo(-26, 30);
+    g.closePath();
+    g.fill();
+    g.lineWidth = 16;
+    g.beginPath();
+    g.moveTo(-16, -92);
+    g.lineTo(-46, -54);
+    g.lineTo(-70 / childScale, (-58 - (rp.pose === 'child' ? 38 : 0)) / childScale);
+    g.stroke();
+    g.restore();
+
+    g.restore();
+    g.restore();
+
+    // Crisp outer golden shockwave ring
+    g.save();
+    g.strokeStyle = `rgba(255, 224, 150, ${alpha * 0.92})`;
+    g.lineWidth = 3.5;
+    g.beginPath();
+    g.arc(cx, cy, rad, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+  }
+}
+
+function drawHUD(g) {
+  // Minimal clean pixel-monospace telemetry in upper-left margin + memory flash bar when active
+  g.save();
+  g.font = 'bold 14px "Courier New", Courier, monospace';
+  g.fillStyle = 'rgba(200, 230, 208, 0.76)';
+  g.textAlign = 'left';
+  const def = ROOM_DEFS[S.roomIdx];
+  g.fillText(
+    `${def.label}   ·   MASS ${S.sizeTier + 1}/3   ·   MEMORIES ${S.totalAbsorbed}`,
+    54,
+    34
+  );
+
+  // Show poignant memory flash card banner during/shortly after node absorption
+  if (S.lastMemory && (S.phase === 'flash' || S.ripples.length > 0)) {
+    const a = S.phase === 'flash' ? 0.96 : Math.min(0.92, S.ripples[0].t < 1.8 ? 0.92 : (2.35 - S.ripples[0].t) * 1.6);
+    if (a > 0.04) {
+      g.globalAlpha = Math.max(0, a);
+      g.fillStyle = 'rgba(10, 14, 13, 0.88)';
+      g.fillRect(210, 594, 860, 62);
+      g.strokeStyle = PALETTE.gold;
+      g.lineWidth = 2;
+      g.strokeRect(210, 594, 860, 62);
+
+      g.fillStyle = PALETTE.gold;
+      g.font = 'bold 13px "Courier New", Courier, monospace';
+      g.fillText(`${S.lastMemory.code} — ${S.lastMemory.who}`, 230, 616);
+
+      g.fillStyle = PALETTE.fg;
+      g.font = '16px "Courier New", Courier, monospace';
+      g.fillText(S.lastMemory.line, 230, 642);
+    }
+  }
+  g.restore();
+}
+
+function drawGlitchTitle(g) {
+  g.fillStyle = 'rgba(10, 13, 12, 0.86)';
+  g.fillRect(0, 0, W, H);
+
+  // Periodic horror glitch burst (spec.json: "Pixel art; a start screen that glitches to a horror version")
+  const cyc = S.t % 2.8;
+  const glitch = (cyc > 2.35 && cyc < 2.62) || (cyc > 1.15 && cyc < 1.22);
+
+  if (glitch) {
+    g.fillStyle = 'rgba(224, 82, 60, 0.12)';
+    g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 9; i++) {
+      const sy = ((S.t * 930 + i * 83) | 0) % H;
+      const sh = 6 + (i % 4) * 8;
+      const shift = ((i % 2 === 0 ? 1 : -1) * 18);
+      g.fillStyle = i % 2 === 0 ? 'rgba(224, 82, 60, 0.28)' : 'rgba(200, 230, 208, 0.15)';
+      g.fillRect(shift, sy, W, sh);
+    }
+  }
+
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+
+  // Title HIVE
+  g.font = 'bold 104px "Helvetica Neue", Arial, sans-serif';
+  if (glitch) {
+    g.fillStyle = 'rgba(200, 230, 208, 0.6)';
+    g.fillText('THEY WERE', W / 2 - 8, 272);
+    g.fillStyle = PALETTE.acc;
+    g.fillText('PEOPLE', W / 2 + 8, 276);
+  } else {
+    g.fillStyle = PALETTE.acc;
+    g.fillText('HIVE', W / 2, 274);
+  }
+
+  g.fillStyle = glitch ? PALETTE.acc : PALETTE.fg;
+  g.font = '28px "Courier New", Courier, monospace';
+  g.fillText(glitch ? 'do not absorb us.' : 'absorb. learn. grow.', W / 2, 376);
+
+  // START button matching m2_title_ref.png
+  g.fillStyle = PALETTE.bg;
+  g.fillRect(480, 448, 320, 74);
+  g.strokeStyle = glitch ? PALETTE.acc : PALETTE.fg;
+  g.lineWidth = 5;
+  g.strokeRect(480, 448, 320, 74);
+  g.fillStyle = PALETTE.fg;
+  g.font = 'bold 28px "Courier New", Courier, monospace';
+  g.fillText('START', W / 2, 486);
+
+  g.font = '22px "Courier New", Courier, monospace';
+  g.fillStyle = 'rgba(200, 230, 208, 0.75)';
+  g.fillText('HOW TO PLAY', W / 2, 574);
+
+  if (S.howToOpen) {
+    g.fillStyle = '#0c0f0e';
+    g.fillRect(300, 600, 680, 92);
+    g.strokeStyle = PALETTE.fg;
+    g.lineWidth = 2;
+    g.strokeRect(300, 600, 680, 92);
+    g.font = '15px "Courier New", Courier, monospace';
+    g.fillStyle = PALETTE.fg;
+    g.fillText('[WASD / ARROWS] Slither behind lab walls & dodge guard beams.', W / 2, 628);
+    g.fillText('[SPACE / TOUCH] Absorb crimson nodes to grow across 3 sectors.', W / 2, 654);
+    g.fillText('Piece together what the nodes really were before the exit.', W / 2, 678);
+  }
+}
+
+function drawCaughtOverlay(g) {
+  g.fillStyle = 'rgba(28, 8, 8, 0.78)';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = PALETTE.acc;
+  g.lineWidth = 3;
+  g.strokeRect(340, 250, 600, 220);
+
+  g.textAlign = 'center';
+  g.fillStyle = PALETTE.acc;
+  g.font = 'bold 42px "Courier New", Courier, monospace';
+  g.fillText('SPECIMEN CAUGHT', W / 2, 320);
+
+  g.fillStyle = PALETTE.fg;
+  g.font = '18px "Courier New", Courier, monospace';
+  g.fillText('Guard spotlight locked before breakout mass reached.', W / 2, 372);
+  g.fillText('Re-initializing sector stealth...', W / 2, 412);
+}
+
+function drawExitAndEndOverlay(g) {
+  if (S.phase === 'exit') {
+    const p = Math.min(1, S.exitTimer / 1.5);
+    g.fillStyle = `rgba(12, 15, 14, ${p * 0.92})`;
+    g.fillRect(0, 0, W, H);
+    g.textAlign = 'center';
+    g.fillStyle = PALETTE.gold;
+    g.font = 'bold 26px "Courier New", Courier, monospace';
+    g.fillText('SURFACE BLAST DOORS OPEN...', W / 2, H / 2 - 18);
+    g.fillStyle = PALETTE.fg;
+    g.font = '20px "Courier New", Courier, monospace';
+    g.fillText('Every voice inside the core speaks at once.', W / 2, H / 2 + 24);
+    return;
+  }
+
+  // ENDING: GUILT (spec.json: "At the exit the memories add up: the nodes were people. The creature, now able to feel guilt, self-destructs.")
+  g.fillStyle = 'rgba(10, 13, 12, 0.95)';
+  g.fillRect(0, 0, W, H);
+
+  // Dissolving crimson-to-gold particles ascending from center
+  for (let i = 0; i < 36; i++) {
+    const a = i * 2.399;
+    const rr = (20 + S.endTimer * (32 + (i % 5) * 14)) % 280;
+    const px = W / 2 + Math.cos(a) * rr;
+    const py = 270 + Math.sin(a) * rr * 0.45 - (S.endTimer * 18) % 90;
+    g.fillStyle = i % 3 === 0 ? 'rgba(224,82,60,0.65)' : 'rgba(245,207,135,0.75)';
+    g.beginPath();
+    g.arc(px, py, 2.5 + (i % 3), 0, Math.PI * 2);
+    g.fill();
+  }
+
+  g.strokeStyle = PALETTE.fg;
+  g.lineWidth = 3;
+  g.strokeRect(200, 125, 880, 470);
+
+  g.textAlign = 'center';
+  g.fillStyle = PALETTE.acc;
+  g.font = 'bold 19px "Courier New", Courier, monospace';
+  g.fillText(`EXIT THRESHOLD REACHED  ·  ${S.totalAbsorbed} MINDS ABSORBED`, W / 2, 185);
+
+  g.fillStyle = PALETTE.fg;
+  g.font = 'bold 52px "Courier New", Courier, monospace';
+  g.fillText('ENDING: GUILT', W / 2, 252);
+
+  g.fillStyle = PALETTE.gold;
+  g.font = '21px "Courier New", Courier, monospace';
+  g.fillText('Aris. Mara. Jonas. Elena. Samir. Claire. David.', W / 2, 326);
+
+  g.fillStyle = PALETTE.fg;
+  g.font = '20px "Courier New", Courier, monospace';
+  g.fillText('What the facility called intelligence nodes were people.', W / 2, 378);
+  g.fillText('Now large enough to understand what it took,', W / 2, 414);
+  g.fillText('the creature opens its core at the threshold and lets go.', W / 2, 450);
+
+  g.fillStyle = 'rgba(200, 230, 208, 0.72)';
+  g.font = 'bold 17px "Courier New", Courier, monospace';
+  g.fillText('[ENTER / SPACE] RETURN TO CONTAINMENT', W / 2, 540);
+}
+
+// Pre-baked subtle film grain for post-processing
+const grainCanvas = document.createElement('canvas');
+grainCanvas.width = 128;
+grainCanvas.height = 128;
+const gctx = grainCanvas.getContext('2d');
+const gData = gctx.createImageData(128, 128);
+for (let i = 0; i < gData.data.length; i += 4) {
+  const v = (Math.random() * 255) | 0;
+  gData.data[i] = v;
+  gData.data[i + 1] = v;
+  gData.data[i + 2] = v;
+  gData.data[i + 3] = 10;
+}
+gctx.putImageData(gData, 0, 0);
+
+// Expose read-only state for play.mjs
+window.__game = {
+  get state() {
+    return {
+      phase: S.phase,
+      t: +S.t.toFixed(3),
+      room: S.roomIdx,
+      x: +S.x.toFixed(1),
+      y: +S.y.toFixed(1),
+      vx: +S.vx.toFixed(1),
+      vy: +S.vy.toFixed(1),
+      size: S.sizeTier + 1,
+      absorbed: S.totalAbsorbed,
+      roomAbsorbed: S.roomAbsorbed,
+      roomRequired: ROOM_DEFS[S.roomIdx].requiredNodes,
+      doorOpen: S.doorOpen,
+      door: { x: S.doorPos.x, y: S.doorPos.y },
+      nodes: S.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, absorbed: n.absorbed })),
+      guards: S.guards.map(g => ({
+        x: +g.x.toFixed(1),
+        y: +g.y.toFixed(1),
+        angle: +g.angle.toFixed(3),
+        halfAngle: g.halfAngle,
+        range: g.range,
+        alert: +g.alert.toFixed(2),
+      })),
+      lastMemory: S.lastMemory ? S.lastMemory.line : null,
+    };
+  },
+};
+
+let lastTime = performance.now();
+function frame(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  update(dt);
+
+  drawRoomBackground(ctx);
+  drawNodes(ctx);
+  drawGuardsAndCones(ctx);
+  drawCreature(ctx);
+  drawMemoryRipples(ctx);
+
+  // Subtle floating dust motes in facility darkness
+  ctx.fillStyle = 'rgba(200, 230, 208, 0.22)';
+  for (const m of S.motes) {
+    ctx.fillRect(m.x, m.y, 2, 2);
+  }
+
+  if (S.phase === 'room' || S.phase === 'flash') {
+    drawHUD(ctx);
+  } else if (S.phase === 'title') {
+    drawGlitchTitle(ctx);
+  } else if (S.phase === 'caught') {
+    drawCaughtOverlay(ctx);
+  } else if (S.phase === 'exit' || S.phase === 'end') {
+    drawExitAndEndOverlay(ctx);
+  }
+
+  // Atmospheric dark vignette + subtle CRT/film grain matched to study/sheet.jpg
+  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, W * 0.68);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(2,5,4,0.46)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  const ox = ((S.t * 89) | 0) % 128;
+  const oy = ((S.t * 53) | 0) % 128;
+  ctx.save();
+  ctx.translate(-ox, -oy);
+  ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat');
+  ctx.fillRect(0, 0, W + 128, H + 128);
+  ctx.restore();
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

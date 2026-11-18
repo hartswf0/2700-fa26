@@ -1,0 +1,222 @@
+{
+  "id": "g9",
+  "group": "Group 9",
+  "name": "Company Builder",
+  "from": "Idea three: an idle clicker where AI takes over the company and human talent disappears.",
+  "hook": "Every upgrade clicks for you. Every upgrade takes a button away.",
+  "pitch": "An idle clicker about a paperclip company. You start by making clips by hand. Each automation you buy does a job for you and removes the button that did it. When the last button greys out, the company runs without you. Stop before the last upgrade and you keep one hand on it.",
+  "minute_check": "Yes: anyone who has seen a clicker gets the twist at once.",
+  "build_check": "Yes: six upgrades, one screen.",
+  "scope": "Six upgrades is enough. Each upgrade should name the decision it takes from the player.",
+  "palette": {
+    "bg": "#f2efe6",
+    "fg": "#1b1b1b",
+    "acc": "#2f6fd8",
+    "main_bg": "#f2efe6",
+    "main_fg": "#1b1b1b",
+    "main_acc": "#2f6fd8"
+  },
+  "template_type": "clicker",
+  "brief": {
+    "player": "The founder of a small paperclip company.",
+    "goal": "Grow output. Buy upgrades that automate the work.",
+    "fail": "None at first. Each automation upgrade removes one button you could press; when no buttons are left, you watch.",
+    "ending": "The screen goes greyscale and skips forward: the company runs itself and human work is gone. A second ending if you stop buying upgrades before the last one.",
+    "verb": "Click, then buy.",
+    "theme": "Success at growth costs you your say. The more you automate, the fewer choices remain yours.",
+    "look": "Colour that drains to grey as automation grows; buttons fade as they lose their clickability."
+  },
+  "prov": {
+    "bug": "This upgrade clicks for me. Free time!",
+    "nit": "Which button did it take away? Can you get it back?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "make",
+      "HAND MADE",
+      1,
+      0
+    ],
+    [
+      "auto",
+      "AUTOMATING",
+      2,
+      0
+    ],
+    [
+      "watch",
+      "WATCHING",
+      3,
+      0
+    ],
+    [
+      "endA",
+      "ENDING: GREY",
+      4,
+      0
+    ],
+    [
+      "endB",
+      "ENDING: KEPT A HAND",
+      4,
+      1
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "make",
+      "start"
+    ],
+    [
+      "make",
+      "auto",
+      "first upgrade"
+    ],
+    [
+      "auto",
+      "watch",
+      "last button gone"
+    ],
+    [
+      "watch",
+      "endA",
+      "time skip"
+    ],
+    [
+      "auto",
+      "endB",
+      "refuse last upgrade"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Universal Paperclips (Frank Lantz, 2017)",
+      "The same premise, played to the end of the universe. Play it before you design, then decide what yours says that it does not."
+    ],
+    [
+      "Nick Bostrom, “Ethical Issues in Advanced Artificial Intelligence” (2003)",
+      "The paper the paperclip maximizer comes from."
+    ],
+    [
+      "Stanisław Lem, “Trurl’s Electronic Bard” (The Cyberiad)",
+      "Your own reading: a machine that does a human craft and puts the poets out of work."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g9/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g9/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Stylized tactile desktop clicker-simulation game in warm paper cream (#f2efe6), crisp black ink (#1b1b1b), and cobalt blue (#2f6fd8). Steady overhead desk-screen camera. A cursor rapidly clicks a giant blue central circle spawning gleaming bent wire paperclips across the workspace; as robotic auto-bender arms switch on along the right margin, vibrant color slowly drains toward cool industrial greyscale and interactive buttons physically recess and fade flat. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for layout and color palette. Sound design: crisp metallic wire clicks accelerating into rhythmic factory ticks. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Company Builder: Click, then buy. leading visibly to The screen goes greyscale and skips forward: the company runs itself and human work is gone. A second ending if you stop buying upgrades before the last one. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Stylized tactile desktop clicker-simulation game in warm paper cream (#f2efe6), crisp black ink (#1b1b1b), and cobalt blue (#2f6fd8). Steady overhead desk-screen camera. A cursor rapidly clicks a giant blue central circle spawning gleaming bent wire paperclips across the workspace; as robotic auto-bender arms switch on along the right margin, vibrant color slowly drains toward cool industrial greyscale and interactive buttons physically recess and fade flat. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for layout and color palette. Sound design: crisp metallic wire clicks accelerating into rhythmic factory ticks. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Click, then buy.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (None at first. Each automation upgrade removes one button you could press; when no buttons are left, you watch.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The screen goes greyscale and skips forward: the company runs itself and human work is gone. A second ending if you stop buying upgrades before the last one.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Company Builder demonstrating start, core verb (Click, then buy.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "big_click_button",
+      "label": "Big click button",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "paperclip_icon",
+      "label": "Paperclip icon",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Company Builder\": Paperclip icon. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#f2efe6, #1b1b1b, accent #2f6fd8), style: Colour that drains to grey as automation grows; buttons fade as they lose their clickability., matching the reference gameplay frame."
+    },
+    {
+      "id": "upgrade_list_rows_6_upgrades",
+      "label": "Upgrade list rows (6 upgrades)",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "counters_clips_money_buttons_left",
+      "label": "Counters: clips, money, buttons left",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "colour_to_grey_filter",
+      "label": "Colour-to-grey filter",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "time_skip_end_screen",
+      "label": "Time-skip end screen",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Company Builder\" (Success at growth costs you your say. The more you automate, the fewer choices remain yours.). Visual mood: Colour that drains to grey as automation grows; buttons fade as they lose their clickability.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

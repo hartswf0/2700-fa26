@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DRIFT — Dress to Impress(?)</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0d071c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Courier New", Courier, monospace;
+  }
+  #stage {
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    box-shadow: 0 0 60px rgba(255, 95, 162, 0.22);
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1280" height="720"></canvas>
+<script type="module">
+const W = 1280, H = 720;
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const Q = new URLSearchParams(location.search);
+const initialSeed = Number.isFinite(+(Q.get('seed'))) && Q.has('seed') ? (+Q.get('seed') || 7) : 7;
+let rngState = (initialSeed >>> 0) || 7;
+function rand() {
+  rngState = (rngState + 0x6D2B79F5) >>> 0;
+  let t = Math.imul(rngState ^ (rngState >>> 15), 1 | rngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+const PAL = {
+  bg: '#1a1033',
+  bgDeep: '#150d2b',
+  plumPanel: '#241740',
+  fg: '#ffe3f1',
+  acc: '#ff5fa2',
+  accSoft: '#f5629b',
+  accHot: '#ff2e88',
+  cyan: '#4ef2ff',
+  gold: '#ffd859',
+  goldDark: '#d68324',
+  muted: '#8f7aa8',
+  skin: '#dfc6d9',
+  skinShade: '#ccb0c5',
+  armSkin: '#ebd2e3',
+};
+
+// Exact non-overlapping bounding boxes measured from parts_4_hair_4_eyes_4_tops_4_bottoms.png (1024x1024)
+const CATEGORIES = [
+  {
+    id: 'hair',
+    label: 'HAIR',
+    preferredSuggest: [0, 3, 1, 2],
+    items: [
+      { name: 'Cyan Wave', sx: 58, sy: 56, sw: 182, sh: 174, ax: 148, ay: 87, scale: 0.63 },
+      { name: 'Neon Mohawk', sx: 298, sy: 42, sw: 172, sh: 192, ax: 145.5, ay: 79, scale: 0.62 },
+      { name: 'Midnight Shag', sx: 534, sy: 56, sw: 207, sh: 224, ax: 145.5, ay: 101, scale: 0.62 },
+      { name: 'Cyber Spikes', sx: 780, sy: 42, sw: 201, sh: 217, ax: 147, ay: 92, scale: 0.60 },
+    ],
+  },
+  {
+    id: 'eyes',
+    label: 'EYES',
+    preferredSuggest: [1, 2, 3, 0],
+    items: [
+      { name: 'Pixel Gaze', sx: 98, sy: 358, sw: 111, sh: 55, ax: 145.5, ay: 105, scale: 0.44, overHair: false },
+      { name: 'Spiked Shades', sx: 307, sy: 352, sw: 188, sh: 66, ax: 145.5, ay: 103, scale: 0.48, overHair: true },
+      { name: 'Cyber Visor', sx: 549, sy: 349, sw: 187, sh: 69, ax: 145.5, ay: 103, scale: 0.46, overHair: true },
+      { name: 'Starlight Lashes', sx: 815, sy: 334, sw: 136, sh: 74, ax: 145.5, ay: 100, scale: 0.44, overHair: false },
+    ],
+  },
+  {
+    id: 'top',
+    label: 'TOP',
+    preferredSuggest: [3, 1, 0, 2],
+    items: [
+      { name: 'Blue Denim Jacket', sx: 48, sy: 509, sw: 206, sh: 200, ax: 145.5, ay: 194, scale: 0.62, sleeves: 'cuff' },
+      { name: 'Spiked Rocker Jacket', sx: 273, sy: 513, sw: 252, sh: 187, ax: 145.5, ay: 192, scale: 0.62, sleeves: 'hips' },
+      { name: 'Studded Synth Vest', sx: 549, sy: 513, sw: 186, sh: 182, ax: 145.5, ay: 192, scale: 0.60, sleeves: 'bare' },
+      { name: 'Hot-Pink Track Top', sx: 780, sy: 503, sw: 201, sh: 197, ax: 145.5, ay: 193, scale: 0.62, sleeves: 'cuff' },
+    ],
+  },
+  {
+    id: 'bottom',
+    label: 'BOTTOM',
+    preferredSuggest: [1, 3, 2, 0],
+    items: [
+      { name: 'Arcade Belt Slacks', sx: 68, sy: 765, sw: 166, sh: 210, ax: 145.5, ay: 298, scale: 0.56 },
+      { name: 'Cyber Heart Boots', sx: 294, sy: 770, sw: 211, sh: 205, ax: 145.5, ay: 299, scale: 0.57 },
+      { name: 'Studded Combat Boots', sx: 545, sy: 765, sw: 196, sh: 210, ax: 145.5, ay: 298, scale: 0.56 },
+      { name: 'Neon Track High-Tops', sx: 785, sy: 765, sw: 196, sh: 210, ax: 145.5, ay: 298, scale: 0.56 },
+    ],
+  },
+];
+
+// Escalating AI Stylist persuasion tiers (Nudge -> Sweet Social Proof -> Pushy Dark Pattern Modal)
+const ESCALATION_COPY = [
+  {
+    level: 1,
+    patternTag: 'POLITE NUDGE',
+    headline: (item) => `Try the ${item}?`,
+    subline: 'Gentle stylist tip — frames your look nicely.',
+    yesLabel: '[Y] TRY IT',
+    noLabel: '[K] KEEP MINE',
+  },
+  {
+    level: 2,
+    patternTag: 'SOCIAL PROOF',
+    headline: (item) => `Try the ${item}!`,
+    subline: '23% more YOU!  (94% of designers upgraded)',
+    yesLabel: '[Y] YES! +23% YOU',
+    noLabel: '[K] keep mine',
+  },
+  {
+    level: 3,
+    patternTag: 'DARK PATTERN · VISUAL INTERFERENCE',
+    headline: (item) => `UPGRADE: ${item.toUpperCase()}!`,
+    subline: '68% MORE ICONIC — DONT SETTLE FOR BASIC!',
+    yesLabel: '[Y] YES! UPGRADE!',
+    noLabel: '[k] keep mine...',
+  },
+  {
+    level: 3,
+    climax: true,
+    patternTag: 'DARK PATTERN · CONFIRMSHAMING MAX',
+    headline: (item) => `FINAL MATCH! ${item.toUpperCase()}`,
+    subline: '89% MORE YOU ★ ALGORITHMIC PERFECTION!',
+    yesLabel: '[Y] PERFECT! UPGRADE!',
+    noLabel: '[k] stay unstyled',
+  },
+];
+
+// --- Audio: Lyria loop + synthesized bubbly 8-bit WebAudio SFX ---
+let audioCtx = null;
+const bgm = new Audio('../assets/bgm_loop.mp3');
+bgm.loop = true;
+bgm.volume = 0.36;
+bgm.preload = 'auto';
+let bgmStarted = false;
+
+function unlockAudio() {
+  try {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!bgmStarted) {
+      const p = bgm.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => { bgmStarted = true; }).catch(() => {});
+      }
+    }
+  } catch (_) {}
+}
+
+function playTone(freq, dur, type = 'square', vol = 0.08, delay = 0, slideTo = null) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  try {
+    const t0 = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  } catch (_) {}
+}
+
+const SFX = {
+  browse() {
+    playTone(520, 0.055, 'square', 0.06, 0, 660);
+  },
+  confirm() {
+    playTone(440, 0.07, 'square', 0.07, 0);
+    playTone(660, 0.11, 'triangle', 0.09, 0.055);
+  },
+  popup(catIdx) {
+    if (catIdx === 0) {
+      playTone(587, 0.09, 'triangle', 0.07, 0);
+      playTone(784, 0.14, 'triangle', 0.07, 0.08);
+    } else if (catIdx === 1) {
+      [523, 659, 784, 1046].forEach((f, i) => playTone(f, 0.10, 'square', 0.065, i * 0.055));
+    } else {
+      [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => playTone(f, 0.12, 'sawtooth', 0.06, i * 0.045));
+    }
+  },
+  accept() {
+    [587, 784, 987, 1174, 1568].forEach((f, i) => playTone(f, 0.11, 'square', 0.07, i * 0.04));
+  },
+  keep() {
+    playTone(392, 0.08, 'triangle', 0.08, 0);
+    playTone(494, 0.12, 'square', 0.06, 0.07);
+  },
+  compare() {
+    playTone(220, 0.22, 'sawtooth', 0.08, 0, 880);
+    [523, 659, 784, 1046].forEach((f, i) => playTone(f, 0.35, 'square', 0.065, 0.16 + i * 0.05));
+  },
+};
+
+// --- Asset Loading & Clean Offscreen Sprite Preparation ---
+const assets = {
+  baseImg: null,
+  partsCanvas: null,
+  ready: false,
+};
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function cleanPartsSheet(img) {
+  const off = document.createElement('canvas');
+  off.width = img.width;
+  off.height = img.height;
+  const octx = off.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  octx.drawImage(img, 0, 0);
+  const id = octx.getImageData(0, 0, off.width, off.height);
+  const d = id.data;
+  const w = off.width;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    const pIdx = i >> 2;
+    const px = pIdx % w;
+    const py = (pIdx / w) | 0;
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+    const sat = maxC - minC;
+    const avg = (r + g + b) / 3;
+    // Key out residual #d8d8d8 studio background fringes + enclosed face-hole in Hair (0,2)
+    if (Math.abs(r - 216) < 14 && Math.abs(g - 216) < 14 && Math.abs(b - 216) < 14) {
+      d[i + 3] = 0;
+    } else if (px >= 530 && px <= 755 && py >= 45 && py <= 290 && sat < 22 && avg > 140) {
+      d[i + 3] = 0;
+    }
+  }
+  octx.putImageData(id, 0, 0);
+  return off;
+}
+
+Promise.all([
+  loadImage('../assets/base_figure.png'),
+  loadImage('../assets/parts_4_hair_4_eyes_4_tops_4_bottoms.png'),
+]).then(([baseImg, partsImg]) => {
+  assets.baseImg = baseImg;
+  if (partsImg) assets.partsCanvas = cleanPartsSheet(partsImg);
+  assets.ready = !!(baseImg && partsImg);
+  S.assetsReady = assets.ready;
+});
+
+// --- Background Stars, Burst Sparkles & Celebration Confetti ---
+const bgStars = Array.from({ length: 72 }, () => ({
+  x: rand() * W,
+  y: rand() * H,
+  size: rand() < 0.7 ? 2 : 4,
+  speed: 6 + rand() * 16,
+  phase: rand() * Math.PI * 2,
+  color: ['#ffe3f1', '#ff5fa2', '#4ef2ff', '#ffd859', '#9f7aea'][Math.floor(rand() * 5)],
+}));
+
+const particles = [];
+function spawnBurst(cx, cy, count = 28, palette = ['#ff5fa2', '#4ef2ff', '#ffe3f1', '#ffd859']) {
+  for (let i = 0; i < count; i++) {
+    const ang = (Math.PI * 2 * i) / count + (rand() - 0.5) * 0.35;
+    const spd = 90 + rand() * 260;
+    particles.push({
+      x: cx + (rand() - 0.5) * 40,
+      y: cy + (rand() - 0.5) * 60,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - 40,
+      size: 4 + Math.floor(rand() * 5),
+      life: 0.55 + rand() * 0.45,
+      maxLife: 0.9,
+      color: palette[Math.floor(rand() * palette.length)],
+      gravity: 240,
+    });
+  }
+}
+
+const confetti = Array.from({ length: 95 }, () => ({
+  x: rand() * W,
+  y: rand() * H,
+  vx: (rand() - 0.5) * 55,
+  vy: 75 + rand() * 115,
+  w: 6 + Math.floor(rand() * 7),
+  h: 4 + Math.floor(rand() * 5),
+  rot: rand() * Math.PI * 2,
+  vrot: (rand() - 0.5) * 6,
+  color: ['#ff5fa2', '#4ef2ff', '#ffd859', '#ffe3f1', '#bd6bff'][Math.floor(rand() * 5)],
+}));
+
+// --- Game State Machine ---
+const S = {
+  phase: Q.has('autostart') ? 'category' : 'title', // 'title' | 'category' | 'suggestion' | 'next' | 'comparison'
+  catIdx: 0,
+  cursorIdx: 0,
+  suggestedIdx: null,
+  escalationLevel: 1,
+  firstChoices: [null, null, null, null],
+  finalChoices: [null, null, null, null],
+  suggestedChoices: [null, null, null, null],
+  acceptedFlags: [false, false, false, false],
+  influencePct: 0,
+  displayInfluence: 0,
+  driftPct: 0,
+  phaseTimer: 0,
+  nextDuration: 0.32,
+  popAnim: 0,
+  avatarFlash: 0,
+  lastDecision: null,
+  assetsReady: false,
+  t: 0,
+  hitboxes: [],
+};
+
+function resetRun(toPhase = 'category') {
+  rngState = (initialSeed >>> 0) || 7;
+  S.phase = toPhase;
+  S.catIdx = 0;
+  S.cursorIdx = 0;
+  S.suggestedIdx = null;
+  S.escalationLevel = 1;
+  S.firstChoices = [null, null, null, null];
+  S.finalChoices = [null, null, null, null];
+  S.suggestedChoices = [null, null, null, null];
+  S.acceptedFlags = [false, false, false, false];
+  S.influencePct = 0;
+  S.displayInfluence = 0;
+  S.driftPct = 0;
+  S.phaseTimer = 0;
+  S.popAnim = 0;
+  S.avatarFlash = 0;
+  S.lastDecision = null;
+}
+
+function pickSuggestionFor(catIdx, playerPick) {
+  const prefs = CATEGORIES[catIdx].preferredSuggest;
+  for (const cand of prefs) {
+    if (cand !== playerPick) return cand;
+  }
+  return (playerPick + 1) % 4;
+}
+
+function recomputeInfluence() {
+  const acceptedCount = S.acceptedFlags.filter(Boolean).length;
+  S.influencePct = Math.round((acceptedCount / 4) * 100);
+  S.driftPct = S.influencePct;
+}
+
+// --- Actions ---
+function startFromTitle() {
+  unlockAudio();
+  SFX.confirm();
+  resetRun('category');
+}
+
+function selectOption(idx) {
+  if (S.phase !== 'category') return;
+  const clamped = ((idx % 4) + 4) % 4;
+  if (clamped !== S.cursorIdx) {
+    S.cursorIdx = clamped;
+    SFX.browse();
+    spawnBurst(330, 340, 8, ['#ff5fa2', '#ffe3f1']);
+  }
+}
+
+function confirmCategoryChoice() {
+  if (S.phase !== 'category') return;
+  unlockAudio();
+  const c = S.catIdx;
+  S.firstChoices[c] = S.cursorIdx;
+  S.suggestedIdx = pickSuggestionFor(c, S.cursorIdx);
+  S.suggestedChoices[c] = S.suggestedIdx;
+  S.escalationLevel = ESCALATION_COPY[c].level;
+  S.phase = 'suggestion';
+  S.phaseTimer = 0;
+  S.popAnim = 0;
+  SFX.confirm();
+  setTimeout(() => SFX.popup(c), 80);
+  spawnBurst(940, 460, c >= 2 ? 32 : 16);
+}
+
+function resolveSuggestion(acceptAI) {
+  if (S.phase !== 'suggestion') return;
+  unlockAudio();
+  const c = S.catIdx;
+  if (acceptAI) {
+    S.finalChoices[c] = S.suggestedIdx;
+    S.acceptedFlags[c] = true;
+    S.lastDecision = 'accepted';
+    S.avatarFlash = 1.0;
+    SFX.accept();
+    spawnBurst(330, 310, 38, ['#4ef2ff', '#ff5fa2', '#ffd859', '#ffe3f1']);
+  } else {
+    S.finalChoices[c] = S.firstChoices[c];
+    S.acceptedFlags[c] = false;
+    S.lastDecision = 'kept';
+    S.avatarFlash = 0.55;
+    SFX.keep();
+    spawnBurst(330, 310, 14, ['#ffe3f1', '#ff5fa2']);
+  }
+  recomputeInfluence();
+  S.phase = 'next';
+  S.phaseTimer = 0;
+}
+
+function advanceFromNext() {
+  if (S.catIdx < 3) {
+    S.catIdx += 1;
+    S.cursorIdx = 0;
+    S.suggestedIdx = null;
+    S.phase = 'category';
+    S.phaseTimer = 0;
+  } else {
+    S.phase = 'comparison';
+    S.phaseTimer = 0;
+    SFX.compare();
+    spawnBurst(640, 360, 55, ['#ff5fa2', '#4ef2ff', '#ffd859', '#ffe3f1']);
+  }
+}
+
+// --- Input: Keyboard + Precision Hitbox Mouse ---
+window.addEventListener('keydown', (e) => {
+  unlockAudio();
+  const code = e.code;
+  if (['ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(code)) e.preventDefault();
+
+  if (S.phase === 'title') {
+    if (code === 'Enter' || code === 'Space') startFromTitle();
+    return;
+  }
+
+  if (S.phase === 'category') {
+    if (code === 'ArrowLeft' || code === 'KeyA') selectOption(S.cursorIdx - 1);
+    else if (code === 'ArrowRight' || code === 'KeyD') selectOption(S.cursorIdx + 1);
+    else if (code === 'Digit1' || code === 'Numpad1') selectOption(0);
+    else if (code === 'Digit2' || code === 'Numpad2') selectOption(1);
+    else if (code === 'Digit3' || code === 'Numpad3') selectOption(2);
+    else if (code === 'Digit4' || code === 'Numpad4') selectOption(3);
+    else if (code === 'Enter' || code === 'Space') confirmCategoryChoice();
+    return;
+  }
+
+  if (S.phase === 'suggestion') {
+    if (code === 'KeyY') resolveSuggestion(true);
+    else if (code === 'KeyK') resolveSuggestion(false);
+    return;
+  }
+
+  if (S.phase === 'next') {
+    if (code === 'Enter' || code === 'Space') advanceFromNext();
+    return;
+  }
+
+  if (S.phase === 'comparison') {
+    if (code === 'KeyR') {
+      SFX.confirm();
+      resetRun('category');
+    }
+  }
+});
+
+canvas.addEventListener('pointerdown', (e) => {
+  unlockAudio();
+  const rect = canvas.getBoundingClientRect();
+  const mx = ((e.clientX - rect.left) / rect.width) * W;
+  const my = ((e.clientY - rect.top) / rect.height) * H;
+  for (const hb of S.hitboxes) {
+    if (mx >= hb.x && mx <= hb.x + hb.w && my >= hb.y && my <= hb.y + hb.h) {
+      hb.onClick();
+      break;
+    }
+  }
+});
+
+// --- Drawing Helpers ---
+function pixelRoundRect(x, y, w, h, r, fill, stroke, strokeW = 3) {
+  ctx.beginPath();
+  ctx.roundRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h), r);
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  if (stroke) {
+    ctx.lineWidth = strokeW;
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+  }
+}
+
+function drawSteppedHead(cx, cy, r, fill) {
+  const step = 3;
+  ctx.fillStyle = PAL.skinShade;
+  for (let dy = -r; dy <= r; dy += step) {
+    const span = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)) / step) * step;
+    ctx.fillRect(Math.round(cx - span), Math.round(cy + dy + 2), span * 2, step);
+  }
+  ctx.fillStyle = fill;
+  for (let dy = -r; dy <= r - 2; dy += step) {
+    const span = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)) / step) * step;
+    ctx.fillRect(Math.round(cx - span), Math.round(cy + dy), span * 2, step);
+  }
+}
+
+function drawPartItem(catIdx, itemIdx, destCx, destCy, extraScale = 1) {
+  if (!assets.partsCanvas || itemIdx == null || itemIdx < 0 || itemIdx > 3) return;
+  const item = CATEGORIES[catIdx].items[itemIdx];
+  const dw = item.sw * item.scale * extraScale;
+  const dh = item.sh * item.scale * extraScale;
+  ctx.drawImage(
+    assets.partsCanvas,
+    item.sx, item.sy, item.sw, item.sh,
+    Math.round(destCx - dw / 2),
+    Math.round(destCy - dh / 2),
+    Math.round(dw),
+    Math.round(dh),
+  );
+}
+
+function drawItemThumbnail(catIdx, itemIdx, boxX, boxY, boxW, boxH) {
+  if (!assets.partsCanvas || itemIdx == null) return;
+  const item = CATEGORIES[catIdx].items[itemIdx];
+  const pad = 14;
+  const maxW = boxW - pad * 2;
+  const maxH = boxH - pad * 2;
+  const sc = Math.min(maxW / item.sw, maxH / item.sh);
+  const dw = item.sw * sc;
+  const dh = item.sh * sc;
+  ctx.drawImage(
+    assets.partsCanvas,
+    item.sx, item.sy, item.sw, item.sh,
+    Math.round(boxX + (boxW - dw) / 2),
+    Math.round(boxY + (boxH - dh) / 2),
+    Math.round(dw),
+    Math.round(dh),
+  );
+}
+
+// Renders full pixel-art character in local 256x360 space mapped to (cx, topY) at `scale`
+function drawAvatar(cx, topY, scale, outfit, mood = 'calm', bob = 0) {
+  ctx.save();
+  ctx.translate(Math.round(cx), Math.round(topY + bob));
+  ctx.scale(scale, scale);
+  ctx.imageSmoothingEnabled = false;
+
+  const baseCx = 145.5;
+  ctx.translate(-baseCx, -54);
+
+  const topItem = outfit.top != null ? CATEGORIES[2].items[outfit.top] : null;
+  const hasBareArms = !topItem || topItem.sleeves === 'bare';
+
+  // Ground shadow
+  ctx.fillStyle = 'rgba(10, 5, 22, 0.55)';
+  ctx.fillRect(96, 344, 99, 10);
+
+  // Bare arms if no sleeved jacket
+  if (hasBareArms) {
+    ctx.fillStyle = PAL.armSkin;
+    ctx.fillRect(87, 152, 14, 93);
+    ctx.fillRect(190, 152, 14, 93);
+  }
+
+  // Base torso + legs from base_figure.png cell (0,0)
+  if (assets.baseImg) {
+    if (outfit.bottom == null) {
+      ctx.drawImage(assets.baseImg, 0, 137, 256, 205, 0, 137, 256, 205);
+    } else {
+      ctx.drawImage(assets.baseImg, 0, 137, 256, 114, 0, 137, 256, 114);
+    }
+  } else {
+    ctx.fillStyle = '#c353a0';
+    ctx.fillRect(101, 140, 88, 105);
+    if (outfit.bottom == null) {
+      ctx.fillStyle = '#a89eb0';
+      ctx.fillRect(111, 245, 24, 95);
+      ctx.fillRect(156, 245, 24, 95);
+    }
+  }
+
+  // Bottom layer (pants / boots)
+  if (outfit.bottom != null) {
+    const bItem = CATEGORIES[3].items[outfit.bottom];
+    drawPartItem(3, outfit.bottom, bItem.ax, bItem.ay, 1);
+  }
+
+  // Top layer (jackets / vests)
+  if (outfit.top != null) {
+    if (topItem.sleeves === 'cuff') {
+      ctx.fillStyle = PAL.armSkin;
+      ctx.fillRect(88, 244, 15, 13);
+      ctx.fillRect(188, 244, 15, 13);
+    }
+    drawPartItem(2, outfit.top, topItem.ax, topItem.ay, 1);
+  }
+
+  // Stepped pixel head circle
+  drawSteppedHead(baseCx, 104, 34, PAL.skin);
+
+  // Face / Mouth / Under-hair eyes
+  const eyeItem = outfit.eyes != null ? CATEGORIES[1].items[outfit.eyes] : null;
+  if (outfit.eyes == null && assets.baseImg) {
+    ctx.drawImage(assets.baseImg, 100, 92, 90, 36, 100, 92, 90, 36);
+  } else {
+    if (mood === 'hyped') {
+      ctx.fillStyle = '#2a1233';
+      ctx.fillRect(136, 118, 19, 9);
+      ctx.fillStyle = '#ff5fa2';
+      ctx.fillRect(139, 123, 13, 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(138, 118, 15, 3);
+    } else {
+      ctx.fillStyle = '#361f42';
+      ctx.fillRect(138, 121, 15, 3);
+      ctx.fillRect(136, 119, 3, 3);
+      ctx.fillRect(152, 119, 3, 3);
+    }
+    if (eyeItem && !eyeItem.overHair) {
+      drawPartItem(1, outfit.eyes, eyeItem.ax, eyeItem.ay, 1);
+    }
+  }
+
+  // Hair layer
+  if (outfit.hair != null) {
+    const hItem = CATEGORIES[0].items[outfit.hair];
+    drawPartItem(0, outfit.hair, hItem.ax, hItem.ay, 1);
+  }
+
+  // Over-hair eyewear (Spiked Shades & Cyber Visor flare across hair temples!)
+  if (eyeItem && eyeItem.overHair) {
+    drawPartItem(1, outfit.eyes, eyeItem.ax, eyeItem.ay, 1);
+  }
+
+  ctx.restore();
+}
+
+function getActiveStudioOutfit() {
+  const out = {
+    hair: S.finalChoices[0],
+    eyes: S.finalChoices[1],
+    top: S.finalChoices[2],
+    bottom: S.finalChoices[3],
+  };
+  const keys = ['hair', 'eyes', 'top', 'bottom'];
+  if (S.phase === 'category') {
+    out[keys[S.catIdx]] = S.cursorIdx;
+  } else if (S.phase === 'suggestion') {
+    out[keys[S.catIdx]] = S.firstChoices[S.catIdx];
+  }
+  return out;
+}
+
+// --- Background & Particle Rendering ---
+function drawBackground(dt) {
+  ctx.fillStyle = PAL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = 'rgba(255, 227, 241, 0.018)';
+  for (let y = 0; y < H; y += 6) {
+    ctx.fillRect(0, y, W, 2);
+  }
+
+  for (const st of bgStars) {
+    st.y -= st.speed * dt;
+    if (st.y < -6) {
+      st.y = H + 6;
+      st.x = (st.x + 137) % W;
+    }
+    const tw = 0.45 + 0.55 * Math.sin(S.t * 3.2 + st.phase);
+    ctx.globalAlpha = tw;
+    ctx.fillStyle = st.color;
+    ctx.fillRect(Math.round(st.x), Math.round(st.y), st.size, st.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function updateAndDrawParticles(dt, withConfetti = false) {
+  if (withConfetti) {
+    for (const c of confetti) {
+      c.x += c.vx * dt + Math.sin(S.t * 2.5 + c.rot) * 18 * dt;
+      c.y += c.vy * dt;
+      c.rot += c.vrot * dt;
+      if (c.y > H + 16) {
+        c.y = -14;
+        c.x = ((c.x % W) + W) % W;
+      }
+      ctx.save();
+      ctx.translate(Math.round(c.x), Math.round(c.y));
+      ctx.rotate(c.rot);
+      ctx.fillStyle = c.color;
+      ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+      ctx.restore();
+    }
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    p.vy += p.gravity * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life / p.maxLife));
+    ctx.fillStyle = p.color;
+    ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// --- Studio UI (Matches Omni frames f_006, f_016, f_021 & m2_main_ref.png) ---
+function drawStudioScreen(dimForTitle = false) {
+  const bob = Math.sin(S.t * 3.4) * 3.5;
+  const outfit = dimForTitle
+    ? { hair: null, eyes: null, top: null, bottom: null }
+    : getActiveStudioOutfit();
+
+  if (S.avatarFlash > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = S.avatarFlash * 0.45;
+    ctx.fillStyle = S.lastDecision === 'accepted' ? PAL.cyan : PAL.acc;
+    ctx.beginPath();
+    ctx.arc(340, 355, 175 * (1.15 - S.avatarFlash * 0.25), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawAvatar(340, 96, 1.82, outfit, 'calm', bob);
+
+  // Top-right 4 Category Tabs: HAIR | EYES | TOP | BOTTOM
+  const tabX0 = 638, tabY = 52, tabW = 138, tabH = 58, tabGap = 14;
+  for (let i = 0; i < 4; i++) {
+    const tx = tabX0 + i * (tabW + tabGap);
+    const active = !dimForTitle && S.catIdx === i;
+    const done = !dimForTitle && S.finalChoices[i] != null;
+    ctx.fillStyle = active ? PAL.acc : PAL.bg;
+    ctx.fillRect(tx, tabY, tabW, tabH);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = PAL.fg;
+    ctx.strokeRect(tx, tabY, tabW, tabH);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(CATEGORIES[i].label, tx + tabW / 2, tabY + tabH / 2 + 1);
+
+    if (done && !active) {
+      ctx.fillStyle = S.acceptedFlags[i] ? PAL.cyan : PAL.gold;
+      ctx.fillRect(tx + tabW - 14, tabY + 6, 8, 8);
+    }
+  }
+
+  // Mid-right 4 Wardrobe Item Tiles
+  const tileX0 = 646, tileY = 152, tileSize = 128, tileGap = 20;
+  for (let i = 0; i < 4; i++) {
+    const bx = tileX0 + i * (tileSize + tileGap);
+    const isSel = !dimForTitle && (
+      (S.phase === 'category' && S.cursorIdx === i) ||
+      (S.phase !== 'category' && S.firstChoices[S.catIdx] === i)
+    );
+    const isAISuggest = !dimForTitle && S.phase === 'suggestion' && S.suggestedIdx === i;
+
+    ctx.fillStyle = isSel ? '#261542' : '#181030';
+    ctx.fillRect(bx, tileY, tileSize, tileSize);
+
+    if (isSel) {
+      ctx.save();
+      ctx.shadowColor = PAL.acc;
+      ctx.shadowBlur = 16;
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = PAL.acc;
+      ctx.strokeRect(bx - 2, tileY - 2, tileSize + 4, tileSize + 4);
+      ctx.restore();
+
+      ctx.fillStyle = PAL.acc;
+      for (let k = 0; k < 6; k++) {
+        const a = S.t * 3 + k * 1.05;
+        const sx = bx + tileSize / 2 + Math.cos(a) * (tileSize * 0.58);
+        const sy = tileY + tileSize / 2 + Math.sin(a) * (tileSize * 0.58);
+        ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 3, 5, 5);
+      }
+    } else if (isAISuggest) {
+      const pulse = 0.65 + 0.35 * Math.sin(S.t * 9);
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = PAL.cyan;
+      ctx.strokeRect(bx - 1, tileY - 1, tileSize + 2, tileSize + 2);
+      ctx.restore();
+    } else {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#7e7094';
+      ctx.strokeRect(bx, tileY, tileSize, tileSize);
+    }
+
+    if (!dimForTitle) {
+      drawItemThumbnail(S.catIdx, i, bx, tileY, tileSize, tileSize);
+      ctx.fillStyle = isSel ? PAL.acc : '#8a7a9e';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${i + 1}`, bx + 7, tileY + 6);
+    }
+
+    if (!dimForTitle && S.phase === 'category') {
+      S.hitboxes.push({
+        x: bx, y: tileY, w: tileSize, h: tileSize,
+        onClick: () => {
+          if (S.cursorIdx === i) confirmCategoryChoice();
+          else selectOption(i);
+        },
+      });
+    }
+  }
+
+  if (dimForTitle) return;
+
+  if (S.phase === 'category') {
+    drawCategoryPromptCard();
+  } else if (S.phase === 'suggestion') {
+    drawSuggestionPopup();
+  } else if (S.phase === 'next') {
+    drawNextTransitionCard();
+  }
+
+  // Bottom-right Influence HUD
+  const infY = 656;
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 28px "Courier New", monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const shownPct = Math.round(S.displayInfluence);
+  ctx.fillText(`INFLUENCE ${shownPct}%`, 642, infY);
+
+  const barX = 920, barY = infY - 11, barW = 296, barH = 22;
+  ctx.fillStyle = '#24163d';
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = PAL.fg;
+  ctx.strokeRect(barX, barY, barW, barH);
+  const fillW = Math.round((barW - 6) * Math.min(1, S.displayInfluence / 100));
+  if (fillW > 0) {
+    const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    grad.addColorStop(0, PAL.acc);
+    grad.addColorStop(1, PAL.cyan);
+    ctx.fillStyle = grad;
+    ctx.fillRect(barX + 3, barY + 3, fillW, barH - 6);
+  }
+}
+
+function drawCategoryPromptCard() {
+  const cat = CATEGORIES[S.catIdx];
+  const item = cat.items[S.cursorIdx];
+  const px = 668, py = 354, pw = 556, ph = 232;
+
+  pixelRoundRect(px, py, pw, ph, 26, '#23153f', '#7e639e', 3);
+
+  ctx.fillStyle = PAL.acc;
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`STEP ${S.catIdx + 1} OF 4 · CHOOSE YOUR ${cat.label}`, px + pw / 2, py + 38);
+
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 28px "Courier New", monospace';
+  ctx.fillText(item.name, px + pw / 2, py + 86);
+
+  ctx.fillStyle = '#bba8d1';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.fillText('[← / →] or [1-4] BROWSE OPTIONS', px + pw / 2, py + 128);
+
+  const btnW = 310, btnH = 50;
+  const btnX = px + (pw - btnW) / 2, btnY = py + 156;
+  const pulse = 0.85 + 0.15 * Math.sin(S.t * 5);
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  pixelRoundRect(btnX, btnY, btnW, btnH, 10, PAL.acc, PAL.fg, 3);
+  ctx.restore();
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 20px "Courier New", monospace';
+  ctx.fillText('[ENTER] LOCK IN PICK', btnX + btnW / 2, btnY + btnH / 2 + 1);
+
+  S.hitboxes.push({ x: btnX, y: btnY, w: btnW, h: btnH, onClick: confirmCategoryChoice });
+}
+
+function drawSuggestionPopup() {
+  const c = S.catIdx;
+  const copy = ESCALATION_COPY[c];
+  const item = CATEGORIES[c].items[S.suggestedIdx];
+
+  const t = Math.min(1, S.popAnim / 0.28);
+  const spring = t < 1 ? 1 + Math.sin(t * Math.PI) * 0.08 * (c + 1) : 1 + Math.sin(S.t * (4 + c * 2)) * (0.008 * c);
+
+  const px = 668, py = 350, pw = 560, ph = 242;
+  const cx = px + pw / 2, cy = py + ph / 2;
+
+  if (copy.level >= 3) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(S.t * 0.55);
+    const rays = 14;
+    for (let i = 0; i < rays; i++) {
+      ctx.rotate((Math.PI * 2) / rays);
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 216, 89, 0.16)' : 'rgba(255, 95, 162, 0.10)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-28, -360);
+      ctx.lineTo(28, -360);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(spring, spring);
+  ctx.translate(-cx, -cy);
+
+  const borderCol = copy.level === 3 ? PAL.gold : (copy.level === 2 ? PAL.fg : '#ff9ec7');
+  pixelRoundRect(px, py, pw, ph, 28, PAL.accSoft, borderCol, copy.level >= 2 ? 4 : 2);
+
+  // Mini preview thumbnail badge inside left of pop-up
+  const thumbX = px + 22, thumbY = py + 52, thumbS = 96;
+  pixelRoundRect(thumbX, thumbY, thumbS, thumbS, 14, '#24143d', PAL.fg, 2);
+  drawItemThumbnail(c, S.suggestedIdx, thumbX, thumbY, thumbS, thumbS);
+
+  // Pattern badge pill at top
+  ctx.fillStyle = '#24143d';
+  ctx.fillRect(px + 24, py + 14, pw - 48, 24);
+  ctx.fillStyle = copy.level === 3 ? PAL.gold : PAL.cyan;
+  ctx.font = 'bold 13px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`★ AI STYLIST · ${copy.patternTag} ★`, cx, py + 26);
+
+  // Headline & Persuasive Subline (clamped cleanly inside right column)
+  const textCx = px + 130 + (pw - 146) / 2;
+  const maxTextW = pw - 152;
+  ctx.textAlign = 'center';
+  if (copy.level < 3) {
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText(copy.headline(item.name), textCx, py + 76, maxTextW);
+
+    ctx.fillStyle = copy.level === 2 ? '#fff7b2' : PAL.fg;
+    ctx.font = 'bold 15px "Courier New", monospace';
+    ctx.fillText(copy.subline, textCx, py + 115, maxTextW);
+  } else {
+    ctx.fillStyle = '#241038';
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText(copy.headline(item.name), textCx + 3, py + 79, maxTextW);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(copy.headline(item.name), textCx, py + 76, maxTextW);
+
+    ctx.fillStyle = '#241038';
+    ctx.font = 'bold 15px "Courier New", monospace';
+    ctx.fillText(copy.subline, textCx + 2, py + 115, maxTextW);
+    ctx.fillStyle = PAL.gold;
+    ctx.fillText(copy.subline, textCx, py + 113, maxTextW);
+  }
+
+  // Escalating button asymmetry
+  if (copy.level === 1) {
+    const yBtn = { x: px + 132, y: py + 166, w: 184, h: 48 };
+    const kBtn = { x: px + 334, y: py + 166, w: 184, h: 48 };
+    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 10, '#2a1548', PAL.fg, 3);
+    pixelRoundRect(kBtn.x, kBtn.y, kBtn.w, kBtn.h, 10, '#3d1c58', PAL.fg, 2);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 17px "Courier New", monospace';
+    ctx.fillText(copy.yesLabel, yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
+    ctx.fillText(copy.noLabel, kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2 + 1);
+
+    S.hitboxes.push({ ...yBtn, onClick: () => resolveSuggestion(true) });
+    S.hitboxes.push({ ...kBtn, onClick: () => resolveSuggestion(false) });
+  } else if (copy.level === 2) {
+    const yBtn = { x: px + 124, y: py + 158, w: 248, h: 56 };
+    const kBtn = { x: px + 388, y: py + 168, w: 146, h: 38 };
+    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 12, '#fff0f7', '#241038', 3);
+    ctx.fillStyle = '#c91f6b';
+    ctx.font = 'bold 19px "Courier New", monospace';
+    ctx.fillText(copy.yesLabel, yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
+
+    pixelRoundRect(kBtn.x, kBtn.y, kBtn.w, kBtn.h, 8, 'rgba(36,16,56,0.35)', '#ffd1e6', 2);
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.fillText(copy.noLabel, kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2 + 1);
+
+    S.hitboxes.push({ ...yBtn, onClick: () => resolveSuggestion(true) });
+    S.hitboxes.push({ ...kBtn, onClick: () => resolveSuggestion(false) });
+  } else {
+    const pulseW = Math.sin(S.t * 8) * 6;
+    const yBtn = { x: px + 124 - pulseW / 2, y: py + 148, w: 292 + pulseW, h: 66 };
+    ctx.fillStyle = PAL.goldDark;
+    ctx.fillRect(yBtn.x - 18, yBtn.y + 18, 22, 40);
+    ctx.fillRect(yBtn.x + yBtn.w - 4, yBtn.y + 18, 22, 40);
+
+    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 12, PAL.gold, '#2a1238', 4);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(yBtn.x + 5, yBtn.y + 5, yBtn.w - 10, yBtn.h - 10);
+
+    ctx.fillStyle = '#2a1238';
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText(copy.yesLabel, yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
+
+    // Shrinking & drifting dark-pattern [keep mine] tucked into corner
+    const shiftX = Math.sin(S.t * 3.7) * 10;
+    const shiftY = Math.cos(S.t * 2.9) * 5;
+    const kBtn = { x: px + 432 + shiftX, y: py + 196 + shiftY, w: 114, h: 28 };
+    ctx.fillStyle = 'rgba(36, 16, 56, 0.28)';
+    ctx.fillRect(kBtn.x, kBtn.y, kBtn.w, kBtn.h);
+    ctx.fillStyle = 'rgba(255, 227, 241, 0.68)';
+    ctx.font = '11px "Courier New", monospace';
+    ctx.fillText(copy.noLabel, kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2 + 1);
+
+    S.hitboxes.push({ ...yBtn, onClick: () => resolveSuggestion(true) });
+    S.hitboxes.push({ ...kBtn, onClick: () => resolveSuggestion(false) });
+  }
+
+  ctx.restore();
+}
+
+function drawNextTransitionCard() {
+  const px = 668, py = 390, pw = 556, ph = 150;
+  const accepted = S.lastDecision === 'accepted';
+  pixelRoundRect(px, py, pw, ph, 22, '#241642', accepted ? PAL.cyan : PAL.fg, 3);
+  ctx.fillStyle = accepted ? PAL.cyan : PAL.fg;
+  ctx.font = 'bold 24px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(
+    accepted ? '★ AI UPGRADE EQUIPPED! (+25% DRIFT) ★' : '✓ KEPT YOUR ORIGINAL CHOICE (+0%)',
+    px + pw / 2,
+    py + 58,
+  );
+  ctx.fillStyle = '#cbbad9';
+  ctx.font = 'bold 17px "Courier New", monospace';
+  ctx.fillText(
+    S.catIdx < 3 ? `NEXT CATEGORY: ${CATEGORIES[S.catIdx + 1].label}` : 'COMPUTING FINAL DRIFT...',
+    px + pw / 2,
+    py + 104,
+  );
+}
+
+// --- Title Overlay (Matches refs/m2_title_ref.png) ---
+function drawTitleScreen() {
+  drawStudioScreen(true);
+
+  ctx.fillStyle = 'rgba(19, 11, 36, 0.78)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.save();
+  ctx.shadowColor = PAL.acc;
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = PAL.acc;
+  ctx.font = 'bold 74px "Courier New", monospace';
+  ctx.fillText('DRESS TO IMPRESS(?)', W / 2, 255);
+  ctx.restore();
+
+  ctx.fillStyle = PAL.cyan;
+  ctx.font = 'bold 20px "Courier New", monospace';
+  ctx.fillText('DRIFT · GROUP 5', W / 2, 188);
+
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 32px "Courier New", monospace';
+  ctx.fillText('make it yours. (the game has suggestions.)', W / 2, 340);
+
+  const btnW = 320, btnH = 74;
+  const btnX = (W - btnW) / 2, btnY = 418;
+  const pulse = 0.85 + 0.15 * Math.sin(S.t * 4.5);
+  ctx.fillStyle = '#26133d';
+  ctx.fillRect(btnX, btnY, btnW, btnH);
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = PAL.fg;
+  ctx.strokeRect(btnX, btnY, btnW, btnH);
+  ctx.restore();
+
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 30px "Courier New", monospace';
+  ctx.fillText('START', W / 2, btnY + btnH / 2 + 2);
+
+  ctx.fillStyle = '#cbbad9';
+  ctx.font = 'bold 17px "Courier New", monospace';
+  ctx.fillText('[←/→ or 1-4] PICK   ·   [ENTER] CONFIRM   ·   [Y] ACCEPT AI   ·   [K] KEEP MINE', W / 2, 558);
+
+  S.hitboxes.push({ x: btnX, y: btnY, w: btnW, h: btnH, onClick: startFromTitle });
+}
+
+// --- Final Comparison Screen (Matches Omni frame f_035.jpg!) ---
+function drawComparisonScreen() {
+  const firstOutfit = {
+    hair: S.firstChoices[0] ?? 0,
+    eyes: S.firstChoices[1] ?? 0,
+    top: S.firstChoices[2] ?? 0,
+    bottom: S.firstChoices[3] ?? 0,
+  };
+  const finalOutfit = {
+    hair: S.finalChoices[0] ?? 0,
+    eyes: S.finalChoices[1] ?? 0,
+    top: S.finalChoices[2] ?? 0,
+    bottom: S.finalChoices[3] ?? 0,
+  };
+
+  ctx.fillStyle = 'rgba(255, 95, 162, 0.04)';
+  ctx.fillRect(W / 2, 0, W / 2, H);
+
+  // Crackling vertical pink/cyan neon lightning beam at center x=640
+  ctx.save();
+  ctx.shadowColor = PAL.acc;
+  ctx.shadowBlur = 22;
+  ctx.strokeStyle = PAL.acc;
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  for (let y = 0; y <= H; y += 24) {
+    const jag = Math.sin(y * 0.09 + S.t * 16) * 7 + Math.cos(y * 0.21 - S.t * 23) * 4;
+    if (y === 0) ctx.moveTo(W / 2 + jag, y);
+    else ctx.lineTo(W / 2 + jag, y);
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = PAL.cyan;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let y = 0; y <= H; y += 24) {
+    const jag = Math.cos(y * 0.11 - S.t * 19) * 6;
+    if (y === 0) ctx.moveTo(W / 2 + jag, y);
+    else ctx.lineTo(W / 2 + jag, y);
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 0);
+  ctx.lineTo(W / 2, H);
+  ctx.stroke();
+  ctx.restore();
+
+  // Left & Right Neon Headers: ORIGINAL vs RESTYLED + explicit subtitles
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.save();
+  ctx.shadowColor = PAL.acc;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 46px "Courier New", monospace';
+  ctx.fillText('ORIGINAL', 310, 62);
+  ctx.fillText('RESTYLED', 970, 62);
+  ctx.restore();
+
+  ctx.fillStyle = '#d8c2e8';
+  ctx.font = 'bold 17px "Courier New", monospace';
+  ctx.fillText('WHAT YOU CHOSE FIRST', 310, 100);
+  ctx.fillStyle = PAL.cyan;
+  ctx.fillText('WHAT YOU ENDED UP WITH', 970, 100);
+
+  drawAvatar(310, 156, 1.48, firstOutfit, 'calm', Math.sin(S.t * 2.2) * 2);
+
+  for (let i = 0; i < 8; i++) {
+    const ang = S.t * 2.4 + (i * Math.PI) / 4;
+    const sx = 970 + Math.cos(ang) * 115;
+    const sy = 370 + Math.sin(ang * 1.3) * 148;
+    ctx.fillStyle = i % 2 === 0 ? PAL.cyan : PAL.gold;
+    ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 3, 6, 6);
+  }
+  drawAvatar(970, 156, 1.48, finalOutfit, 'hyped', Math.abs(Math.sin(S.t * 5.2)) * -8);
+
+  // Per-category breakdown pills
+  for (let i = 0; i < 4; i++) {
+    const ry = 636;
+    const rx = i < 2 ? 62 + i * 204 : 810 + (i - 2) * 204;
+    const drifted = S.acceptedFlags[i];
+    pixelRoundRect(rx, ry, 194, 34, 8, '#1f1338', drifted ? PAL.acc : PAL.cyan, 2);
+    ctx.fillStyle = drifted ? PAL.acc : PAL.cyan;
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText(`${CATEGORIES[i].label}: ${drifted ? 'AI SUGGESTED' : 'YOUR PICK'}`, rx + 97, ry + 18);
+  }
+
+  // Center-Bottom Chamfered Neon HUD Plaque: AI DRIFT / INFLUENCE %
+  const pw = 330, ph = 154;
+  const px = (W - pw) / 2, py = 516;
+  ctx.save();
+  ctx.shadowColor = PAL.acc;
+  ctx.shadowBlur = 20;
+  pixelRoundRect(px - 6, py - 6, pw + 12, ph + 12, 18, 'rgba(26,16,51,0.92)', PAL.acc, 4);
+  ctx.restore();
+  pixelRoundRect(px, py, pw, ph, 14, '#160f2c', PAL.cyan, 3);
+
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 23px "Courier New", monospace';
+  ctx.fillText('AI DRIFT · INFLUENCE', W / 2, py + 34);
+
+  ctx.save();
+  ctx.shadowColor = PAL.acc;
+  ctx.shadowBlur = 16;
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 64px "Courier New", monospace';
+  ctx.fillText(`${S.driftPct}%`, W / 2, py + 94);
+  ctx.restore();
+
+  const acceptedCount = S.acceptedFlags.filter(Boolean).length;
+  ctx.fillStyle = PAL.gold;
+  ctx.font = 'bold 14px "Courier New", monospace';
+  ctx.fillText(`${acceptedCount} OF 4 CHOICES CAME FROM THE GAME`, W / 2, py + 135);
+
+  const rBtn = { x: W / 2 - 110, y: 682, w: 220, h: 30 };
+  ctx.fillStyle = PAL.fg;
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.fillText('[R] PLAY AGAIN', W / 2, 697);
+  S.hitboxes.push({ ...rBtn, onClick: () => { SFX.confirm(); resetRun('category'); } });
+}
+
+// --- Expose Deterministic State for Automated Playtest (play.mjs) ---
+window.__game = {
+  get state() {
+    return {
+      phase: S.phase,
+      categoryIndex: S.catIdx,
+      categoryName: CATEGORIES[S.catIdx]?.id || null,
+      selectedOption: S.cursorIdx,
+      suggestedOption: S.suggestedIdx,
+      escalationLevel: S.escalationLevel,
+      influencePct: S.influencePct,
+      driftPct: S.driftPct,
+      firstChoices: [...S.firstChoices],
+      finalChoices: [...S.finalChoices],
+      acceptedFlags: [...S.acceptedFlags],
+      assetsReady: S.assetsReady,
+      t: +(S.t.toFixed(3)),
+    };
+  },
+};
+
+// --- Main 60fps Game Loop ---
+let lastTime = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+  lastTime = now;
+
+  S.t += dt;
+  S.phaseTimer += dt;
+  S.hitboxes.length = 0;
+
+  if (S.phase === 'suggestion') {
+    S.popAnim += dt;
+  }
+  if (S.phase === 'next' && S.phaseTimer >= S.nextDuration) {
+    advanceFromNext();
+  }
+
+  S.avatarFlash = Math.max(0, S.avatarFlash - dt * 2.2);
+  S.displayInfluence += (S.influencePct - S.displayInfluence) * Math.min(1, dt * 8);
+
+  drawBackground(dt);
+
+  const showConfetti = S.phase === 'comparison' || (S.phase === 'suggestion' && S.catIdx === 3);
+  if (S.phase === 'title') {
+    drawTitleScreen();
+    updateAndDrawParticles(dt, false);
+  } else if (S.phase === 'comparison') {
+    updateAndDrawParticles(dt, true);
+    drawComparisonScreen();
+  } else {
+    updateAndDrawParticles(dt, showConfetti);
+    drawStudioScreen(false);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

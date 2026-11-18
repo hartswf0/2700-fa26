@@ -1,0 +1,224 @@
+{
+  "id": "g11",
+  "group": "Group 11",
+  "name": "Orpheus",
+  "from": "Idea 2 with some of Idea 3: an RPG Maker game after Orpheus, losing autonomy step by step, with Stanley Parable-style choices.",
+  "hook": "The guide will get you both out. It only asks to choose the doors.",
+  "pitch": "Orpheus leads Eurydice through five rooms out of the underworld. A helpful guide offers to choose for you, and each room it chooses more; your options grey out. By the last room the only choice left is the old one: whether to look back.",
+  "minute_check": "Yes, for anyone who knows the myth; the guide’s first line covers the rest.",
+  "build_check": "Yes in RPG Maker with five rooms.",
+  "scope": "Five rooms. Write the guide’s lines for each room first; they are the antagonist and the helper.",
+  "palette": {
+    "bg": "#22252a",
+    "fg": "#e6e1d3",
+    "acc": "#d9b45a",
+    "main_bg": "#22252a",
+    "main_fg": "#e6e1d3",
+    "main_acc": "#d9b45a"
+  },
+  "template_type": "rpg",
+  "brief": {
+    "player": "Orpheus, leading Eurydice out of the underworld.",
+    "goal": "Reach the surface without looking back.",
+    "fail": "Looking back.",
+    "ending": "The guide that helps you (the AI) makes more choices for you each room. Whether you look back is the only choice left; the ending depends on it.",
+    "verb": "Walk, and choose (fewer options each room).",
+    "theme": "Autonomy lost a step at a time, to a guide that is not simply bad. You asked for the help.",
+    "look": "Muted 3D-looking office spaces like The Stanley Parable, in an underworld."
+  },
+  "prov": {
+    "bug": "The guide picks the doors. Much faster!",
+    "nit": "When the guide chooses, can the player see what it chose against?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "room",
+      "ROOM",
+      1,
+      0
+    ],
+    [
+      "choose",
+      "CHOICE",
+      2,
+      0
+    ],
+    [
+      "look",
+      "LOOKED BACK",
+      2,
+      1
+    ],
+    [
+      "surface",
+      "THE SURFACE",
+      3,
+      0
+    ],
+    [
+      "end",
+      "ENDING",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "room",
+      "start"
+    ],
+    [
+      "room",
+      "choose",
+      "door"
+    ],
+    [
+      "choose",
+      "room",
+      "next room"
+    ],
+    [
+      "choose",
+      "look",
+      "turn around"
+    ],
+    [
+      "look",
+      "end",
+      "lost her"
+    ],
+    [
+      "choose",
+      "surface",
+      "room 5"
+    ],
+    [
+      "surface",
+      "end",
+      "arrive"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Ovid, Metamorphoses, Book X",
+      "The source: Orpheus looks back. Decide whether your player can be made to."
+    ],
+    [
+      "The Stanley Parable (Galactic Cafe, 2013)",
+      "Your own reference: choice everywhere but meaningless."
+    ],
+    [
+      "Hades (Supergiant Games, 2020)",
+      "A recent retelling where Orpheus is a character; useful for how myth carries into play."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g11/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g11/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Atmospheric top-down 2.5D mythological office-underworld adventure in muted charcoal (#22252a), warm bone (#e6e1d3), and antique gold (#d9b45a). Smooth overhead tracking camera. Orpheus walks ahead of a pale trailing Eurydice through stark Stanley-Parable-like subterranean corridors; at each branching doorway, a golden AI guide beam automatically seals and greys out two doors, steering them forward while Orpheus resists turning around toward the footsteps behind him. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for palette and corridor staging. Sound design: echoing footsteps, quiet harp notes mixed with fluorescent office hum. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Orpheus: Walk, and choose (fewer options each room). leading visibly to The guide that helps you (the AI) makes more choices for you each room. Whether you look back is the only choice left; the ending depends on it. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Atmospheric top-down 2.5D mythological office-underworld adventure in muted charcoal (#22252a), warm bone (#e6e1d3), and antique gold (#d9b45a). Smooth overhead tracking camera. Orpheus walks ahead of a pale trailing Eurydice through stark Stanley-Parable-like subterranean corridors; at each branching doorway, a golden AI guide beam automatically seals and greys out two doors, steering them forward while Orpheus resists turning around toward the footsteps behind him. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for palette and corridor staging. Sound design: echoing footsteps, quiet harp notes mixed with fluorescent office hum. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Walk, and choose (fewer options each room).) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Looking back.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The guide that helps you (the AI) makes more choices for you each room. Whether you look back is the only choice left; the ending depends on it.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Orpheus demonstrating start, core verb (Walk, and choose (fewer options each room).), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "orpheus_and_eurydice_sprites",
+      "label": "Orpheus and Eurydice sprites",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Orpheus\": Orpheus and Eurydice sprites. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#22252a, #e6e1d3, accent #d9b45a), style: Muted 3D-looking office spaces like The Stanley Parable, in an underworld., matching the reference gameplay frame."
+    },
+    {
+      "id": "guide_voice_text_box_style",
+      "label": "Guide voice: text box style",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "5_room_maps_rpg_maker_tiles",
+      "label": "5 room maps (RPG Maker tiles)",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "choice_menu_with_options_greying_out",
+      "label": "Choice menu with options greying out",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "two_ending_scenes",
+      "label": "Two ending scenes",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Orpheus\" (Autonomy lost a step at a time, to a guide that is not simply bad. You asked for the help.). Visual mood: Muted 3D-looking office spaces like The Stanley Parable, in an underworld.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

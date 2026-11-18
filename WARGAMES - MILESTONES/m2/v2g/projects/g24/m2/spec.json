@@ -1,0 +1,233 @@
+{
+  "id": "g24",
+  "group": "Group 24",
+  "name": "Memory Munitions",
+  "from": "Idea 1 (80s neon shooter, a machine working against you), refined: each kill destroys a memory. Working title.",
+  "hook": "You uploaded your mind into a war machine. Now every robot you shoot takes a piece of the past with it.",
+  "pitch": "A Contra-style arcade shooter with a minigun and a reason to take your finger off the trigger. Every robot you destroy takes information with it. You see what you erased as it breaks apart on screen: a family photo, a map, a message you almost had time to read. You can clear the room in seconds. Getting through with the evidence intact takes a different kind of skill.",
+  "minute_check": "Yes: the first robot that shatters into a photo explains it.",
+  "build_check": "Yes, with one level and one robot type that carries fragments.",
+  "scope": "One level. Decide the second skill (disable instead of destroy?) and give it one button.",
+  "palette": {
+    "bg": "#07060c",
+    "fg": "#5dff9e",
+    "acc": "#ff4fb0",
+    "main_bg": "#07060c",
+    "main_fg": "#5dff9e",
+    "main_acc": "#ff4fb0"
+  },
+  "template_type": "shooter",
+  "brief": {
+    "player": "A mind uploaded into a combat robot.",
+    "goal": "Get through the level, and recover as many memory fragments as you can.",
+    "fail": "Losing all health.",
+    "ending": "An album of what you kept and what you shot: the story you can piece together depends on it.",
+    "verb": "Shoot, or disable and read.",
+    "theme": "Speed costs memory: the fastest route destroys the evidence of who you were.",
+    "look": "Neon 1980s side-scroller; fragments in warm photo colours against the neon."
+  },
+  "prov": {
+    "bug": "Minigun! Clear the room in three seconds!",
+    "nit": "What was in the robot you just shot? Can the player ever get it back?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "run",
+      "RUN AND GUN",
+      1,
+      0
+    ],
+    [
+      "frag",
+      "FRAGMENT",
+      2,
+      0
+    ],
+    [
+      "dead",
+      "GAME OVER",
+      2,
+      1
+    ],
+    [
+      "boss",
+      "LAST ROBOT",
+      3,
+      0
+    ],
+    [
+      "album",
+      "ALBUM",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "run",
+      "start"
+    ],
+    [
+      "run",
+      "frag",
+      "robot destroyed"
+    ],
+    [
+      "frag",
+      "run",
+      "continue"
+    ],
+    [
+      "run",
+      "dead",
+      "health 0"
+    ],
+    [
+      "run",
+      "boss",
+      "end of level"
+    ],
+    [
+      "boss",
+      "album",
+      "down"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Contra (Konami, 1987)",
+      "The run-and-gun template: fast, readable, side-on."
+    ],
+    [
+      "Eternal Sunshine of the Spotless Mind (Michel Gondry, 2004)",
+      "Memories erased one by one, and someone trying to keep one."
+    ],
+    [
+      "Spec Ops: The Line (Yager, 2012)",
+      "A shooter that makes the player look at what their shooting did."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g24/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g24/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "1980s arcade neon side-scrolling run-and-gun game on deep void black (#07060c) with electric mint (#5dff9e) vector grid floors and hot magenta (#ff4fb0) robot enemies. Steady side-on 2.5D tracking camera. A sleek cybernetic soldier fires rapid neon bursts, then switches to a precision disable beam: the first robot shatters into warm golden-sepia photographic memory shards floating in slow motion, while the second robot powers down intact releasing a glowing intact memory photograph. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for perspective grid and neon palette. Sound design: punchy 80s synth bassline, laser zaps, crystalline chime. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Memory Munitions: Shoot, or disable and read. leading visibly to An album of what you kept and what you shot: the story you can piece together depends on it. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "1980s arcade neon side-scrolling run-and-gun game on deep void black (#07060c) with electric mint (#5dff9e) vector grid floors and hot magenta (#ff4fb0) robot enemies. Steady side-on 2.5D tracking camera. A sleek cybernetic soldier fires rapid neon bursts, then switches to a precision disable beam: the first robot shatters into warm golden-sepia photographic memory shards floating in slow motion, while the second robot powers down intact releasing a glowing intact memory photograph. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for perspective grid and neon palette. Sound design: punchy 80s synth bassline, laser zaps, crystalline chime. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Shoot, or disable and read.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Losing all health.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (An album of what you kept and what you shot: the story you can piece together depends on it.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Memory Munitions demonstrating start, core verb (Shoot, or disable and read.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "player_robot_with_minigun",
+      "label": "Player robot with minigun",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Memory Munitions\": Player robot with minigun. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#07060c, #5dff9e, accent #ff4fb0), style: Neon 1980s side-scroller; fragments in warm photo colours against the neon., matching the reference gameplay frame."
+    },
+    {
+      "id": "2_enemy_robot_types",
+      "label": "2 enemy robot types",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Memory Munitions\": 2 enemy robot types. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#07060c, #5dff9e, accent #ff4fb0), style: Neon 1980s side-scroller; fragments in warm photo colours against the neon., matching the reference gameplay frame."
+    },
+    {
+      "id": "8_memory_fragments_photo_map_message",
+      "label": "8 memory fragments (photo, map, message)",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Memory Munitions\": 8 memory fragments (photo, map, message). strictly harmonized palette (#07060c, #5dff9e, accent #ff4fb0), style: Neon 1980s side-scroller; fragments in warm photo colours against the neon.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "shatter_effect",
+      "label": "Shatter effect",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "side_scrolling_level",
+      "label": "Side-scrolling level",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "album_screen",
+      "label": "Album screen",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Memory Munitions\" (Speed costs memory: the fastest route destroys the evidence of who you were.). Visual mood: Neon 1980s side-scroller; fragments in warm photo colours against the neon.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

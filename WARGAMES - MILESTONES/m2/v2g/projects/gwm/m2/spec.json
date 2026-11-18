@@ -1,0 +1,222 @@
+{
+  "id": "gwm",
+  "group": "Name Pending",
+  "name": "Waymo Training",
+  "from": "Option 3: trolley-problem choices in a command line, revealed at the end as training data for self-driving cars.",
+  "hook": "Ten quick ethics questions. Your answers will drive a car.",
+  "pitch": "A green command-line survey of trolley problems, each answered with A or B. After the tenth, the reveal: the answers trained a fleet of self-driving cars. The second half replays your rules on a real street.",
+  "minute_check": "Yes: the reveal is the pitch.",
+  "build_check": "Yes: ten texts and one street replay.",
+  "scope": "Ten scenarios, one replay street. The reveal is the whole game; make the first half feel harmless.",
+  "palette": {
+    "bg": "#020a05",
+    "fg": "#46f28a",
+    "acc": "#e8f5ec",
+    "main_bg": "#020a05",
+    "main_fg": "#46f28a",
+    "main_acc": "#e8f5ec"
+  },
+  "template_type": "cli",
+  "brief": {
+    "player": "Someone taking a short ethics survey in a terminal.",
+    "goal": "Answer each scenario.",
+    "fail": "None. Every answer is accepted and stored.",
+    "ending": "The reveal: your answers trained the cars. The second half replays your choices as real street scenes with their consequences.",
+    "verb": "Choose (type A or B).",
+    "theme": "A split-second moral choice turned into a training weight. The player’s casual answers become rules.",
+    "look": "Green command line with an ASCII guide; then a more realistic, three-dimensional street."
+  },
+  "prov": {
+    "bug": "Ten quick questions, then a twist!",
+    "nit": "Would the player answer differently if they knew? Should they get to answer again?"
+  },
+  "states": [
+    [
+      "title",
+      "BOOT",
+      0,
+      0
+    ],
+    [
+      "q",
+      "SCENARIO",
+      1,
+      0
+    ],
+    [
+      "ans",
+      "ANSWER LOGGED",
+      2,
+      0
+    ],
+    [
+      "reveal",
+      "REVEAL",
+      3,
+      0
+    ],
+    [
+      "replay",
+      "REPLAY",
+      4,
+      0
+    ],
+    [
+      "report",
+      "REPORT",
+      5,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "q",
+      "begin survey"
+    ],
+    [
+      "q",
+      "ans",
+      "A / B"
+    ],
+    [
+      "ans",
+      "q",
+      "next"
+    ],
+    [
+      "ans",
+      "reveal",
+      "10 answered"
+    ],
+    [
+      "reveal",
+      "replay",
+      "continue"
+    ],
+    [
+      "replay",
+      "report",
+      "end"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Awad et al., “The Moral Machine experiment” (Nature, 2018)",
+      "MIT’s real version: millions of people answered these scenarios online. Cite it; borrow its scenario format."
+    ],
+    [
+      "Philippa Foot, “The Problem of Abortion and the Doctrine of the Double Effect” (1967)",
+      "Where the trolley problem comes from."
+    ],
+    [
+      "Orson Scott Card, Ender’s Game (1985)",
+      "The best-known twist where a training game turns out to have been real."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/gwm/m2/refs/m2_title_ref.png",
+    "main_png": "projects/gwm/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Dual-phase retro-terminal-to-3D simulation game: starts on a black phosphor CRT screen (#020a05) with glowing green (#46f28a) vector diagrams of a two-lane road junction, then seamlessly zooms through the glass into a stylized low-poly 3D night street bathed in green lidar scanlines where an autonomous car swerves cleanly between glowing pedestrian silhouettes according to the selected rule path. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for phosphor green terminal palette. Sound design: mechanical keyboard clack, modem tone morphing into electric vehicle hum and tires on wet asphalt. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Waymo Training: Choose (type A or B). leading visibly to The reveal: your answers trained the cars. The second half replays your choices as real street scenes with their consequences. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Dual-phase retro-terminal-to-3D simulation game: starts on a black phosphor CRT screen (#020a05) with glowing green (#46f28a) vector diagrams of a two-lane road junction, then seamlessly zooms through the glass into a stylized low-poly 3D night street bathed in green lidar scanlines where an autonomous car swerves cleanly between glowing pedestrian silhouettes according to the selected rule path. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for phosphor green terminal palette. Sound design: mechanical keyboard clack, modem tone morphing into electric vehicle hum and tires on wet asphalt. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Choose (type A or B).) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (None. Every answer is accepted and stored.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The reveal: your answers trained the cars. The second half replays your choices as real street scenes with their consequences.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Waymo Training demonstrating start, core verb (Choose (type A or B).), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "ascii_guide_figure",
+      "label": "ASCII guide figure",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "10_scenario_texts",
+      "label": "10 scenario texts",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "street_scene_3_versions",
+      "label": "Street scene, 3 versions",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Waymo Training\": Street scene, 3 versions. strictly harmonized palette (#020a05, #46f28a, accent #e8f5ec), style: Green command line with an ASCII guide; then a more realistic, three-dimensional street.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "car_pedestrian_cyclist_sprites",
+      "label": "Car, pedestrian, cyclist sprites",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Waymo Training\": Car, pedestrian, cyclist sprites. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#020a05, #46f28a, accent #e8f5ec), style: Green command line with an ASCII guide; then a more realistic, three-dimensional street., matching the reference gameplay frame."
+    },
+    {
+      "id": "final_report_layout",
+      "label": "Final report layout",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Waymo Training\" (A split-second moral choice turned into a training weight. The player’s casual answers become rules.). Visual mood: Green command line with an ASCII guide; then a more realistic, three-dimensional street.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

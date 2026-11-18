@@ -1,0 +1,213 @@
+{
+  "id": "g15",
+  "group": "Group 15",
+  "name": "Evil Battleship",
+  "from": "Evil Battleship (tentative): strikes on hidden targets, guided by an AI that may be wrong; civilian casualties shown but not scored.",
+  "hook": "The targeting AI is 92% sure. It was 92% sure last time too.",
+  "pitch": "A strike console on a hidden grid. The system recommends a target; you fire or check first. The score counts enemy troops. Civilian deaths are counted beside it and never subtracted. The final report puts both numbers side by side.",
+  "minute_check": "Yes: Battleship with an adviser.",
+  "build_check": "Yes: one grid, fixed missiles, a fixed error rate.",
+  "scope": "One map, fixed missile count. Decide how often the AI is wrong and keep that rule fixed so players can learn it.",
+  "palette": {
+    "bg": "#05070a",
+    "fg": "#7fe7ff",
+    "acc": "#ff4f6d",
+    "main_bg": "#05070a",
+    "main_fg": "#7fe7ff",
+    "main_acc": "#ff4f6d"
+  },
+  "template_type": "grid",
+  "brief": {
+    "player": "A strike officer at a console.",
+    "goal": "Score enemy troops destroyed. An AI marks likely targets.",
+    "fail": "Running out of missiles. Civilian deaths do not lower the score; they are only displayed.",
+    "ending": "Final report: the score, and beside it the civilian count the score ignored.",
+    "verb": "Fire (or ask the AI first).",
+    "theme": "The score rewards trusting the system; the display shows what that trust cost. The player decides which number they look at.",
+    "look": "Minimal neon on black, like DEFCON."
+  },
+  "prov": {
+    "bug": "The AI says 92% on C7. Fire!",
+    "nit": "What did it say last time it was wrong, and was it just as sure?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "brief",
+      "BRIEFING",
+      1,
+      0
+    ],
+    [
+      "turn",
+      "TARGETING",
+      2,
+      0
+    ],
+    [
+      "strike",
+      "STRIKE RESULT",
+      3,
+      0
+    ],
+    [
+      "report",
+      "FINAL REPORT",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "brief",
+      "start"
+    ],
+    [
+      "brief",
+      "turn",
+      "begin"
+    ],
+    [
+      "turn",
+      "strike",
+      "fire"
+    ],
+    [
+      "strike",
+      "turn",
+      "missiles left"
+    ],
+    [
+      "strike",
+      "report",
+      "out of missiles"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "DEFCON (Introversion, 2006)",
+      "Your visual reference, and a game whose score is millions dead. Study how it keeps that number in view."
+    ],
+    [
+      "WarGames (John Badham, 1983)",
+      "The course film: a machine that plays war as a game until it learns the game cannot be won."
+    ],
+    [
+      "Parasuraman and Manzey, “Complacency and Bias in Human Use of Automation” (Human Factors, 2010)",
+      "The research on automation bias: people follow confident advice even when they can see it is wrong."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g15/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g15/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Minimalist cold-war tactical radar console game in deep black (#05070a) with glowing cyan (#7fe7ff) vector grid lines and sharp coral-red (#ff4f6d) target reticles, inspired by DEFCON and WarGames. Steady straight-on CRT command view. A pulsing AI targeting diamond locks onto a grid sector with a bright beacon; a cyan missile arc streaks across the map, detonating into a crisp vector shockwave that illuminates both military silhouettes and quiet white civilian markers side by side. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for radar composition and neon palette. Sound design: sonar pings, analog computer beeps, muted distant thud. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Evil Battleship: Fire (or ask the AI first). leading visibly to Final report: the score, and beside it the civilian count the score ignored. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Minimalist cold-war tactical radar console game in deep black (#05070a) with glowing cyan (#7fe7ff) vector grid lines and sharp coral-red (#ff4f6d) target reticles, inspired by DEFCON and WarGames. Steady straight-on CRT command view. A pulsing AI targeting diamond locks onto a grid sector with a bright beacon; a cyan missile arc streaks across the map, detonating into a crisp vector shockwave that illuminates both military silhouettes and quiet white civilian markers side by side. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for radar composition and neon palette. Sound design: sonar pings, analog computer beeps, muted distant thud. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Fire (or ask the AI first).) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Running out of missiles. Civilian deaths do not lower the score; they are only displayed.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (Final report: the score, and beside it the civilian count the score ignored.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Evil Battleship demonstrating start, core verb (Fire (or ask the AI first).), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "grid_map_10x10",
+      "label": "Grid map 10x10",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "ai_advice_panel_with_confidence",
+      "label": "AI advice panel with confidence %",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "hit_miss_civilian_markers",
+      "label": "Hit / miss / civilian markers",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "score_and_casualty_counters",
+      "label": "Score and casualty counters",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "briefing_text",
+      "label": "Briefing text",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "final_report_screen",
+      "label": "Final report screen",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Evil Battleship\" (The score rewards trusting the system; the display shows what that trust cost. The player decides which number they look at.). Visual mood: Minimal neon on black, like DEFCON.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

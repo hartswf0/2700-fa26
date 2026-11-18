@@ -1,0 +1,230 @@
+{
+  "id": "gsu",
+  "group": "Sushi Cutting",
+  "name": "Sushi Cutting",
+  "from": "Sushi Cutting (timed cuts on a conveyor), refined: a Y2K kitchen rush with a failing order system.",
+  "hook": "It’s midnight, the ticket printer thinks it’s 1900, and table four still wants eight even pieces.",
+  "pitch": "An Overcooked-style kitchen game set during the Y2K dinner rush. Slice fish, portion rolls, and get the right plate to the right customer while the order system starts scrambling tickets. The knife gives the chaos a focal point. Even as orders pile up, taking an extra beat to line up a cut might save you from remaking the whole roll.",
+  "minute_check": "Yes: kitchen, rush, broken tickets.",
+  "build_check": "Yes, if it is one station and one cutting action; add the scrambling last.",
+  "scope": "One station, four tables, eight minutes to midnight. Get one good cut before adding the printer.",
+  "palette": {
+    "bg": "#1b1410",
+    "fg": "#f5e9d6",
+    "acc": "#ff6b4a",
+    "main_bg": "#1b1410",
+    "main_fg": "#f5e9d6",
+    "main_acc": "#ff6b4a"
+  },
+  "template_type": "cutter",
+  "brief": {
+    "player": "A sushi chef on New Year’s Eve, 1999.",
+    "goal": "Serve every table the right order before midnight.",
+    "fail": "Too many wrong or late plates: the restaurant closes early.",
+    "ending": "Midnight: the printer either recovers or prints the year 1900 on every ticket; your tally of good plates.",
+    "verb": "Cut, then serve.",
+    "theme": "A system you trust starts lying; your own measure (the even cut) is what still holds.",
+    "look": "Late-90s kitchen, warm counter, a dot-matrix ticket printer that glitches."
+  },
+  "prov": {
+    "bug": "Table four: eight pieces. Cut fast!",
+    "nit": "If the ticket is wrong, how does the chef find out what table four ordered?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "ticket",
+      "NEW TICKET",
+      1,
+      0
+    ],
+    [
+      "cut",
+      "CUT",
+      2,
+      0
+    ],
+    [
+      "serve",
+      "SERVE",
+      3,
+      0
+    ],
+    [
+      "closed",
+      "CLOSED EARLY",
+      3,
+      1
+    ],
+    [
+      "mid",
+      "MIDNIGHT",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "ticket",
+      "open"
+    ],
+    [
+      "ticket",
+      "cut",
+      "read order"
+    ],
+    [
+      "cut",
+      "serve",
+      "plate ready"
+    ],
+    [
+      "serve",
+      "ticket",
+      "next"
+    ],
+    [
+      "serve",
+      "closed",
+      "3 wrong"
+    ],
+    [
+      "serve",
+      "mid",
+      "12:00"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Overcooked (Ghost Town Games, 2016)",
+      "The kitchen-rush model: few actions, rising pressure, readable stations."
+    ],
+    [
+      "The Year 2000 problem",
+      "Real systems that stored years as two digits; the date 00 read as 1900."
+    ],
+    [
+      "Cooking Mama (Office Create, 2006)",
+      "A single cut graded every time; the feel to aim for at the board."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/gsu/m2/refs/m2_title_ref.png",
+    "main_png": "projects/gsu/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Late-1990s Y2K arcade kitchen rhythm-action game in rich dark wood (#1b1410), warm rice cream (#f5e9d6), and punchy salmon-coral (#ff6b4a). Steady angled overhead counter camera. Fresh salmon maki rolls glide along a wooden board under glowing dashed cut guides; a gleaming chef's knife slices down on the beat into eight even pieces with joyful coral combo sparks while a dot-matrix ticket printer in the corner spits out glitching paper slips. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for cutting board, knife, and ticket composition. Sound design: upbeat 90s breakbeat groove, crisp rhythmic knife chops, dot-matrix printer buzz. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Sushi Cutting: Cut, then serve. leading visibly to Midnight: the printer either recovers or prints the year 1900 on every ticket; your tally of good plates. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Late-1990s Y2K arcade kitchen rhythm-action game in rich dark wood (#1b1410), warm rice cream (#f5e9d6), and punchy salmon-coral (#ff6b4a). Steady angled overhead counter camera. Fresh salmon maki rolls glide along a wooden board under glowing dashed cut guides; a gleaming chef's knife slices down on the beat into eight even pieces with joyful coral combo sparks while a dot-matrix ticket printer in the corner spits out glitching paper slips. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for cutting board, knife, and ticket composition. Sound design: upbeat 90s breakbeat groove, crisp rhythmic knife chops, dot-matrix printer buzz. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Cut, then serve.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Too many wrong or late plates: the restaurant closes early.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (Midnight: the printer either recovers or prints the year 1900 on every ticket; your tally of good plates.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Sushi Cutting demonstrating start, core verb (Cut, then serve.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "counter_and_cutting_board",
+      "label": "Counter and cutting board",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Sushi Cutting\": Counter and cutting board. strictly harmonized palette (#1b1410, #f5e9d6, accent #ff6b4a), style: Late-90s kitchen, warm counter, a dot-matrix ticket printer that glitches.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "roll_and_fish_sprites_cut_pieces",
+      "label": "Roll and fish sprites + cut pieces",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Sushi Cutting\": Roll and fish sprites + cut pieces. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#1b1410, #f5e9d6, accent #ff6b4a), style: Late-90s kitchen, warm counter, a dot-matrix ticket printer that glitches., matching the reference gameplay frame."
+    },
+    {
+      "id": "knife_with_guide_line",
+      "label": "Knife with guide line",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "ticket_printer_and_scrambled_tickets",
+      "label": "Ticket printer and scrambled tickets",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "4_tables",
+      "label": "4 tables",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "clock_to_midnight",
+      "label": "Clock to midnight",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Sushi Cutting\" (A system you trust starts lying; your own measure (the even cut) is what still holds.). Visual mood: Late-90s kitchen, warm counter, a dot-matrix ticket printer that glitches.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

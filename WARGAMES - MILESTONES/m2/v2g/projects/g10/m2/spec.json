@@ -1,0 +1,239 @@
+{
+  "id": "g10",
+  "group": "Group 10",
+  "name": "Lab-Rat-ory",
+  "from": "Escape Room (test subject): a lab rat escapes through four levels that grow more realistic; it was all another test.",
+  "hook": "You are a lab rat. The key in your cage was not an accident.",
+  "pitch": "Four levels, each sharper than the last: from 8-bit to near-real. Break out of the cage, cross the maze, the workbench, the room with the humans. Each level hides a clue that the escape is planned. The last image is the cage, at full resolution.",
+  "minute_check": "Yes: rat, lab, escape, twist.",
+  "build_check": "Yes: one level per member; shared controls and palette first.",
+  "scope": "One level per member is a good split. Agree the rat’s controls and the palette before splitting up.",
+  "palette": {
+    "bg": "#1a0606",
+    "fg": "#ff6a5a",
+    "acc": "#ffd6cf",
+    "main_bg": "#1a0606",
+    "main_fg": "#ff6a5a",
+    "main_acc": "#ffd6cf"
+  },
+  "template_type": "lab",
+  "brief": {
+    "player": "A lab rat.",
+    "goal": "Escape through four levels: cage, maze, workbench, the room with the humans.",
+    "fail": "Caught or trapped: restart the level.",
+    "ending": "The twist: the escape was another test. The last image is the cage, at full resolution.",
+    "verb": "Sneak and solve.",
+    "theme": "A subject trained to think it is choosing. The rising resolution shows how much more the rat can see, and how little it changes.",
+    "look": "Red near-monochrome pixel art; each level a step up in resolution, from 8-bit to near-realistic."
+  },
+  "prov": {
+    "bug": "The rat found the key by accident!",
+    "nit": "Was it an accident? Plant one clue per level that it was not."
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "l1",
+      "1 CAGE",
+      1,
+      0
+    ],
+    [
+      "l2",
+      "2 MAZE",
+      2,
+      0
+    ],
+    [
+      "l3",
+      "3 BENCH",
+      3,
+      0
+    ],
+    [
+      "l4",
+      "4 HUMANS",
+      4,
+      0
+    ],
+    [
+      "caught",
+      "CAUGHT",
+      2,
+      1
+    ],
+    [
+      "end",
+      "STILL IN THE TEST",
+      5,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "l1",
+      "start"
+    ],
+    [
+      "l1",
+      "l2",
+      "key"
+    ],
+    [
+      "l2",
+      "l3",
+      "exit"
+    ],
+    [
+      "l3",
+      "l4",
+      "exit"
+    ],
+    [
+      "l4",
+      "end",
+      "door"
+    ],
+    [
+      "l2",
+      "caught",
+      "trap"
+    ],
+    [
+      "caught",
+      "l2",
+      "retry"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "The Secret of NIMH (Don Bluth, 1982)",
+      "Lab rats who escape the institute, made smarter by the experiments. The classic version of your story."
+    ],
+    [
+      "Iron Lung (David Szymanski, 2022)",
+      "Your own reference: horror from a tiny window and a little information."
+    ],
+    [
+      "Inside (Playdead, 2016)",
+      "A short game whose ending changes who was in control the whole time."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g10/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g10/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Crimson monochrome top-down stealth-puzzle escape game (#1a0606, #ff6a5a, #ffd6cf) that shifts visual fidelity mid-run. Steady overhead camera following a small white-pink lab rat sneaking out of a chunky 8-bit red pixel wire cage with a gleaming key, scurrying through a lab maze where the tiles seamlessly sharpen into detailed high-resolution workbench instruments, scalpels, and the looming shadow of an observing scientist's hand. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for maze layout and red monochrome palette. Sound design: tiny claws skittering, metallic key clink, tense heartbeat pulse. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Lab-Rat-ory: Sneak and solve. leading visibly to The twist: the escape was another test. The last image is the cage, at full resolution. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Crimson monochrome top-down stealth-puzzle escape game (#1a0606, #ff6a5a, #ffd6cf) that shifts visual fidelity mid-run. Steady overhead camera following a small white-pink lab rat sneaking out of a chunky 8-bit red pixel wire cage with a gleaming key, scurrying through a lab maze where the tiles seamlessly sharpen into detailed high-resolution workbench instruments, scalpels, and the looming shadow of an observing scientist's hand. Continuous unbroken gameplay shot, no scene cuts, no HUD text. Use the reference image for maze layout and red monochrome palette. Sound design: tiny claws skittering, metallic key clink, tense heartbeat pulse. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Sneak and solve.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Caught or trapped: restart the level.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The twist: the escape was another test. The last image is the cage, at full resolution.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Lab-Rat-ory demonstrating start, core verb (Sneak and solve.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "rat_sprite_at_4_resolutions",
+      "label": "Rat sprite at 4 resolutions",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Lab-Rat-ory\": Rat sprite at 4 resolutions. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#1a0606, #ff6a5a, accent #ffd6cf), style: Red near-monochrome pixel art; each level a step up in resolution, from 8-bit to near-realistic., matching the reference gameplay frame."
+    },
+    {
+      "id": "4_level_backgrounds_one_per_member",
+      "label": "4 level backgrounds (one per member)",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Lab-Rat-ory\": 4 level backgrounds (one per member). strictly harmonized palette (#1a0606, #ff6a5a, accent #ffd6cf), style: Red near-monochrome pixel art; each level a step up in resolution, from 8-bit to near-realistic.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "key_cheese_trap_needles",
+      "label": "Key, cheese trap, needles",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Lab-Rat-ory\": Key, cheese trap, needles. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#1a0606, #ff6a5a, accent #ffd6cf), style: Red near-monochrome pixel art; each level a step up in resolution, from 8-bit to near-realistic., matching the reference gameplay frame."
+    },
+    {
+      "id": "human_hand_shadow_hazard",
+      "label": "Human hand/shadow hazard",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Lab-Rat-ory\": Human hand/shadow hazard. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#1a0606, #ff6a5a, accent #ffd6cf), style: Red near-monochrome pixel art; each level a step up in resolution, from 8-bit to near-realistic., matching the reference gameplay frame."
+    },
+    {
+      "id": "final_reveal_screen",
+      "label": "Final reveal screen",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Lab-Rat-ory\" (A subject trained to think it is choosing. The rising resolution shows how much more the rat can see, and how little it changes.). Visual mood: Red near-monochrome pixel art; each level a step up in resolution, from 8-bit to near-realistic.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

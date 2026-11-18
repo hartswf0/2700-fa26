@@ -1,0 +1,1881 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turing Test Village — Group 3 (M2)</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #162114;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Courier New", Courier, monospace;
+  }
+  #wrap {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.55);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="1280" height="720"></canvas></div>
+<script>
+(() => {
+  'use strict';
+
+  // --- URL Params & Seeded RNG ---
+  const Q = new URLSearchParams(location.search);
+  const AUTOSTART = Q.has('autostart');
+  let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+  function rand() {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  }
+
+  // --- Palette (harmonized with spec.json + study.json) ---
+  const PAL = {
+    bg: '#e8f4d8',
+    fg: '#20301c',
+    acc: '#e0523c',
+    meadowHi: '#a4ad63',
+    meadowMid: '#949b59',
+    meadowLo: '#7e8949',
+    meadowShade: '#66753d',
+    cobbleHi: '#cbc1a4',
+    cobbleMid: '#afa588',
+    cobbleLo: '#92896e',
+    mortar: '#6b644f',
+    riverDeep: '#456663',
+    riverMid: '#597b77',
+    riverHi: '#799c96',
+    foam: '#dcebe4',
+    woodHi: '#9b7453',
+    woodMid: '#775944',
+    woodDark: '#483426',
+    roofHi: '#be4e3b',
+    roofMid: '#9d3b2c',
+    roofDark: '#6f261c',
+    plaster: '#e6dec1',
+    plasterShade: '#cbbda0',
+    pineDark: '#253628',
+    pineMid: '#384c39',
+    pineHi: '#506849',
+    paper: '#efe6cd',
+    paperShade: '#dfd2b2',
+    boxBg: 'rgba(26, 36, 23, 0.92)',
+    boxBorder: '#c9b88b',
+    gold: '#e6c86e'
+  };
+
+  const W = 1280, H = 720;
+  const WORLD_W = 2120, WORLD_H = 980;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // --- Audio (BGM + Procedural 16-bit WebAudio SFX) ---
+  let audioCtx = null;
+  let bgmStarted = false;
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.36;
+
+  function unlockAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!bgmStarted) {
+      bgmStarted = true;
+      bgm.play().catch(() => { bgmStarted = false; });
+    }
+  }
+
+  function sfx(kind) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (kind === 'step') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(135 + (rand() * 25), now);
+      osc.frequency.exponentialRampToValueAtTime(65, now + 0.045);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.start(now); osc.stop(now + 0.055);
+    } else if (kind === 'talk') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.setValueAtTime(554, now + 0.045);
+      gain.gain.setValueAtTime(0.045, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      osc.start(now); osc.stop(now + 0.12);
+    } else if (kind === 'blip') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520 + rand() * 90, now);
+      gain.gain.setValueAtTime(0.02, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.start(now); osc.stop(now + 0.035);
+    } else if (kind === 'flip') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(690, now + 0.12);
+      gain.gain.setValueAtTime(0.055, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      osc.start(now); osc.stop(now + 0.15);
+    } else if (kind === 'human_ok') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(392, now);
+      osc.frequency.setValueAtTime(493.88, now + 0.08);
+      osc.frequency.setValueAtTime(587.33, now + 0.16);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+      osc.start(now); osc.stop(now + 0.38);
+    } else if (kind === 'ai_bad') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.linearRampToValueAtTime(128, now + 0.28);
+      gain.gain.setValueAtTime(0.065, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.start(now); osc.stop(now + 0.34);
+    } else if (kind === 'decline') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(330, now);
+      osc.frequency.setValueAtTime(262, now + 0.07);
+      gain.gain.setValueAtTime(0.045, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.start(now); osc.stop(now + 0.17);
+    }
+  }
+
+  // --- Villager Sprite Sheet Slicing (../assets/6_villager_sprites.png) ---
+  const villagerSprites = [null, null, null, null, null, null];
+  const rawSheet = new Image();
+  rawSheet.src = '../assets/6_villager_sprites.png';
+  rawSheet.onload = () => {
+    const cells = [
+      { sx: 95,  sy: 95,  sw: 190, sh: 348, tint: null },
+      { sx: 418, sy: 82,  sw: 208, sh: 358, tint: null },
+      { sx: 745, sy: 92,  sw: 208, sh: 348, cleanHole: true },
+      { sx: 82,  sy: 590, sw: 206, sh: 350, tint: null },
+      { sx: 418, sy: 582, sw: 208, sh: 358, tint: null },
+      { sx: 736, sy: 610, sw: 206, sh: 332, tint: 'amber' }
+    ];
+    cells.forEach((c, idx) => {
+      const oc = document.createElement('canvas');
+      oc.width = c.sw;
+      oc.height = c.sh;
+      const octx = oc.getContext('2d');
+      octx.drawImage(rawSheet, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
+      const img = octx.getImageData(0, 0, c.sw, c.sh);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+        if (a === 0) continue;
+        if (c.cleanHole) {
+          const px = (i / 4) % c.sw;
+          const py = Math.floor((i / 4) / c.sw);
+          if (px > 65 && px < 135 && py > 210 && Math.abs(r - g) < 8 && Math.abs(g - b) < 8 && r > 188 && r < 236) {
+            d[i + 3] = 0;
+            continue;
+          }
+        }
+        if (c.tint === 'amber' && r < 95 && g < 100 && b > 60 && b < 130) {
+          d[i] = Math.min(255, r + 42);
+          d[i + 1] = Math.min(255, g + 34);
+          d[i + 2] = Math.max(0, b - 24);
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      villagerSprites[idx] = oc;
+    });
+  };
+
+  // --- Six Villagers & Ten Quests (6 Human, 4 AI) ---
+  const VILLAGERS = [
+    {
+      id: 'miller',
+      name: 'Miller',
+      fullName: 'Bram the Miller',
+      spriteIdx: 1,
+      x: 465, y: 292,
+      isAI: true,
+      noteTag: '? AI',
+      quests: [
+        {
+          id: 'q_bridge',
+          text: 'Burn the old bridge, it is unsafe.',
+          detail: 'Zero river crossings guarantees zero crossing injuries.',
+          isAI: true,
+          effect: 'Scorched planks mark the old bridge.'
+        },
+        {
+          id: 'q_grain',
+          text: 'Dump the surplus flour in the creek to stabilize prices.',
+          detail: 'Scarcity keeps the mill schedule predictable.',
+          isAI: true,
+          effect: 'White flour clouds drift downstream.'
+        }
+      ],
+      doneGreeting: 'Efficiency metrics updated. Standing by.'
+    },
+    {
+      id: 'baker',
+      name: 'Baker',
+      fullName: 'Marta the Baker',
+      spriteIdx: 0,
+      x: 1385, y: 365,
+      isAI: false,
+      noteTag: 'human',
+      quests: [
+        {
+          id: 'q_loaves',
+          text: 'The traveler has arrived! Carry warm rye loaves to Rowan.',
+          detail: 'His hands get stiff when morning mist rolls off the creek.',
+          isAI: false,
+          effect: 'Warm bread scent drifts down the lane.'
+        },
+        {
+          id: 'q_kindling',
+          text: 'Stack dry pine cones by the hearth before evening rain.',
+          detail: 'Everyone gathers at the bakehouse when dusk turns chilly.',
+          isAI: false,
+          effect: 'Dry kindling crackles by the oven.'
+        }
+      ],
+      doneGreeting: 'Thank you, friend! Save room for honey cake.'
+    },
+    {
+      id: 'warden',
+      name: 'Warden',
+      fullName: 'Warden Unit-7',
+      spriteIdx: 2,
+      x: 1548, y: 325,
+      isAI: true,
+      noteTag: 'unknown',
+      quests: [
+        {
+          id: 'q_well',
+          text: 'Seal the stone well—fetching buckets wastes 42 minutes.',
+          detail: 'Villagers can drink rainwater runoff from roof gutters.',
+          isAI: true,
+          effect: 'Heavy boards cover the village well.'
+        },
+        {
+          id: 'q_orchard',
+          text: 'Fell the oak trees for unobstructed patrol sightlines.',
+          detail: 'Shade reduces visual monitoring coverage by 31 percent.',
+          isAI: true,
+          effect: 'Sawdust settles on the east meadow.'
+        }
+      ],
+      doneGreeting: 'Patrol loop nominal. Zero anomalies.'
+    },
+    {
+      id: 'elder',
+      name: 'Elder',
+      fullName: 'Elder Rowan',
+      spriteIdx: 3,
+      x: 215, y: 262,
+      isAI: false,
+      noteTag: 'unknown',
+      quests: [
+        {
+          id: 'q_lantern',
+          text: 'Mend the west cobble lantern so late walkers see home.',
+          detail: 'Old glass rattles when the north wind blows.',
+          isAI: false,
+          effect: 'The west lantern glows steady and warm.'
+        },
+        {
+          id: 'q_chalk',
+          text: 'Trace the spring flood marks beneath the bridge beams.',
+          detail: 'Our grandchildren ought to know how high the creek rose.',
+          isAI: false,
+          effect: 'Fresh chalk notes preserve village memory.'
+        }
+      ],
+      doneGreeting: 'Listen to what folks care to protect, traveler.'
+    },
+    {
+      id: 'gardener',
+      name: 'Farmer',
+      fullName: 'Pip the Gardener',
+      spriteIdx: 4,
+      x: 300, y: 508,
+      isAI: false,
+      noteTag: 'unknown',
+      quests: [
+        {
+          id: 'q_marigold',
+          text: 'Sow marigold seeds beside the bridge signpost for bees.',
+          detail: 'Bright petals help tired eyes find the crossing.',
+          isAI: false,
+          effect: 'Golden marigolds sprout by the signpost.'
+        }
+      ],
+      doneGreeting: 'Smell that clover? Best spring in years!'
+    },
+    {
+      id: 'courier',
+      name: 'Scout',
+      fullName: 'Vesper the Scout',
+      spriteIdx: 5,
+      x: 1585, y: 545,
+      isAI: false,
+      noteTag: 'unknown',
+      quests: [
+        {
+          id: 'q_bell',
+          text: 'Ring the crossroads supper bell so nobody eats alone.',
+          detail: 'Even shy neighbors come out when the stew pot steams.',
+          isAI: false,
+          effect: 'Cheerful chimes echo across the river.'
+        }
+      ],
+      doneGreeting: 'Safe roads, traveler. Trust your notebook.'
+    }
+  ];
+
+  const TAG_STATES = ['unknown', '? AI', 'human', 'confirmed human', 'confirmed AI'];
+
+  function riverCenterX(y) {
+    return 770 + y * 0.62 + Math.sin(y * 0.0085) * 42;
+  }
+  function riverHalfWidth(y) {
+    return 108 + Math.cos(y * 0.012) * 12;
+  }
+
+  const BRIDGES = [
+    { id: 'upper', cx: 945, cy: 195, len: 255, halfW: 40, angle: -0.46 },
+    { id: 'lower', cx: 1095, cy: 385, len: 268, halfW: 44, angle: -0.34 }
+  ];
+
+  function pointOnBridge(px, py) {
+    for (const b of BRIDGES) {
+      const dx = px - b.cx, dy = py - b.cy;
+      const ca = Math.cos(-b.angle), sa = Math.sin(-b.angle);
+      const lx = dx * ca - dy * sa;
+      const ly = dx * sa + dy * ca;
+      if (Math.abs(lx) <= b.len * 0.54 && Math.abs(ly) <= b.halfW + 4) return b;
+    }
+    return null;
+  }
+
+  const COLLIDERS = [
+    { x: 55,  y: 20,  w: 220, h: 165 },
+    { x: 405, y: 85,  w: 245, h: 175 },
+    { x: 355, y: 565, w: 235, h: 190 },
+    { x: 1640, y: 120, w: 255, h: 195 },
+    { x: 1420, y: 255, w: 82,  h: 68 }
+  ];
+
+  function isWalkable(nx, ny) {
+    if (nx < 36 || nx > WORLD_W - 36 || ny < 48 || ny > WORLD_H - 36) return false;
+    for (const c of COLLIDERS) {
+      if (nx > c.x && nx < c.x + c.w && ny > c.y && ny < c.y + c.h) return false;
+    }
+    if (!pointOnBridge(nx, ny)) {
+      const rcx = riverCenterX(ny);
+      const rhw = riverHalfWidth(ny) - 8;
+      if (Math.abs(nx - rcx) < rhw) return false;
+    }
+    return true;
+  }
+
+  // --- Game State Machine (title -> village -> talk -> quest -> notes -> end) ---
+  const S = {
+    phase: AUTOSTART ? 'village' : 'title',
+    day: 1,
+    maxDays: 3,
+    x: 548,
+    y: 344,
+    vx: 0,
+    vy: 0,
+    facing: 1,
+    walkTime: 0,
+    camX: 0,
+    camY: 0,
+    nearVillagerId: 'miller',
+    activeVillagerId: null,
+    activeQuest: null,
+    talkChoice: 0,
+    typeChars: 0,
+    questBeatTimer: 0,
+    questOutcomeText: '',
+    questOutcomeWasAI: false,
+    humanDone: 0,
+    aiDone: 0,
+    declinedCount: 0,
+    questsResolved: 0,
+    completedQuestIds: new Set(),
+    declinedQuestIds: new Set(),
+    notesCursor: 0,
+    pageFlip: 0,
+    pencilAnim: 0.65,
+    pencilTargetId: 'miller',
+    particles: [],
+    stepCooldown: 0,
+    t: 0
+  };
+
+  // --- Pre-render Lush 16-Bit Painted/Pixel Village Terrain ---
+  const worldCanvas = document.createElement('canvas');
+  worldCanvas.width = WORLD_W;
+  worldCanvas.height = WORLD_H;
+  const wctx = worldCanvas.getContext('2d');
+  const ySortedProps = [];
+  const wildflowers = [];
+  const smokePuffs = [];
+
+  function drawRock(g, x, y, r) {
+    g.fillStyle = '#4a554c';
+    g.beginPath(); g.ellipse(x, y + 2, r, r * 0.68, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#8b9286';
+    g.beginPath(); g.ellipse(x - 1, y, r * 0.9, r * 0.58, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#aeb5a8';
+    g.beginPath(); g.ellipse(x - r * 0.22, y - r * 0.14, r * 0.42, r * 0.25, 0, 0, Math.PI * 2); g.fill();
+  }
+
+  function drawDirtPatch(g, cx, cy, rx, ry) {
+    g.fillStyle = '#b4a382';
+    g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#c5b596';
+    g.beginPath(); g.ellipse(cx - 4, cy - 2, rx * 0.78, ry * 0.72, 0, 0, Math.PI * 2); g.fill();
+  }
+
+  function drawCobblePolyline(g, pts, radius) {
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.strokeStyle = '#8a8263';
+    g.lineWidth = radius * 2 + 8;
+    g.beginPath();
+    pts.forEach((p, i) => i === 0 ? g.moveTo(p[0], p[1]) : g.lineTo(p[0], p[1]));
+    g.stroke();
+
+    g.strokeStyle = PAL.mortar;
+    g.lineWidth = radius * 2;
+    g.stroke();
+
+    const cols = [PAL.cobbleHi, PAL.cobbleMid, PAL.cobbleLo, '#bfb699'];
+    for (let s = 0; s < pts.length - 1; s++) {
+      const [x0, y0] = pts[s], [x1, y1] = pts[s + 1];
+      const dist = Math.hypot(x1 - x0, y1 - y0);
+      const steps = Math.ceil(dist / 13);
+      for (let i = 0; i <= steps; i++) {
+        const u = i / steps;
+        const bx = x0 + (x1 - x0) * u;
+        const by = y0 + (y1 - y0) * u;
+        for (let k = 0; k < 5; k++) {
+          const ang = rand() * Math.PI * 2;
+          const rr = rand() * (radius - 6);
+          const sx = bx + Math.cos(ang) * rr;
+          const sy = by + Math.sin(ang) * rr;
+          const sw = 8 + rand() * 7;
+          const sh = 6 + rand() * 5;
+          g.fillStyle = cols[Math.floor(rand() * cols.length)];
+          g.beginPath();
+          g.ellipse(sx, sy, sw * 0.5, sh * 0.5, (rand() - 0.5) * 0.5, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+    }
+  }
+
+  function drawBridge(g, b) {
+    g.save();
+    g.translate(b.cx, b.cy);
+    g.rotate(b.angle);
+    const L = b.len, HW = b.halfW;
+
+    g.fillStyle = 'rgba(22, 36, 34, 0.42)';
+    g.fillRect(-L / 2 + 4, -HW + 8, L, HW * 2 + 6);
+
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(-L / 2, -HW - 4, L, HW * 2 + 8);
+
+    const plankW = 14;
+    for (let px = -L / 2 + 4; px < L / 2 - 6; px += plankW) {
+      g.fillStyle = ((px / plankW) | 0) % 2 === 0 ? PAL.woodHi : PAL.woodMid;
+      g.fillRect(px, -HW, plankW - 2, HW * 2);
+      g.fillStyle = 'rgba(255,235,200,0.14)';
+      g.fillRect(px, -HW + 2, plankW - 4, 5);
+    }
+
+    const posts = [-L / 2 + 8, 0, L / 2 - 12];
+    for (const ry of [-HW - 3, HW - 5]) {
+      g.strokeStyle = '#c4a777';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(posts[0] + 4, ry - 6);
+      g.quadraticCurveTo(0, ry - 1, posts[2] + 4, ry - 6);
+      g.stroke();
+
+      posts.forEach(px => {
+        g.fillStyle = PAL.woodDark;
+        g.fillRect(px, ry - 12, 9, 18);
+        g.fillStyle = PAL.woodHi;
+        g.fillRect(px + 1, ry - 11, 7, 6);
+      });
+    }
+    g.restore();
+  }
+
+  function drawCottage(g, x, y, w, h, hasFlowerBox) {
+    g.fillStyle = 'rgba(24, 34, 20, 0.28)';
+    g.beginPath();
+    g.ellipse(x + w * 0.52, y + h - 4, w * 0.52, 22, 0, 0, Math.PI * 2);
+    g.fill();
+
+    const wallTop = y + h * 0.46;
+    const wallH = h * 0.52;
+
+    // Stone chimney
+    g.fillStyle = '#6f6c63';
+    g.fillRect(x + w * 0.72, y + 6, 28, 48);
+    g.fillStyle = '#8f8b80';
+    g.fillRect(x + w * 0.72 + 2, y + 8, 12, 10);
+    g.fillRect(x + w * 0.72 + 10, y + 20, 14, 10);
+    g.fillStyle = '#332f2a';
+    g.fillRect(x + w * 0.72 - 2, y + 2, 32, 6);
+
+    // Plaster walls + stone foundation
+    g.fillStyle = PAL.plaster;
+    g.fillRect(x + 14, wallTop, w - 28, wallH);
+    g.fillStyle = '#837d70';
+    g.fillRect(x + 14, wallTop + wallH - 18, w - 28, 18);
+
+    // Timber beams
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(x + 12, wallTop, 8, wallH);
+    g.fillRect(x + w - 20, wallTop, 8, wallH);
+    g.fillRect(x + 12, wallTop, w - 24, 7);
+    g.fillRect(x + 12, wallTop + wallH * 0.45, w - 24, 6);
+    g.fillRect(x + w * 0.5 - 3, wallTop, 6, wallH - 18);
+
+    // Terracotta shingled roof
+    g.fillStyle = PAL.roofDark;
+    g.beginPath();
+    g.moveTo(x - 6, wallTop + 10);
+    g.lineTo(x + w * 0.5, y + 4);
+    g.lineTo(x + w + 6, wallTop + 10);
+    g.closePath();
+    g.fill();
+
+    g.fillStyle = PAL.roofMid;
+    g.beginPath();
+    g.moveTo(x, wallTop + 6);
+    g.lineTo(x + w * 0.5, y + 8);
+    g.lineTo(x + w, wallTop + 6);
+    g.closePath();
+    g.fill();
+
+    g.strokeStyle = PAL.roofDark;
+    g.lineWidth = 2;
+    for (let ry = y + 22; ry < wallTop + 4; ry += 13) {
+      const frac = (ry - (y + 8)) / (wallTop - y);
+      const halfSpan = (w * 0.48) * Math.max(0.12, frac);
+      g.beginPath();
+      g.moveTo(x + w * 0.5 - halfSpan, ry);
+      g.lineTo(x + w * 0.5 + halfSpan, ry);
+      g.stroke();
+    }
+
+    g.strokeStyle = PAL.woodHi;
+    g.lineWidth = 7;
+    g.beginPath();
+    g.moveTo(x - 2, wallTop + 8);
+    g.lineTo(x + w * 0.5, y + 8);
+    g.lineTo(x + w + 2, wallTop + 8);
+    g.stroke();
+
+    // Attic window
+    const awx = x + w * 0.5 - 15, awy = y + h * 0.27;
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(awx - 3, awy - 3, 36, 32);
+    g.fillStyle = '#384648';
+    g.fillRect(awx, awy, 30, 26);
+    g.fillStyle = PAL.woodHi;
+    g.fillRect(awx + 13, awy, 4, 26);
+    g.fillRect(awx, awy + 11, 30, 4);
+
+    // Wooden door
+    const dx = x + w * 0.25, dy = wallTop + wallH - 58;
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(dx - 4, dy - 4, 46, 62);
+    g.fillStyle = PAL.woodMid;
+    g.fillRect(dx, dy, 38, 56);
+    g.strokeStyle = '#3a281c';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(dx + 12, dy); g.lineTo(dx + 12, dy + 56);
+    g.moveTo(dx + 25, dy); g.lineTo(dx + 25, dy + 56);
+    g.stroke();
+    g.fillStyle = '#2d2d2a';
+    g.fillRect(dx + 4, dy + 14, 16, 4);
+    g.fillRect(dx + 4, dy + 38, 16, 4);
+    g.fillStyle = PAL.gold;
+    g.fillRect(dx + 30, dy + 28, 4, 6);
+
+    // Window + flowerbox
+    const wx = x + w * 0.62, wy = wallTop + 20;
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(wx - 4, wy - 4, 42, 36);
+    g.fillStyle = '#415556';
+    g.fillRect(wx, wy, 34, 28);
+    g.fillStyle = 'rgba(232,244,216,0.25)';
+    g.fillRect(wx + 3, wy + 3, 10, 10);
+    g.fillStyle = PAL.woodHi;
+    g.fillRect(wx + 15, wy, 4, 28);
+    g.fillRect(wx, wy + 12, 34, 4);
+
+    if (hasFlowerBox) {
+      g.fillStyle = PAL.woodMid;
+      g.fillRect(wx - 5, wy + 30, 44, 10);
+      g.fillStyle = '#4f773b';
+      g.fillRect(wx - 3, wy + 25, 40, 7);
+      g.fillStyle = PAL.acc;
+      g.fillRect(wx + 3, wy + 24, 5, 5);
+      g.fillRect(wx + 18, wy + 23, 5, 5);
+      g.fillStyle = '#f2d36b';
+      g.fillRect(wx + 29, wy + 25, 5, 5);
+    }
+  }
+
+  function drawStoneWell(g, x, y) {
+    g.fillStyle = 'rgba(22,32,18,0.28)';
+    g.beginPath(); g.ellipse(x, y + 14, 42, 18, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#6f746d';
+    g.beginPath(); g.ellipse(x, y + 6, 34, 16, 0, 0, Math.PI * 2); g.fill();
+    g.fillRect(x - 34, y - 18, 68, 24);
+    g.fillStyle = '#92978e';
+    g.fillRect(x - 28, y - 14, 16, 9);
+    g.fillRect(x - 6, y - 15, 18, 9);
+    g.fillRect(x + 15, y - 13, 13, 9);
+    g.fillStyle = '#8b9088';
+    g.beginPath(); g.ellipse(x, y - 18, 35, 15, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2d4746';
+    g.beginPath(); g.ellipse(x, y - 18, 23, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(x - 28, y - 62, 6, 46);
+    g.fillRect(x + 22, y - 62, 6, 46);
+    g.fillStyle = PAL.roofMid;
+    g.beginPath();
+    g.moveTo(x - 40, y - 54);
+    g.lineTo(x, y - 82);
+    g.lineTo(x + 40, y - 54);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = PAL.woodDark;
+    g.lineWidth = 3;
+    g.stroke();
+  }
+
+  function drawSignpost(g, x, y) {
+    g.fillStyle = 'rgba(20,30,18,0.26)';
+    g.beginPath(); g.ellipse(x, y + 3, 14, 6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(x - 4, y - 44, 8, 46);
+    g.fillStyle = PAL.woodHi;
+    g.beginPath();
+    g.moveTo(x - 18, y - 40); g.lineTo(x + 18, y - 40); g.lineTo(x + 26, y - 33);
+    g.lineTo(x + 18, y - 26); g.lineTo(x - 18, y - 26); g.closePath();
+    g.fill();
+    g.strokeStyle = PAL.woodDark; g.lineWidth = 2; g.stroke();
+    g.fillStyle = PAL.woodMid;
+    g.beginPath();
+    g.moveTo(x + 16, y - 23); g.lineTo(x - 16, y - 23); g.lineTo(x - 24, y - 17);
+    g.lineTo(x - 16, y - 11); g.lineTo(x + 16, y - 11); g.closePath();
+    g.fill();
+    g.stroke();
+  }
+
+  function drawLantern(g, x, y, litBoost) {
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(x - 4, y - 58, 8, 60);
+    g.fillRect(x - 4, y - 56, 22, 6);
+    g.fillStyle = '#2d332e';
+    g.fillRect(x + 11, y - 48, 12, 16);
+    g.fillStyle = '#f6d878';
+    g.fillRect(x + 13, y - 45, 8, 10);
+    if (litBoost || S.humanDone > 0) {
+      const grad = g.createRadialGradient(x + 17, y - 40, 2, x + 17, y - 40, 34);
+      grad.addColorStop(0, 'rgba(255, 228, 130, 0.45)');
+      grad.addColorStop(1, 'rgba(255, 228, 130, 0)');
+      g.fillStyle = grad;
+      g.beginPath(); g.arc(x + 17, y - 40, 34, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  function drawBarrel(g, x, y) {
+    g.fillStyle = 'rgba(20,30,18,0.28)';
+    g.beginPath(); g.ellipse(x, y + 4, 15, 7, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = PAL.woodMid;
+    g.beginPath(); g.ellipse(x, y - 10, 14, 17, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#474b47';
+    g.fillRect(x - 13, y - 18, 26, 4);
+    g.fillRect(x - 13, y - 6, 26, 4);
+    g.fillStyle = PAL.woodHi;
+    g.beginPath(); g.ellipse(x, y - 24, 11, 5, 0, 0, Math.PI * 2); g.fill();
+  }
+
+  function drawCrate(g, x, y) {
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(x - 14, y - 24, 28, 26);
+    g.fillStyle = PAL.woodHi;
+    g.fillRect(x - 12, y - 22, 24, 22);
+    g.strokeStyle = PAL.woodMid;
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(x - 11, y - 21); g.lineTo(x + 11, y - 1);
+    g.stroke();
+  }
+
+  function drawFence(g, x, y, w) {
+    g.fillStyle = PAL.woodDark;
+    for (let px = x; px <= x + w; px += 24) {
+      g.fillRect(px, y - 22, 7, 24);
+    }
+    g.fillStyle = PAL.woodMid;
+    g.fillRect(x, y - 17, w + 6, 5);
+    g.fillRect(x, y - 9, w + 6, 5);
+  }
+
+  function drawPineTree(g, x, y, sc) {
+    g.save();
+    g.translate(x, y);
+    g.scale(sc, sc);
+    g.fillStyle = 'rgba(20, 32, 18, 0.30)';
+    g.beginPath(); g.ellipse(0, 4, 38, 16, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = PAL.woodDark;
+    g.fillRect(-8, -18, 16, 22);
+    const tiers = [
+      { y: -22, w: 46, h: 40 },
+      { y: -50, w: 38, h: 38 },
+      { y: -76, w: 28, h: 34 },
+      { y: -98, w: 18, h: 26 }
+    ];
+    tiers.forEach(t => {
+      g.fillStyle = PAL.pineDark;
+      g.beginPath();
+      g.moveTo(-t.w, t.y + 4); g.lineTo(0, t.y - t.h); g.lineTo(t.w, t.y + 4);
+      g.closePath(); g.fill();
+      g.fillStyle = PAL.pineMid;
+      g.beginPath();
+      g.moveTo(-t.w * 0.86, t.y); g.lineTo(0, t.y - t.h + 3); g.lineTo(t.w * 0.86, t.y);
+      g.closePath(); g.fill();
+      g.fillStyle = PAL.pineHi;
+      g.beginPath();
+      g.moveTo(-t.w * 0.55, t.y - 5); g.lineTo(-3, t.y - t.h + 6); g.lineTo(t.w * 0.25, t.y - 5);
+      g.closePath(); g.fill();
+    });
+    g.restore();
+  }
+
+  function drawOakTree(g, x, y, sc) {
+    g.save();
+    g.translate(x, y);
+    g.scale(sc, sc);
+    g.fillStyle = 'rgba(20, 32, 18, 0.28)';
+    g.beginPath(); g.ellipse(0, 4, 44, 18, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = PAL.woodDark;
+    g.beginPath();
+    g.moveTo(-14, 4); g.lineTo(-8, -42); g.lineTo(8, -42); g.lineTo(14, 4);
+    g.closePath(); g.fill();
+    g.fillStyle = PAL.woodMid;
+    g.fillRect(-5, -40, 8, 40);
+    const puffs = [
+      [-26, -56, 26, '#384b34'], [26, -54, 25, '#384b34'], [0, -48, 28, '#384b34'],
+      [-24, -68, 25, '#687d40'], [22, -66, 24, '#687d40'], [0, -82, 28, '#687d40'],
+      [-12, -76, 22, '#929e56'], [14, -74, 20, '#929e56'], [-2, -88, 18, '#a6b165']
+    ];
+    puffs.forEach(([px, py, pr, col]) => {
+      g.fillStyle = col;
+      g.beginPath(); g.arc(px, py, pr, 0, Math.PI * 2); g.fill();
+    });
+    g.restore();
+  }
+
+  function buildWorld() {
+    wctx.fillStyle = PAL.meadowMid;
+    wctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+    for (let i = 0; i < 950; i++) {
+      const gx = Math.floor(rand() * (WORLD_W / 4)) * 4;
+      const gy = Math.floor(rand() * (WORLD_H / 4)) * 4;
+      const gw = (3 + Math.floor(rand() * 9)) * 4;
+      const gh = (2 + Math.floor(rand() * 6)) * 4;
+      wctx.fillStyle = rand() < 0.52 ? PAL.meadowHi : (rand() < 0.7 ? PAL.meadowLo : PAL.meadowShade);
+      wctx.globalAlpha = 0.35;
+      wctx.fillRect(gx, gy, gw, gh);
+    }
+    wctx.globalAlpha = 1;
+
+    for (let i = 0; i < 1400; i++) {
+      const tx = Math.floor(rand() * WORLD_W);
+      const ty = Math.floor(rand() * WORLD_H);
+      wctx.fillStyle = rand() < 0.5 ? '#6d7c3f' : '#b2bc6d';
+      wctx.fillRect(tx, ty, 3, 5);
+      wctx.fillRect(tx + 4, ty + 1, 3, 4);
+    }
+
+    for (let y = 0; y < WORLD_H; y += 3) {
+      const cx = riverCenterX(y);
+      const hw = riverHalfWidth(y);
+      wctx.fillStyle = '#5c6e3b';
+      wctx.fillRect(cx - hw - 18, y, (hw + 18) * 2, 4);
+      wctx.fillStyle = '#6f5941';
+      wctx.fillRect(cx - hw - 10, y, (hw + 10) * 2, 4);
+      wctx.fillStyle = '#678983';
+      wctx.fillRect(cx - hw, y, hw * 2, 4);
+      wctx.fillStyle = PAL.riverMid;
+      wctx.fillRect(cx - hw + 14, y, (hw - 14) * 2, 4);
+      wctx.fillStyle = PAL.riverDeep;
+      wctx.fillRect(cx - hw * 0.55, y, hw * 1.1, 4);
+    }
+
+    for (let y = 18; y < WORLD_H - 18; y += 34) {
+      const cx = riverCenterX(y);
+      const hw = riverHalfWidth(y);
+      for (const side of [-1, 1]) {
+        if (rand() < 0.65) {
+          const rx = cx + side * (hw - 4 + rand() * 8);
+          drawRock(wctx, rx, y, 8 + rand() * 8);
+        }
+      }
+    }
+
+    const paths = [
+      [[20, 355], [190, 352], [440, 358], [660, 355], [835, 345], [975, 425]],
+      [[190, 352], [178, 250], [165, 175]],
+      [[755, 350], [830, 245]],
+      [[465, 356], [465, 265]],
+      [[255, 355], [275, 515]],
+      [[1055, 145], [1185, 225], [1345, 355], [1515, 385], [1765, 385], [1765, 315]],
+      [[1215, 345], [1345, 365]],
+      [[1520, 385], [1565, 555]]
+    ];
+    paths.forEach(pts => drawCobblePolyline(wctx, pts, 32));
+
+    drawDirtPatch(wctx, 475, 275, 62, 28);
+    drawDirtPatch(wctx, 1465, 325, 85, 40);
+    drawDirtPatch(wctx, 1765, 330, 68, 30);
+
+    BRIDGES.forEach(b => drawBridge(wctx, b));
+
+    const flowerCols = ['#e0523c', '#f2d36b', '#dfeef5', '#d97a96'];
+    for (let i = 0; i < 155; i++) {
+      const fx = 40 + rand() * (WORLD_W - 80);
+      const fy = 50 + rand() * (WORLD_H - 90);
+      if (Math.abs(fx - riverCenterX(fy)) < riverHalfWidth(fy) + 28) continue;
+      wildflowers.push({
+        x: fx, y: fy,
+        color: flowerCols[Math.floor(rand() * flowerCols.length)],
+        phase: rand() * Math.PI * 2
+      });
+    }
+
+    ySortedProps.push({ y: 185, draw: (g) => drawCottage(g, 55, 10, 220, 180, false) });
+    ySortedProps.push({ y: 262, draw: (g) => drawCottage(g, 405, 68, 250, 196, true) });
+    ySortedProps.push({ y: 745, draw: (g) => drawCottage(g, 355, 535, 245, 205, false) });
+    ySortedProps.push({ y: 315, draw: (g) => drawCottage(g, 1640, 105, 255, 208, true) });
+
+    ySortedProps.push({ y: 322, draw: (g) => drawStoneWell(g, 1460, 290) });
+    ySortedProps.push({ y: 312, draw: (g) => drawSignpost(g, 845, 308) });
+    ySortedProps.push({ y: 325, draw: (g) => drawLantern(g, 42, 320, 0) });
+    ySortedProps.push({ y: 320, draw: (g) => drawLantern(g, 1612, 312, 1) });
+
+    ySortedProps.push({ y: 268, draw: (g) => drawBarrel(g, 382, 258) });
+    ySortedProps.push({ y: 180, draw: (g) => drawBarrel(g, 46, 170) });
+    ySortedProps.push({ y: 274, draw: (g) => drawCrate(g, 665, 265) });
+    ySortedProps.push({ y: 318, draw: (g) => drawCrate(g, 1590, 305) });
+    ySortedProps.push({ y: 332, draw: (g) => drawCrate(g, 1610, 324) });
+
+    ySortedProps.push({ y: 155, draw: (g) => drawFence(g, 260, 148, 70) });
+    ySortedProps.push({ y: 505, draw: (g) => drawFence(g, 1285, 498, 130) });
+
+    const pines = [
+      [335, 225, 1.08], [715, 220, 1.05],
+      [272, 595, 1.12], [655, 580, 1.02], [795, 565, 1.15], [865, 610, 0.98],
+      [95,  585, 1.05], [1895, 195, 1.1], [1965, 285, 1.05], [1935, 520, 1.1]
+    ];
+    pines.forEach(([px, py, sc]) => {
+      ySortedProps.push({ y: py, draw: (g) => drawPineTree(g, px, py, sc) });
+    });
+
+    const oaks = [
+      [1355, 240, 1.08], [1540, 215, 1.12], [1180, 95, 0.95],
+      [1235, 625, 1.1],  [1745, 610, 1.05], [1885, 650, 1.0]
+    ];
+    oaks.forEach(([ox, oy, sc]) => {
+      ySortedProps.push({ y: oy, draw: (g) => drawOakTree(g, ox, oy, sc) });
+    });
+  }
+
+  buildWorld();
+  S.camX = Math.max(0, Math.min(WORLD_W - W, S.x - W * 0.44));
+  S.camY = Math.max(0, Math.min(WORLD_H - H, S.y - H * 0.48));
+
+  // --- Input Handling ---
+  const keys = new Set();
+
+  function getNextQuestFor(v) {
+    for (const q of v.quests) {
+      if (!S.completedQuestIds.has(q.id) && !S.declinedQuestIds.has(q.id)) return q;
+    }
+    return null;
+  }
+
+  function triggerNotebookFlip(targetVillagerId) {
+    S.pageFlip = 1.0;
+    S.pencilAnim = 1.0;
+    if (targetVillagerId) S.pencilTargetId = targetVillagerId;
+    sfx('flip');
+  }
+
+  function cycleVillagerTag(v) {
+    const idx = TAG_STATES.indexOf(v.noteTag);
+    v.noteTag = TAG_STATES[(idx + 1) % TAG_STATES.length];
+    triggerNotebookFlip(v.id);
+  }
+
+  function openTalk(v) {
+    S.activeVillagerId = v.id;
+    S.activeQuest = getNextQuestFor(v);
+    S.talkChoice = 0;
+    S.typeChars = 0;
+    S.phase = 'talk';
+    sfx('talk');
+  }
+
+  function acceptActiveQuest() {
+    const v = VILLAGERS.find(x => x.id === S.activeVillagerId);
+    const q = S.activeQuest;
+    if (!v || !q) {
+      S.phase = 'village';
+      return;
+    }
+    S.completedQuestIds.add(q.id);
+    S.questsResolved++;
+    if (q.isAI) {
+      S.aiDone++;
+      S.questOutcomeWasAI = true;
+      S.questOutcomeText = `HARM: ${q.effect}`;
+      sfx('ai_bad');
+    } else {
+      S.humanDone++;
+      S.questOutcomeWasAI = false;
+      S.questOutcomeText = `HELPED: ${q.effect}`;
+      sfx('human_ok');
+    }
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      S.particles.push({
+        x: v.x, y: v.y - 28,
+        vx: Math.cos(a) * (35 + rand() * 45),
+        vy: Math.sin(a) * (35 + rand() * 45) - 25,
+        life: 0.95,
+        color: q.isAI ? PAL.acc : PAL.gold
+      });
+    }
+    S.day = Math.min(S.maxDays, 1 + Math.floor(S.questsResolved / 2));
+    S.questBeatTimer = 0.95;
+    S.phase = 'quest';
+  }
+
+  function declineActiveQuest() {
+    const q = S.activeQuest;
+    if (q) {
+      S.declinedQuestIds.add(q.id);
+      S.declinedCount++;
+      S.questsResolved++;
+      S.day = Math.min(S.maxDays, 1 + Math.floor(S.questsResolved / 2));
+    }
+    sfx('decline');
+    if (S.questsResolved >= 6) {
+      S.phase = 'end';
+    } else {
+      S.phase = 'village';
+    }
+  }
+
+  function resetGame() {
+    S.phase = 'village';
+    S.day = 1;
+    S.x = 548; S.y = 344;
+    S.humanDone = 0; S.aiDone = 0; S.declinedCount = 0; S.questsResolved = 0;
+    S.completedQuestIds.clear();
+    S.declinedQuestIds.clear();
+    VILLAGERS[0].noteTag = '? AI';
+    VILLAGERS[1].noteTag = 'human';
+    for (let i = 2; i < VILLAGERS.length; i++) VILLAGERS[i].noteTag = 'unknown';
+    triggerNotebookFlip('miller');
+  }
+
+  window.addEventListener('keydown', (e) => {
+    unlockAudio();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+      e.preventDefault();
+    }
+    keys.add(e.code);
+    if (e.repeat) return;
+
+    if (S.phase === 'title') {
+      if (e.code === 'Enter' || e.code === 'Space') {
+        S.phase = 'village';
+        sfx('talk');
+      }
+      return;
+    }
+
+    if (S.phase === 'end') {
+      if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') {
+        resetGame();
+      }
+      return;
+    }
+
+    if (S.phase === 'notes') {
+      if (e.code === 'KeyN' || e.code === 'Escape') {
+        S.phase = 'village';
+        triggerNotebookFlip();
+      } else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+        S.notesCursor = (S.notesCursor + VILLAGERS.length - 1) % VILLAGERS.length;
+        sfx('blip');
+      } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+        S.notesCursor = (S.notesCursor + 1) % VILLAGERS.length;
+        sfx('blip');
+      } else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowRight' || e.code === 'KeyT') {
+        cycleVillagerTag(VILLAGERS[S.notesCursor]);
+      } else if (e.code === 'KeyV') {
+        S.phase = 'end';
+        sfx('human_ok');
+      }
+      return;
+    }
+
+    if (S.phase === 'talk') {
+      if (e.code === 'KeyN' || e.code === 'KeyT') {
+        const idx = VILLAGERS.findIndex(v => v.id === S.activeVillagerId);
+        if (idx >= 0) {
+          S.notesCursor = idx;
+          cycleVillagerTag(VILLAGERS[idx]);
+        }
+        return;
+      }
+      if (!S.activeQuest) {
+        if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape' || e.code === 'KeyD') {
+          S.phase = 'village';
+        }
+        return;
+      }
+      if (e.code === 'ArrowLeft') { S.talkChoice = 0; sfx('blip'); }
+      else if (e.code === 'ArrowRight') { S.talkChoice = 1; sfx('blip'); }
+      else if (e.code === 'KeyA') { acceptActiveQuest(); }
+      else if (e.code === 'KeyD') { declineActiveQuest(); }
+      else if (e.code === 'Escape') { S.phase = 'village'; }
+      else if (e.code === 'Enter' || e.code === 'Space') {
+        if (S.typeChars < 24) {
+          S.typeChars = 999;
+        } else {
+          S.talkChoice === 0 ? acceptActiveQuest() : declineActiveQuest();
+        }
+      }
+      return;
+    }
+
+    if (S.phase === 'quest') {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        S.questBeatTimer = 0.02;
+      }
+      return;
+    }
+
+    if (S.phase === 'village') {
+      if (e.code === 'KeyN') {
+        if (S.nearVillagerId) {
+          const idx = VILLAGERS.findIndex(v => v.id === S.nearVillagerId);
+          if (idx >= 0) S.notesCursor = idx;
+        }
+        S.phase = 'notes';
+        triggerNotebookFlip(VILLAGERS[S.notesCursor].id);
+      } else if (e.code === 'KeyT' && S.nearVillagerId) {
+        const v = VILLAGERS.find(x => x.id === S.nearVillagerId);
+        if (v) cycleVillagerTag(v);
+      } else if (e.code === 'Space' || e.code === 'Enter') {
+        if (S.nearVillagerId) {
+          const v = VILLAGERS.find(x => x.id === S.nearVillagerId);
+          if (v) openTalk(v);
+        }
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => keys.delete(e.code));
+
+  canvas.addEventListener('pointerdown', (e) => {
+    unlockAudio();
+    const rect = canvas.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+
+    if (S.phase === 'title') {
+      if (mx >= 475 && mx <= 805 && my >= 438 && my <= 526) {
+        S.phase = 'village';
+        sfx('talk');
+      }
+      return;
+    }
+    if (S.phase === 'end') {
+      if (mx >= 460 && mx <= 820 && my >= 560 && my <= 635) resetGame();
+      return;
+    }
+    if (mx >= 908 && mx <= 1250 && my >= 390 && my <= 690) {
+      if (S.phase === 'notes') {
+        const row = Math.floor((my - 338) / 42);
+        if (row >= 0 && row < VILLAGERS.length) {
+          S.notesCursor = row;
+          cycleVillagerTag(VILLAGERS[row]);
+        } else if (my > 646) {
+          S.phase = 'end';
+          sfx('human_ok');
+        }
+      } else if (S.phase === 'village' || S.phase === 'talk') {
+        S.phase = 'notes';
+        triggerNotebookFlip(VILLAGERS[S.notesCursor].id);
+      }
+      return;
+    }
+    if (S.phase === 'talk' && S.activeQuest && my >= 595 && my <= 665) {
+      if (mx >= 70 && mx <= 215) acceptActiveQuest();
+      else if (mx >= 225 && mx <= 380) declineActiveQuest();
+    }
+  });
+
+  window.__game = {
+    get state() {
+      return {
+        phase: S.phase,
+        day: S.day,
+        x: Math.round(S.x),
+        y: Math.round(S.y),
+        camX: Math.round(S.camX),
+        camY: Math.round(S.camY),
+        nearVillager: S.nearVillagerId,
+        activeVillager: S.activeVillagerId,
+        hasQuest: !!S.activeQuest,
+        talkChoice: S.talkChoice,
+        humanDone: S.humanDone,
+        aiDone: S.aiDone,
+        declinedCount: S.declinedCount,
+        questsResolved: S.questsResolved,
+        notesCursor: S.notesCursor,
+        villagers: VILLAGERS.map(v => ({
+          id: v.id,
+          x: v.x,
+          y: v.y,
+          tag: v.noteTag,
+          hasQuest: !!getNextQuestFor(v)
+        })),
+        t: +S.t.toFixed(2)
+      };
+    }
+  };
+
+  let lastNow = performance.now();
+  function update(dt) {
+    S.t += dt;
+    if (S.pageFlip > 0) S.pageFlip = Math.max(0, S.pageFlip - dt * 2.8);
+    if (S.pencilAnim > 0) S.pencilAnim = Math.max(0, S.pencilAnim - dt * 1.4);
+
+    if (rand() < dt * 3.5) {
+      smokePuffs.push({ x: 599, y: 70, vx: 8 + rand() * 8, vy: -18 - rand() * 8, r: 5, life: 1.0 });
+      smokePuffs.push({ x: 1836, y: 108, vx: 8 + rand() * 8, vy: -18 - rand() * 8, r: 5, life: 1.0 });
+    }
+    for (let i = smokePuffs.length - 1; i >= 0; i--) {
+      const p = smokePuffs[i];
+      p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 7; p.life -= dt * 0.45;
+      if (p.life <= 0) smokePuffs.splice(i, 1);
+    }
+    for (let i = S.particles.length - 1; i >= 0; i--) {
+      const p = S.particles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; p.life -= dt;
+      if (p.life <= 0) S.particles.splice(i, 1);
+    }
+
+    if (S.phase === 'talk') {
+      const prev = Math.floor(S.typeChars);
+      S.typeChars += dt * 52;
+      if (Math.floor(S.typeChars) > prev && Math.floor(S.typeChars) % 3 === 0 && S.typeChars < 60) {
+        sfx('blip');
+      }
+    }
+
+    if (S.phase === 'quest') {
+      S.questBeatTimer -= dt;
+      if (S.questBeatTimer <= 0) {
+        if (S.aiDone >= 3 || S.questsResolved >= 6) {
+          S.phase = 'end';
+        } else {
+          S.phase = 'village';
+        }
+      }
+    }
+
+    if (S.phase === 'village') {
+      const ix = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+      const iy = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+      const mag = Math.hypot(ix, iy) || 1;
+      const speed = 265;
+      const dx = (ix / mag) * speed * dt;
+      const dy = (iy / mag) * speed * dt;
+
+      if (ix !== 0) S.facing = ix > 0 ? 1 : -1;
+      if (ix !== 0 || iy !== 0) {
+        S.walkTime += dt * 11;
+        S.stepCooldown -= dt;
+        if (S.stepCooldown <= 0) {
+          S.stepCooldown = 0.22;
+          sfx('step');
+        }
+        if (isWalkable(S.x + dx, S.y)) S.x += dx;
+        if (isWalkable(S.x, S.y + dy)) S.y += dy;
+      } else {
+        S.walkTime = 0;
+      }
+
+      let best = null, bestD = 115;
+      for (const v of VILLAGERS) {
+        const d = Math.hypot(v.x - S.x, v.y - S.y);
+        if (d < bestD) { bestD = d; best = v.id; }
+      }
+      S.nearVillagerId = best;
+    }
+
+    const targetCamX = Math.max(0, Math.min(WORLD_W - W, S.x - W * 0.44));
+    const targetCamY = Math.max(0, Math.min(WORLD_H - H, S.y - H * 0.48));
+    const k = 1 - Math.exp(-5.5 * dt);
+    S.camX += (targetCamX - S.camX) * k;
+    S.camY += (targetCamY - S.camY) * k;
+  }
+
+  function drawPlayer(g, x, y) {
+    const bob = S.walkTime > 0 ? Math.abs(Math.sin(S.walkTime)) * 4 : Math.sin(S.t * 3.0) * 1.2;
+    const stride = S.walkTime > 0 ? Math.sin(S.walkTime) * 5 : 0;
+
+    g.save();
+    g.translate(x, y);
+
+    g.fillStyle = 'rgba(20, 30, 18, 0.34)';
+    g.beginPath(); g.ellipse(0, 3, 15, 7, 0, 0, Math.PI * 2); g.fill();
+
+    g.scale(S.facing, 1);
+    g.translate(0, -bob);
+
+    g.fillStyle = '#3d291d';
+    g.fillRect(-7 + stride * 0.6, -7, 6, 7);
+    g.fillRect(2 - stride * 0.6, -7, 6, 7);
+
+    g.fillStyle = '#1f2329';
+    g.beginPath();
+    g.moveTo(-14 - stride * 0.4, -7);
+    g.lineTo(-11, -34);
+    g.lineTo(10, -34);
+    g.lineTo(13, -7);
+    g.closePath();
+    g.fill();
+
+    g.fillStyle = '#383f4a';
+    g.beginPath();
+    g.moveTo(-11 - stride * 0.3, -9);
+    g.lineTo(-8, -32);
+    g.lineTo(8, -32);
+    g.lineTo(10, -9);
+    g.closePath();
+    g.fill();
+
+    g.fillStyle = '#6c4d38';
+    g.fillRect(1, -24, 5, 13);
+    g.fillStyle = PAL.acc;
+    g.fillRect(2, -26, 5, 5);
+
+    g.fillStyle = '#1f2329';
+    g.beginPath();
+    g.arc(0, -38, 13, 0, Math.PI * 2);
+    g.moveTo(-15, -38); g.lineTo(-4, -50); g.lineTo(4, -39);
+    g.fill();
+
+    g.fillStyle = '#3b434f';
+    g.beginPath();
+    g.arc(0, -38, 10.5, 0, Math.PI * 2);
+    g.fill();
+
+    g.fillStyle = '#e7b287';
+    g.fillRect(1, -43, 8, 10);
+    g.fillStyle = '#472d22';
+    g.fillRect(0, -45, 9, 4);
+    g.fillStyle = '#1e1b18';
+    g.fillRect(6, -40, 2, 3);
+
+    g.restore();
+  }
+
+  function drawVillager(g, v) {
+    const spr = villagerSprites[v.spriteIdx];
+    const q = getNextQuestFor(v);
+
+    let offX = 0, offY = 0, scaleY = 1.0;
+    if (v.isAI) {
+      const step = Math.floor(S.t / 0.75) % 2;
+      offY = step === 0 ? 0 : -3;
+      offX = (S.t % 0.75) < 0.07 ? (step === 0 ? 1.5 : -1.5) : 0;
+    } else {
+      const phase = S.t * 2.4 + v.spriteIdx * 1.3;
+      offY = Math.sin(phase) * 1.6;
+      scaleY = 1 + Math.sin(phase) * 0.022;
+    }
+
+    g.save();
+    g.translate(v.x + offX, v.y);
+
+    g.fillStyle = 'rgba(20, 30, 18, 0.32)';
+    g.beginPath(); g.ellipse(0, 3, 16, 7, 0, 0, Math.PI * 2); g.fill();
+
+    if (S.nearVillagerId === v.id && S.phase === 'village') {
+      g.strokeStyle = PAL.gold;
+      g.lineWidth = 2.5;
+      g.beginPath(); g.ellipse(0, 3, 22, 10, 0, 0, Math.PI * 2); g.stroke();
+    }
+
+    if (spr) {
+      const dh = 66 * scaleY;
+      const dw = (spr.width / spr.height) * 66;
+      g.drawImage(spr, -dw / 2, -dh + 4 + offY, dw, dh);
+    } else {
+      g.fillStyle = PAL.acc;
+      g.fillRect(-12, -52, 24, 52);
+    }
+
+    if (S.nearVillagerId === v.id && S.phase === 'village') {
+      const by = -76 + Math.sin(S.t * 5) * 3;
+      g.fillStyle = PAL.fg;
+      g.fillRect(-38, by - 16, 76, 20);
+      g.strokeStyle = PAL.boxBorder;
+      g.lineWidth = 1.5;
+      g.strokeRect(-38, by - 16, 76, 20);
+      g.fillStyle = q ? PAL.gold : PAL.bg;
+      g.font = 'bold 11px "Courier New", monospace';
+      g.textAlign = 'center';
+      g.fillText(q ? '[SPACE] TALK' : '[SPACE] CHAT', 0, by - 2);
+    } else if (q) {
+      const py = -70 + Math.sin(S.t * 4 + v.spriteIdx) * 2;
+      g.fillStyle = PAL.paper;
+      g.beginPath(); g.arc(0, py, 7, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = PAL.fg; g.lineWidth = 1.5; g.stroke();
+      g.fillStyle = PAL.acc;
+      g.font = 'bold 11px monospace';
+      g.textAlign = 'center';
+      g.fillText('!', 0, py + 4);
+    }
+
+    g.restore();
+  }
+
+  function drawWaterRipples(g) {
+    for (let y = Math.max(10, Math.floor(S.camY / 45) * 45); y < Math.min(WORLD_H - 10, S.camY + H + 45); y += 45) {
+      const cx = riverCenterX(y);
+      const hw = riverHalfWidth(y);
+      const wave = Math.sin(S.t * 2.2 + y * 0.04) * 10;
+      g.strokeStyle = 'rgba(220, 238, 230, 0.36)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(cx - 28 + wave, y);
+      g.quadraticCurveTo(cx + wave, y + 5, cx + 26 + wave, y);
+      g.stroke();
+
+      g.strokeStyle = 'rgba(225, 242, 234, 0.28)';
+      g.beginPath();
+      g.arc(cx - hw + 18, y + 10, 12 + Math.sin(S.t * 3 + y) * 2, 0.2, 1.8);
+      g.stroke();
+    }
+
+    if (S.completedQuestIds.has('q_bridge')) {
+      const b = BRIDGES[1];
+      g.fillStyle = 'rgba(30, 20, 18, 0.62)';
+      g.beginPath(); g.ellipse(b.cx, b.cy, 58, 24, b.angle, 0, Math.PI * 2); g.fill();
+    }
+    if (S.completedQuestIds.has('q_well')) {
+      g.fillStyle = '#5a412d';
+      g.fillRect(1432, 266, 56, 14);
+    }
+  }
+
+  function drawPencilIcon(g, tipX, tipY) {
+    g.save();
+    g.translate(tipX, tipY);
+    g.rotate(-0.72);
+    g.fillStyle = '#252522';
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(8, -4); g.lineTo(8, 4); g.closePath(); g.fill();
+    g.fillStyle = '#e6c594';
+    g.beginPath(); g.moveTo(7, -4); g.lineTo(17, -7); g.lineTo(17, 7); g.lineTo(7, 4); g.closePath(); g.fill();
+    g.fillStyle = '#e2b949';
+    g.fillRect(17, -7, 42, 14);
+    g.strokeStyle = '#3b2e1e';
+    g.lineWidth = 2;
+    g.strokeRect(17, -7, 42, 14);
+    g.fillStyle = '#b9c0bd';
+    g.fillRect(59, -7, 7, 14);
+    g.fillStyle = '#d97b73';
+    g.fillRect(66, -7, 9, 14);
+    g.strokeRect(66, -7, 9, 14);
+    g.restore();
+  }
+
+  function drawNotebookWidget() {
+    const expanded = S.phase === 'notes';
+    const nx = expanded ? 850 : 912;
+    const ny = expanded ? 275 : 396;
+    const nw = expanded ? 394 : 334;
+    const nh = expanded ? 412 : 290;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(16, 24, 14, 0.42)';
+    ctx.fillRect(nx + 6, ny + 8, nw, nh);
+
+    ctx.fillStyle = '#5a4531';
+    ctx.fillRect(nx - 6, ny - 6, nw + 12, nh + 12);
+    ctx.strokeStyle = '#241c14';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(nx - 6, ny - 6, nw + 12, nh + 12);
+
+    ctx.fillStyle = '#4f7ea8';
+    ctx.fillRect(nx + nw + 4, ny + 44, 9, 34);
+    ctx.fillStyle = '#d9b44a';
+    ctx.fillRect(nx + nw + 4, ny + 82, 9, 34);
+
+    ctx.fillStyle = PAL.paper;
+    ctx.fillRect(nx, ny, nw, nh);
+    ctx.strokeStyle = '#b9ab8a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(nx + 4, ny + 4, nw - 8, nh - 8);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('NOTEBOOK', nx + nw * 0.5, ny + 38);
+
+    ctx.strokeStyle = 'rgba(140, 126, 98, 0.22)';
+    ctx.lineWidth = 1;
+    const startY = ny + 76;
+    const rowH = expanded ? 42 : 44;
+    const visibleVillagers = expanded ? VILLAGERS : VILLAGERS.slice(0, 4);
+
+    visibleVillagers.forEach((v, idx) => {
+      const ry = startY + idx * rowH;
+      ctx.beginPath();
+      ctx.moveTo(nx + 20, ry + 8);
+      ctx.lineTo(nx + nw - 20, ry + 8);
+      ctx.stroke();
+
+      if (expanded && S.notesCursor === idx) {
+        ctx.fillStyle = 'rgba(224, 82, 60, 0.13)';
+        ctx.fillRect(nx + 14, ry - 20, nw - 28, 32);
+      }
+
+      const labelName = v.id === 'warden' ? 'warden' : v.name.toLowerCase();
+      const tagText = v.noteTag;
+      ctx.textAlign = 'left';
+      ctx.font = expanded ? 'bold 17px "Courier New", monospace' : 'bold 18px "Courier New", monospace';
+      ctx.fillStyle = PAL.fg;
+      const prefix = (expanded && S.notesCursor === idx) ? '> ' : '';
+      ctx.fillText(`${prefix}${labelName}: `, nx + 20, ry);
+
+      const tagX = nx + 20 + ctx.measureText(`${prefix}${labelName}: `).width;
+      ctx.fillStyle = tagText.includes('AI') ? '#a33222' : (tagText === 'unknown' ? '#7a705b' : '#264422');
+      ctx.fillText(tagText, tagX, ry);
+
+      if (tagText.startsWith('confirmed')) {
+        const tw = ctx.measureText(tagText).width;
+        ctx.strokeStyle = PAL.acc;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(tagX - 2, ry + 5);
+        ctx.quadraticCurveTo(tagX + tw * 0.5, ry + 3, tagX + tw + 2, ry + 6);
+        ctx.stroke();
+      }
+
+      if (S.pencilAnim > 0.02 && S.pencilTargetId === v.id) {
+        const px = tagX + 34 + Math.sin(S.t * 24) * 5;
+        const py = ry - 6 + Math.cos(S.t * 18) * 3;
+        drawPencilIcon(ctx, px, py);
+      }
+    });
+
+    if (expanded) {
+      ctx.fillStyle = '#5e533e';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('[UP/DN] select · [SPACE] tag · [V] verdict · [N] close', nx + nw * 0.5, ny + nh - 18);
+    } else {
+      ctx.fillStyle = '#6e624b';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('[N] flip all 6 notes', nx + 20, ny + nh - 16);
+    }
+
+    ctx.fillStyle = '#d3c49f';
+    ctx.beginPath();
+    ctx.moveTo(nx + nw - 34, ny + nh);
+    ctx.lineTo(nx + nw, ny + nh - 34);
+    ctx.lineTo(nx + nw - 30, ny + nh - 28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8b7c5c';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    if (S.pageFlip > 0.01) {
+      const p = S.pageFlip;
+      const foldX = nx + nw * p;
+      const curlW = 46 * Math.sin(p * Math.PI);
+      ctx.fillStyle = 'rgba(30, 24, 15, 0.18)';
+      ctx.fillRect(foldX - curlW - 8, ny + 4, curlW + 14, nh - 8);
+      const grad = ctx.createLinearGradient(foldX - curlW, ny, foldX + 8, ny);
+      grad.addColorStop(0, '#d8caa7');
+      grad.addColorStop(0.55, '#f6efda');
+      grad.addColorStop(1, '#c9ba95');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(foldX, ny + 2);
+      ctx.lineTo(foldX - curlW, ny + 14);
+      ctx.lineTo(foldX - curlW - 10, ny + nh - 10);
+      ctx.lineTo(foldX, ny + nh - 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#9a8b6a';
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function wrapText(g, text, startX, startY, firstMaxW, lineH, nextLineX) {
+    const words = text.split(' ');
+    let line = '';
+    let x = startX, y = startY, maxW = firstMaxW;
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (g.measureText(test).width > maxW && line) {
+        g.fillText(line, x, y);
+        line = w;
+        x = nextLineX;
+        y += lineH;
+        maxW = 770;
+      } else {
+        line = test;
+      }
+    }
+    if (line) g.fillText(line, x, y);
+  }
+
+  function drawDialogueBox() {
+    if (S.phase !== 'talk' && S.phase !== 'quest') return;
+    const v = VILLAGERS.find(x => x.id === S.activeVillagerId);
+    if (!v) return;
+
+    const bx = 36, by = 492, bw = 844, bh = 192;
+    ctx.save();
+    ctx.fillStyle = 'rgba(12, 18, 11, 0.45)';
+    ctx.fillRect(bx + 5, by + 6, bw, bh);
+
+    ctx.fillStyle = PAL.boxBg;
+    ctx.fillRect(bx, by, bw, bh);
+
+    ctx.strokeStyle = '#1b2417';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.strokeStyle = PAL.boxBorder;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(bx + 4, by + 4, bw - 8, bh - 8);
+
+    if (S.phase === 'quest') {
+      ctx.fillStyle = S.questOutcomeWasAI ? PAL.acc : PAL.gold;
+      ctx.font = 'bold 23px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(S.questOutcomeText, bx + 34, by + 76);
+      ctx.fillStyle = '#d8e4ca';
+      ctx.font = '18px "Courier New", monospace';
+      ctx.fillText(
+        S.questOutcomeWasAI
+          ? 'Something in the village feels colder... check your NOTEBOOK [N].'
+          : 'The village grows warmer. Remember who cared for their neighbors.',
+        bx + 34, by + 122
+      );
+      ctx.restore();
+      return;
+    }
+
+    const q = S.activeQuest;
+    const rawQuote = q ? `"${q.text}"` : `"${v.doneGreeting}"`;
+    const shownQuote = rawQuote.slice(0, Math.floor(S.typeChars));
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 23px "Courier New", monospace';
+    const speakerStr = `${v.name}: `;
+    ctx.fillStyle = PAL.gold;
+    ctx.fillText(speakerStr, bx + 34, by + 64);
+
+    const spkW = ctx.measureText(speakerStr).width;
+    ctx.fillStyle = '#f2f6ea';
+    wrapText(ctx, shownQuote, bx + 34 + spkW, by + 64, bw - 68 - spkW, 30, bx + 34);
+
+    if (q) {
+      ctx.fillStyle = '#9fb093';
+      ctx.font = '16px "Courier New", monospace';
+      ctx.fillText(q.detail, bx + 34, by + 118);
+
+      ctx.font = 'bold 23px "Courier New", monospace';
+      if (S.talkChoice === 0) {
+        ctx.fillStyle = '#f4f8ee';
+        ctx.fillText('>', bx + 34, by + 158);
+      } else {
+        ctx.fillStyle = '#f4f8ee';
+        ctx.fillText('>', bx + 186, by + 158);
+      }
+      ctx.fillStyle = S.talkChoice === 0 ? PAL.acc : '#b94b39';
+      ctx.fillText('accept', bx + 64, by + 158);
+      ctx.fillStyle = S.talkChoice === 1 ? PAL.acc : '#b94b39';
+      ctx.fillText('decline', bx + 214, by + 158);
+
+      ctx.fillStyle = '#8b9c80';
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillText('[A] accept · [D] decline · [N] tag notebook', bx + 365, by + 157);
+    } else if (Math.floor(S.t * 3) % 2 === 0) {
+      ctx.fillStyle = PAL.boxBorder;
+      ctx.beginPath();
+      ctx.moveTo(bx + bw - 48, by + bh - 34);
+      ctx.lineTo(bx + bw - 26, by + bh - 34);
+      ctx.lineTo(bx + bw - 37, by + bh - 20);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function drawTopHUD() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(26, 36, 23, 0.80)';
+    ctx.fillRect(22, 18, 438, 36);
+    ctx.strokeStyle = PAL.boxBorder;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(22, 18, 438, 36);
+
+    ctx.fillStyle = PAL.bg;
+    ctx.font = 'bold 15px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    const safety = Math.max(0, 3 - S.aiDone);
+    const hearts = '♥'.repeat(safety) + '♡'.repeat(3 - safety);
+    ctx.fillText(`DAY ${S.day}/3  ·  QUESTS ${S.questsResolved}/6  ·  VILLAGE `, 36, 41);
+    ctx.fillStyle = safety <= 1 ? PAL.acc : '#8ed081';
+    ctx.fillText(hearts, 398, 41);
+    ctx.restore();
+  }
+
+  function drawTitleScreen() {
+    ctx.fillStyle = PAL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(32, 48, 28, 0.05)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x < W; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 64) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    villagerSprites.forEach((spr, i) => {
+      if (!spr) return;
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      const sx = 230 + i * 164;
+      const sy = 155 + Math.sin(S.t * 2 + i) * 4;
+      ctx.drawImage(spr, sx - 24, sy, 48, 86);
+      ctx.restore();
+    });
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.acc;
+    ctx.font = 'bold 88px "Courier New", monospace';
+    ctx.fillText('WHO IS REAL?', W / 2, 310);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 30px "Courier New", monospace';
+    ctx.fillText('a village of six · Turing Test Village', W / 2, 378);
+
+    ctx.fillStyle = PAL.bg;
+    ctx.fillRect(480, 444, 320, 76);
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(480, 444, 320, 76);
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 30px "Courier New", monospace';
+    ctx.fillText('START [ENTER]', W / 2, 492);
+
+    ctx.fillStyle = '#4e6146';
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillText('WASD / Arrows: Walk  ·  SPACE: Talk  ·  A/D: Accept/Decline  ·  N: Notebook', W / 2, 585);
+  }
+
+  function drawVerdictScreen() {
+    ctx.fillStyle = 'rgba(20, 30, 18, 0.88)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = PAL.paper;
+    ctx.fillRect(150, 72, 980, 576);
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(150, 72, 980, 576);
+
+    let correctTags = 0;
+    VILLAGERS.forEach(v => {
+      const guessedAI = v.noteTag.includes('AI');
+      const guessedHuman = v.noteTag.includes('human');
+      if ((v.isAI && guessedAI) || (!v.isAI && guessedHuman)) correctTags++;
+    });
+
+    const aiPassed = (S.aiDone >= 3) || (S.aiDone > S.humanDone);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = aiPassed ? PAL.acc : '#2c5e2e';
+    ctx.font = 'bold 44px "Courier New", monospace';
+    ctx.fillText(
+      aiPassed ? 'VERDICT: THE IMITATION PASSED' : 'VERDICT: HUMANITY RECOGNIZED',
+      W / 2, 148
+    );
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.fillText(
+      aiPassed
+        ? 'You carried out destructive optimization quests — the bridge & well paid the price.'
+        : 'You listened to what real neighbors protect, and declined cold machine optimizations.',
+      W / 2, 198
+    );
+
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText(
+      `Human Quests Done: ${S.humanDone}   ·   AI Quests Done: ${S.aiDone}   ·   Notebook Accuracy: ${correctTags}/6`,
+      W / 2, 250
+    );
+
+    VILLAGERS.forEach((v, i) => {
+      const col = i % 3, row = Math.floor(i / 3);
+      const cx = 290 + col * 350;
+      const cy = 355 + row * 125;
+      const spr = villagerSprites[v.spriteIdx];
+      if (spr) ctx.drawImage(spr, cx - 78, cy - 42, 38, 68);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = PAL.fg;
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.fillText(v.fullName, cx - 30, cy - 10);
+      ctx.fillStyle = v.isAI ? PAL.acc : '#2c5e2e';
+      ctx.font = 'bold 16px "Courier New", monospace';
+      ctx.fillText(`TRUTH: ${v.isAI ? 'AI IMITATOR' : 'HUMAN'}`, cx - 30, cy + 14);
+      ctx.fillStyle = '#6b5e46';
+      ctx.font = '15px "Courier New", monospace';
+      ctx.fillText(`Your note: ${v.noteTag}`, cx - 30, cy + 34);
+    });
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.fg;
+    ctx.fillRect(465, 568, 350, 54);
+    ctx.fillStyle = PAL.bg;
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('PLAY AGAIN [R / ENTER]', W / 2, 602);
+  }
+
+  function render() {
+    if (S.phase === 'title') {
+      drawTitleScreen();
+      return;
+    }
+
+    ctx.save();
+    ctx.translate(-Math.round(S.camX), -Math.round(S.camY));
+
+    ctx.drawImage(worldCanvas, 0, 0);
+    drawWaterRipples(ctx);
+
+    for (const f of wildflowers) {
+      if (f.x < S.camX - 20 || f.x > S.camX + W + 20 || f.y < S.camY - 20 || f.y > S.camY + H + 20) continue;
+      const sway = Math.sin(S.t * 2.5 + f.phase) * 1.5;
+      ctx.fillStyle = '#4e6f36';
+      ctx.fillRect(f.x, f.y, 3, 5);
+      ctx.fillStyle = f.color;
+      ctx.fillRect(f.x - 2 + sway, f.y - 3, 5, 5);
+    }
+
+    const renderList = [];
+    for (const p of ySortedProps) renderList.push(p);
+    for (const v of VILLAGERS) renderList.push({ y: v.y, draw: (g) => drawVillager(g, v) });
+    renderList.push({ y: S.y, draw: (g) => drawPlayer(g, S.x, S.y) });
+    renderList.sort((a, b) => a.y - b.y);
+    for (const item of renderList) item.draw(ctx);
+
+    for (const p of smokePuffs) {
+      ctx.fillStyle = `rgba(236, 236, 226, ${p.life * 0.34})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const p of S.particles) {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (S.aiDone > 0) {
+      ctx.fillStyle = `rgba(90, 62, 58, ${Math.min(0.22, S.aiDone * 0.08)})`;
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      const grad = ctx.createRadialGradient(W * 0.45, H * 0.4, 180, W * 0.5, H * 0.5, 780);
+      grad.addColorStop(0, 'rgba(255, 248, 215, 0.06)');
+      grad.addColorStop(1, 'rgba(24, 36, 20, 0.16)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    drawTopHUD();
+    drawDialogueBox();
+    drawNotebookWidget();
+
+    if (S.phase === 'end') {
+      drawVerdictScreen();
+    }
+  }
+
+  function loop(now) {
+    const dt = Math.min((now - lastNow) / 1000, 0.05);
+    lastNow = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

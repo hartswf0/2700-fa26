@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
+<title>Space Farmer — Five Days on the Farm (M2)</title>
+<style>
+  :root {
+    --bg: #171917;
+    --slate: #1d1f1c;
+    --fg: #d9d4c2;
+    --acc: #e0a35a;
+    --red: #d9483b;
+  }
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #121412;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Courier New", Courier, ui-monospace, monospace;
+    color: var(--fg);
+  }
+  #stage-wrap {
+    position: relative;
+    width: min(100vw, 177.7778vh);
+    height: min(56.25vw, 100vh);
+    background: var(--slate);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+</style>
+</head>
+<body>
+<div id="stage-wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  // One-sentence clone mood rule (spec.json):
+  // Every clone performs one task calmly before needing a brief rest in the lineup;
+  // assigning a winded clone a second consecutive task without rest turns them hostile red.
+
+  const W = 1280;
+  const H = 720;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  const params = new URLSearchParams(window.location.search);
+  const AUTOSTART = params.has('autostart');
+  const INITIAL_SEED = Number.isFinite(Number(params.get('seed'))) && params.get('seed') !== null
+    ? (Number(params.get('seed')) >>> 0)
+    : 7;
+
+  // Deterministic Mulberry32 PRNG
+  let rngState = (INITIAL_SEED || 7) >>> 0;
+  function rand() {
+    rngState = (rngState + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(rngState ^ (rngState >>> 15), 1 | rngState);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function randRange(a, b) { return a + (b - a) * rand(); }
+
+  const PALETTE = {
+    bg: '#1d1f1c',
+    dark: '#151816',
+    fg: '#d9d4c2',
+    muted: '#8f8b7d',
+    acc: '#e0a35a',
+    gold: '#f4c978',
+    red: '#df4638',
+    redSoft: 'rgba(223, 70, 56, 0.34)',
+    amberSoft: 'rgba(224, 163, 90, 0.28)'
+  };
+
+  // --- Audio System (Lyria BGM + Procedural WebAudio SFX) ---
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.42;
+  let audioCtx = null;
+  let humStarted = false;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        try { audioCtx = new AC(); } catch (_) {}
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (bgm.paused) {
+      bgm.play().catch(() => {});
+    }
+    if (audioCtx && !humStarted) {
+      humStarted = true;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filt = audioCtx.createBiquadFilter();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 54;
+        filt.type = 'lowpass';
+        filt.frequency.value = 120;
+        gain.gain.value = 0.022;
+        osc.connect(filt);
+        filt.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+      } catch (_) {}
+    }
+  }
+
+  function playSfx(kind) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    try {
+      if (kind === 'select') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(420, now);
+        o.frequency.exponentialRampToValueAtTime(560, now + 0.07);
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.085);
+      } else if (kind === 'assign') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(310, now);
+        o.frequency.exponentialRampToValueAtTime(620, now + 0.18);
+        g.gain.setValueAtTime(0.09, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.23);
+      } else if (kind === 'harvest') {
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(freq, now + i * 0.05);
+          g.gain.setValueAtTime(0.065, now + i * 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.28);
+          o.connect(g); g.connect(audioCtx.destination);
+          o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.3);
+        });
+      } else if (kind === 'grow') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(196, now);
+        o.frequency.exponentialRampToValueAtTime(392, now + 0.35);
+        g.gain.setValueAtTime(0.085, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.4);
+      } else if (kind === 'hostile') {
+        [220, 207.65].forEach((freq, i) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'sawtooth';
+          const f = audioCtx.createBiquadFilter();
+          f.type = 'lowpass';
+          f.frequency.value = 680;
+          o.frequency.setValueAtTime(freq, now + i * 0.08);
+          o.frequency.linearRampToValueAtTime(freq * 0.78, now + i * 0.08 + 0.28);
+          g.gain.setValueAtTime(0.09, now + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+          o.connect(f); f.connect(g); g.connect(audioCtx.destination);
+          o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.32);
+        });
+      }
+    } catch (_) {}
+  }
+
+  // --- Asset Loading & Sprite Sheet Slicing ---
+  const assets = {
+    loaded: false,
+    bg: null,
+    bgBaked: null,
+    vignetteBaked: null,
+    farmerPoses: [],    // [workPoseCanvas, standBasketPoseCanvas]
+    farmerHostile: [],  // crimson hostile tinted canvases
+    farmerTired: [],    // warm strained tinted canvases
+    farmerOverseer: null, // dark charcoal overseer suit
+    cropStages: [],     // [stage0Canvas, stage1Canvas, stage2Canvas]
+    grainCanvas: null
+  };
+
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  function extractAlphaRuns(img, expectedCount, fallbackSplits) {
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const octx = off.getContext('2d', { willReadFrequently: true });
+    octx.drawImage(img, 0, 0);
+    const data = octx.getImageData(0, 0, w, h).data;
+
+    const colMax = new Uint8Array(w);
+    for (let x = 0; x < w; x++) {
+      let m = 0;
+      for (let y = 0; y < h; y++) {
+        const a = data[(y * w + x) * 4 + 3];
+        if (a > m) m = a;
+      }
+      colMax[x] = m;
+    }
+
+    const runs = [];
+    let inRun = false, start = 0;
+    for (let x = 0; x < w; x++) {
+      if (colMax[x] > 14 && !inRun) {
+        inRun = true; start = x;
+      } else if (colMax[x] <= 14 && inRun) {
+        inRun = false;
+        if (x - start > 24) runs.push([start, x - 1]);
+      }
+    }
+    if (inRun && w - start > 24) runs.push([start, w - 1]);
+
+    const ranges = runs.length === expectedCount
+      ? runs
+      : fallbackSplits.map(([a, b]) => [Math.floor(a * w), Math.floor(b * w) - 1]);
+
+    return ranges.map(([x0, x1]) => {
+      let y0 = h, y1 = 0;
+      for (let y = 0; y < h; y++) {
+        for (let x = x0; x <= x1; x++) {
+          if (data[(y * w + x) * 4 + 3] > 14) {
+            if (y < y0) y0 = y;
+            if (y > y1) y1 = y;
+          }
+        }
+      }
+      if (y1 <= y0) { y0 = 0; y1 = h - 1; }
+      const sw = Math.max(1, x1 - x0 + 1);
+      const sh = Math.max(1, y1 - y0 + 1);
+      const c = document.createElement('canvas');
+      c.width = sw; c.height = sh;
+      c.getContext('2d').drawImage(img, x0, y0, sw, sh, 0, 0, sw, sh);
+      return c;
+    });
+  }
+
+  function makeTintedSprite(srcCanvas, mode) {
+    const c = document.createElement('canvas');
+    c.width = srcCanvas.width;
+    c.height = srcCanvas.height;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(srcCanvas, 0, 0);
+    const imgData = cctx.getImageData(0, 0, c.width, c.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 8) continue;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (mode === 'hostile') {
+        // Deep restless crimson-tinted suit & visor glow matching f_027.jpg
+        d[i]     = Math.min(255, lum * 0.92 + 78);
+        d[i + 1] = Math.min(255, lum * 0.28 + 10);
+        d[i + 2] = Math.min(255, lum * 0.24 + 10);
+      } else if (mode === 'tired') {
+        d[i]     = Math.min(255, r * 0.96 + 24);
+        d[i + 1] = Math.min(255, g * 0.82 + 8);
+        d[i + 2] = Math.min(255, b * 0.72);
+      } else if (mode === 'overseer') {
+        // Dark slate-charcoal station suit with warm amber visor/belt accents matching f_004..f_033!
+        const isWarm = (r - b > 38 && r > 135);
+        if (isWarm) {
+          d[i]     = Math.min(255, r * 1.08 + 18);
+          d[i + 1] = Math.min(255, g * 0.96 + 8);
+          d[i + 2] = Math.min(255, b * 0.65);
+        } else {
+          d[i]     = Math.min(255, lum * 0.34 + 14);
+          d[i + 1] = Math.min(255, lum * 0.34 + 15);
+          d[i + 2] = Math.min(255, lum * 0.31 + 14);
+        }
+      } else if (mode === 'calm') {
+        // Harmonize bright suit tones slightly into moody lunar lighting
+        d[i]     = Math.min(255, r * 0.88 + 10);
+        d[i + 1] = Math.min(255, g * 0.85 + 8);
+        d[i + 2] = Math.min(255, b * 0.78 + 6);
+      }
+    }
+    cctx.putImageData(imgData, 0, 0);
+    return c;
+  }
+
+  function refineCropStageSprite(srcCanvas) {
+    // Isolate strictly bright golden living shoots & wheat + crisp dark ink outlines around them
+    // so zero grey/brown sub-planter rims ever appear over the station soil bed!
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(srcCanvas, 0, 0);
+    const imgData = cctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    const isGold = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+        if (a > 24 && r > 148 && g > 105 && (r - b) > 42) {
+          isGold[y * w + x] = 1;
+        }
+      }
+    }
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        const i = idx * 4;
+        if (d[i + 3] < 10 || isGold[idx]) continue;
+        let nearGold = false;
+        for (let dy = -2; dy <= 2 && !nearGold; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= h) continue;
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = x + dx;
+            if (nx >= 0 && nx < w && isGold[ny * w + nx]) {
+              nearGold = true;
+              break;
+            }
+          }
+        }
+        if (nearGold) {
+          const lum = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+          if (lum > 68) d[i + 3] = 0; // keep only dark ink outline around golden stalks
+        } else {
+          d[i + 3] = 0;
+        }
+      }
+    }
+    cctx.putImageData(imgData, 0, 0);
+    return c;
+  }
+
+  function buildGrainTile() {
+    const g = document.createElement('canvas');
+    g.width = W + 64; g.height = H + 64;
+    const gctx = g.getContext('2d');
+    const im = gctx.createImageData(g.width, g.height);
+    let s = 1337;
+    for (let i = 0; i < im.data.length; i += 4) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      const v = (s >>> 24) & 255;
+      im.data[i] = v;
+      im.data[i + 1] = v;
+      im.data[i + 2] = v;
+      im.data[i + 3] = v > 200 ? 11 : v < 50 ? 11 : 0;
+    }
+    gctx.putImageData(im, 0, 0);
+    return g;
+  }
+
+  function buildVignette() {
+    const v = document.createElement('canvas');
+    v.width = W; v.height = H;
+    const vctx = v.getContext('2d');
+    const vig = vctx.createRadialGradient(W / 2, H * 0.48, H * 0.36, W / 2, H * 0.5, W * 0.64);
+    vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vig.addColorStop(1, 'rgba(8, 10, 9, 0.58)');
+    vctx.fillStyle = vig;
+    vctx.fillRect(0, 0, W, H);
+    return v;
+  }
+
+  function bakeBackground(bgImg) {
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const bctx = c.getContext('2d');
+    bctx.fillStyle = PALETTE.bg;
+    bctx.fillRect(0, 0, W, H);
+    if (bgImg) {
+      bctx.drawImage(bgImg, 0, 0, W, H);
+      const shade = bctx.createLinearGradient(0, 0, 0, H);
+      shade.addColorStop(0.0, 'rgba(16, 19, 18, 0.56)');
+      shade.addColorStop(0.52, 'rgba(20, 23, 21, 0.34)');
+      shade.addColorStop(1.0, 'rgba(14, 16, 15, 0.48)');
+      bctx.fillStyle = shade;
+      bctx.fillRect(0, 0, W, H);
+    }
+    const lamps = [
+      { x: 465, y: 60, rx: 250, ry: 410, a: 0.13 },
+      { x: 950, y: 100, rx: 220, ry: 380, a: 0.11 }
+    ];
+    bctx.save();
+    bctx.globalCompositeOperation = 'screen';
+    for (const l of lamps) {
+      const g = bctx.createRadialGradient(l.x, l.y, 6, l.x - 24, l.y + 190, l.ry);
+      g.addColorStop(0, `rgba(236, 185, 112, ${l.a * 1.7})`);
+      g.addColorStop(0.45, `rgba(224, 163, 90, ${l.a * 0.65})`);
+      g.addColorStop(1, 'rgba(224, 163, 90, 0)');
+      bctx.fillStyle = g;
+      bctx.beginPath();
+      bctx.moveTo(l.x - 24, l.y);
+      bctx.lineTo(l.x + 24, l.y);
+      bctx.lineTo(l.x + l.rx, l.y + l.ry);
+      bctx.lineTo(l.x - l.rx - 40, l.y + l.ry);
+      bctx.closePath();
+      bctx.fill();
+    }
+    bctx.restore();
+    return c;
+  }
+
+  assets.grainCanvas = buildGrainTile();
+  assets.vignetteBaked = buildVignette();
+
+  Promise.all([
+    loadImage('../assets/station_background_one_room.png'),
+    loadImage('../assets/farmer_sprite_2_poses.png'),
+    loadImage('../assets/crop_tile_3_growth_stages.png')
+  ]).then(([bgImg, farmerImg, cropImg]) => {
+    assets.bg = bgImg;
+    assets.bgBaked = bakeBackground(bgImg);
+    if (farmerImg) {
+      const rawPoses = extractAlphaRuns(farmerImg, 2, [[0, 0.52], [0.52, 1.0]]);
+      assets.farmerPoses = rawPoses.map(c => makeTintedSprite(c, 'calm'));
+      assets.farmerTired = rawPoses.map(c => makeTintedSprite(c, 'tired'));
+      assets.farmerHostile = rawPoses.map(c => makeTintedSprite(c, 'hostile'));
+      assets.farmerOverseer = makeTintedSprite(rawPoses[1] || rawPoses[0], 'overseer');
+    }
+    if (cropImg) {
+      assets.cropStages = extractAlphaRuns(cropImg, 3, [[0, 0.341], [0.341, 0.661], [0.661, 1.0]])
+        .map(c => refineCropStageSprite(c));
+    }
+    assets.loaded = true;
+  });
+
+  // --- Room Geometry & Coordinates (matched to station_background_one_room.png at 1280x720) ---
+  const BED_BACK = { x: 565, y: 424 };
+  const BED_LEFT = { x: 252, y: 526 };
+  const BED_RIGHT = { x: 1116, y: 546 };
+
+  function bedPoint(u, v) {
+    return {
+      x: BED_BACK.x + v * (BED_LEFT.x - BED_BACK.x) + u * (BED_RIGHT.x - BED_BACK.x),
+      y: BED_BACK.y + v * (BED_LEFT.y - BED_BACK.y) + u * (BED_RIGHT.y - BED_BACK.y)
+    };
+  }
+
+  const PUMP_STATION = { x: 356, y: 446, gaugeX: 303, gaugeY: 357 };
+  const CLONE_VAT = { x: 597, y: 392, glowX: 597, glowY: 327 };
+  const OVERSEER_POS = { x: 742, y: 448 };
+
+  const LINEUP_SLOTS = [
+    { x: 846, y: 468 },
+    { x: 932, y: 488 },
+    { x: 1014, y: 506 },
+    { x: 658, y: 432 },
+    { x: 1088, y: 522 }
+  ];
+
+  // 6 isometric crop plots inside the planter bed
+  const PLOT_COORDS = [
+    { u: 0.21, v: 0.30 }, // 0: back-left
+    { u: 0.21, v: 0.72 }, // 1: front-left (water rows primary target, matches f_014!)
+    { u: 0.50, v: 0.30 }, // 2: back-mid
+    { u: 0.50, v: 0.72 }, // 3: front-mid
+    { u: 0.79, v: 0.30 }, // 4: back-right
+    { u: 0.79, v: 0.72 }  // 5: front-right (golden wheat harvest target, matches f_027/f_033!)
+  ].map((uv, idx) => {
+    const p = bedPoint(uv.u, uv.v);
+    return { id: idx, u: uv.u, v: uv.v, x: p.x, y: p.y };
+  });
+
+  // --- Game State ---
+  const DAY_NOTES = [
+    '',
+    'Two hands cannot tend six lunar trays alone. Grow help if you need it.',
+    'Three tasks on the board. Work a clone twice without rest and they turn sour.',
+    'Pump seals are rattling. Rotate rested clones before tempers flare.',
+    'Golden ears are filling out. Keep calm hands outnumbering angry ones tonight.',
+    'Final shift before the orbital freighter docks. Ship the harvest or lose the room.'
+  ];
+
+  const game = {
+    phase: AUTOSTART ? 'work' : 'title',
+    day: AUTOSTART ? 2 : 1,
+    t: 0,
+    phaseTime: 0,
+    shiftDuration: 34,
+    shiftTime: 0,
+    harvestScore: 0,
+    selectedClone: 0,
+    selectedTask: 0,
+    showHelp: false,
+    clones: [],
+    plots: [],
+    tasks: [],
+    arcs: [],
+    particles: [],
+    steamPuffs: [],
+    dustMotes: [],
+    drag: {
+      active: false,
+      cloneIdx: -1,
+      x: 0,
+      y: 0,
+      hoverTask: -1
+    },
+    cursor: { x: 850, y: 450, visible: false, down: false },
+    nightSummary: { missedTasks: 0, outcome: 'next' }
+  };
+
+  for (let i = 0; i < 28; i++) {
+    game.dustMotes.push({
+      x: randRange(180, 1120),
+      y: randRange(70, 560),
+      vx: randRange(-6, 6),
+      vy: randRange(-4, 4),
+      r: randRange(1.0, 2.2),
+      a: randRange(0.12, 0.38)
+    });
+  }
+
+  function makeClone(index, spawnFromVat = false) {
+    const slot = LINEUP_SLOTS[index % LINEUP_SLOTS.length];
+    const startX = spawnFromVat ? CLONE_VAT.x : slot.x;
+    const startY = spawnFromVat ? CLONE_VAT.y : slot.y;
+    return {
+      id: index,
+      label: `Clone ${index + 1}`,
+      x: startX,
+      y: startY,
+      homeX: slot.x,
+      homeY: slot.y,
+      mood: 'calm',          // 'calm' | 'hostile'
+      fatigue: 0,            // 0 = rested, 1 = worked once (needs rest), >=2 -> snaps hostile
+      restProgress: 0,
+      restNeeded: 5.2,
+      state: spawnFromVat ? 'walking_home' : 'idle', // 'idle' | 'leaping' | 'working' | 'walking_home' | 'tantrum'
+      taskId: null,
+      targetX: slot.x,
+      targetY: slot.y,
+      leapStartX: startX,
+      leapStartY: startY,
+      leapT: 0,
+      leapDur: 0.58,
+      workTimer: 0,
+      workDur: 2.5,
+      carryingWheat: false,
+      facingLeft: true,
+      tasksDoneToday: 0,
+      alertTimer: 0
+    };
+  }
+
+  function setupDay(dayNum, isAutostartInit = false) {
+    game.day = dayNum;
+    game.shiftTime = 0;
+    game.shiftDuration = 36;
+    game.arcs = [];
+
+    // Initialize or carry over clones
+    if (isAutostartInit) {
+      // Match sheet.jpg: Day 2 starts with 3 clones on station
+      game.clones = [makeClone(0), makeClone(1), makeClone(2)];
+    } else if (dayNum === 1 && game.clones.length === 0) {
+      game.clones = [makeClone(0), makeClone(1)];
+    } else {
+      game.clones.forEach((c, idx) => {
+        const slot = LINEUP_SLOTS[idx % LINEUP_SLOTS.length];
+        c.homeX = slot.x;
+        c.homeY = slot.y;
+        c.x = slot.x;
+        c.y = slot.y;
+        c.state = 'idle';
+        c.taskId = null;
+        c.fatigue = 0;
+        c.restProgress = 0;
+        c.carryingWheat = false;
+        c.tasksDoneToday = 0;
+      });
+    }
+
+    // Initialize 6 isometric plots
+    // Start with mix of sprouts (-1/0) and one warm budding plot so room feels alive
+    game.plots = PLOT_COORDS.map((p, idx) => ({
+      id: idx,
+      x: p.x,
+      y: p.y,
+      stage: isAutostartInit ? (idx === 1 ? 0 : idx >= 4 ? 0 : -1) : (idx % 2 === 0 ? 0 : -1),
+      growth: isAutostartInit && idx >= 4 ? 0.45 : 0.0, // 0..1 within current stage
+      watered: false,
+      glow: idx === 1 ? 0.4 : 0.15
+    }));
+
+    const targetWater = dayNum === 1 ? 1 : 2;
+    const targetPump = 1;
+    const targetHarvest = dayNum >= 4 ? 2 : 1;
+
+    game.tasks = [
+      {
+        id: 'water',
+        index: 0,
+        label: 'water rows',
+        progress: 0,
+        goal: targetWater,
+        done: false,
+        active: false,
+        failed: false,
+        x: PLOT_COORDS[1].x,
+        y: PLOT_COORDS[1].y - 12
+      },
+      {
+        id: 'pump',
+        index: 1,
+        label: 'fix pump',
+        progress: 0,
+        goal: targetPump,
+        done: false,
+        active: false,
+        failed: false,
+        x: PUMP_STATION.x,
+        y: PUMP_STATION.y - 18
+      },
+      {
+        id: 'harvest',
+        index: 2,
+        label: 'harvest',
+        progress: 0,
+        goal: targetHarvest,
+        done: false,
+        active: false,
+        failed: false,
+        x: PLOT_COORDS[5].x,
+        y: PLOT_COORDS[5].y - 16
+      }
+    ];
+
+    game.selectedClone = 0;
+    game.selectedTask = 0;
+  }
+
+  function resetFullGame(toWork = false) {
+    rngState = (INITIAL_SEED || 7) >>> 0;
+    game.harvestScore = 0;
+    game.clones = [];
+    game.particles = [];
+    game.steamPuffs = [];
+    if (toWork) {
+      setupDay(2, true);
+      game.phase = 'work';
+      game.phaseTime = 0;
+    } else {
+      setupDay(1, false);
+      game.phase = 'day';
+      game.phaseTime = 0;
+    }
+  }
+
+  if (AUTOSTART) {
+    setupDay(2, true);
+    game.phase = 'work';
+  } else {
+    setupDay(1, false);
+    game.phase = 'title';
+  }
+
+  // --- Helper Queries & Mechanics ---
+  function getTaskAnchor(taskIdx) {
+    if (taskIdx === 0) {
+      // Pick least watered/lowest stage plot on left/mid
+      const cand = game.plots.find(p => !p.watered && p.stage < 2) || game.plots[1];
+      return { x: cand.x - 18, y: cand.y - 6, plotId: cand.id };
+    }
+    if (taskIdx === 1) {
+      return { x: PUMP_STATION.x, y: PUMP_STATION.y, plotId: -1 };
+    }
+    // Harvest: pick highest stage plot on right/front
+    let best = game.plots[5];
+    for (const p of game.plots) {
+      if (p.stage > best.stage) best = p;
+    }
+    return { x: best.x - 18, y: best.y - 4, plotId: best.id };
+  }
+
+  function spawnParticles(x, y, count, color, style = 'spark') {
+    for (let i = 0; i < count; i++) {
+      const ang = randRange(-Math.PI * 0.92, -Math.PI * 0.08);
+      const spd = randRange(26, 98);
+      game.particles.push({
+        x: x + randRange(-18, 18),
+        y: y + randRange(-12, 10),
+        vx: Math.cos(ang) * spd + randRange(-15, 15),
+        vy: Math.sin(ang) * spd - randRange(8, 32),
+        life: 0,
+        maxLife: randRange(0.55, 1.25),
+        size: style === 'wheat' ? randRange(3.2, 5.4) : randRange(2.0, 4.0),
+        color,
+        style
+      });
+    }
+  }
+
+  function addAssignmentArc(x0, y0, x1, y1, color = PALETTE.acc) {
+    game.arcs.push({
+      x0, y0, x1, y1,
+      color,
+      life: 0,
+      maxLife: 1.15
+    });
+  }
+
+  function growClone() {
+    if (game.phase !== 'work') return false;
+    if (game.clones.length >= 5) return false;
+    ensureAudio();
+    const idx = game.clones.length;
+    const c = makeClone(idx, true);
+    game.clones.push(c);
+    game.selectedClone = idx;
+    spawnParticles(CLONE_VAT.x, CLONE_VAT.y - 30, 18, PALETTE.acc, 'spark');
+    addAssignmentArc(CLONE_VAT.x, CLONE_VAT.y - 35, c.homeX, c.homeY - 30, PALETTE.acc);
+    playSfx('grow');
+    return true;
+  }
+
+  function restSelectedClone() {
+    if (game.phase !== 'work') return false;
+    const c = game.clones[game.selectedClone];
+    if (!c || c.mood === 'hostile') return false;
+    c.fatigue = 0;
+    c.restProgress = 0;
+    spawnParticles(c.x, c.y - 60, 8, PALETTE.fg, 'spark');
+    playSfx('select');
+    return true;
+  }
+
+  function assignCloneToTask(cloneIdx, taskIdx) {
+    if (game.phase !== 'work') return false;
+    const c = game.clones[cloneIdx];
+    const task = game.tasks[taskIdx];
+    if (!c || !task) return false;
+    if (c.mood === 'hostile' || c.state === 'tantrum' || c.state === 'leaping') return false;
+
+    ensureAudio();
+    game.selectedClone = cloneIdx;
+    game.selectedTask = taskIdx;
+
+    // If clone was currently mid-work on another station, pulling them counts as immediate strain!
+    if (c.state === 'working') {
+      c.fatigue = Math.max(1, c.fatigue);
+      const prevTask = game.tasks[c.taskId];
+      if (prevTask) prevTask.active = false;
+    }
+
+    const dest = getTaskAnchor(taskIdx);
+    c.leapStartX = c.x;
+    c.leapStartY = c.y;
+    c.targetX = dest.x;
+    c.targetY = dest.y;
+    c.plotId = dest.plotId;
+    c.taskId = taskIdx;
+    c.state = 'leaping';
+    c.leapT = 0;
+    c.leapDur = 0.56;
+    c.facingLeft = (dest.x < c.x);
+
+    task.active = true;
+    task.failed = false;
+    task.x = dest.x;
+    task.y = dest.y;
+
+    addAssignmentArc(c.x, c.y - 58, dest.x, dest.y - 18, PALETTE.acc);
+    spawnParticles(c.x, c.y - 45, 10, PALETTE.acc, 'spark');
+    playSfx('assign');
+    return true;
+  }
+
+  function completeCloneWork(c) {
+    const task = game.tasks[c.taskId];
+    if (!task) {
+      c.state = 'walking_home';
+      return;
+    }
+
+    if (task.id === 'water') {
+      // Advance 2 plots cleanly toward golden growth
+      let wateredCount = 0;
+      for (const p of game.plots) {
+        if (p.stage < 2 && wateredCount < 2) {
+          p.stage = Math.min(2, p.stage + 1);
+          p.watered = true;
+          p.glow = 1.0;
+          spawnParticles(p.x, p.y - 18, 14, PALETTE.gold, 'spark');
+          wateredCount++;
+        }
+      }
+      // Also nudge right-side wheat plots so harvest becomes lush golden stage 2
+      if (game.plots[5].stage < 2) {
+        game.plots[5].stage = Math.min(2, game.plots[5].stage + 1);
+        game.plots[5].glow = 1.0;
+      }
+      if (game.plots[4].stage < 1) {
+        game.plots[4].stage = 1;
+      }
+      task.progress = Math.min(task.goal, task.progress + 1);
+      if (task.progress >= task.goal) task.done = true;
+      task.active = false;
+      c.carryingWheat = false;
+      playSfx('select');
+    } else if (task.id === 'pump') {
+      task.progress = Math.min(task.goal, task.progress + 1);
+      if (task.progress >= task.goal) task.done = true;
+      task.active = false;
+      // Fixing the pump irrigates the whole bed, boosting mid/right plots to full golden wheat!
+      game.plots.forEach((p, idx) => {
+        if (idx >= 3 && p.stage < 2) {
+          p.stage = 2;
+          p.glow = 1.0;
+          spawnParticles(p.x, p.y - 24, 12, PALETTE.gold, 'wheat');
+        } else if (p.stage < 1) {
+          p.stage = 1;
+          p.glow = 0.85;
+        }
+      });
+      playSfx('assign');
+    } else if (task.id === 'harvest') {
+      // Harvest ripe golden plots
+      let harvestedAny = false;
+      for (let i = game.plots.length - 1; i >= 0; i--) {
+        const p = game.plots[i];
+        if (p.stage >= 1) {
+          spawnParticles(p.x, p.y - 28, 22, PALETTE.gold, 'wheat');
+          p.stage = Math.max(0, p.stage - 1);
+          p.glow = 0.9;
+          harvestedAny = true;
+          break;
+        }
+      }
+      if (!harvestedAny) {
+        spawnParticles(c.x, c.y - 24, 16, PALETTE.gold, 'wheat');
+      }
+      task.progress = Math.min(task.goal, task.progress + 1);
+      if (task.progress >= task.goal) task.done = true;
+      task.active = false;
+      game.harvestScore += 12;
+      c.carryingWheat = true;
+      playSfx('harvest');
+    }
+
+    c.tasksDoneToday += 1;
+    c.fatigue = 1; // Now winded! Needs to walk back and rest before next assignment.
+    c.restProgress = 0;
+    c.taskId = null;
+    c.state = 'walking_home';
+  }
+
+  function triggerCloneOverwork(c) {
+    const task = game.tasks[c.taskId];
+    c.mood = 'hostile';
+    c.state = 'tantrum';
+    c.workTimer = 0;
+    c.alertTimer = 6.0;
+    c.carryingWheat = false;
+    if (task) {
+      task.active = false;
+      task.done = false;
+      task.progress = Math.max(0, task.progress - 1);
+      task.failed = true; // Shows red [X] crossed-out task just like f_027 & f_033!
+    }
+    c.taskId = null;
+    spawnParticles(c.x, c.y - 54, 24, PALETTE.red, 'anger');
+    playSfx('hostile');
+  }
+
+  function endWorkShift() {
+    if (game.phase !== 'work') return;
+    // Check unfinished tasks: neglecting station chores sours 1 calm clone at night
+    const missed = game.tasks.filter(t => !t.done).length;
+    if (missed > 0) {
+      const calmClone = game.clones.find(c => c.mood === 'calm' && c.tasksDoneToday === 0)
+        || game.clones.find(c => c.mood === 'calm');
+      if (calmClone && missed >= 2) {
+        calmClone.mood = 'hostile';
+      }
+    }
+    const calmCount = game.clones.filter(c => c.mood === 'calm').length;
+    const hostileCount = game.clones.filter(c => c.mood === 'hostile').length;
+    let outcome = 'next';
+    if (hostileCount > calmCount) {
+      outcome = 'endB';
+    } else if (game.day >= 5) {
+      outcome = 'endA';
+    }
+    game.nightSummary = { missedTasks: missed, outcome };
+    game.phase = 'night';
+    game.phaseTime = 0;
+  }
+
+  function advanceFromNight() {
+    if (game.phase !== 'night') return;
+    if (game.nightSummary.outcome === 'endB') {
+      game.phase = 'endB';
+      game.phaseTime = 0;
+    } else if (game.nightSummary.outcome === 'endA') {
+      game.phase = 'endA';
+      game.phaseTime = 0;
+    } else {
+      setupDay(game.day + 1, false);
+      game.phase = 'day';
+      game.phaseTime = 0;
+    }
+  }
+
+  // --- Input Handling (Mouse Drag-and-Drop + Keyboard) ---
+  function clientToCanvas(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / Math.max(1, rect.width)) * W,
+      y: ((clientY - rect.top) / Math.max(1, rect.height)) * H
+    };
+  }
+
+  function hitTestClone(x, y) {
+    // Search front-to-back
+    const ordered = game.clones
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => b.c.y - a.c.y);
+    for (const { c, i } of ordered) {
+      if (c.mood === 'hostile') continue;
+      if (Math.abs(x - c.x) < 44 && y <= c.y + 14 && y >= c.y - 135) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function hitTestTask(x, y) {
+    // 1. Check top-right checklist rows
+    const bx = 976, by = 28, bw = 274;
+    if (x >= bx && x <= bx + bw && y >= by + 58 && y <= by + 188) {
+      const row = Math.floor((y - (by + 58)) / 40);
+      if (row >= 0 && row <= 2) return row;
+    }
+    // 2. Check pump area on left
+    if (x >= 180 && x <= 415 && y >= 270 && y <= 500) {
+      return 1; // fix pump
+    }
+    // 3. Check isometric crop bed
+    if (x >= 250 && x <= 1110 && y >= 435 && y <= 675) {
+      // Right half or ripe stage-2 plot -> harvest; left/mid -> water rows
+      if (x >= 685 || (game.tasks[0].done && !game.tasks[2].done)) {
+        return 2; // harvest
+      }
+      return 0; // water rows
+    }
+    return -1;
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    ensureAudio();
+    const p = clientToCanvas(e.clientX, e.clientY);
+    game.cursor.x = p.x;
+    game.cursor.y = p.y;
+    game.cursor.visible = true;
+    game.cursor.down = true;
+
+    if (game.phase === 'title') {
+      // HOW TO PLAY click
+      if (p.y >= 548 && p.y <= 605 && Math.abs(p.x - W / 2) < 130) {
+        game.showHelp = !game.showHelp;
+        playSfx('select');
+        return;
+      }
+      // START button or general click
+      if (Math.abs(p.x - W / 2) < 190 && p.y >= 435 && p.y <= 535) {
+        setupDay(1, false);
+        game.phase = 'day';
+        game.phaseTime = 0;
+        playSfx('assign');
+      }
+      return;
+    }
+
+    if (game.phase === 'day') {
+      game.phase = 'work';
+      game.phaseTime = 0;
+      playSfx('select');
+      return;
+    }
+
+    if (game.phase === 'night') {
+      advanceFromNight();
+      playSfx('select');
+      return;
+    }
+
+    if (game.phase === 'endA' || game.phase === 'endB') {
+      resetFullGame(false);
+      playSfx('assign');
+      return;
+    }
+
+    if (game.phase === 'work') {
+      // Clicking cloning vat window grows a clone (tight radius on vat glass so center-screen clicks don't trigger it)
+      if (Math.hypot(p.x - CLONE_VAT.glowX, p.y - CLONE_VAT.glowY) < 34) {
+        growClone();
+        return;
+      }
+
+      const cIdx = hitTestClone(p.x, p.y);
+      if (cIdx >= 0) {
+        game.selectedClone = cIdx;
+        game.drag.active = true;
+        game.drag.cloneIdx = cIdx;
+        game.drag.x = p.x;
+        game.drag.y = p.y;
+        game.drag.hoverTask = -1;
+        playSfx('select');
+        return;
+      }
+
+      // Clicking a task row in top-right HUD assigns currently selected clone if explicitly inside HUD box
+      if (p.x >= 976 && p.x <= 1250 && p.y >= 86 && p.y <= 216) {
+        const tIdx = hitTestTask(p.x, p.y);
+        if (tIdx >= 0) {
+          assignCloneToTask(game.selectedClone, tIdx);
+        }
+      }
+    }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    const p = clientToCanvas(e.clientX, e.clientY);
+    game.cursor.x = p.x;
+    game.cursor.y = p.y;
+    game.cursor.visible = true;
+    if (game.drag.active) {
+      game.drag.x = p.x;
+      game.drag.y = p.y;
+      game.drag.hoverTask = hitTestTask(p.x, p.y);
+      if (game.drag.hoverTask >= 0) {
+        game.selectedTask = game.drag.hoverTask;
+      }
+    }
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    const p = clientToCanvas(e.clientX, e.clientY);
+    game.cursor.x = p.x;
+    game.cursor.y = p.y;
+    game.cursor.down = false;
+    if (game.drag.active) {
+      const cIdx = game.drag.cloneIdx;
+      const tIdx = hitTestTask(p.x, p.y);
+      game.drag.active = false;
+      game.drag.cloneIdx = -1;
+      game.drag.hoverTask = -1;
+      if (tIdx >= 0) {
+        assignCloneToTask(cIdx, tIdx);
+      }
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    ensureAudio();
+    const key = e.key;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(key)) {
+      e.preventDefault();
+    }
+
+    if (game.phase === 'title') {
+      if (key === 'Enter' || key === ' ') {
+        setupDay(1, false);
+        game.phase = 'day';
+        game.phaseTime = 0;
+        playSfx('assign');
+      } else if (key === 'h' || key === 'H') {
+        game.showHelp = !game.showHelp;
+      }
+      return;
+    }
+
+    if (game.phase === 'day') {
+      if (key === 'Enter' || key === ' ') {
+        game.phase = 'work';
+        game.phaseTime = 0;
+        playSfx('select');
+      }
+      return;
+    }
+
+    if (game.phase === 'night') {
+      if (key === 'Enter' || key === ' ') {
+        advanceFromNight();
+        playSfx('select');
+      }
+      return;
+    }
+
+    if (game.phase === 'endA' || game.phase === 'endB') {
+      if (key === 'Enter' || key === ' ' || key === 'r' || key === 'R') {
+        resetFullGame(false);
+        playSfx('assign');
+      }
+      return;
+    }
+
+    if (game.phase === 'work') {
+      if (key >= '1' && key <= '5') {
+        const idx = Number(key) - 1;
+        if (idx < game.clones.length) {
+          game.selectedClone = idx;
+          playSfx('select');
+        }
+      } else if (key === 'ArrowLeft') {
+        game.selectedClone = (game.selectedClone - 1 + game.clones.length) % game.clones.length;
+        playSfx('select');
+      } else if (key === 'ArrowRight') {
+        game.selectedClone = (game.selectedClone + 1) % game.clones.length;
+        playSfx('select');
+      } else if (key === 'ArrowUp') {
+        game.selectedTask = (game.selectedTask + 2) % 3;
+        playSfx('select');
+      } else if (key === 'ArrowDown') {
+        game.selectedTask = (game.selectedTask + 1) % 3;
+        playSfx('select');
+      } else if (key === 'q' || key === 'Q') {
+        game.selectedTask = 0;
+        playSfx('select');
+      } else if (key === 'w' || key === 'W') {
+        game.selectedTask = 1;
+        playSfx('select');
+      } else if (key === 'e' || key === 'E') {
+        game.selectedTask = 2;
+        playSfx('select');
+      } else if (key === ' ' || key === 'Enter') {
+        assignCloneToTask(game.selectedClone, game.selectedTask);
+      } else if (key === 'g' || key === 'G') {
+        growClone();
+      } else if (key === 'r' || key === 'R') {
+        restSelectedClone();
+      } else if (key === 'n' || key === 'N') {
+        endWorkShift();
+      }
+    }
+  });
+
+  // --- Update Loop ---
+  function update(dt) {
+    game.t += dt;
+    game.phaseTime += dt;
+
+    // Ambient dust motes
+    for (const m of game.dustMotes) {
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+      if (m.x < 140) m.x = 1140;
+      if (m.x > 1140) m.x = 140;
+      if (m.y < 60) m.y = 580;
+      if (m.y > 580) m.y = 60;
+    }
+
+    // Pump steam puffs
+    const pumpTask = game.tasks[1];
+    const pumpNeedSteam = game.phase === 'work' && pumpTask && (!pumpTask.done || pumpTask.active || pumpTask.failed);
+    if (pumpNeedSteam && rand() < dt * (pumpTask.failed ? 8.5 : 4.2)) {
+      game.steamPuffs.push({
+        x: PUMP_STATION.gaugeX - 24 + randRange(-12, 12),
+        y: PUMP_STATION.gaugeY - 62,
+        vx: randRange(-12, 8),
+        vy: randRange(-38, -20),
+        r: randRange(8, 16),
+        life: 0,
+        maxLife: randRange(1.1, 1.9)
+      });
+    }
+    for (let i = game.steamPuffs.length - 1; i >= 0; i--) {
+      const s = game.steamPuffs[i];
+      s.life += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.r += dt * 11;
+      if (s.life >= s.maxLife) game.steamPuffs.splice(i, 1);
+    }
+
+    // Particles
+    for (let i = game.particles.length - 1; i >= 0; i--) {
+      const p = game.particles[i];
+      p.life += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 42 * dt;
+      if (p.life >= p.maxLife) game.particles.splice(i, 1);
+    }
+
+    // Assignment arcs
+    for (let i = game.arcs.length - 1; i >= 0; i--) {
+      game.arcs[i].life += dt;
+      if (game.arcs[i].life >= game.arcs[i].maxLife) game.arcs.splice(i, 1);
+    }
+
+    if (game.phase === 'day' && game.phaseTime > 2.3) {
+      game.phase = 'work';
+      game.phaseTime = 0;
+      return;
+    }
+
+    if (game.phase === 'night' && game.phaseTime > 3.6) {
+      advanceFromNight();
+      return;
+    }
+
+    if (game.phase !== 'work') return;
+
+    game.shiftTime += dt;
+
+    // Passive crop ripening when watered
+    for (const p of game.plots) {
+      if (p.glow > 0.2) p.glow = Math.max(0.2, p.glow - dt * 0.18);
+      if (p.watered && p.stage < 2) {
+        p.growth += dt * 0.16;
+        if (p.growth >= 1) {
+          p.growth = 0;
+          p.stage = Math.min(2, p.stage + 1);
+          p.glow = 0.95;
+        }
+      }
+    }
+
+    // Update Clones
+    for (const c of game.clones) {
+      if (c.alertTimer > 0) c.alertTimer = Math.max(0, c.alertTimer - dt);
+
+      if (c.state === 'leaping') {
+        c.leapT += dt / c.leapDur;
+        if (c.leapT >= 1) {
+          c.x = c.targetX;
+          c.y = c.targetY;
+          c.leapT = 1;
+          c.state = 'working';
+          c.workTimer = 0;
+          // If already winded (fatigue >= 1), clone strains briefly then snaps hostile!
+          c.workDur = c.fatigue >= 1 ? 0.65 : 2.15;
+          c.facingLeft = (c.taskId === 1); // Face left into pump, right into crop bed!
+          spawnParticles(c.x, c.y - 12, 8, PALETTE.acc, 'spark');
+        } else {
+          const u = c.leapT;
+          const arcLift = Math.sin(u * Math.PI) * 86;
+          c.x = c.leapStartX + (c.targetX - c.leapStartX) * u;
+          c.y = c.leapStartY + (c.targetY - c.leapStartY) * u - arcLift;
+        }
+      } else if (c.state === 'working') {
+        c.workTimer += dt;
+        if (rand() < dt * 9) {
+          const col = c.fatigue >= 1 ? PALETTE.red : PALETTE.gold;
+          const offX = c.facingLeft ? -36 : 36;
+          spawnParticles(c.x + offX, c.y - 34, 1, col, 'spark');
+        }
+        if (c.workTimer >= c.workDur) {
+          if (c.fatigue >= 1) {
+            triggerCloneOverwork(c);
+          } else {
+            completeCloneWork(c);
+          }
+        }
+      } else if (c.state === 'tantrum') {
+        c.workTimer += dt;
+        if (rand() < dt * 5.5) {
+          spawnParticles(c.x, c.y - 68, 1, PALETTE.red, 'anger');
+        }
+        // Restless pacing near where they snapped
+        if (c.workTimer > 2.8) {
+          const restSpotX = Math.max(330, Math.min(430, c.x));
+          c.x += (restSpotX - c.x) * Math.min(1, dt * 1.8);
+        }
+      } else if (c.state === 'walking_home') {
+        const dx = c.homeX - c.x;
+        const dy = c.homeY - c.y;
+        const dist = Math.hypot(dx, dy);
+        c.facingLeft = dx < 0;
+        if (dist < 6) {
+          c.x = c.homeX;
+          c.y = c.homeY;
+          c.state = 'idle';
+          c.facingLeft = true;
+        } else {
+          const spd = 175;
+          c.x += (dx / dist) * spd * dt;
+          c.y += (dy / dist) * spd * dt;
+        }
+      } else if (c.state === 'idle') {
+        // Recover from fatigue while resting calmly in lineup
+        if (c.mood === 'calm' && c.fatigue > 0) {
+          c.restProgress += dt;
+          if (c.restProgress >= c.restNeeded) {
+            c.fatigue = 0;
+            c.restProgress = 0;
+          }
+        }
+      }
+    }
+
+    // End shift automatically when shift timer completes (generous 36s so 14s video take stays in unbroken work loop)
+    if (game.shiftTime >= game.shiftDuration) {
+      endWorkShift();
+    }
+  }
+
+  // --- Rendering ---
+  function drawBackground() {
+    if (assets.bgBaked) {
+      ctx.drawImage(assets.bgBaked, 0, 0);
+    } else {
+      ctx.fillStyle = PALETTE.bg;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Subtle warm pulse on cloning pod window & pump gauge
+    const podPulse = 0.20 + 0.08 * Math.sin(game.t * 3.1);
+    ctx.fillStyle = `rgba(240, 178, 95, ${podPulse.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(CLONE_VAT.glowX, CLONE_VAT.glowY, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    const pumpPulse = 0.24 + 0.10 * Math.sin(game.t * 4.5);
+    const pumpCol = (game.tasks[1] && game.tasks[1].failed) ? '223, 70, 56' : '236, 174, 88';
+    ctx.fillStyle = `rgba(${pumpCol}, ${pumpPulse.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(PUMP_STATION.gaugeX, PUMP_STATION.gaugeY, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Floating dust motes
+    ctx.fillStyle = 'rgba(232, 206, 162, 0.26)';
+    for (const m of game.dustMotes) {
+      ctx.globalAlpha = m.a;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Pump steam puffs (matching f_021 & f_027!)
+    for (const s of game.steamPuffs) {
+      const k = s.life / s.maxLife;
+      const alpha = (1 - k) * 0.28;
+      ctx.fillStyle = `rgba(175, 178, 172, ${alpha.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawCropPlot(p) {
+    // Draw warm golden soil radiance for living crops
+    if (p.stage >= 0) {
+      const intensity = (p.stage === 2 ? 0.42 : p.stage === 1 ? 0.28 : 0.14) + p.glow * 0.12;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const rg = ctx.createRadialGradient(p.x, p.y - 10, 8, p.x, p.y - 10, p.stage === 2 ? 96 : 72);
+      rg.addColorStop(0, `rgba(238, 182, 92, ${intensity.toFixed(3)})`);
+      rg.addColorStop(1, 'rgba(238, 182, 92, 0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y - 6, p.stage === 2 ? 98 : 74, p.stage === 2 ? 48 : 36, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Draw sliced Nano Banana isometric crop stage sprite anchored into the soil bed
+    // (Stage 0 uses the hand-inked sprouts in the lunar bed; Stages 1 & 2 layer rich golden shoots & wheat!)
+    if (p.stage >= 1 && assets.cropStages.length === 3) {
+      const spr = assets.cropStages[Math.min(2, p.stage)];
+      const baseScale = p.stage === 2 ? 0.72 : 0.64;
+      const dw = spr.width * baseScale;
+      const dh = spr.height * baseScale;
+      const sway = Math.sin(game.t * 2.6 + p.id * 1.3) * 1.6;
+      ctx.save();
+      ctx.globalAlpha = 0.98;
+      ctx.drawImage(spr, p.x - dw / 2 + sway * 0.4, p.y + 24 - dh, dw, dh);
+      ctx.restore();
+    }
+
+    // Active target ring highlight (matching f_014.jpg golden ground ring!)
+    const hoverMatch = (game.drag.active && (
+      (game.drag.hoverTask === 0 && p.id === 1) ||
+      (game.drag.hoverTask === 2 && p.id === 5)
+    ));
+    const activeRing = hoverMatch ||
+      (game.tasks[0]?.active && p.id === 1) ||
+      (game.tasks[2]?.active && p.id === 5);
+
+    if (activeRing) {
+      ctx.save();
+      ctx.strokeStyle = PALETTE.acc;
+      ctx.lineWidth = 2.6;
+      ctx.shadowColor = PALETTE.acc;
+      ctx.shadowBlur = 14;
+      ctx.setLineDash([28, 10]);
+      ctx.lineDashOffset = -game.t * 36;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y + 4, 82, 34, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawOverseer() {
+    const spr = assets.farmerOverseer;
+    if (!spr) return;
+    const x = OVERSEER_POS.x;
+    const y = OVERSEER_POS.y;
+    const h = 158;
+    const w = spr.width * (h / spr.height);
+    const bob = Math.sin(game.t * 1.8) * 1.4;
+
+    // Ground shadow
+    ctx.fillStyle = 'rgba(8, 10, 9, 0.52)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 6, 30, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(x, y + bob);
+    ctx.scale(-1, 1); // Face slightly left over the crop bed
+    ctx.drawImage(spr, -w / 2, -h, w, h);
+
+    // Twin glowing amber visor eyes matching the dark-suited figure in f_004..f_033!
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = '#f6c46d';
+    ctx.shadowColor = '#e0a35a';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(4, -h + 26, 3.2, 0, Math.PI * 2);
+    ctx.arc(15, -h + 27, 3.0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawClone(c, idx) {
+    if (assets.farmerPoses.length === 0) return;
+
+    const useWorkPose = (c.state === 'working' || c.state === 'tantrum');
+    const poseIdx = useWorkPose ? 0 : (assets.farmerPoses[1] ? 1 : 0);
+
+    let bank = assets.farmerPoses;
+    if (c.mood === 'hostile') bank = assets.farmerHostile;
+    else if (c.fatigue >= 1) bank = assets.farmerTired;
+    const spr = bank[poseIdx] || assets.farmerPoses[0];
+
+    const targetH = useWorkPose ? 142 : 152;
+    const scale = targetH / spr.height;
+    const dw = spr.width * scale;
+    const dh = targetH;
+
+    // Ground shadow (anchored to floor below leaping clone too)
+    const floorY = c.state === 'leaping'
+      ? c.leapStartY + (c.targetY - c.leapStartY) * c.leapT
+      : c.y;
+    ctx.fillStyle = 'rgba(8, 10, 9, 0.50)';
+    ctx.beginPath();
+    ctx.ellipse(c.x, floorY + 6, 28, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const isSelected = (game.phase === 'work' && idx === game.selectedClone && c.mood !== 'hostile');
+    const isDragged = (game.drag.active && game.drag.cloneIdx === idx);
+
+    // Selection halo circle matching f_014.jpg!
+    if (isSelected || isDragged) {
+      ctx.save();
+      const radius = isDragged ? 66 : 52;
+      ctx.fillStyle = isDragged ? 'rgba(224, 163, 90, 0.20)' : 'rgba(224, 163, 90, 0.10)';
+      ctx.strokeStyle = 'rgba(224, 163, 90, 0.85)';
+      ctx.lineWidth = isDragged ? 2.4 : 1.6;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y - dh * 0.52, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Hostile red aura matching f_027.jpg!
+    if (c.mood === 'hostile') {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const pulse = 0.28 + 0.12 * Math.sin(game.t * 8.0 + idx);
+      const rg = ctx.createRadialGradient(c.x, c.y - dh * 0.5, 8, c.x, c.y - dh * 0.5, 72);
+      rg.addColorStop(0, `rgba(228, 62, 48, ${pulse.toFixed(3)})`);
+      rg.addColorStop(1, 'rgba(228, 62, 48, 0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y - dh * 0.5, 72, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    const bob = c.state === 'working'
+      ? Math.sin(game.t * 9.5 + idx) * 3.2
+      : c.state === 'tantrum'
+        ? Math.sin(game.t * 16 + idx) * 2.5
+        : c.state === 'walking_home'
+          ? Math.abs(Math.sin(game.t * 11 + idx)) * -5
+          : Math.sin(game.t * 2.2 + idx * 1.4) * 1.5;
+
+    ctx.save();
+    ctx.translate(c.x, c.y + bob);
+    // Pose 0 natively faces right; Pose 1 natively faces slightly left/front
+    if (poseIdx === 0 && c.facingLeft) {
+      ctx.scale(-1, 1);
+    } else if (poseIdx === 1 && !c.facingLeft) {
+      ctx.scale(-1, 1);
+    }
+
+    if (c.state === 'leaping' || isSelected) {
+      ctx.shadowColor = c.mood === 'hostile' ? PALETTE.red : PALETTE.acc;
+      ctx.shadowBlur = c.state === 'leaping' ? 16 : 8;
+    }
+    ctx.drawImage(spr, -dw / 2, -dh, dw, dh);
+    ctx.restore();
+
+    // Watering / wrench golden beam while working calmly
+    if (c.state === 'working' && c.fatigue === 0) {
+      const nozzleX = c.x + (c.facingLeft ? -44 : 44);
+      const nozzleY = c.y - 44;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(240, 190, 105, 0.65)';
+      ctx.lineWidth = 2.2;
+      ctx.setLineDash([5, 6]);
+      ctx.lineDashOffset = -game.t * 48;
+      ctx.beginPath();
+      ctx.moveTo(nozzleX, nozzleY);
+      ctx.lineTo(nozzleX + (c.facingLeft ? -26 : 26), nozzleY + 28);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Fatigue cooldown micro-arc above winded calm clone
+    if (c.mood === 'calm' && c.fatigue >= 1 && c.state !== 'working') {
+      const ratio = 1 - Math.min(1, c.restProgress / c.restNeeded);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(224, 163, 90, 0.78)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y - dh - 14, 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Hostile [!] speech badge & red X markers matching f_027.jpg & f_033.jpg!
+    if (c.mood === 'hostile') {
+      const bx = c.x - 18;
+      const by = c.y - dh - 44 + Math.sin(game.t * 6.5) * 2.5;
+      ctx.save();
+      ctx.fillStyle = 'rgba(24, 22, 22, 0.92)';
+      ctx.strokeStyle = 'rgba(223, 70, 56, 0.75)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, 36, 32, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = PALETTE.red;
+      ctx.font = 'bold 24px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('!', bx + 18, by + 24);
+
+      // Red X badges around broken pump just like f_033.jpg!
+      if (game.tasks[1]?.failed) {
+        const xs = [
+          { x: PUMP_STATION.gaugeX - 42, y: PUMP_STATION.gaugeY - 62 },
+          { x: PUMP_STATION.gaugeX + 26, y: PUMP_STATION.gaugeY - 112 }
+        ];
+        for (const pt of xs) {
+          ctx.fillStyle = 'rgba(24, 22, 22, 0.88)';
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 13, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = PALETTE.red;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(pt.x - 6, pt.y - 6); ctx.lineTo(pt.x + 6, pt.y + 6);
+          ctx.moveTo(pt.x + 6, pt.y - 6); ctx.lineTo(pt.x - 6, pt.y + 6);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawParabolicArc(x0, y0, x1, y1, alpha, color, dashed = false) {
+    const mx = (x0 + x1) * 0.5;
+    const dist = Math.hypot(x1 - x0, y1 - y0);
+    const my = Math.min(y0, y1) - Math.max(68, dist * 0.34);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3.4;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 16;
+    if (dashed) {
+      ctx.setLineDash([10, 8]);
+      ctx.lineDashOffset = -game.t * 42;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(mx, my, x1, y1);
+    ctx.stroke();
+
+    // Glowing landing pad diamond/ellipse at destination (f_004 / f_009)
+    ctx.fillStyle = 'rgba(224, 163, 90, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x1, y1 + 10, 26, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawArcsAndParticles() {
+    // Active fired assignment arcs
+    for (const a of game.arcs) {
+      const k = a.life / a.maxLife;
+      const alpha = Math.sin(Math.min(1, k) * Math.PI) * 0.95;
+      drawParabolicArc(a.x0, a.y0, a.x1, a.y1, alpha, a.color, false);
+    }
+
+    // Live drag parabolic arc
+    if (game.drag.active && game.clones[game.drag.cloneIdx]) {
+      const c = game.clones[game.drag.cloneIdx];
+      drawParabolicArc(c.x, c.y - 62, game.drag.x, game.drag.y, 0.92, PALETTE.acc, false);
+    } else if (game.phase === 'work' && game.clones[game.selectedClone] && game.tasks[game.selectedTask]) {
+      // Subtle keyboard targeting guide arc so keyboard selection is equally readable
+      const c = game.clones[game.selectedClone];
+      const dest = getTaskAnchor(game.selectedTask);
+      if (c.mood === 'calm' && c.state === 'idle') {
+        drawParabolicArc(c.x, c.y - 62, dest.x, dest.y - 12, 0.24, PALETTE.acc, true);
+      }
+    }
+
+    // Particles
+    for (const p of game.particles) {
+      const k = p.life / p.maxLife;
+      const alpha = Math.max(0, 1 - k);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 8;
+      if (p.style === 'anger') {
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.x - 3, p.y - 3); ctx.lineTo(p.x + 3, p.y + 3);
+        ctx.moveTo(p.x + 3, p.y - 3); ctx.lineTo(p.x - 3, p.y + 3);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (1 - k * 0.35), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawWorkHUD() {
+    // 1. Top-Right Checklist Box matching sheet.jpg & m2_main_ref.png!
+    const bx = 976, by = 28, bw = 274, bh = 250;
+    ctx.save();
+    ctx.fillStyle = 'rgba(26, 29, 27, 0.92)';
+    ctx.strokeStyle = PALETTE.fg;
+    ctx.lineWidth = 2.2;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.fillStyle = PALETTE.fg;
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`DAY ${game.day} TASKS`, bx + 20, by + 38);
+
+    game.tasks.forEach((t, idx) => {
+      const ry = by + 72 + idx * 38;
+      const isHighlighted = t.done || t.active || (game.drag.active && game.drag.hoverTask === idx);
+
+      if (isHighlighted && !t.failed) {
+        ctx.fillStyle = 'rgba(196, 140, 72, 0.42)';
+        ctx.fillRect(bx + 14, ry - 22, bw - 28, 30);
+      } else if (idx === game.selectedTask && game.phase === 'work') {
+        ctx.fillStyle = 'rgba(217, 212, 194, 0.08)';
+        ctx.fillRect(bx + 14, ry - 22, bw - 28, 30);
+      }
+
+      ctx.font = '19px "Courier New", monospace';
+      ctx.fillStyle = t.failed ? '#e88b82' : PALETTE.fg;
+      ctx.fillText(`[ ] ${t.label}`, bx + 18, ry);
+
+      if (t.done || t.active) {
+        // Bold warm amber checkmark matching f_014 & f_021!
+        ctx.strokeStyle = PALETTE.acc;
+        ctx.lineWidth = 3.4;
+        ctx.beginPath();
+        ctx.moveTo(bx + 26, ry - 8);
+        ctx.lineTo(bx + 33, ry - 1);
+        ctx.lineTo(bx + 47, ry - 19);
+        ctx.stroke();
+      } else if (t.failed) {
+        // Bold red X + diagonal red strike matching f_027 & f_033!
+        ctx.strokeStyle = PALETTE.red;
+        ctx.lineWidth = 3.0;
+        ctx.beginPath();
+        ctx.moveTo(bx + 25, ry - 18); ctx.lineTo(bx + 43, ry + 1);
+        ctx.moveTo(bx + 43, ry - 18); ctx.lineTo(bx + 25, ry + 1);
+        ctx.moveTo(bx + 18, ry + 2);  ctx.lineTo(bx + bw - 24, ry - 16);
+        ctx.stroke();
+      }
+    });
+
+    const calmCount = game.clones.filter(c => c.mood === 'calm').length;
+    const totalClones = game.clones.length;
+    ctx.font = 'bold 17px "Courier New", monospace';
+    ctx.fillStyle = calmCount * 2 >= totalClones ? PALETTE.acc : PALETTE.red;
+    ctx.fillText(`CLONES ${totalClones} · MOOD ${calmCount}/${totalClones}`, bx + 18, by + bh - 22);
+    ctx.restore();
+
+    // 2. Bottom 6-Block Shift / Harvest Tray matching f_004..f_033 & m2_main_ref.png!
+    ctx.save();
+    ctx.fillStyle = 'rgba(35, 37, 32, 0.94)';
+    ctx.beginPath();
+    ctx.moveTo(275, H);
+    ctx.quadraticCurveTo(295, 628, 365, 628);
+    ctx.lineTo(915, 628);
+    ctx.quadraticCurveTo(985, 628, 1005, H);
+    ctx.closePath();
+    ctx.fill();
+
+    const blockColors = ['#665037', '#795e3f', '#8c6d48', '#a37e51', '#bc9058', '#dba15a'];
+    const shiftProgress = Math.min(1, game.shiftTime / game.shiftDuration);
+    const completedCount = game.tasks.filter(t => t.done).length;
+    for (let i = 0; i < 6; i++) {
+      const x = 360 + i * 96;
+      const y = 652;
+      const lit = (i < completedCount * 2) || (i / 6 <= 1 - shiftProgress * 0.5);
+      ctx.fillStyle = blockColors[i];
+      ctx.globalAlpha = lit ? 0.96 : 0.42;
+      ctx.fillRect(x, y, 72, 34);
+    }
+    ctx.restore();
+
+    // Amber cursor arrow when mouse/playtest pointer is active (matches f_004/f_009!)
+    if (game.cursor.visible && game.phase === 'work') {
+      const cx = game.cursor.x, cy = game.cursor.y;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.fillStyle = PALETTE.acc;
+      ctx.strokeStyle = '#181917';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 20);
+      ctx.lineTo(6, 15);
+      ctx.lineTo(11, 24);
+      ctx.lineTo(15, 22);
+      ctx.lineTo(9, 13);
+      ctx.lineTo(16, 13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawTitleOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(22, 24, 21, 0.84)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PALETTE.acc;
+    ctx.font = 'bold 68px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('FIVE DAYS ON THE FARM', W / 2, 312);
+
+    ctx.fillStyle = PALETTE.fg;
+    ctx.font = '32px "Courier New", monospace';
+    ctx.fillText('grow food. grow help.', W / 2, 384);
+
+    // START Button matching refs/m2_title_ref.png
+    const bw = 320, bh = 74;
+    const bx = W / 2 - bw / 2, by = 448;
+    ctx.fillStyle = 'rgba(25, 27, 24, 0.95)';
+    ctx.strokeStyle = PALETTE.fg;
+    ctx.lineWidth = 4;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.fillStyle = PALETTE.fg;
+    ctx.font = 'bold 31px "Courier New", monospace';
+    ctx.fillText('START', W / 2, by + 47);
+
+    ctx.fillStyle = '#9e9a8b';
+    ctx.font = '24px "Courier New", monospace';
+    ctx.fillText('HOW TO PLAY', W / 2, 584);
+
+    if (game.showHelp) {
+      ctx.fillStyle = 'rgba(20, 22, 20, 0.96)';
+      ctx.strokeStyle = PALETTE.acc;
+      ctx.lineWidth = 2;
+      ctx.fillRect(W / 2 - 390, 602, 780, 88);
+      ctx.strokeRect(W / 2 - 390, 602, 780, 88);
+      ctx.fillStyle = PALETTE.fg;
+      ctx.font = '17px "Courier New", monospace';
+      ctx.fillText('Drag a clone onto crop rows or the water pump (or 1-5, Q/W/E, Space).', W / 2, 636);
+      ctx.fillText('Press [G] or click the pod to grow a clone. Overworked clones turn hostile at night.', W / 2, 666);
+    }
+    ctx.restore();
+  }
+
+  function drawDayBriefOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(18, 20, 18, 0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = PALETTE.fg;
+    ctx.fillStyle = 'rgba(26, 29, 26, 0.95)';
+    ctx.lineWidth = 2.5;
+    ctx.fillRect(W / 2 - 360, H / 2 - 125, 720, 250);
+    ctx.strokeRect(W / 2 - 360, H / 2 - 125, 720, 250);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PALETTE.acc;
+    ctx.font = 'bold 42px "Courier New", monospace';
+    ctx.fillText(`DAY ${game.day} OF 5`, W / 2, H / 2 - 48);
+
+    ctx.fillStyle = PALETTE.fg;
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillText(DAY_NOTES[game.day] || DAY_NOTES[2], W / 2, H / 2 + 12);
+
+    const calmCount = game.clones.filter(c => c.mood === 'calm').length;
+    const hostileCount = game.clones.filter(c => c.mood === 'hostile').length;
+    ctx.fillStyle = '#9e9a8b';
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillText(`STATION ROSTER: ${calmCount} CALM · ${hostileCount} HOSTILE   [ENTER / CLICK]`, W / 2, H / 2 + 76);
+    ctx.restore();
+  }
+
+  function drawNightOverlay() {
+    const calmCount = game.clones.filter(c => c.mood === 'calm').length;
+    const hostileCount = game.clones.filter(c => c.mood === 'hostile').length;
+    const total = Math.max(1, game.clones.length);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(14, 16, 16, 0.86)';
+    ctx.fillRect(0, 0, W, H);
+
+    const pw = 760, ph = 340;
+    const px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+    ctx.fillStyle = 'rgba(24, 26, 24, 0.96)';
+    ctx.strokeStyle = hostileCount > calmCount ? PALETTE.red : PALETTE.fg;
+    ctx.lineWidth = 2.5;
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeRect(px, py, pw, ph);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PALETTE.fg;
+    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.fillText(`NIGHT ${game.day} · CLONE MOOD CHECK`, W / 2, py + 58);
+
+    // Clone silhouettes / mood badges
+    const spacing = 86;
+    const startX = W / 2 - ((game.clones.length - 1) * spacing) / 2;
+    game.clones.forEach((c, i) => {
+      const cx = startX + i * spacing;
+      const cy = py + 135;
+      ctx.fillStyle = c.mood === 'calm' ? PALETTE.acc : PALETTE.red;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#181a18';
+      ctx.font = 'bold 20px "Courier New", monospace';
+      ctx.fillText(c.mood === 'calm' ? '✓' : '!', cx, cy + 7);
+    });
+
+    // Mood balance meter bar
+    const barW = 520, barH = 24;
+    const bx = W / 2 - barW / 2, by = py + 196;
+    const calmW = (calmCount / total) * barW;
+    ctx.fillStyle = PALETTE.acc;
+    ctx.fillRect(bx, by, calmW, barH);
+    ctx.fillStyle = PALETTE.red;
+    ctx.fillRect(bx + calmW, by, barW - calmW, barH);
+    ctx.strokeStyle = PALETTE.fg;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, barW, barH);
+
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.fillStyle = hostileCount > calmCount ? PALETTE.red : PALETTE.acc;
+    const verdict = hostileCount > calmCount
+      ? `HOSTILE (${hostileCount}) OUTNUMBER CALM (${calmCount}) — THE ROOM TURNS`
+      : game.day >= 5
+        ? `CALM (${calmCount}) HOLD THE STATION — READY TO SHIP HARVEST`
+        : `CALM (${calmCount}) OUTNUMBER HOSTILE (${hostileCount}) — SLEEP SAFE`;
+    ctx.fillText(verdict, W / 2, py + 266);
+
+    ctx.fillStyle = '#9e9a8b';
+    ctx.font = '17px "Courier New", monospace';
+    ctx.fillText('[SPACE / CLICK TO CONTINUE]', W / 2, py + 308);
+    ctx.restore();
+  }
+
+  function drawEndingOverlay() {
+    const isWin = game.phase === 'endA';
+    ctx.save();
+    ctx.fillStyle = isWin ? 'rgba(24, 22, 16, 0.84)' : 'rgba(28, 14, 14, 0.88)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = isWin ? PALETTE.acc : PALETTE.red;
+    ctx.font = 'bold 54px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText(isWin ? 'ENDING: THE HARVEST SHIPS' : 'ENDING: THE STATION IS THEIRS', W / 2, 265);
+
+    ctx.fillStyle = PALETTE.fg;
+    ctx.font = '22px "Courier New", monospace';
+    if (isWin) {
+      ctx.fillText('Day five complete. Golden grain lifts into lunar orbit.', W / 2, 340);
+      ctx.fillText(`Crates shipped: ${Math.max(12, game.harvestScore)} · Clones remaining on station: ${game.clones.length}`, W / 2, 382);
+    } else {
+      ctx.fillText('Overworked copies outnumbered calm hands at night check.', W / 2, 340);
+      ctx.fillText('They bolt the greenhouse hatch from the inside. Your shift is over.', W / 2, 382);
+    }
+
+    const bw = 340, bh = 66;
+    ctx.strokeStyle = PALETTE.fg;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(W / 2 - bw / 2, 446, bw, bh);
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText('PLAY AGAIN [ENTER]', W / 2, 488);
+    ctx.restore();
+  }
+
+  function drawPostProcess() {
+    // Fast single-draw film grain + pre-baked lunar vignette
+    if (assets.grainCanvas) {
+      const ox = -Math.floor(randRange(0, 60));
+      const oy = -Math.floor(randRange(0, 60));
+      ctx.drawImage(assets.grainCanvas, ox, oy);
+    }
+    if (assets.vignetteBaked) {
+      ctx.drawImage(assets.vignetteBaked, 0, 0);
+    }
+  }
+
+  function render() {
+    drawBackground();
+
+    // Depth-sort isometric crop plots, Overseer, and Clones by foot/baseline Y!
+    const drawables = [];
+    for (const p of game.plots) {
+      drawables.push({ y: p.y - 8, fn: () => drawCropPlot(p) });
+    }
+    drawables.push({ y: OVERSEER_POS.y, fn: drawOverseer });
+    game.clones.forEach((c, idx) => {
+      const sortY = c.state === 'leaping'
+        ? Math.max(c.leapStartY, c.targetY) + 12
+        : c.y;
+      drawables.push({ y: sortY, fn: () => drawClone(c, idx) });
+    });
+    drawables.sort((a, b) => a.y - b.y);
+    for (const d of drawables) d.fn();
+
+    drawArcsAndParticles();
+    drawWorkHUD();
+
+    if (game.phase === 'title') drawTitleOverlay();
+    else if (game.phase === 'day') drawDayBriefOverlay();
+    else if (game.phase === 'night') drawNightOverlay();
+    else if (game.phase === 'endA' || game.phase === 'endB') drawEndingOverlay();
+
+    drawPostProcess();
+  }
+
+  // --- Expose Read-Only Inspection State for Automated Playtest ---
+  window.__game = {
+    get state() {
+      const calmCount = game.clones.filter(c => c.mood === 'calm').length;
+      const hostileCount = game.clones.filter(c => c.mood === 'hostile').length;
+      return {
+        phase: game.phase,
+        day: game.day,
+        clones: game.clones.map((c, idx) => ({
+          id: idx,
+          mood: c.mood,
+          fatigue: c.fatigue,
+          state: c.state,
+          x: Math.round(c.x),
+          y: Math.round(c.y),
+          nx: +(c.x / W).toFixed(4),
+          ny: +((c.y - 68) / H).toFixed(4),
+          carryingWheat: c.carryingWheat
+        })),
+        tasks: game.tasks.map(t => {
+          const dest = getTaskAnchor(t.index);
+          return {
+            id: t.id,
+            label: t.label,
+            done: t.done,
+            active: t.active,
+            failed: t.failed,
+            progress: t.progress,
+            goal: t.goal,
+            nx: +(dest.x / W).toFixed(4),
+            ny: +(dest.y / H).toFixed(4)
+          };
+        }),
+        calmCount,
+        hostileCount,
+        harvestScore: game.harvestScore,
+        selectedClone: game.selectedClone,
+        selectedTask: game.selectedTask,
+        t: +game.t.toFixed(3)
+      };
+    }
+  };
+
+  // --- Main RAF Loop ---
+  let lastTs = performance.now();
+  function frame(ts) {
+    const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
+    lastTs = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

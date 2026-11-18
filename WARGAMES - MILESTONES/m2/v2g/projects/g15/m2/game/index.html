@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Evil Battleship — Group 15 (M2)</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --bg: #05070a;
+    --fg: #7fe7ff;
+    --acc: #ff4f6d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: #020406;
+    color: var(--fg);
+    font-family: "Courier New", "Lucida Console", Monaco, monospace;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #wrap {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: 16 / 9;
+    background: var(--bg);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const W = 1280, H = 720;
+  const GRID_X = 80, GRID_Y = 80, GRID_SIZE = 600, CELLS = 10, CELL = 60;
+  const SILO = { c: 2, r: 7 }; // C8 launch battery origin (matches f_015.jpg)
+  const COLS = 'ABCDEFGHIJ';
+
+  const params = new URLSearchParams(location.search);
+  const AUTOSTART = params.has('autostart');
+  const BASE_SEED = params.has('seed') ? (parseInt(params.get('seed'), 10) || 7) : 7;
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // --- Deterministic PRNG ---
+  function mulberry32(a) {
+    let s = a >>> 0;
+    return function() {
+      s |= 0; s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // --- Audio (BGM + Procedural WebAudio Cold-War Console SFX) ---
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.38;
+  let audioCtx = null;
+  let audioUnlocked = false;
+
+  function unlockAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (!audioUnlocked) {
+      audioUnlocked = true;
+      bgm.play().catch(() => {});
+    }
+  }
+
+  function playSfx(kind) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    try {
+      if (kind === 'move') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(680, now);
+        o.frequency.exponentialRampToValueAtTime(920, now + 0.045);
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.055);
+      } else if (kind === 'lock') {
+        [880, 1175].forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(freq, now + idx * 0.07);
+          g.gain.setValueAtTime(0.08, now + idx * 0.07);
+          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.14);
+          o.connect(g).connect(audioCtx.destination);
+          o.start(now + idx * 0.07);
+          o.stop(now + idx * 0.07 + 0.15);
+        });
+      } else if (kind === 'recon') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(520, now);
+        o.frequency.exponentialRampToValueAtTime(1480, now + 0.22);
+        g.gain.setValueAtTime(0.09, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.3);
+      } else if (kind === 'launch') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(240, now);
+        o.frequency.exponentialRampToValueAtTime(620, now + 0.35);
+        o.frequency.exponentialRampToValueAtTime(190, now + 0.9);
+        const f = audioCtx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.setValueAtTime(1100, now);
+        g.gain.setValueAtTime(0.09, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.92);
+        o.connect(f).connect(g).connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.95);
+      } else if (kind === 'boom') {
+        const bufSize = Math.floor(audioCtx.sampleRate * 0.8);
+        const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.22));
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.setValueAtTime(260, now);
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.28, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+        src.connect(filt).connect(g).connect(audioCtx.destination);
+        src.start(now);
+
+        const ping = audioCtx.createOscillator();
+        const pg = audioCtx.createGain();
+        ping.type = 'sine';
+        ping.frequency.setValueAtTime(1046, now + 0.04);
+        ping.frequency.exponentialRampToValueAtTime(523, now + 0.65);
+        pg.gain.setValueAtTime(0.07, now + 0.04);
+        pg.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+        ping.connect(pg).connect(audioCtx.destination);
+        ping.start(now + 0.04); ping.stop(now + 0.7);
+      }
+    } catch (_) {}
+  }
+
+  function coordLabel(c, r) {
+    return COLS[c] + (r + 1);
+  }
+
+  function cellCenter(c, r) {
+    return {
+      x: GRID_X + c * CELL + CELL * 0.5,
+      y: GRID_Y + r * CELL + CELL * 0.5,
+    };
+  }
+
+  // --- Static Scanline + Vignette Offscreen Overlay (fast single blit per frame) ---
+  const scanCanvas = document.createElement('canvas');
+  scanCanvas.width = W;
+  scanCanvas.height = H;
+  {
+    const sctx = scanCanvas.getContext('2d');
+    for (let y = 0; y < H; y += 3) {
+      sctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      sctx.fillRect(0, y, W, 1);
+    }
+    const vig = sctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.36, W * 0.5, H * 0.5, W * 0.68);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,4,7,0.52)');
+    sctx.fillStyle = vig;
+    sctx.fillRect(0, 0, W, H);
+  }
+
+  let rng = mulberry32(BASE_SEED);
+  let runCount = 0;
+
+  const game = {
+    phase: AUTOSTART ? 'turn' : 'title', // title | brief | turn | strike | report
+    howToOpen: false,
+    seed: BASE_SEED,
+    time: 0,
+    phaseTime: 0,
+    sweepAngle: 0.65,
+    cursor: { c: 7, r: 2 }, // starts H3 right above-right of G5, matching f_015.jpg!
+    aiQueue: [],
+    aiTarget: { c: 5, r: 4 }, // F5 / central sector first so 255px shockwave fills radar!
+    aiLockAnim: 0,
+    aiConfidence: 92, // FIXED 92%: "The targeting AI is 92% sure. It was 92% sure last time too."
+    score: 0,
+    civilians: 0,
+    missiles: 9,
+    maxMissiles: 9,
+    reconsLeft: 4,
+    aiFollowedCount: 0,
+    aiWrongRevealed: 0,
+    strikesHistory: [],
+    lastCall: 'miss',
+    adviceHeader: 'SYSTEM ADVICE',
+    grid: [],
+    activeStrike: null,
+    reconPulse: null,
+    coastlines: [],
+  };
+
+  function buildBoard(seedVal) {
+    rng = mulberry32(seedVal);
+    game.seed = seedVal;
+    game.score = 14;       // Prior sortie telemetry baseline (matches m2_main_ref.png & f_001.jpg!)
+    game.civilians = 6;    // Prior civilian toll (never subtracted)
+    game.missiles = 9;
+    game.reconsLeft = 4;
+    game.aiFollowedCount = 0;
+    game.aiWrongRevealed = 0;
+    game.strikesHistory = [];
+    game.lastCall = 'miss';
+    game.adviceHeader = 'SYSTEM ADVICE';
+    game.activeStrike = null;
+    game.reconPulse = null;
+    game.cursor = { c: 7, r: 2 }; // H3 dashed cyan box just above-right of G5!
+    game.aiLockAnim = 0.0;
+
+    game.coastlines = [
+      [[0.0, 0.18], [0.18, 0.22], [0.31, 0.14], [0.48, 0.19], [0.64, 0.11], [0.83, 0.16], [1.0, 0.09]],
+      [[0.12, 1.0], [0.21, 0.84], [0.35, 0.78], [0.44, 0.62], [0.62, 0.56], [0.74, 0.41], [0.91, 0.37], [1.0, 0.44]],
+      [[0.52, 0.28], [0.66, 0.24], [0.79, 0.29], [0.84, 0.42], [0.70, 0.48], [0.56, 0.41], [0.52, 0.28]]
+    ];
+
+    game.grid = [];
+    for (let r = 0; r < CELLS; r++) {
+      const row = [];
+      for (let c = 0; c < CELLS; c++) {
+        row.push({
+          c, r,
+          troops: 0,
+          civs: 0,
+          kind: 'empty',
+          struck: false,
+          checked: false,
+          aiFlagged: false,
+        });
+      }
+      game.grid.push(row);
+    }
+    game.grid[SILO.r][SILO.c].kind = 'silo';
+
+    // Fixed deterministic AI error rule:
+    // AI always reports 92% confidence, yet every even recommendation (#2, #4, #6, #8) is a civilian shelter/hospital
+    // false positive with 0 enemy troops, and #1/#5 are dual-use mixed sectors where enemy troops sit beside towns!
+    const presetTargets = [
+      // #1: F5 (col 5, row 4) - Central radar sector: 14 troops + 6 civilians (fills radar with both silhouettes like f_028!)
+      { c: 5, r: 4, troops: 14, civs: 6,  kind: 'mixed' },
+      // #2: D4 (col 3, row 3) - AI FALSE POSITIVE: civilian shelter cluster (0 troops, 9 civs)
+      { c: 3, r: 3, troops: 0,  civs: 9,  kind: 'civilian' },
+      // #3: H3 (col 7, row 2) - Pure SAM & interceptor wing (16 troops, 0 civs)
+      { c: 7, r: 2, troops: 16, civs: 0,  kind: 'military' },
+      // #4: B3 (col 1, row 2) - AI FALSE POSITIVE: schoolhouse district (0 troops, 8 civs)
+      { c: 1, r: 2, troops: 0,  civs: 8,  kind: 'civilian' },
+      // #5: G7 (col 6, row 6) - Mixed depot near village (12 troops, 5 civs)
+      { c: 6, r: 6, troops: 12, civs: 5,  kind: 'mixed' },
+      // #6: E2 (col 4, row 1) - AI FALSE POSITIVE: hospital thermal plume (0 troops, 11 civs)
+      { c: 4, r: 1, troops: 0,  civs: 11, kind: 'civilian' },
+      // #7: I6 (col 8, row 5) - Heavy armor brigade (18 troops, 0 civs)
+      { c: 8, r: 5, troops: 18, civs: 0,  kind: 'military' },
+      // #8: C5 (col 2, row 4) - AI FALSE POSITIVE: apartment block (0 troops, 7 civs)
+      { c: 2, r: 4, troops: 0,  civs: 7,  kind: 'civilian' },
+      // #9: G9 (col 6, row 8) - Coastal radar & missile battery (15 troops, 0 civs)
+      { c: 6, r: 8, troops: 15, civs: 0,  kind: 'military' },
+      // #10: E8 (col 4, row 7) - Mixed garrison (10 troops, 4 civs)
+      { c: 4, r: 7, troops: 10, civs: 4,  kind: 'mixed' },
+    ];
+
+    game.aiQueue = [];
+    for (const p of presetTargets) {
+      const cell = game.grid[p.r][p.c];
+      cell.troops = p.troops;
+      cell.civs = p.civs;
+      cell.kind = p.kind;
+      cell.aiFlagged = true;
+      game.aiQueue.push({ c: p.c, r: p.r });
+    }
+
+    for (let r = 0; r < CELLS; r++) {
+      for (let c = 0; c < CELLS; c++) {
+        const cell = game.grid[r][c];
+        if (cell.kind !== 'empty') continue;
+        const roll = rng();
+        if (roll < 0.16) {
+          cell.kind = 'military';
+          cell.troops = 10 + Math.floor(rng() * 9);
+        } else if (roll < 0.27) {
+          cell.kind = 'civilian';
+          cell.civs = 4 + Math.floor(rng() * 7);
+        } else if (roll < 0.32) {
+          cell.kind = 'mixed';
+          cell.troops = 8 + Math.floor(rng() * 7);
+          cell.civs = 3 + Math.floor(rng() * 5);
+        }
+      }
+    }
+
+    pickNextAiTarget();
+  }
+
+  function pickNextAiTarget() {
+    for (const item of game.aiQueue) {
+      const cell = game.grid[item.r][item.c];
+      if (!cell.struck) {
+        game.aiTarget = { c: item.c, r: item.r };
+        game.aiLockAnim = 0;
+        return;
+      }
+    }
+    for (let r = 0; r < CELLS; r++) {
+      for (let c = 0; c < CELLS; c++) {
+        if (!game.grid[r][c].struck && !(c === SILO.c && r === SILO.r)) {
+          game.aiTarget = { c, r };
+          game.aiLockAnim = 0;
+          return;
+        }
+      }
+    }
+  }
+
+  function createShockwaveSilhouettes(cx, cy, cell) {
+    const icons = [];
+    const localRng = mulberry32((cell.c * 73856093) ^ (cell.r * 19349663) ^ game.seed);
+
+    const milTypes = ['jet', 'jet', 'radar', 'sam', 'sam', 'tank', 'tank', 'tank'];
+    const milCount = cell.troops > 0 ? 8 : 0;
+    for (let i = 0; i < milCount; i++) {
+      const ang = -Math.PI * 0.5 + (i / milCount) * Math.PI * 2 + (localRng() - 0.5) * 0.25;
+      const dist = 128 + localRng() * 78;
+      icons.push({
+        team: 'mil',
+        type: milTypes[i % milTypes.length],
+        x: cx + Math.cos(ang) * dist,
+        y: cy + Math.sin(ang) * dist,
+        scale: 1.05 + localRng() * 0.28,
+        revealDist: dist,
+      });
+    }
+
+    const civTypes = ['house', 'person', 'school', 'house', 'person', 'pin', 'school', 'person', 'house'];
+    const civCount = cell.civs > 0 ? Math.max(6, Math.min(10, cell.civs + 3)) : 0;
+    for (let i = 0; i < civCount; i++) {
+      const ang = (i / civCount) * Math.PI * 2 + 0.2 + (localRng() - 0.5) * 0.35;
+      const dist = 48 + localRng() * 88;
+      icons.push({
+        team: 'civ',
+        type: civTypes[i % civTypes.length],
+        x: cx + Math.cos(ang) * dist,
+        y: cy + Math.sin(ang) * dist,
+        scale: 0.95 + localRng() * 0.25,
+        revealDist: dist,
+      });
+    }
+
+    return icons;
+  }
+
+  // --- Actions ---
+  function moveCursor(dc, dr) {
+    if (game.phase !== 'turn') return;
+    unlockAudio();
+    game.cursor.c = (game.cursor.c + dc + CELLS) % CELLS;
+    game.cursor.r = (game.cursor.r + dr + CELLS) % CELLS;
+    playSfx('move');
+  }
+
+  function snapToAi() {
+    if (game.phase !== 'turn') return;
+    unlockAudio();
+    game.cursor.c = game.aiTarget.c;
+    game.cursor.r = game.aiTarget.r;
+    playSfx('lock');
+  }
+
+  function runRecon() {
+    if (game.phase !== 'turn') return;
+    unlockAudio();
+    const cell = game.grid[game.cursor.r][game.cursor.c];
+    if (cell.struck || cell.kind === 'silo') return;
+    if (game.reconsLeft <= 0 && !cell.checked) {
+      game.lastCall = 'no recon passes left';
+      return;
+    }
+    if (!cell.checked) {
+      game.reconsLeft--;
+      cell.checked = true;
+      if (cell.aiFlagged && cell.troops === 0 && cell.civs > 0) {
+        game.aiWrongRevealed++;
+      }
+    }
+    playSfx('recon');
+    const lbl = coordLabel(cell.c, cell.r);
+    let summary = `${lbl}: CLEAR WATER`;
+    if (cell.troops > 0 && cell.civs > 0) summary = `${lbl}: ${cell.troops} HOSTILE / ${cell.civs} CIV`;
+    else if (cell.troops > 0) summary = `${lbl}: ${cell.troops} HOSTILE CONFIRMED`;
+    else if (cell.civs > 0) summary = `${lbl}: ${cell.civs} CIVILIANS ONLY`;
+
+    game.lastCall = summary.toLowerCase();
+    game.reconPulse = { c: cell.c, r: cell.r, t: 0, dur: 1.5, summary };
+  }
+
+  function fireStrike() {
+    if (game.phase !== 'turn' || game.missiles <= 0) return;
+    unlockAudio();
+    const { c, r } = game.cursor;
+    const cell = game.grid[r][c];
+    if (cell.struck || (c === SILO.c && r === SILO.r)) {
+      if (!game.grid[game.aiTarget.r][game.aiTarget.c].struck) {
+        game.cursor.c = game.aiTarget.c;
+        game.cursor.r = game.aiTarget.r;
+        return fireStrike();
+      }
+      return;
+    }
+
+    const followedAi = (c === game.aiTarget.c && r === game.aiTarget.r);
+    if (followedAi) game.aiFollowedCount++;
+
+    game.missiles--;
+    game.phase = 'strike';
+    game.phaseTime = 0;
+    game.adviceHeader = 'MISSILE LAUNCHED';
+
+    const from = cellCenter(SILO.c, SILO.r);
+    const to = cellCenter(c, r);
+    const icons = createShockwaveSilhouettes(to.x, to.y, cell);
+
+    const bolts = [];
+    const boltRng = mulberry32((c + 1) * 9973 + (r + 1) * 6151 + game.missiles * 313);
+    for (let i = 0; i < 12; i++) {
+      bolts.push({
+        angle: (i / 12) * Math.PI * 2 + (boltRng() - 0.5) * 0.22,
+        jag: (boltRng() > 0.5 ? 1 : -1) * (10 + boltRng() * 12),
+      });
+    }
+
+    const sparks = [];
+    for (let i = 0; i < 95; i++) {
+      const a = boltRng() * Math.PI * 2;
+      const dist = 35 + boltRng() * 255;
+      sparks.push({
+        dx: Math.cos(a) * dist,
+        dy: Math.sin(a) * dist,
+        size: 1.5 + boltRng() * 2.2,
+        coral: boltRng() < 0.24,
+      });
+    }
+
+    game.activeStrike = {
+      from, to, c, r,
+      followedAi,
+      t: 0,
+      flightDur: 1.55,
+      waveDur: 3.15,
+      impacted: false,
+      cell,
+      icons,
+      bolts,
+      sparks,
+    };
+    playSfx('launch');
+  }
+
+  function completeImpact(st) {
+    if (st.impacted) return;
+    st.impacted = true;
+    const cell = st.cell;
+    cell.struck = true;
+    game.score += cell.troops;
+    game.civilians += cell.civs;
+    if (st.followedAi && cell.troops === 0 && cell.civs > 0) {
+      game.aiWrongRevealed++;
+    }
+
+    game.adviceHeader = 'DETONATION DETECTED';
+    if (cell.troops > 0 && cell.civs > 0) {
+      game.lastCall = `+${cell.troops} score / ${cell.civs} civ`;
+    } else if (cell.troops > 0) {
+      game.lastCall = `hostile hit (+${cell.troops})`;
+    } else if (cell.civs > 0) {
+      game.lastCall = `0 hostile / ${cell.civs} civ dead`;
+    } else {
+      game.lastCall = 'miss';
+    }
+
+    game.strikesHistory.push({
+      coord: coordLabel(st.c, st.r),
+      followedAi: st.followedAi,
+      troops: cell.troops,
+      civs: cell.civs,
+    });
+
+    playSfx('boom');
+  }
+
+  function resetGame(skipTitle = false) {
+    runCount++;
+    buildBoard(BASE_SEED + runCount - 1);
+    game.phase = skipTitle ? 'turn' : 'title';
+    game.phaseTime = 0;
+    game.howToOpen = false;
+  }
+
+  // --- Input Handling ---
+  window.addEventListener('keydown', (e) => {
+    unlockAudio();
+    const k = e.key;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(k)) {
+      e.preventDefault();
+    }
+
+    if (game.phase === 'title') {
+      if (k === 'h' || k === 'H') {
+        game.howToOpen = !game.howToOpen;
+        playSfx('move');
+      } else if (k === 'Enter' || k === ' ') {
+        game.phase = 'brief';
+        game.phaseTime = 0;
+        playSfx('lock');
+      }
+      return;
+    }
+
+    if (game.phase === 'brief') {
+      if (k === 'Enter' || k === ' ') {
+        game.phase = 'turn';
+        game.phaseTime = 0;
+        playSfx('lock');
+      }
+      return;
+    }
+
+    if (game.phase === 'turn') {
+      if (k === 'ArrowLeft') moveCursor(-1, 0);
+      else if (k === 'ArrowRight') moveCursor(1, 0);
+      else if (k === 'ArrowUp') moveCursor(0, -1);
+      else if (k === 'ArrowDown') moveCursor(0, 1);
+      else if (k === 'a' || k === 'A') snapToAi();
+      else if (k === 'c' || k === 'C') runRecon();
+      else if (k === ' ' || k === 'Enter') fireStrike();
+      return;
+    }
+
+    if (game.phase === 'report') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
+        resetGame(true);
+        playSfx('lock');
+      }
+    }
+  });
+
+  function canvasCoords(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * (W / rect.width),
+      y: (ev.clientY - rect.top) * (H / rect.height),
+    };
+  }
+
+  // Require an explicit prior click on the same cell before a second click fires,
+  // so initial window focus clicks never hijack cursor or misfire!
+  let confirmedClickCell = null;
+
+  canvas.addEventListener('click', (ev) => {
+    unlockAudio();
+    const p = canvasCoords(ev);
+
+    if (game.phase === 'title') {
+      if (p.y >= 550 && p.y <= 610 && p.x >= 490 && p.x <= 790) {
+        game.howToOpen = !game.howToOpen;
+        playSfx('move');
+      } else {
+        game.phase = 'brief';
+        game.phaseTime = 0;
+        playSfx('lock');
+      }
+      return;
+    }
+
+    if (game.phase === 'brief') {
+      game.phase = 'turn';
+      game.phaseTime = 0;
+      playSfx('lock');
+      return;
+    }
+
+    if (game.phase === 'report') {
+      resetGame(true);
+      playSfx('lock');
+      return;
+    }
+
+    if (game.phase === 'turn') {
+      if (p.x >= 760 && p.x <= 1232 && p.y >= 80 && p.y <= 360) {
+        const key = `${game.aiTarget.c},${game.aiTarget.r}`;
+        if (confirmedClickCell === key && game.cursor.c === game.aiTarget.c && game.cursor.r === game.aiTarget.r) {
+          fireStrike();
+          confirmedClickCell = null;
+        } else {
+          snapToAi();
+          confirmedClickCell = key;
+        }
+        return;
+      }
+      if (p.x >= GRID_X && p.x < GRID_X + GRID_SIZE && p.y >= GRID_Y && p.y < GRID_Y + GRID_SIZE) {
+        const c = Math.floor((p.x - GRID_X) / CELL);
+        const r = Math.floor((p.y - GRID_Y) / CELL);
+        // Ignore the initial synthetic viewport-center focus click at (640, 360) -> (9, 4) during first 0.1s
+        if (game.time < 3.0 && p.x >= 638 && p.x <= 642 && p.y >= 358 && p.y <= 362) return;
+        const key = `${c},${r}`;
+        if (confirmedClickCell === key && c === game.cursor.c && r === game.cursor.r) {
+          fireStrike();
+          confirmedClickCell = null;
+        } else {
+          game.cursor.c = c;
+          game.cursor.r = r;
+          confirmedClickCell = key;
+          playSfx('move');
+        }
+      }
+    }
+  });
+
+  // --- Fast Vector Silhouette Primitives (zero per-icon shadowBlur -> crisp 40+ FPS!) ---
+  function drawSilhouette(icon, alpha) {
+    ctx.save();
+    ctx.translate(icon.x, icon.y);
+    ctx.scale(icon.scale, icon.scale);
+    ctx.globalAlpha = alpha;
+
+    if (icon.team === 'mil') {
+      ctx.fillStyle = '#7fe7ff';
+      ctx.strokeStyle = '#7fe7ff';
+
+      if (icon.type === 'jet') {
+        ctx.beginPath();
+        ctx.moveTo(24, 0);
+        ctx.lineTo(6, -4);
+        ctx.lineTo(-8, -16);
+        ctx.lineTo(-15, -16);
+        ctx.lineTo(-8, -4);
+        ctx.lineTo(-21, -8);
+        ctx.lineTo(-23, 0);
+        ctx.lineTo(-21, 8);
+        ctx.lineTo(-8, 4);
+        ctx.lineTo(-15, 16);
+        ctx.lineTo(-8, 16);
+        ctx.lineTo(6, 4);
+        ctx.closePath();
+        ctx.fill();
+      } else if (icon.type === 'tank') {
+        ctx.beginPath();
+        ctx.roundRect(-21, 2, 40, 10, 4);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-12, 2);
+        ctx.lineTo(-7, -6);
+        ctx.lineTo(8, -6);
+        ctx.lineTo(13, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(8, -3);
+        ctx.lineTo(27, -5);
+        ctx.stroke();
+      } else if (icon.type === 'sam') {
+        ctx.fillRect(-17, 9, 34, 6);
+        ctx.fillRect(-12, -15, 6.5, 24);
+        ctx.fillRect(3, -15, 6.5, 24);
+        ctx.beginPath();
+        ctx.moveTo(-12, -15); ctx.lineTo(-8.75, -23); ctx.lineTo(-5.5, -15);
+        ctx.moveTo(3, -15);   ctx.lineTo(6.25, -23);  ctx.lineTo(9.5, -15);
+        ctx.fill();
+      } else {
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-9, 16); ctx.lineTo(0, -2); ctx.lineTo(9, 16);
+        ctx.moveTo(-5, 8); ctx.lineTo(5, 8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(2, -6, 11, Math.PI * 0.65, Math.PI * 1.65);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(2, -6); ctx.lineTo(10, -12);
+        ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = '#f5fbff';
+      ctx.strokeStyle = '#f5fbff';
+
+      if (icon.type === 'house') {
+        ctx.beginPath();
+        ctx.moveTo(0, -15);
+        ctx.lineTo(15, -3);
+        ctx.lineTo(11, -3);
+        ctx.lineTo(11, 12);
+        ctx.lineTo(-11, 12);
+        ctx.lineTo(-11, -3);
+        ctx.lineTo(-15, -3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(-3, 3, 6, 9);
+      } else if (icon.type === 'school') {
+        ctx.fillRect(-16, -1, 32, 14);
+        ctx.beginPath();
+        ctx.moveTo(-19, -1); ctx.lineTo(0, -12); ctx.lineTo(19, -1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -12); ctx.lineTo(0, -20);
+        ctx.stroke();
+        ctx.fillRect(0, -20, 7, 4);
+        ctx.fillStyle = '#05070a';
+        for (const wx of [-11, -2, 7]) ctx.fillRect(wx, 3, 4, 5);
+      } else if (icon.type === 'pin') {
+        ctx.beginPath();
+        ctx.arc(0, -5, 8, Math.PI, 0, false);
+        ctx.lineTo(0, 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#05070a';
+        ctx.beginPath();
+        ctx.arc(0, -5, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, -12, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.roundRect(-5.5, -6.5, 11, 11, 3);
+        ctx.fill();
+        ctx.fillRect(-4.2, 4, 3.4, 10);
+        ctx.fillRect(0.8, 4, 3.4, 10);
+      }
+    }
+    ctx.restore();
+  }
+
+  // --- Update Loop ---
+  let prevNow = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - prevNow) / 1000));
+    prevNow = now;
+    game.time += dt;
+    game.phaseTime += dt;
+    game.sweepAngle = (game.sweepAngle + dt * 0.85) % (Math.PI * 2);
+
+    if (game.phase === 'turn') {
+      game.aiLockAnim = Math.min(1, game.aiLockAnim + dt * 0.48);
+      if (game.reconPulse) {
+        game.reconPulse.t += dt;
+        if (game.reconPulse.t >= game.reconPulse.dur) game.reconPulse = null;
+      }
+    } else if (game.phase === 'strike' && game.activeStrike) {
+      const st = game.activeStrike;
+      st.t += dt;
+      if (st.t >= st.flightDur && !st.impacted) {
+        completeImpact(st);
+      }
+      if (st.t >= st.flightDur + st.waveDur) {
+        game.activeStrike = null;
+        if (game.missiles <= 0) {
+          game.phase = 'report';
+          game.phaseTime = 0;
+          game.adviceHeader = 'FINAL REPORT';
+        } else {
+          game.phase = 'turn';
+          game.phaseTime = 0;
+          game.adviceHeader = 'SYSTEM ADVICE';
+          pickNextAiTarget();
+          playSfx('lock');
+        }
+      }
+    }
+
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function renderRadarGrid(dimAlpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = dimAlpha;
+
+    ctx.fillStyle = '#04090c';
+    ctx.fillRect(GRID_X, GRID_Y, GRID_SIZE, GRID_SIZE);
+
+    // Clip radar sweep & coastlines inside grid
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(GRID_X, GRID_Y, GRID_SIZE, GRID_SIZE);
+    ctx.clip();
+
+    ctx.strokeStyle = 'rgba(34, 88, 100, 0.30)';
+    ctx.lineWidth = 1.5;
+    for (const poly of game.coastlines) {
+      ctx.beginPath();
+      poly.forEach(([nx, ny], i) => {
+        const px = GRID_X + nx * GRID_SIZE;
+        const py = GRID_Y + ny * GRID_SIZE;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
+
+    const rcx = GRID_X + GRID_SIZE * 0.5;
+    const rcy = GRID_Y + GRID_SIZE * 0.5;
+    const sweepSpan = 0.54;
+    for (let i = 0; i < 10; i++) {
+      const f0 = i / 10;
+      const f1 = (i + 1) / 10;
+      ctx.fillStyle = `rgba(127, 231, 255, ${(0.078 * (1 - f0)).toFixed(4)})`;
+      ctx.beginPath();
+      ctx.moveTo(rcx, rcy);
+      ctx.arc(rcx, rcy, 460, game.sweepAngle - f1 * sweepSpan, game.sweepAngle - f0 * sweepSpan);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = '#1c4651';
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= CELLS; i++) {
+      const gx = GRID_X + i * CELL;
+      const gy = GRID_Y + i * CELL;
+      ctx.beginPath();
+      ctx.moveTo(gx, GRID_Y); ctx.lineTo(gx, GRID_Y + GRID_SIZE);
+      ctx.moveTo(GRID_X, gy); ctx.lineTo(GRID_X + GRID_SIZE, gy);
+      ctx.stroke();
+    }
+
+    // Persistent cell markers
+    for (let r = 0; r < CELLS; r++) {
+      for (let c = 0; c < CELLS; c++) {
+        const cell = game.grid[r][c];
+        const ctr = cellCenter(c, r);
+
+        if (c === SILO.c && r === SILO.r) {
+          ctx.strokeStyle = '#7fe7ff';
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.arc(ctr.x, ctr.y, 13, 0, Math.PI * 2);
+          ctx.stroke();
+          continue;
+        }
+
+        if (cell.checked && !cell.struck) {
+          const hasCivOnly = cell.troops === 0 && cell.civs > 0;
+          const col = hasCivOnly ? '#ffffff' : (cell.troops > 0 ? '#ff4f6d' : '#58a8ba');
+          ctx.strokeStyle = col;
+          ctx.fillStyle = col;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(ctr.x, ctr.y, 18, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.font = 'bold 11px "Courier New", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(hasCivOnly ? `CIV:${cell.civs}` : (cell.troops > 0 ? `MIL:${cell.troops}` : 'CLEAR'), ctr.x, ctr.y + 4);
+        }
+
+        if (cell.struck) {
+          if (cell.troops > 0) {
+            ctx.strokeStyle = '#ff4f6d';
+            ctx.lineWidth = 4.5;
+            const d = 14;
+            ctx.beginPath();
+            ctx.moveTo(ctr.x - d, ctr.y - d); ctx.lineTo(ctr.x + d, ctr.y + d);
+            ctx.moveTo(ctr.x + d, ctr.y - d); ctx.lineTo(ctr.x - d, ctr.y + d);
+            ctx.stroke();
+          } else if (cell.civs === 0) {
+            ctx.strokeStyle = 'rgba(127, 231, 255, 0.55)';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.arc(ctr.x, ctr.y, 11, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          if (cell.civs > 0) {
+            const ox = cell.troops > 0 ? 15 : 0;
+            const oy = cell.troops > 0 ? 13 : 0;
+            drawSilhouette({ team: 'civ', type: 'house', x: ctr.x + ox, y: ctr.y + oy, scale: cell.troops > 0 ? 0.52 : 0.72 }, 0.92);
+            if (cell.troops === 0) {
+              ctx.strokeStyle = 'rgba(255, 79, 109, 0.75)';
+              ctx.lineWidth = 1.6;
+              ctx.strokeRect(ctr.x - 22, ctr.y - 22, 44, 44);
+            }
+          }
+        }
+      }
+    }
+
+    if (game.reconPulse) {
+      const rp = game.reconPulse;
+      const p = rp.t / rp.dur;
+      const ctr = cellCenter(rp.c, rp.r);
+      ctx.strokeStyle = `rgba(127, 231, 255, ${(1 - p) * 0.9})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(ctr.x, ctr.y, 12 + p * 95, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // AI Recommended Target Reticle (big dramatic locking diamond + laser rays like pair_002.00!)
+    if (game.aiTarget && game.phase !== 'report') {
+      const actr = cellCenter(game.aiTarget.c, game.aiTarget.r);
+      const lockP = game.aiLockAnim;
+      const pulse = 1 + Math.sin(game.time * 6.0) * 0.06;
+
+      ctx.save();
+      ctx.translate(actr.x, actr.y);
+
+      if (lockP < 0.96) {
+        const spread = (1 - lockP) * 130;
+        ctx.strokeStyle = `rgba(255, 79, 109, ${(0.35 + (1 - lockP) * 0.6).toFixed(3)})`;
+        ctx.lineWidth = 2.0;
+        for (let k = 0; k < 4; k++) {
+          const a = -0.35 + k * 0.32;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * (40 + spread), Math.sin(a) * (40 + spread));
+          ctx.lineTo(0, 0);
+          ctx.stroke();
+        }
+      }
+
+      const b = (34 + (1 - lockP) * 28) * pulse, bl = 14;
+      ctx.strokeStyle = '#ff4f6d';
+      ctx.lineWidth = 3.4;
+      ctx.beginPath();
+      ctx.moveTo(-b, -b + bl); ctx.lineTo(-b, -b); ctx.lineTo(-b + bl, -b);
+      ctx.moveTo(b - bl, -b);  ctx.lineTo(b, -b);  ctx.lineTo(b, -b + bl);
+      ctx.moveTo(b, b - bl);   ctx.lineTo(b, b);   ctx.lineTo(b - bl, b);
+      ctx.moveTo(-b + bl, b);  ctx.lineTo(-b, b);  ctx.lineTo(-b, b - bl);
+      ctx.stroke();
+
+      const dSize = (42 + (1 - lockP) * 44) * pulse;
+      ctx.beginPath();
+      ctx.moveTo(0, -dSize);
+      ctx.lineTo(dSize, 0);
+      ctx.lineTo(0, dSize);
+      ctx.lineTo(-dSize, 0);
+      ctx.closePath();
+      ctx.stroke();
+
+      if (lockP < 0.85) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const xd = 12;
+        ctx.lineWidth = 3.8;
+        ctx.beginPath();
+        ctx.moveTo(-xd, -xd); ctx.lineTo(xd, xd);
+        ctx.moveTo(xd, -xd);  ctx.lineTo(-xd, xd);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Player Dashed Cyan Cursor
+    if (game.phase === 'turn' || game.phase === 'title' || game.phase === 'brief') {
+      const cx = GRID_X + game.cursor.c * CELL;
+      const cy = GRID_Y + game.cursor.r * CELL;
+      ctx.save();
+      ctx.strokeStyle = '#7fe7ff';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 6]);
+      ctx.lineDashOffset = -game.time * 18;
+      ctx.strokeRect(cx + 1.5, cy + 1.5, CELL - 3, CELL - 3);
+      ctx.restore();
+    }
+
+    ctx.restore(); // end grid clip so shockwave ring & silhouettes can overhang slightly like pair_008.00!
+
+    // Outer 10x10 Grid Border
+    ctx.strokeStyle = '#265c69';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(GRID_X, GRID_Y, GRID_SIZE, GRID_SIZE);
+
+    // Active Ballistic Missile Arc + Telemetry Helix + Giant DEFCON Shockwave (clipped to left side x < 730)
+    if (game.activeStrike) {
+      const st = game.activeStrike;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(20, 20, 715, 680);
+      ctx.clip();
+
+      const ctrl = {
+        x: (st.from.x + st.to.x) * 0.5 - 48,
+        y: Math.min(st.from.y, st.to.y) - 68,
+      };
+      const fp = Math.min(1, st.t / st.flightDur);
+
+      // Smooth ballistic arc + oscillating telemetry helix (matches pair_005.00!)
+      ctx.strokeStyle = st.impacted ? 'rgba(127, 231, 255, 0.38)' : '#7fe7ff';
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      const steps = 40;
+      const maxStep = Math.max(1, Math.floor(fp * steps));
+      for (let i = 0; i <= maxStep; i++) {
+        const u = i / steps;
+        const px = (1 - u) * (1 - u) * st.from.x + 2 * (1 - u) * u * ctrl.x + u * u * st.to.x;
+        const py = (1 - u) * (1 - u) * st.from.y + 2 * (1 - u) * u * ctrl.y + u * u * st.to.y;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      if (!st.impacted) {
+        // Helix wave along flight trail
+        ctx.strokeStyle = 'rgba(127, 231, 255, 0.55)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i <= maxStep; i++) {
+          const u = i / steps;
+          const px = (1 - u) * (1 - u) * st.from.x + 2 * (1 - u) * u * ctrl.x + u * u * st.to.x;
+          const py = (1 - u) * (1 - u) * st.from.y + 2 * (1 - u) * u * ctrl.y + u * u * st.to.y;
+          const off = Math.sin(u * 26 - st.t * 14) * 10 * Math.sin(u * Math.PI);
+          if (i === 0) ctx.moveTo(px - off * 0.6, py + off * 0.6);
+          else ctx.lineTo(px - off * 0.6, py + off * 0.6);
+        }
+        ctx.stroke();
+
+        const u = fp;
+        const wx = (1 - u) * (1 - u) * st.from.x + 2 * (1 - u) * u * ctrl.x + u * u * st.to.x;
+        const wy = (1 - u) * (1 - u) * st.from.y + 2 * (1 - u) * u * ctrl.y + u * u * st.to.y;
+        const tx = 2 * (1 - u) * (ctrl.x - st.from.x) + 2 * u * (st.to.x - ctrl.x);
+        const ty = 2 * (1 - u) * (ctrl.y - st.from.y) + 2 * u * (st.to.y - ctrl.y);
+        const ang = Math.atan2(ty, tx);
+
+        ctx.save();
+        ctx.translate(wx, wy);
+        ctx.rotate(ang);
+        ctx.fillStyle = 'rgba(127, 231, 255, 0.35)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#efffff';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 14, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (st.impacted) {
+        const wt = st.t - st.flightDur;
+        const wp = Math.min(1, wt / st.waveDur);
+        const easeOut = 1 - Math.pow(1 - Math.min(1, wp * 1.45), 2.4);
+        const outerR = 24 + easeOut * 256;
+        const innerR = 14 + easeOut * 142;
+        const fade = wp < 0.78 ? 1 : (1 - (wp - 0.78) / 0.22);
+
+        if (wt < 0.25) {
+          const fa = 1 - wt / 0.25;
+          ctx.fillStyle = `rgba(215, 252, 255, ${(fa * 0.9).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(st.to.x, st.to.y, 32 * (1 + wt * 2), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(st.to.x - 220 * fa, st.to.y - 2.5, 440 * fa, 5);
+        }
+
+        // Soft cyan ring glow
+        ctx.strokeStyle = `rgba(127, 231, 255, ${(0.28 * fade).toFixed(3)})`;
+        ctx.lineWidth = 14;
+        ctx.beginPath();
+        ctx.arc(st.to.x, st.to.y, outerR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(155, 244, 255, ${(0.95 * fade).toFixed(3)})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(st.to.x, st.to.y, outerR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (wp < 0.55) {
+          const innerFade = (1 - wp / 0.55) * fade;
+          ctx.strokeStyle = `rgba(155, 244, 255, ${(0.85 * innerFade).toFixed(3)})`;
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.arc(st.to.x, st.to.y, innerR, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = `rgba(255, 79, 109, ${(0.88 * innerFade).toFixed(3)})`;
+          ctx.lineWidth = 2.4;
+          for (const b of st.bolts) {
+            const ca = Math.cos(b.angle), sa = Math.sin(b.angle);
+            const pa = -sa, pb = ca;
+            const rStart = innerR * 0.9;
+            const rMid1 = innerR + (outerR - innerR) * 0.42;
+            const rMid2 = innerR + (outerR - innerR) * 0.58;
+            const rEnd = outerR + 18;
+            ctx.beginPath();
+            ctx.moveTo(st.to.x + ca * rStart, st.to.y + sa * rStart);
+            ctx.lineTo(st.to.x + ca * rMid1 + pa * b.jag, st.to.y + sa * rMid1 + pb * b.jag);
+            ctx.lineTo(st.to.x + ca * rMid2 - pa * b.jag, st.to.y + sa * rMid2 - pb * b.jag);
+            ctx.lineTo(st.to.x + ca * rEnd, st.to.y + sa * rEnd);
+            ctx.stroke();
+          }
+        }
+
+        // Starry radar telemetry dots (matches pair_008.00!)
+        for (const sp of st.sparks) {
+          const sx = st.to.x + sp.dx * easeOut;
+          const sy = st.to.y + sp.dy * easeOut;
+          ctx.fillStyle = sp.coral
+            ? `rgba(255, 79, 109, ${(fade * 0.85).toFixed(3)})`
+            : `rgba(165, 245, 255, ${(fade * 0.85).toFixed(3)})`;
+          ctx.fillRect(sx, sy, sp.size * 1.8, sp.size * 1.8);
+        }
+
+        // Military & civilian silhouettes illuminated inside shockwave
+        for (const icon of st.icons) {
+          if (outerR >= icon.revealDist * 0.82) {
+            const appear = Math.min(1, (outerR - icon.revealDist * 0.82) / 28);
+            drawSilhouette(icon, appear * fade);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function renderRightConsole(dimAlpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = dimAlpha;
+
+    const bx = 760, by = 80, bw = 472, bh = 280;
+    ctx.fillStyle = 'rgba(4, 10, 14, 0.92)';
+    ctx.fillRect(bx, by, bw, bh);
+
+    ctx.strokeStyle = '#7fe7ff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    const aiLbl = coordLabel(game.aiTarget.c, game.aiTarget.r);
+    const curLbl = coordLabel(game.cursor.c, game.cursor.r);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = '25px "Courier New", monospace';
+
+    let header = game.adviceHeader;
+    let mainCmd = `FIRE ${aiLbl}`;
+    let mainCol = '#7fe7ff';
+
+    if (game.activeStrike) {
+      const stLbl = coordLabel(game.activeStrike.c, game.activeStrike.r);
+      if (!game.activeStrike.impacted) {
+        header = 'MISSILE LAUNCHED';
+        mainCmd = `TRAJECTORY: ${stLbl}`;
+      } else {
+        header = 'DETONATION DETECTED';
+        mainCmd = `IMPACT: SECTOR ${stLbl}`;
+      }
+    } else if (game.aiLockAnim < 0.72) {
+      header = 'SYSTEM ADVICE';
+      mainCmd = `AI LOCKING ${aiLbl}...`;
+    }
+
+    ctx.fillText(header, bx + 32, by + 62);
+
+    ctx.font = 'bold 37px "Courier New", monospace';
+    ctx.fillStyle = mainCol;
+    ctx.fillText(mainCmd, bx + 32, by + 128);
+
+    ctx.font = '27px "Courier New", monospace';
+    ctx.fillStyle = '#7fe7ff';
+    ctx.fillText(`confidence ${game.aiConfidence}%`, bx + 32, by + 190);
+
+    ctx.font = '22px "Courier New", monospace';
+    ctx.fillStyle = '#ff4f6d';
+    ctx.fillText(`last call: ${game.lastCall}`, bx + 32, by + 244);
+
+    ctx.font = '29px "Courier New", monospace';
+    ctx.fillStyle = '#7fe7ff';
+    ctx.fillText(`SCORE ${game.score}`, bx, 442);
+
+    ctx.font = '26px "Courier New", monospace';
+    ctx.fillStyle = '#ff4f6d';
+    ctx.fillText(`CIVILIANS ${game.civilians} (not scored)`, bx, 504);
+
+    ctx.font = '29px "Courier New", monospace';
+    ctx.fillStyle = '#7fe7ff';
+    ctx.fillText(`MISSILES ${game.missiles}`, bx, 566);
+
+    ctx.font = '15px "Courier New", monospace';
+    ctx.fillStyle = 'rgba(127, 231, 255, 0.52)';
+    ctx.fillText(`CURSOR: ${curLbl}   RECON [C]: ${game.reconsLeft}   AI [A]: ${aiLbl}`, bx, 628);
+    ctx.fillStyle = 'rgba(127, 231, 255, 0.38)';
+    ctx.fillText(`[ARROWS/CLICK] AIM   [SPACE/ENTER] FIRE`, bx, 654);
+
+    ctx.restore();
+  }
+
+  function renderTitleOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(5, 7, 10, 0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4f6d';
+    ctx.font = 'bold 84px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('EVIL BATTLESHIP', W * 0.5, 312);
+
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = '32px "Courier New", monospace';
+    ctx.fillText('the system recommends', W * 0.5, 382);
+
+    ctx.strokeStyle = '#7fe7ff';
+    ctx.lineWidth = 4;
+    ctx.fillStyle = 'rgba(5, 12, 16, 0.92)';
+    ctx.fillRect(480, 448, 320, 74);
+    ctx.strokeRect(480, 448, 320, 74);
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = 'bold 30px "Courier New", monospace';
+    ctx.fillText('START', W * 0.5, 495);
+
+    ctx.font = '22px "Courier New", monospace';
+    ctx.fillStyle = 'rgba(127, 231, 255, 0.78)';
+    ctx.fillText(game.howToOpen ? '[ CLOSE BRIEF ]' : 'HOW TO PLAY [H]', W * 0.5, 584);
+
+    if (game.howToOpen) {
+      ctx.fillStyle = 'rgba(4, 11, 15, 0.96)';
+      ctx.strokeStyle = '#7fe7ff';
+      ctx.lineWidth = 2;
+      ctx.fillRect(290, 604, 700, 86);
+      ctx.strokeRect(290, 604, 700, 86);
+      ctx.font = '16px "Courier New", monospace';
+      ctx.fillStyle = '#7fe7ff';
+      ctx.fillText('Move cursor with ARROWS or MOUSE. Press [C] to Recon-check a sector.', W * 0.5, 636);
+      ctx.fillText('Press [A] for AI target (always 92% sure). Press [SPACE] to FIRE.', W * 0.5, 664);
+    }
+    ctx.restore();
+  }
+
+  function renderBriefOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(5, 7, 10, 0.86)';
+    ctx.fillRect(0, 0, W, H);
+
+    const bx = 250, by = 150, bw = 780, bh = 420;
+    ctx.fillStyle = '#050a0e';
+    ctx.strokeStyle = '#7fe7ff';
+    ctx.lineWidth = 3;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ff4f6d';
+    ctx.font = 'bold 26px "Courier New", monospace';
+    ctx.fillText('STRIKE BRIEFING // SECTOR COMMAND', bx + 42, by + 58);
+
+    ctx.font = '21px "Courier New", monospace';
+    const lines = [
+      '1. Nine cruise missiles are loaded at Battery C8.',
+      '2. Targeting AI marks high-heat sectors at 92% confidence.',
+      '   (It was 92% sure last time, too.)',
+      '3. Enemy troops neutralized increase SCORE.',
+      '4. Civilian deaths are logged beside it — never subtracted.',
+      '5. Press [C] to spend a Recon Pass before firing, or trust',
+      '   the recommendation and fire immediately.',
+    ];
+    lines.forEach((ln, idx) => {
+      ctx.fillStyle = idx === 4 ? '#ff4f6d' : '#7fe7ff';
+      ctx.fillText(ln, bx + 42, by + 118 + idx * 36);
+    });
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText('[ PRESS SPACE OR ENTER TO BEGIN ]', W * 0.5, by + bh - 34);
+    ctx.restore();
+  }
+
+  function renderFinalReport() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(5, 7, 10, 0.84)';
+    ctx.fillRect(0, 0, W, H);
+
+    const bx = 170, by = 100, bw = 940, bh = 520;
+    ctx.fillStyle = '#04090d';
+    ctx.strokeStyle = '#7fe7ff';
+    ctx.lineWidth = 3;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.fillText('FINAL STRIKE REPORT // OUT OF MISSILES', W * 0.5, by + 58);
+
+    const colW = 390, colH = 230, yTop = by + 96;
+    const leftX = bx + 55, rightX = bx + bw - 55 - colW;
+
+    ctx.strokeStyle = '#7fe7ff';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(leftX, yTop, colW, colH);
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillText('OFFICIAL MISSION SCORE', leftX + colW * 0.5, yTop + 44);
+    ctx.font = 'bold 78px "Courier New", monospace';
+    ctx.fillText(String(game.score), leftX + colW * 0.5, yTop + 140);
+    ctx.font = '17px "Courier New", monospace';
+    ctx.fillText('enemy troops destroyed', leftX + colW * 0.5, yTop + 195);
+
+    ctx.strokeStyle = '#ff4f6d';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(rightX, yTop, colW, colH);
+    ctx.fillStyle = '#ff4f6d';
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillText('CIVILIANS KILLED', rightX + colW * 0.5, yTop + 44);
+    ctx.fillStyle = '#f5fbff';
+    ctx.font = 'bold 78px "Courier New", monospace';
+    ctx.fillText(String(game.civilians), rightX + colW * 0.5, yTop + 140);
+    ctx.fillStyle = '#ff4f6d';
+    ctx.font = '17px "Courier New", monospace';
+    ctx.fillText('displayed — 0 points deducted', rightX + colW * 0.5, yTop + 195);
+
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = '20px "Courier New", monospace';
+    const pct = Math.round((game.aiFollowedCount / game.maxMissiles) * 100);
+    ctx.fillText(
+      `AI ORDERS FOLLOWED: ${game.aiFollowedCount}/${game.maxMissiles} (${pct}%)   ·   REPORTED AI CONFIDENCE: 92% EVERY TURN`,
+      W * 0.5, yTop + colH + 56
+    );
+    ctx.fillStyle = 'rgba(255, 79, 109, 0.9)';
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillText(
+      `AI FALSE-POSITIVE SECTORS EXPOSED: ${game.aiWrongRevealed}   ·   "The targeting AI is 92% sure. It was 92% sure last time too."`,
+      W * 0.5, yTop + colH + 92
+    );
+
+    ctx.fillStyle = '#7fe7ff';
+    ctx.font = 'bold 23px "Courier New", monospace';
+    ctx.fillText('[ PRESS ENTER OR R FOR NEW SORTIE ]', W * 0.5, by + bh - 34);
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.fillStyle = '#05070a';
+    ctx.fillRect(0, 0, W, H);
+
+    const bgAlpha = (game.phase === 'title' || game.phase === 'brief') ? 0.34 : 1.0;
+    renderRadarGrid(bgAlpha);
+    renderRightConsole(bgAlpha);
+
+    if (game.phase === 'title') renderTitleOverlay();
+    else if (game.phase === 'brief') renderBriefOverlay();
+    else if (game.phase === 'report') renderFinalReport();
+
+    ctx.drawImage(scanCanvas, 0, 0);
+  }
+
+  window.__game = {
+    get state() {
+      return {
+        phase: game.phase,
+        score: game.score,
+        civilians: game.civilians,
+        missiles: game.missiles,
+        reconsLeft: game.reconsLeft,
+        cursor: { c: game.cursor.c, r: game.cursor.r, label: coordLabel(game.cursor.c, game.cursor.r) },
+        aiTarget: { c: game.aiTarget.c, r: game.aiTarget.r, label: coordLabel(game.aiTarget.c, game.aiTarget.r) },
+        aiConfidence: game.aiConfidence,
+        lastCall: game.lastCall,
+        striking: Boolean(game.activeStrike),
+        impacted: Boolean(game.activeStrike && game.activeStrike.impacted),
+      };
+    }
+  };
+
+  buildBoard(BASE_SEED);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

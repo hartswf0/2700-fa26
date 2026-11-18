@@ -1,0 +1,232 @@
+{
+  "id": "g3",
+  "group": "Group 3",
+  "name": "Turing Test Village",
+  "from": "AI Turing Test: a retro RPG village where some villagers are AI giving false quests; the ending depends on whom you helped.",
+  "hook": "Six villagers need your help. Some of them are not people.",
+  "pitch": "A small retro RPG village. Villagers give quests; some quests help the village and some quietly harm it. Your notebook is your only tool for working out who is human. The ending depends on whose quests you finished.",
+  "minute_check": "Yes: villagers, quests, who is real.",
+  "build_check": "Yes: six villagers, ten quests, one map.",
+  "scope": "Six villagers, ten quests. Fix the rule that gives AI villagers away before writing any dialogue.",
+  "palette": {
+    "bg": "#e8f4d8",
+    "fg": "#20301c",
+    "acc": "#e0523c",
+    "main_bg": "#e8f4d8",
+    "main_fg": "#20301c",
+    "main_acc": "#e0523c"
+  },
+  "template_type": "rpg",
+  "brief": {
+    "player": "A traveller in a small village.",
+    "goal": "Help the village by doing villagers’ quests, and work out which villagers are AI.",
+    "fail": "Completing too many AI quests (the village is harmed).",
+    "ending": "The ending depends on whether you did more human quests or more AI quests: whether the AI passed the test.",
+    "verb": "Talk, take notes, accept or decline.",
+    "theme": "Telling real from artificial by what people ask of you, with a notebook as your only tool.",
+    "look": "1980s-90s RPG: bright, tile-based, Pokémon Red and Undertale."
+  },
+  "prov": {
+    "bug": "The miller wants the bridge burned. A quest!",
+    "nit": "What clue tells a careful player the miller is not human, and is it fair?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "village",
+      "VILLAGE",
+      1,
+      0
+    ],
+    [
+      "talk",
+      "TALK",
+      2,
+      0
+    ],
+    [
+      "quest",
+      "QUEST",
+      3,
+      0
+    ],
+    [
+      "notes",
+      "NOTEBOOK",
+      2,
+      1
+    ],
+    [
+      "end",
+      "VERDICT",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "village",
+      "start"
+    ],
+    [
+      "village",
+      "talk",
+      "approach"
+    ],
+    [
+      "talk",
+      "quest",
+      "accept"
+    ],
+    [
+      "quest",
+      "village",
+      "done"
+    ],
+    [
+      "village",
+      "notes",
+      "open"
+    ],
+    [
+      "notes",
+      "village",
+      "close"
+    ],
+    [
+      "village",
+      "end",
+      "day 3"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Alan Turing, “Computing Machinery and Intelligence” (1950)",
+      "The imitation game. Read the first section: the test is about conversation, which is your mechanic."
+    ],
+    [
+      "Return of the Obra Dinn (Lucas Pope, 2018)",
+      "Deduction from evidence with a notebook; the best model for your notes screen."
+    ],
+    [
+      "Blade Runner (Ridley Scott, 1982), the Voight-Kampff test",
+      "The film version of asking questions to find the machine."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g3/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g3/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Charming 1990s top-down 16-bit retro village RPG in sunlit meadow sage (#e8f4d8), deep forest ink (#20301c), and vermilion accent (#e0523c). Steady overhead tile-map camera. A tiny cloaked traveler walks along a cobblestone path past timber cottages and an old wooden bridge, speaking with colorful villagers: human villagers radiate subtle warm organic idle motion while one uncanny villager repeats a rigid robotic loop beside a flipping detective notebook overlay. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for tile-village palette and composition. Sound design: nostalgic 16-bit pastoral flute and plucked strings, soft footsteps. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Turing Test Village: Talk, take notes, accept or decline. leading visibly to The ending depends on whether you did more human quests or more AI quests: whether the AI passed the test. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Charming 1990s top-down 16-bit retro village RPG in sunlit meadow sage (#e8f4d8), deep forest ink (#20301c), and vermilion accent (#e0523c). Steady overhead tile-map camera. A tiny cloaked traveler walks along a cobblestone path past timber cottages and an old wooden bridge, speaking with colorful villagers: human villagers radiate subtle warm organic idle motion while one uncanny villager repeats a rigid robotic loop beside a flipping detective notebook overlay. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for tile-village palette and composition. Sound design: nostalgic 16-bit pastoral flute and plucked strings, soft footsteps. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Talk, take notes, accept or decline.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Completing too many AI quests (the village is harmed).) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The ending depends on whether you did more human quests or more AI quests: whether the AI passed the test.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Turing Test Village demonstrating start, core verb (Talk, take notes, accept or decline.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "village_tile_map",
+      "label": "Village tile map",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "6_villager_sprites",
+      "label": "6 villager sprites",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Turing Test Village\": 6 villager sprites. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#e8f4d8, #20301c, accent #e0523c), style: 1980s-90s RPG: bright, tile-based, Pokémon Red and Undertale., matching the reference gameplay frame."
+    },
+    {
+      "id": "dialogue_box",
+      "label": "Dialogue box",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "notebook_screen",
+      "label": "Notebook screen",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "quest_list_6_human_4_ai",
+      "label": "Quest list (6 human, 4 AI)",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "two_ending_screens",
+      "label": "Two ending screens",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Turing Test Village\" (Telling real from artificial by what people ask of you, with a notebook as your only tool.). Visual mood: 1980s-90s RPG: bright, tile-based, Pokémon Red and Undertale.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

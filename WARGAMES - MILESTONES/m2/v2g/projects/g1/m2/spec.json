@@ -1,0 +1,241 @@
+{
+  "id": "g1",
+  "group": "Group 1",
+  "name": "Space Farmer",
+  "from": "Idea one: a farmer in space who makes clones to finish tasks (after Moon, Among Us, Detroit: Become Human).",
+  "hook": "Every clone you grow does a day’s work. Every clone you grow has an opinion about it.",
+  "pitch": "A five-day farming sim on the Moon. The task list is too long for one person, so you grow copies of yourself to help. Overworked clones turn sour. Each night the calm ones are counted against the angry ones: finish day five and the harvest ships; let the angry ones outnumber you and the station is theirs.",
+  "minute_check": "Yes: farm, clones, night count.",
+  "build_check": "Yes, if it stays one room and one drag-to-assign verb.",
+  "scope": "Keep it to one room and five days. The clone mood rule is the whole game; write it down as one sentence before building.",
+  "palette": {
+    "bg": "#1d1f1c",
+    "fg": "#d9d4c2",
+    "acc": "#e0a35a",
+    "main_bg": "#1d1f1c",
+    "main_fg": "#d9d4c2",
+    "main_acc": "#e0a35a"
+  },
+  "template_type": "farm",
+  "brief": {
+    "player": "A lone farmer on a lunar farm station, five working days.",
+    "goal": "Finish each day’s task list. You may grow clones to help.",
+    "fail": "Clones you neglect or overwork turn against you; if hostile clones outnumber calm ones at night, they take the station.",
+    "ending": "Two endings: the clones take the station, or you finish day five and the farm ships its harvest.",
+    "verb": "Assign: drag a clone onto a task.",
+    "theme": "Each clone is cheaper labour that can disagree. Handing work to copies of yourself is handing work to something that will want things.",
+    "look": "Desaturated, scratchy lines; one warm colour for anything alive."
+  },
+  "prov": {
+    "bug": "I made three of me. Work goes three times faster.",
+    "nit": "Who decides what the third one wants?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "day",
+      "DAY BRIEF",
+      1,
+      0
+    ],
+    [
+      "work",
+      "WORK SHIFT",
+      2,
+      0
+    ],
+    [
+      "night",
+      "NIGHT CHECK",
+      3,
+      0
+    ],
+    [
+      "endA",
+      "ENDING: HARVEST",
+      4,
+      0
+    ],
+    [
+      "endB",
+      "ENDING: TAKEN",
+      4,
+      1
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "day",
+      "start"
+    ],
+    [
+      "day",
+      "work",
+      "tasks shown"
+    ],
+    [
+      "work",
+      "night",
+      "shift ends"
+    ],
+    [
+      "night",
+      "day",
+      "calm, next day"
+    ],
+    [
+      "night",
+      "endB",
+      "hostile > calm"
+    ],
+    [
+      "night",
+      "endA",
+      "day 5 done"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Moon (Duncan Jones, 2009)",
+      "Your own source: the clone does not know it is a clone. Decide whether yours do."
+    ],
+    [
+      "The Swapper (Facepalm Games, 2013)",
+      "Clones as a puzzle mechanic, and the question of which body is you. Good for how assigning works."
+    ],
+    [
+      "Lemmings (DMA Design, 1991)",
+      "Managing many small workers by giving each one a job. A tested interface for your drag-to-assign verb."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g1/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g1/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "2.5D stylized lunar station farming game, desaturated scratchy ink-and-gouache lines on dark slate (#1d1f1c) with warm amber (#e0a35a) glowing only on living crops and characters. Fixed elevated three-quarter room camera. A lone farmer drags and assigns two identical clones onto glowing amber crop rows and a water pump; one overworked clone turns restless red-tinted and shrugs off the task while calm clones harvest golden sprouts. Continuous unbroken gameplay shot, no scene cuts, no gibberish HUD text. Use the reference image for palette and room layout. Sound design: low lunar station hum, soft soil rustle, subtle warning chime. No spoken dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Space Farmer: Assign: drag a clone onto a task. leading visibly to Two endings: the clones take the station, or you finish day five and the farm ships its harvest. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "2.5D stylized lunar station farming game, desaturated scratchy ink-and-gouache lines on dark slate (#1d1f1c) with warm amber (#e0a35a) glowing only on living crops and characters. Fixed elevated three-quarter room camera. A lone farmer drags and assigns two identical clones onto glowing amber crop rows and a water pump; one overworked clone turns restless red-tinted and shrugs off the task while calm clones harvest golden sprouts. Continuous unbroken gameplay shot, no scene cuts, no gibberish HUD text. Use the reference image for palette and room layout. Sound design: low lunar station hum, soft soil rustle, subtle warning chime. No spoken dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Assign: drag a clone onto a task.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Clones you neglect or overwork turn against you; if hostile clones outnumber calm ones at night, they take the station.) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (Two endings: the clones take the station, or you finish day five and the farm ships its harvest.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Space Farmer demonstrating start, core verb (Assign: drag a clone onto a task.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "farmer_sprite_2_poses",
+      "label": "Farmer sprite, 2 poses",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Space Farmer\": Farmer sprite, 2 poses. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#1d1f1c, #d9d4c2, accent #e0a35a), style: Desaturated, scratchy lines; one warm colour for anything alive., matching the reference gameplay frame."
+    },
+    {
+      "id": "clone_sprite_recolour_of_farmer_angry_tint",
+      "label": "Clone sprite (recolour of farmer) + angry tint",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "crop_tile_3_growth_stages",
+      "label": "Crop tile, 3 growth stages",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Space Farmer\": Crop tile, 3 growth stages. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#1d1f1c, #d9d4c2, accent #e0a35a), style: Desaturated, scratchy lines; one warm colour for anything alive., matching the reference gameplay frame."
+    },
+    {
+      "id": "station_background_one_room",
+      "label": "Station background, one room",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "16:9",
+      "image_size": "1K",
+      "cutout": false,
+      "prompt": "Clean 2D/2.5D game environment asset for \"Space Farmer\": Station background, one room. strictly harmonized palette (#1d1f1c, #d9d4c2, accent #e0a35a), style: Desaturated, scratchy lines; one warm colour for anything alive.. No UI text, no characters baked in, crisp game-ready art matching the reference gameplay frame."
+    },
+    {
+      "id": "task_card_ui",
+      "label": "Task card UI",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "night_overlay_clone_mood_meter",
+      "label": "Night overlay + clone mood meter",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "two_ending_screens_text_over_background",
+      "label": "Two ending screens (text over background)",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Space Farmer\" (Each clone is cheaper labour that can disagree. Handing work to copies of yourself is handing work to something that will want things.). Visual mood: Desaturated, scratchy lines; one warm colour for anything alive.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "id": "g25",
+  "group": "Group 25",
+  "name": "Glitchquest",
+  "from": "Glitch Quest: a retro adventure where the game itself is the antagonist, with misleading instructions and changing universes.",
+  "hook": "The game is lying to you. Your job is to work out how.",
+  "pitch": "Three short retro worlds (a Mario-like, a Space Invaders-like, a third of your choice). Signs and hints are sometimes false, by a rule you can learn. Obey a lie and you go back to the checkpoint. The last world tells you to quit; winning means not doing what the game says.",
+  "minute_check": "Yes, once the first false sign gets you killed.",
+  "build_check": "Yes with three small worlds; a fixed lying rule keeps it fair.",
+  "scope": "Three universes. Give the lies a rule (for example, signs in one colour always lie) so testing is a skill, not luck.",
+  "palette": {
+    "bg": "#140b2b",
+    "fg": "#ffe86b",
+    "acc": "#3cf2ff",
+    "main_bg": "#140b2b",
+    "main_fg": "#ffe86b",
+    "main_acc": "#3cf2ff"
+  },
+  "template_type": "platform",
+  "brief": {
+    "player": "A hero the player picks, in a world that keeps changing rules.",
+    "goal": "Get through each universe to the end.",
+    "fail": "Following an instruction that is a lie (back to the checkpoint).",
+    "ending": "The final level tells you to quit. Winning means not obeying the game.",
+    "verb": "Test: try what the game says, and the opposite.",
+    "theme": "Who to believe when the interface lies. Each universe teaches an expectation and then breaks it.",
+    "look": "Pixel art that changes style per universe (Mario-like, Space Invaders-like), bright neon."
+  },
+  "prov": {
+    "bug": "The sign says this jump is safe!",
+    "nit": "How does the player learn which signs lie, without just guessing?"
+  },
+  "states": [
+    [
+      "title",
+      "TITLE",
+      0,
+      0
+    ],
+    [
+      "pick",
+      "PICK HERO",
+      1,
+      0
+    ],
+    [
+      "world",
+      "UNIVERSE",
+      2,
+      0
+    ],
+    [
+      "lie",
+      "LIED TO",
+      2,
+      1
+    ],
+    [
+      "last",
+      "FINAL: \"QUIT\"",
+      3,
+      0
+    ],
+    [
+      "end",
+      "ENDING",
+      4,
+      0
+    ]
+  ],
+  "edges": [
+    [
+      "title",
+      "pick",
+      "start"
+    ],
+    [
+      "pick",
+      "world",
+      "go"
+    ],
+    [
+      "world",
+      "lie",
+      "obeyed a lie"
+    ],
+    [
+      "lie",
+      "world",
+      "checkpoint"
+    ],
+    [
+      "world",
+      "world",
+      "next universe"
+    ],
+    [
+      "world",
+      "last",
+      "universe 3 done"
+    ],
+    [
+      "last",
+      "end",
+      "disobey"
+    ]
+  ],
+  "refs_lit": [
+    [
+      "Pony Island (Daniel Mullins Games, 2016)",
+      "An arcade game possessed by its maker; the interface lies and you hack around it."
+    ],
+    [
+      "The Stanley Parable (Galactic Cafe, 2013)",
+      "A narrator who gives instructions you can disobey; the game is about that choice."
+    ],
+    [
+      "Undertale (Toby Fox, 2015)",
+      "Your own reference: a game that remembers what you did and talks back."
+    ]
+  ],
+  "m2_mockups": {
+    "title_png": "projects/g25/m2/refs/m2_title_ref.png",
+    "main_png": "projects/g25/m2/refs/m2_main_ref.png"
+  },
+  "omni_gameplay_prompt": "Vibrant retro-neon meta-platformer on deep indigo (#140b2b) with bright pixel gold (#ffe86b) and cyan (#3cf2ff) glitching geometry. Steady side-on arcade camera. A small pixel hero approaches a flashing neon arrow sign pointing into a deceptive shimmering floor pit, pauses to test it, leaps backward as the fake floor pixels dissolve into digital static, and hops across hidden solid cyan blocks in the opposite direction while the background warps between 8-bit bricks and starfield vectors. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for neon glitch style. Sound design: chiptune melody with playful glitch stutters. No dialogue.",
+  "milestones": {
+    "m1": {
+      "code": "M1",
+      "title": "Project Launch & Concept Comparison",
+      "mode": "concept-triptych",
+      "prompt": "Rough sketchbook prototype animatic on paper showing the core control-and-response loop of Glitchquest: Test: try what the game says, and the opposite. leading visibly to The final level tells you to quit. Winning means not obeying the game. Minimal wireframe lines, no HUD text."
+    },
+    "m2": {
+      "code": "M2",
+      "title": "Design Brief & Systems Plan (Seed Gameplay Video)",
+      "mode": "seed-video-to-game",
+      "prompt": "Vibrant retro-neon meta-platformer on deep indigo (#140b2b) with bright pixel gold (#ffe86b) and cyan (#3cf2ff) glitching geometry. Steady side-on arcade camera. A small pixel hero approaches a flashing neon arrow sign pointing into a deceptive shimmering floor pit, pauses to test it, leaps backward as the fake floor pixels dissolve into digital static, and hops across hidden solid cyan blocks in the opposite direction while the background warps between 8-bit bricks and starfield vectors. Continuous unbroken gameplay shot, no scene cuts, no gibberish text. Use the reference image for neon glitch style. Sound design: chiptune melody with playful glitch stutters. No dialogue."
+    },
+    "m3": {
+      "code": "M3",
+      "title": "Prototype Build (Greybox + Core Verb)",
+      "mode": "edit-from-m2",
+      "prompt": "Simplify textures into a crisp playable M3 prototype build focusing clearly on the core mechanic (Test: try what the game says, and the opposite.) with high-contrast placeholder silhouettes. Keep camera, timing, and layout the same."
+    },
+    "m4": {
+      "code": "M4",
+      "title": "Alpha Build & Playtest Packet (Full State Loop)",
+      "mode": "extend-from-m2",
+      "prompt": "Extend this video: transition smoothly from the active gameplay loop into the consequential state change (Following an instruction that is a lie (back to the checkpoint).) with clear visual feedback. Keep the exact art style and palette."
+    },
+    "m5": {
+      "code": "M5",
+      "title": "Beta Build & Presentation Prep (Polished Art + Juice)",
+      "mode": "edit-from-m2",
+      "prompt": "Add rich beta-stage lighting polish, tactile particle feedback on every player action, and subtle atmospheric depth while keeping the exact camera, palette, and gameplay choreography the same."
+    },
+    "m6": {
+      "code": "M6",
+      "title": "Presentation Build (Exhibition Showcase)",
+      "mode": "extend-from-m5",
+      "prompt": "Extend this video: build to the climatic ending reveal (The final level tells you to quit. Winning means not obeying the game.) in a single continuous showcase take."
+    },
+    "m7": {
+      "code": "M7",
+      "title": "Final Documentation Package (Archival Trailer)",
+      "mode": "final-cut",
+      "prompt": "Clean archival exhibition capture of Glitchquest demonstrating start, core verb (Test: try what the game says, and the opposite.), and ending state in crisp 1080p."
+    }
+  },
+  "asset_plan": [
+    {
+      "id": "hero_sprite_3_choices_palette_swaps",
+      "label": "Hero sprite, 3 choices (palette swaps)",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "3_universe_tile_sets",
+      "label": "3 universe tile sets",
+      "how": "MAKE",
+      "kind": "image",
+      "model": "gemini-nano-banana-2.1",
+      "aspect_ratio": "1:1",
+      "image_size": "1K",
+      "cutout": true,
+      "prompt": "Isolated 2D game sprite sheet / prop for \"Glitchquest\": 3 universe tile sets. Centered full silhouette, isolated on a flat uniform light grey studio background (#d8d8d8), even lighting, zero drop shadow, no text, strictly harmonized palette (#140b2b, #ffe86b, accent #3cf2ff), style: Pixel art that changes style per universe (Mario-like, Space Invaders-like), bright neon., matching the reference gameplay frame."
+    },
+    {
+      "id": "hint_text_boxes_true_and_false",
+      "label": "Hint text boxes (true and false)",
+      "how": "TYPE",
+      "kind": "text-data",
+      "model": null,
+      "note": "Authored in structured game state data"
+    },
+    {
+      "id": "glitch_transition_effect",
+      "label": "Glitch transition effect",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "fake_quit_screen",
+      "label": "Fake quit screen",
+      "how": "BUILD",
+      "kind": "procedural-code",
+      "model": null,
+      "note": "Implemented directly in index.html Canvas/Three.js code"
+    },
+    {
+      "id": "bgm_loop",
+      "label": "Original instrumental game loop (30s)",
+      "how": "MAKE_AUDIO",
+      "kind": "music",
+      "model": "lyria-3-clip-preview",
+      "prompt": "Instrumental 30-second loopable game soundtrack for \"Glitchquest\" (Who to believe when the interface lies. Each universe teaches an expectation and then breaks it.). Visual mood: Pixel art that changes style per universe (Mario-like, Space Invaders-like), bright neon.. Purely instrumental, cohesive game loop, no vocals."
+    }
+  ]
+}
