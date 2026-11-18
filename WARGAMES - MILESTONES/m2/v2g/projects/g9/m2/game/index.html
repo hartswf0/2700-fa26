@@ -12,7 +12,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #111213;
+    background: #141617;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,7 +23,6 @@
     width: min(100vw, calc(100vh * 16 / 9));
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
-    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
     cursor: none;
   }
 </style>
@@ -31,41 +30,90 @@
 <body>
 <canvas id="game" width="1280" height="720"></canvas>
 <script type="module">
+// VOIDBASTARD-TAO · Group 9: Company Builder (M2)
+// Show only what is true now. Every upgrade clicks for you; every upgrade takes a button away.
+
 const W = 1280, H = 720;
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: false });
 
-// Offscreen scene buffer so we can apply accurate colour-to-greyscale grading + post-processing
-const sceneCanvas = document.createElement('canvas');
-sceneCanvas.width = W;
-sceneCanvas.height = H;
-const sctx = sceneCanvas.getContext('2d');
-
-// Persistent desk layer for settled paperclips (keeps 60fps even with 600+ clips piled up)
+// Persistent offscreen layer for settled paperclips (locks 60fps with 650+ clips piled on desk)
 const pileCanvas = document.createElement('canvas');
 pileCanvas.width = W;
 pileCanvas.height = H;
 const pctx = pileCanvas.getContext('2d');
 
-// URL params: ?autostart skips title, ?seed=N fixes deterministic RNG
+// URL params: ?autostart skips REST title, ?seed=N fixes deterministic RNG
 const Q = new URLSearchParams(location.search);
-let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+const INITIAL_SEED = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+let seed = INITIAL_SEED;
 function rand() {
   seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
   return seed / 4294967296;
 }
 function randRange(a, b) { return a + (b - a) * rand(); }
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
-const PALETTE = {
-  bg: '#f2efe6',
-  fg: '#1b1b1b',
-  acc: '#2f6fd8',
-};
+// Exact chromatic targets measured from study/f_001 -> f_014 -> f_021 -> f_027 -> f_033
+const DESK_TOPLEFT_STOPS = [
+  [241, 239, 227], // 0 bought: warm luminous paper cream
+  [240, 238, 225], // 1 bought
+  [238, 236, 224], // 2 bought (t=2s pair_002: bright warm cream)
+  [196, 195, 189], // 3 bought (t=5s pair_005: stone-putty mid-drain)
+  [150, 156, 158], // 4 bought
+  [124, 131, 134], // 5 bought (f_027 cool slate)
+  [118, 127, 129], // 6 bought (t=8s pair_008: top-left studio slate)
+];
 
-// Audio: BGM + WebAudio procedural tactile SFX
+const DESK_BOTRIGHT_STOPS = [
+  [237, 235, 222], // 0 bought: even warm cream
+  [236, 234, 221], // 1 bought
+  [233, 231, 219], // 2 bought
+  [175, 175, 170], // 3 bought (directional studio falloff begins like f_021)
+  [122, 128, 131], // 4 bought
+  [90, 97, 100],   // 5 bought
+  [78, 86, 89],    // 6 bought (directional gunmetal-slate shade at bottom-right like f_033!)
+];
+
+const CIRCLE_STOPS = [
+  [47, 111, 216],  // 0 bought: vivid cobalt (#2f6fd8)
+  [49, 112, 213],  // 1 bought
+  [52, 114, 211],  // 2 bought (t=2s pair_002: vivid cobalt)
+  [124, 141, 161], // 3 bought (t=5s pair_005: dusty steel-blue)
+  [96, 110, 120],  // 4 bought
+  [82, 95, 101],   // 5 bought
+  [79, 90, 95],    // 6 bought (t=8s pair_008: recessed flat slate)
+];
+
+const DRAIN_STOPS = [0.0, 0.03, 0.07, 0.48, 0.78, 0.93, 1.0];
+
+function sampleStop(stops, pos) {
+  const x = clamp(pos, 0, stops.length - 1);
+  const i = Math.min(stops.length - 2, x | 0);
+  const f = x - i;
+  const a = stops[i], b = stops[i + 1];
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * f),
+    Math.round(a[1] + (b[1] - a[1]) * f),
+    Math.round(a[2] + (b[2] - a[2]) * f),
+  ];
+}
+function sampleScalar(vals, pos) {
+  const x = clamp(pos, 0, vals.length - 1);
+  const i = Math.min(vals.length - 2, x | 0);
+  const f = x - i;
+  return vals[i] + (vals[i + 1] - vals[i]) * f;
+}
+function rgbStr(rgb, alpha = 1) {
+  return alpha >= 0.999
+    ? `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`
+    : `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha.toFixed(3)})`;
+}
+
+// Audio: Lyria 3 BGM loop + procedural WebAudio wire-bend, clink & solenoid stamp SFX
 const bgm = new Audio('../assets/bgm_loop.mp3');
 bgm.loop = true;
-bgm.volume = 0.35;
+bgm.volume = 0.34;
 let audioCtx = null;
 let audioUnlocked = false;
 
@@ -83,56 +131,188 @@ function ensureAudio() {
   }
 }
 
-function sfxWireClick(pitchMul = 1.0, vol = 0.08) {
+function sfxWireSnap(pitchMul = 1.0, vol = 0.075, panVal = -0.22) {
   if (!audioCtx || audioCtx.state !== 'running') return;
   const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(1450 * pitchMul, now);
-  osc.frequency.exponentialRampToValueAtTime(420 * pitchMul, now + 0.045);
+  osc1.type = 'triangle';
+  osc1.frequency.setValueAtTime(1880 * pitchMul, now);
+  osc1.frequency.exponentialRampToValueAtTime(540 * pitchMul, now + 0.042);
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(3120 * pitchMul, now);
+  osc2.frequency.exponentialRampToValueAtTime(1180 * pitchMul, now + 0.028);
+
   gain.gain.setValueAtTime(vol, now);
-  gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.05);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.055);
+  gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.048);
+
+  if (audioCtx.createStereoPanner) {
+    const pan = audioCtx.createStereoPanner();
+    pan.pan.setValueAtTime(clamp(panVal, -1, 1), now);
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(pan).connect(audioCtx.destination);
+  } else {
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+  }
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + 0.052);
+  osc2.stop(now + 0.035);
 }
 
-function sfxBuyUpgrade(idx) {
+function sfxClipSettle(vol = 0.018) {
   if (!audioCtx || audioCtx.state !== 'running') return;
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = 'sawtooth';
-  const base = 240 - idx * 22;
-  osc.frequency.setValueAtTime(base, now);
-  osc.frequency.exponentialRampToValueAtTime(base * 0.55, now + 0.18);
-  gain.gain.setValueAtTime(0.11, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+  osc.type = 'sine';
+  const f = 2650 + ((seed & 255) / 255) * 750;
+  osc.frequency.setValueAtTime(f, now);
+  osc.frequency.exponentialRampToValueAtTime(f * 0.72, now + 0.024);
+  gain.gain.setValueAtTime(vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.028);
   osc.connect(gain).connect(audioCtx.destination);
   osc.start(now);
-  osc.stop(now + 0.21);
+  osc.stop(now + 0.03);
 }
 
-function sfxEndChord(warm = false) {
+function sfxSolenoidStamp(idx, isUnlatch = false) {
   if (!audioCtx || audioCtx.state !== 'running') return;
   const now = audioCtx.currentTime;
-  const freqs = warm ? [261.6, 329.6, 392.0] : [146.8, 220.0, 293.6];
+  const osc = audioCtx.createOscillator();
+  const sub = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = isUnlatch ? 'square' : 'sawtooth';
+  sub.type = 'triangle';
+  const base = isUnlatch ? 420 : (210 - idx * 18);
+  osc.frequency.setValueAtTime(base, now);
+  osc.frequency.exponentialRampToValueAtTime(base * (isUnlatch ? 0.78 : 0.46), now + (isUnlatch ? 0.09 : 0.19));
+  sub.frequency.setValueAtTime(92, now);
+  sub.frequency.exponentialRampToValueAtTime(38, now + 0.16);
+  gain.gain.setValueAtTime(isUnlatch ? 0.065 : 0.11, now);
+  gain.gain.exponentialRampToValueAtTime(0.0008, now + (isUnlatch ? 0.1 : 0.21));
+  osc.connect(gain);
+  sub.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  sub.start(now);
+  osc.stop(now + 0.22);
+  sub.stop(now + 0.18);
+}
+
+function sfxResolutionChord(keptHand = false) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const now = audioCtx.currentTime;
+  const freqs = keptHand ? [261.63, 329.63, 392.0] : [146.83, 220.0, 261.63];
   for (const f of freqs) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = warm ? 'sine' : 'triangle';
+    osc.type = keptHand ? 'sine' : 'triangle';
     osc.frequency.setValueAtTime(f, now);
-    gain.gain.setValueAtTime(0.06, now);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + 1.2);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.0007, now + 1.35);
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + 1.25);
+    osc.stop(now + 1.4);
   }
 }
 
-// Load paperclip sprite and remove enclosed studio-grey (#d5d5d5) inside wire loops
-let clipSprite = null;
+// ---------------------------------------------------------------------------
+// Paperclip Sprite Pipeline:
+// 1. Pre-bakes 24 rotated angle stamps (~102x31px Gem clip proportion matching
+//    study/f_014 & f_027) with top-left directional lighting and soft contact shadow.
+// 2. Loads ../assets/paperclip_icon.png, strips ALL 91,203 studio-grey (#d8d8d8)
+//    enclosed loop/slit pixels + softens comic black outlines on an offscreen
+//    canvas, and composites its metallic sheen into the stamps seamlessly.
+// ---------------------------------------------------------------------------
+const STAMP_COUNT = 24;
+const STAMP_SIZE = 148;
+const clipStamps = [];
+let cleanedAssetCanvas = null;
+
+function createGemWirePath(s = 1.18) {
+  const path = new Path2D();
+  path.moveTo(-16.5 * s, -5.2 * s);
+  path.lineTo(23.5 * s, -5.2 * s);
+  path.arc(23.5 * s, 0.9 * s, 6.1 * s, -Math.PI / 2, Math.PI / 2, false);
+  path.lineTo(-27.5 * s, 7.0 * s);
+  path.arc(-27.5 * s, -1.2 * s, 8.2 * s, Math.PI / 2, -Math.PI / 2, false);
+  path.lineTo(28.5 * s, -9.4 * s);
+  path.arc(28.5 * s, 1.0 * s, 10.4 * s, -Math.PI / 2, Math.PI / 2, false);
+  path.lineTo(-19.5 * s, 11.4 * s);
+  return path;
+}
+
+function rebuildClipStamps() {
+  clipStamps.length = 0;
+  const wirePath = createGemWirePath(1.18);
+  for (let i = 0; i < STAMP_COUNT; i++) {
+    const ang = (i / STAMP_COUNT) * Math.PI * 2;
+    const sc = document.createElement('canvas');
+    sc.width = STAMP_SIZE;
+    sc.height = STAMP_SIZE;
+    const g = sc.getContext('2d');
+    const cx = STAMP_SIZE / 2, cy = STAMP_SIZE / 2;
+
+    // 1. Directional soft contact shadow on desk (always down-right!)
+    g.save();
+    g.translate(cx + 2.8, cy + 4.8);
+    g.rotate(ang);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.shadowColor = 'rgba(10, 14, 16, 0.26)';
+    g.shadowBlur = 4.2;
+    g.strokeStyle = 'rgba(15, 19, 21, 0.25)';
+    g.lineWidth = 4.2;
+    g.stroke(wirePath);
+    g.restore();
+
+    // 2. Cleaned Nano Banana sprite metallic under-sheen (zero grey loops!)
+    if (cleanedAssetCanvas) {
+      g.save();
+      g.translate(cx, cy);
+      g.rotate(ang);
+      g.globalAlpha = 0.40;
+      g.drawImage(cleanedAssetCanvas, -52, -17, 104, 34);
+      g.restore();
+    }
+
+    // 3. Gunmetal steel wire edge
+    g.save();
+    g.translate(cx, cy);
+    g.rotate(ang);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.strokeStyle = '#384044';
+    g.lineWidth = 4.1;
+    g.stroke(wirePath);
+
+    // 4. Brushed nickel-silver core
+    g.strokeStyle = '#b9c2c6';
+    g.lineWidth = 2.4;
+    g.stroke(wirePath);
+    g.restore();
+
+    // 5. Crisp top-left studio chrome catchlight
+    g.save();
+    g.translate(cx - 0.65, cy - 0.75);
+    g.rotate(ang);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.strokeStyle = '#f6f9fb';
+    g.lineWidth = 1.05;
+    g.stroke(wirePath);
+    g.restore();
+
+    clipStamps.push(sc);
+  }
+}
+rebuildClipStamps();
+
 const rawClipImg = new Image();
 rawClipImg.decoding = 'async';
 rawClipImg.onload = () => {
@@ -143,272 +323,380 @@ rawClipImg.onload = () => {
   octx.drawImage(rawClipImg, 0, 0);
   const imgData = octx.getImageData(0, 0, oc.width, oc.height);
   const d = imgData.data;
-  const w = oc.width, h = oc.height;
-  const visited = new Uint8Array(w * h);
-  const seeds = [
-    [Math.floor(w * 0.5), Math.floor(h * 0.5)],
-    [Math.floor(w * 0.635), Math.floor(h * 0.293)],
-    [Math.floor(w * 0.342), Math.floor(h * 0.684)],
-  ];
-  const stack = [];
-  for (const [sx, sy] of seeds) {
-    const idx = sy * w + sx;
-    const p = idx * 4;
-    if (d[p + 3] > 100 && Math.abs(d[p] - 213) < 22 && Math.abs(d[p + 1] - 213) < 22 && Math.abs(d[p + 2] - 213) < 22) {
-      visited[idx] = 1;
-      stack.push(idx);
+  for (let p = 0; p < d.length; p += 4) {
+    const a = d[p + 3];
+    if (a === 0) continue;
+    const r = d[p], gr = d[p + 1], b = d[p + 2];
+    const maxC = Math.max(r, gr, b), minC = Math.min(r, gr, b);
+    const chroma = maxC - minC;
+    const lum = 0.299 * r + 0.587 * gr + 0.114 * b;
+    // Strip ALL neutral studio-grey pixels (#d8d8d8) inside wire loops & slits
+    if (chroma < 19 && lum > 174 && lum < 242) {
+      d[p + 3] = 0;
+      continue;
     }
-  }
-  while (stack.length > 0) {
-    const cur = stack.pop();
-    const p = cur * 4;
-    d[p + 3] = 0;
-    const cx = cur % w, cy = (cur / w) | 0;
-    const neighbors = [
-      cx > 0 ? cur - 1 : -1,
-      cx < w - 1 ? cur + 1 : -1,
-      cy > 0 ? cur - w : -1,
-      cy < h - 1 ? cur + w : -1,
-    ];
-    for (const nb of neighbors) {
-      if (nb < 0 || visited[nb]) continue;
-      const np = nb * 4;
-      if (d[np + 3] > 20) {
-        const r = d[np], g = d[np + 1], b = d[np + 2];
-        const chroma = Math.max(r, g, b) - Math.min(r, g, b);
-        if (r > 188 && r < 232 && chroma < 14) {
-          visited[nb] = 1;
-          stack.push(nb);
-        }
-      }
+    if (chroma < 22 && lum > 164 && lum <= 174) {
+      d[p + 3] = (a * ((174 - lum) / 10)) | 0;
+    }
+    if (lum < 95) {
+      d[p] = 86;
+      d[p + 1] = 94;
+      d[p + 2] = 100;
+      d[p + 3] = (d[p + 3] * 0.68) | 0;
+    } else {
+      d[p] = Math.min(250, ((r * 0.55 + 115) | 0));
+      d[p + 1] = Math.min(252, ((gr * 0.55 + 118) | 0));
+      d[p + 2] = Math.min(255, ((b * 0.55 + 122) | 0));
     }
   }
   octx.putImageData(imgData, 0, 0);
-  // Tightly crop around non-transparent pixels (205..818, 152..872)
-  const cx0 = 200, cy0 = 148, cw = 624, ch = 728;
-  const cropped = document.createElement('canvas');
-  cropped.width = cw;
-  cropped.height = ch;
-  cropped.getContext('2d').drawImage(oc, cx0, cy0, cw, ch, 0, 0, cw, ch);
-  clipSprite = cropped;
+
+  const aligned = document.createElement('canvas');
+  aligned.width = 208;
+  aligned.height = 68;
+  const actx = aligned.getContext('2d');
+  actx.translate(104, 34);
+  actx.rotate(0.855);
+  actx.scale(0.205, 0.13);
+  actx.drawImage(oc, -512, -512);
+  cleanedAssetCanvas = aligned;
+  rebuildClipStamps();
 };
 rawClipImg.src = '../assets/paperclip_icon.png';
 
-// 6 Upgrades matching spec.json + m2_main_ref.png + study/sheet.jpg
-const UPGRADES = [
-  { id: 'auto_bender', key: '1', name: 'Auto-bender', takes: 'BEND WIRE',   cost: 10,     rate: 110,    bought: false, buyT: -1 },
-  { id: 'sales_bot',   key: '2', name: 'Sales bot',   takes: 'SET PRICE',   cost: 110,    rate: 780,    bought: false, buyT: -1 },
-  { id: 'hiring_ai',   key: '3', name: 'Hiring AI',   takes: 'HIRE STAFF',  cost: 1200,   rate: 5600,   bought: false, buyT: -1 },
-  { id: 'board_ai',    key: '4', name: 'Board AI',    takes: 'BOARD VOTE',  cost: 10500,  rate: 34000,  bought: false, buyT: -1 },
-  { id: 'strategy_ai', key: '5', name: 'Strategy AI', takes: 'SET PURPOSE', cost: 48000,  rate: 190000, bought: false, buyT: -1 },
-  { id: 'ceo_ai',      key: '6', name: 'CEO AI',      takes: 'MAKE CLIP',   cost: 175000, rate: 950000, bought: false, buyT: -1 },
-];
-
-// Layout geometry matching m2_main_ref.png (1280x720)
-const BTN_MAIN = { x: 360, y: 360, r: 183 };
-const ROW_X = 760, ROW_W = 470, ROW_H = 72, ROW_Y0 = 55, ROW_GAP = 100;
-
-const S = {
-  phase: Q.has('autostart') ? 'make' : 'title', // title | make | auto | watch | endA | endB
-  t: 0,
-  watchT: 0,
-  endT: 0,
-  clips: 0,
-  displayClips: 0,
-  money: 0,
-  rate: 0,
-  buttonsLeft: 6,
-  saturation: 1.0,       // smoothly drains 1.0 -> 0.0
-  greyBlend: 0.0,        // smoothly blends desk toward cool industrial slate
-  btnPress: 0,
-  howToOpen: false,
-  cursor: { x: 420, y: 340, tx: 420, ty: 340, clickAnim: 0 },
-  ripples: [],
-  activeClips: [],
-  settledCount: 0,
-  autoSpawnCarry: 0,
-  tickSoundTimer: 0,
-};
-
-function resetGame(startPhase = 'make') {
-  S.phase = startPhase;
-  S.t = 0;
-  S.watchT = 0;
-  S.endT = 0;
-  S.clips = 0;
-  S.displayClips = 0;
-  S.money = 0;
-  S.rate = 0;
-  S.buttonsLeft = 6;
-  S.saturation = 1.0;
-  S.greyBlend = 0.0;
-  S.btnPress = 0;
-  S.howToOpen = false;
-  S.ripples.length = 0;
-  S.activeClips.length = 0;
-  S.settledCount = 0;
-  S.autoSpawnCarry = 0;
-  pctx.clearRect(0, 0, W, H);
-  for (const u of UPGRADES) {
-    u.bought = false;
-    u.buyT = -1;
-  }
-}
-
-function drawClipToCtx(targetCtx, x, y, angle, scale, alpha = 1) {
+function drawClipStamp(targetCtx, x, y, angle, scale = 1.0, alpha = 1.0) {
+  const norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const idx = ((norm / (Math.PI * 2)) * STAMP_COUNT) | 0;
+  const stamp = clipStamps[idx % STAMP_COUNT];
+  const sz = STAMP_SIZE * scale;
   targetCtx.save();
-  targetCtx.translate(x, y);
-  targetCtx.rotate(angle);
-  targetCtx.globalAlpha = alpha;
-  if (clipSprite) {
-    const w = 66 * scale, h = 77 * scale;
-    targetCtx.drawImage(clipSprite, -w / 2, -h / 2, w, h);
-  } else {
-    // Crisp fallback wire paperclip while image decodes
-    targetCtx.strokeStyle = '#1b1b1b';
-    targetCtx.lineWidth = 4 * scale;
-    targetCtx.beginPath();
-    targetCtx.roundRect(-12 * scale, -26 * scale, 24 * scale, 52 * scale, 12 * scale);
-    targetCtx.stroke();
-    targetCtx.strokeStyle = '#9aa8b8';
-    targetCtx.lineWidth = 2 * scale;
-    targetCtx.stroke();
-  }
+  if (alpha < 0.999) targetCtx.globalAlpha = alpha;
+  targetCtx.drawImage(stamp, x - sz * 0.5, y - sz * 0.5, sz, sz);
   targetCtx.restore();
 }
 
-function spawnClip(originX, originY, vx, vy, targetX, targetY, scale = 1.0) {
+// ---------------------------------------------------------------------------
+// 6 Upgrades & Exact 1280x720 Layout Geometry (m2_main_ref.png & study/f_001.jpg)
+// ---------------------------------------------------------------------------
+const UPGRADES = [
+  { id: 'auto_bender', key: '1', name: 'Auto-bender', takes: 'BEND WIRE',   cost: 10,     rate: 320,     bought: false, buyT: -1, stampAnim: 0 },
+  { id: 'sales_bot',   key: '2', name: 'Sales bot',   takes: 'SET PRICE',   cost: 160,    rate: 3400,    bought: false, buyT: -1, stampAnim: 0 },
+  { id: 'hiring_ai',   key: '3', name: 'Hiring AI',   takes: 'HIRE STAFF',  cost: 4200,   rate: 21000,   bought: false, buyT: -1, stampAnim: 0 },
+  { id: 'board_ai',    key: '4', name: 'Board AI',    takes: 'BOARD VOTE',  cost: 28000,  rate: 96000,   bought: false, buyT: -1, stampAnim: 0 },
+  { id: 'strategy_ai', key: '5', name: 'Strategy AI', takes: 'SET PURPOSE', cost: 96000,  rate: 360000,  bought: false, buyT: -1, stampAnim: 0 },
+  { id: 'ceo_ai',      key: '6', name: 'CEO AI',      takes: 'MAKE CLIP',   cost: 240000, rate: 1150000, bought: false, buyT: -1, stampAnim: 0 },
+];
+
+const BTN_MAIN = { x: 360, y: 360, r: 184 };
+const ROW_X = 760, ROW_W = 474, ROW_H = 80, ROW_Y0 = 55, ROW_GAP = 104;
+const KEEP_BTN = { x: 80, y: 594, w: 236, h: 34 };
+
+const S = {
+  phase: Q.has('autostart') ? 'make' : 'title', // title | make | auto | watch | endA | endB
+  paused: false,
+  ceoArmed: false, // Law 10: 2-step unlatch friction on irreversible 6th upgrade
+  t: 0,
+  watchT: 0,
+  endT: 0,
+  hitStop: 0,
+  clips: 0,
+  displayClips: 0,
+  rate: 0,
+  buttonsLeft: 6,
+  boughtVisualPos: 0,
+  drain: 0,
+  btnPress: 0,
+  clickCombo: 0,
+  lastManualClickT: -10,
+  cursor: { x: 545, y: 112, tx: 545, ty: 112, clickAnim: 0 },
+  ripples: [],
+  activeClips: [],
+  settledCount: 0,
+  marginClipCount: 0,
+  tickSoundTimer: 0,
+  arms: UPGRADES.map((_, i) => ({
+    cycle: i * 0.21,
+    hasClip: true,
+    sparkT: 0,
+  })),
+};
+
+function getVoidState() {
+  if (S.phase === 'title') return 'REST';
+  if (S.paused) return 'FAULT';
+  if (S.phase === 'make') return 'READY';
+  if (S.phase === 'auto') return S.buttonsLeft === 1 ? 'CHANGED' : 'WORKING';
+  return 'COMPLETE';
+}
+
+function resetGame(startPhase = 'make') {
+  seed = INITIAL_SEED;
+  S.phase = startPhase;
+  S.paused = false;
+  S.ceoArmed = false;
+  S.t = 0;
+  S.watchT = 0;
+  S.endT = 0;
+  S.hitStop = 0;
+  S.clips = 0;
+  S.displayClips = 0;
+  S.rate = 0;
+  S.buttonsLeft = 6;
+  S.boughtVisualPos = 0;
+  S.drain = 0;
+  S.btnPress = 0;
+  S.clickCombo = 0;
+  S.lastManualClickT = -10;
+  S.ripples.length = 0;
+  S.activeClips.length = 0;
+  S.settledCount = 0;
+  S.marginClipCount = 0;
+  S.tickSoundTimer = 0;
+  pctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < UPGRADES.length; i++) {
+    UPGRADES[i].bought = false;
+    UPGRADES[i].buyT = -1;
+    UPGRADES[i].stampAnim = 0;
+    S.arms[i].cycle = i * 0.19;
+    S.arms[i].hasClip = true;
+    S.arms[i].sparkT = 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Text-Safe Airy Desk Margins (~18 sparse clips) + Unified Lower-Center Mound
+// Matches f_014, f_027, f_039: sparse loose clips around outer left/top/bottom-left,
+// and one lush conical metallic mound in lower-center overlapping bottom-right circle rim!
+// ---------------------------------------------------------------------------
+function sanitizeRestingSpot(tx, ty, allowBottomRightRim = false) {
+  let x = clamp(tx, 26, W - 52);
+  let y = clamp(ty, 16, H - 14);
+  // Protect top-left clip counter (140..580, 36..136)
+  if (x > 140 && x < 580 && y > 36 && y < 136) {
+    if (y < 72) y = randRange(12, 28);
+    else x = x < 360 ? randRange(34, 128) : randRange(588, 705);
+  }
+  // Protect bottom-left BUTTONS LEFT + KEEP HAND latch (0..332, 588..720)
+  if (x < 332 && y > 588) {
+    if (x < 245) y = randRange(538, 578);
+    else x = randRange(342, 540);
+  }
+  // Protect MAKE CLIP center text while letting lower-right mound lap naturally onto bottom-right rim (like f_027!)
+  const dx = x - BTN_MAIN.x, dy = y - BTN_MAIN.y;
+  const dist = Math.hypot(dx, dy);
+  const inMoundLapSector = allowBottomRightRim && dx > -35 && dy > 78;
+  const minR = inMoundLapSector ? 118 : 168;
+  if (dist < minR) {
+    const pushAng = dist > 1 ? Math.atan2(dy, dx) : 0.85;
+    const targetR = inMoundLapSector ? randRange(122, 195) : randRange(186, 245);
+    x = BTN_MAIN.x + Math.cos(pushAng) * targetR;
+    y = BTN_MAIN.y + Math.sin(pushAng) * targetR;
+  }
+  return { x: clamp(x, 26, W - 52), y: clamp(y, 14, H - 12) };
+}
+
+// Curated airy margin spots matching the ~18 sparse desk clips in f_014.jpg & f_027.jpg
+const SPARSE_MARGIN_SPOTS = [
+  { x: 64,  y: 196, a: -1.12 },
+  { x: 48,  y: 392, a: 0.24  },
+  { x: 96,  y: 468, a: 1.58  },
+  { x: 24,  y: 498, a: -1.05 },
+  { x: 66,  y: 598, a: 0.88  },
+  { x: 208, y: 562, a: 0.02  },
+  { x: 214, y: 584, a: -0.03 },
+  { x: 298, y: 604, a: 0.62  },
+  { x: 186, y: 16,  a: 0.18  },
+  { x: 268, y: 30,  a: -0.26 },
+  { x: 454, y: 22,  a: 0.34  },
+  { x: 676, y: 108, a: 1.12  },
+  { x: 526, y: 196, a: 0.72  },
+  { x: 606, y: 248, a: 0.42  },
+  { x: 658, y: 218, a: 1.24  },
+  { x: 688, y: 312, a: -1.08 },
+  { x: 726, y: 392, a: 1.56  },
+  { x: 584, y: 368, a: 0.64  },
+];
+
+function pickMoundTarget() {
+  // Unified conical lower-center mound centered around (505, 652), lapping onto bottom-right rim of MAKE CLIP
+  const spread = Math.min(1, S.settledCount / 240);
+  const triX = (rand() + rand() + rand() - 1.5) / 1.5; // bell-shaped -1..+1
+  const triY = (rand() + rand()) * 0.5;
+  let tx = 506 + triX * (138 + spread * 142);
+  let ty = 648 + (triY - 0.54) * (135 + spread * 108);
+  // Occasional stray clip spilling onto row 5/6 left edge like f_027.jpg
+  if (rand() < 0.09) {
+    tx = randRange(710, 835);
+    ty = randRange(505, 698);
+  }
+  const safe = sanitizeRestingSpot(tx, ty, true);
+  return { x: safe.x, y: safe.y, angle: randRange(0, Math.PI * 2) };
+}
+
+function pickManualDeskTarget() {
+  // First ~18 clips populate the airy desk margins just like f_014.jpg; thereafter feed the lower-center mound!
+  if (S.marginClipCount < SPARSE_MARGIN_SPOTS.length) {
+    const base = SPARSE_MARGIN_SPOTS[S.marginClipCount++];
+    const safe = sanitizeRestingSpot(
+      base.x + randRange(-14, 14),
+      base.y + randRange(-10, 10),
+      false
+    );
+    return { x: safe.x, y: safe.y, angle: base.a + randRange(-0.14, 0.14) };
+  }
+  return pickMoundTarget();
+}
+
+function spawnClipFlight(ox, oy, tx, ty, endAngle, flightDur = 0.42, scale = 0.98) {
   S.activeClips.push({
-    x: originX,
-    y: originY,
-    vx,
-    vy,
-    tx: targetX,
-    ty: targetY,
-    angle: randRange(0, Math.PI * 2),
-    va: randRange(-9, 9),
-    scale: scale * randRange(0.88, 1.12),
-    life: 0,
-    maxLife: randRange(0.42, 0.78),
+    ox, oy,
+    x: ox, y: oy,
+    tx, ty,
+    arcH: randRange(18, 48),
+    angle0: randRange(0, Math.PI * 2),
+    angle1: endAngle,
+    scale: scale * randRange(0.94, 1.06),
+    t: 0,
+    dur: flightDur * randRange(0.88, 1.12),
   });
 }
 
-function spawnManualBurst(cx, cy, count = 2) {
-  for (let i = 0; i < count; i++) {
-    const ang = randRange(0, Math.PI * 2);
-    const ringR = randRange(198, 268);
-    const tx = Math.max(45, Math.min(735, BTN_MAIN.x + Math.cos(ang) * ringR));
-    const ty = Math.min(H - 36, Math.max(145, BTN_MAIN.y + Math.sin(ang) * ringR));
-    spawnClip(
-      BTN_MAIN.x + Math.cos(ang) * 165,
-      BTN_MAIN.y + Math.sin(ang) * 165,
-      (tx - BTN_MAIN.x) * 1.15,
-      (ty - BTN_MAIN.y) * 1.15 - 35,
-      tx,
-      ty,
-      1.05
-    );
-  }
-}
-
-function spawnFactoryClip(armIndex) {
-  const rowY = ROW_Y0 + armIndex * ROW_GAP + ROW_H * 0.5;
-  const ox = ROW_X + 180 + randRange(-25, 35);
-  const oy = rowY + randRange(-12, 12);
-  // Pile heavily in lower-center mound (420..760, 485..705) just like study/sheet.jpg
-  let tx = randRange(415, 765);
-  let ty = randRange(485, 705);
-  if (rand() < 0.25) {
-    const ang = randRange(-Math.PI * 0.45, Math.PI * 0.85);
-    const rr = randRange(205, 290);
-    tx = Math.max(48, Math.min(745, BTN_MAIN.x + Math.cos(ang) * rr));
-    ty = Math.max(135, Math.min(698, BTN_MAIN.y + Math.sin(ang) * rr));
-  }
-  spawnClip(ox, oy, (tx - ox) * 2.05, (ty - oy) * 2.05 - 35, tx, ty, 1.02);
-}
-
-function addClickEffect(x, y) {
+function triggerClickFeedback(x, y) {
   S.cursor.tx = x;
   S.cursor.ty = y;
   S.cursor.clickAnim = 1.0;
   S.ripples.push({ x, y, t: 0 });
 }
 
+// ---------------------------------------------------------------------------
+// Core Player Operations
+// ---------------------------------------------------------------------------
+function nextSequentialIndex() {
+  for (let i = 0; i < UPGRADES.length; i++) {
+    if (!UPGRADES[i].bought) return i;
+  }
+  return -1;
+}
+
+function isUpgradeValid(index) {
+  const u = UPGRADES[index];
+  if (!u || u.bought) return false;
+  if (S.phase === 'endB' && index === 5) return false;
+  return S.clips >= u.cost;
+}
+
 function doMakeClip(clickX, clickY) {
-  if (S.phase !== 'make' && S.phase !== 'auto') return;
+  if (S.paused) return;
+  if (S.phase !== 'make' && S.phase !== 'auto' && S.phase !== 'endB') return;
   if (S.buttonsLeft <= 0) return;
   ensureAudio();
-  const cx = clickX ?? (BTN_MAIN.x + randRange(-38, 38));
-  const cy = clickY ?? (BTN_MAIN.y + randRange(-28, 28));
-  // Manual click yield scales mildly with human buttons still active so early clicking is snappy
-  const gain = 1 + (6 - S.buttonsLeft) * 2;
+
+  // Offset keyboard clicks slightly below/around center lettering so MAKE CLIP stays crisp
+  const ang = randRange(0.35, 2.75);
+  const rad = randRange(42, 92);
+  const cx = clickX ?? (BTN_MAIN.x + Math.cos(ang) * rad);
+  const cy = clickY ?? (BTN_MAIN.y + Math.sin(ang) * rad * 0.65 + 24);
+
+  if (S.t - S.lastManualClickT < 0.35) {
+    S.clickCombo = Math.min(6, S.clickCombo + 1);
+  } else {
+    S.clickCombo = 0;
+  }
+  S.lastManualClickT = S.t;
+
+  const boughtCount = 6 - S.buttonsLeft;
+  const gain = 1 + (S.clickCombo >> 1) + boughtCount * 3;
   S.clips += gain;
-  S.money += gain * 0.25;
   S.btnPress = 1.0;
-  addClickEffect(cx, cy);
-  spawnManualBurst(cx, cy, 2);
-  sfxWireClick(randRange(0.94, 1.12), 0.085);
+  S.hitStop = Math.max(S.hitStop, 0.010);
+  triggerClickFeedback(cx, cy);
+
+  const spawnN = S.marginClipCount < 18 ? 2 : 1;
+  for (let k = 0; k < spawnN; k++) {
+    const dest = pickManualDeskTarget();
+    spawnClipFlight(
+      cx + randRange(-20, 20),
+      cy + randRange(-16, 16),
+      dest.x,
+      dest.y,
+      dest.angle,
+      0.40,
+      0.98
+    );
+  }
+  sfxWireSnap(randRange(0.95, 1.14) + S.clickCombo * 0.02, 0.08, -0.25);
 }
 
 function doBuyUpgrade(index) {
+  if (S.paused) return false;
   if (S.phase !== 'make' && S.phase !== 'auto') return false;
   const u = UPGRADES[index];
   if (!u || u.bought) return false;
-  // Require sequential or affordable purchase
   if (S.clips < u.cost) return false;
+
   ensureAudio();
+  const ry = ROW_Y0 + index * ROW_GAP + ROW_H * 0.5;
+  triggerClickFeedback(ROW_X + 195, ry + 6);
+
+  // Law 10: Irreversible final handover (CEO AI -> 0/6 buttons left) requires 2-step safety unlatch
+  if (index === 5 && S.buttonsLeft === 1 && !S.ceoArmed) {
+    S.ceoArmed = true;
+    S.hitStop = 0.024;
+    sfxSolenoidStamp(index, true);
+    return true;
+  }
+
   S.clips -= u.cost;
   u.bought = true;
   u.buyT = S.t;
+  u.stampAnim = 1.0;
+  S.ceoArmed = false;
+  S.hitStop = 0.032; // Tactile mechanical stamp hit-stop
   S.rate = UPGRADES.reduce((acc, item) => acc + (item.bought ? item.rate : 0), 0);
   S.buttonsLeft = UPGRADES.filter(item => !item.bought).length;
 
-  const ry = ROW_Y0 + index * ROW_GAP + ROW_H * 0.5;
-  addClickEffect(ROW_X + 220, ry);
-  sfxBuyUpgrade(index);
+  sfxSolenoidStamp(index, false);
 
-  // Burst of freshly bent clips when arm switches on
-  for (let k = 0; k < 7; k++) spawnFactoryClip(index);
+  for (let k = 0; k < 6; k++) {
+    const dest = pickMoundTarget();
+    spawnClipFlight(ROW_X + 215, ry, dest.x, dest.y, dest.angle, 0.42, 0.98);
+  }
 
   if (S.buttonsLeft === 0) {
     S.phase = 'watch';
     S.watchT = 0;
-    sfxEndChord(false);
+    sfxResolutionChord(false);
   } else {
     S.phase = 'auto';
   }
   return true;
 }
 
-function doRefuseLast() {
+function doKeepHand() {
+  if (S.paused) return;
   if (S.phase === 'auto' && S.buttonsLeft === 1) {
     ensureAudio();
+    S.ceoArmed = false;
     S.phase = 'endB';
     S.endT = 0;
-    sfxEndChord(true);
+    S.hitStop = 0.028;
+    triggerClickFeedback(KEEP_BTN.x + KEEP_BTN.w * 0.5, KEEP_BTN.y + KEEP_BTN.h * 0.5);
+    sfxResolutionChord(true);
   }
 }
 
-// Human micro-buttons along bottom-left (each removed when its corresponding AI upgrade is bought)
-function doHumanSubButton(index) {
-  if (S.phase !== 'make' && S.phase !== 'auto') return;
-  if (UPGRADES[index]?.bought) return;
-  if (index === 5) {
-    doMakeClip();
-    return;
+function togglePause() {
+  if (S.phase === 'auto' || S.phase === 'watch') {
+    ensureAudio();
+    S.paused = !S.paused;
+    bgm.volume = S.paused ? 0.08 : 0.34;
+    sfxWireSnap(S.paused ? 0.65 : 1.15, 0.06, 0);
   }
-  ensureAudio();
-  const bonus = Math.max(2, Math.floor(S.rate * 0.08) + 2);
-  S.clips += bonus;
-  S.money += bonus * 0.3;
-  const bx = 76 + index * 96 + 42;
-  const by = 626;
-  addClickEffect(bx, by);
-  spawnManualBurst(BTN_MAIN.x + randRange(-40, 40), BTN_MAIN.y + randRange(-40, 40), 2);
-  sfxWireClick(1.22, 0.07);
 }
 
-// Input handling: keyboard + pointer mapped to 1280x720
+// ---------------------------------------------------------------------------
+// Input Mapping (Pointer + Keyboard Parity)
+// ---------------------------------------------------------------------------
 function clientToCanvas(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -430,94 +718,101 @@ canvas.addEventListener('pointerdown', e => {
   S.cursor.y = S.cursor.ty = p.y;
 
   if (S.phase === 'title') {
-    // Check HOW TO PLAY toggle
-    if (p.x > 520 && p.x < 760 && p.y > 550 && p.y < 605) {
-      S.howToOpen = !S.howToOpen;
-      return;
-    }
-    resetGame('make');
-    return;
-  }
-
-  if (S.phase === 'endA' || S.phase === 'endB') {
-    if (S.endT > 0.6) resetGame('make');
-    return;
-  }
-
-  if (S.phase === 'watch') return;
-
-  // Check Refuse button when 1 button left
-  if (S.phase === 'auto' && S.buttonsLeft === 1) {
-    if (p.x >= 74 && p.x <= 515 && p.y >= 565 && p.y <= 604) {
-      doRefuseLast();
-      return;
-    }
-  }
-
-  // Check 6 upgrade rows on the right
-  for (let i = 0; i < UPGRADES.length; i++) {
-    const ry = ROW_Y0 + i * ROW_GAP;
-    if (p.x >= ROW_X && p.x <= ROW_X + ROW_W && p.y >= ry && p.y <= ry + ROW_H) {
-      doBuyUpgrade(i);
-      return;
-    }
-  }
-
-  // Check 6 human decision pills near bottom-left
-  for (let i = 0; i < 6; i++) {
-    const bx = 76 + i * 96, by = 610, bw = 88, bh = 30;
-    if (p.x >= bx && p.x <= bx + bw && p.y >= by && p.y <= by + bh) {
-      doHumanSubButton(i);
-      return;
-    }
-  }
-
-  // Check giant MAKE CLIP circle
-  const dx = p.x - BTN_MAIN.x, dy = p.y - BTN_MAIN.y;
-  if (dx * dx + dy * dy <= (BTN_MAIN.r + 18) * (BTN_MAIN.r + 18)) {
-    doMakeClip(p.x, p.y);
-  }
-});
-
-addEventListener('keydown', e => {
-  if (['Space', 'ArrowUp', 'ArrowDown', 'Enter'].includes(e.code)) e.preventDefault();
-  ensureAudio();
-
-  if (S.phase === 'title') {
-    if (e.code === 'Enter' || e.code === 'Space') resetGame('make');
-    if (e.code === 'KeyH') S.howToOpen = !S.howToOpen;
-    return;
-  }
-
-  if (S.phase === 'endA' || S.phase === 'endB') {
-    if ((e.code === 'Enter' || e.code === 'KeyR' || e.code === 'Space') && S.endT > 0.6) {
+    if (p.x >= 470 && p.x <= 810 && p.y >= 438 && p.y <= 526) {
       resetGame('make');
     }
     return;
   }
 
-  if (e.code === 'Space') {
+  if ((S.phase === 'endA' || S.phase === 'endB' || S.paused) && p.x >= 1080 && p.y >= 655) {
+    resetGame('make');
+    return;
+  }
+
+  if ((S.phase === 'auto' || S.phase === 'watch') && p.x >= 72 && p.x <= 165 && p.y >= 62 && p.y <= 104) {
+    togglePause();
+    return;
+  }
+
+  if (S.paused || S.phase === 'watch' || S.phase === 'endA') return;
+
+  if (S.phase === 'auto' && S.buttonsLeft === 1) {
+    if (p.x >= KEEP_BTN.x && p.x <= KEEP_BTN.x + KEEP_BTN.w && p.y >= KEEP_BTN.y && p.y <= KEEP_BTN.y + KEEP_BTN.h) {
+      doKeepHand();
+      return;
+    }
+  }
+
+  if (S.phase === 'make' || S.phase === 'auto') {
+    for (let i = 0; i < UPGRADES.length; i++) {
+      const ry = ROW_Y0 + i * ROW_GAP;
+      if (p.x >= ROW_X && p.x <= ROW_X + ROW_W && p.y >= ry && p.y <= ry + ROW_H) {
+        if (isUpgradeValid(i)) doBuyUpgrade(i);
+        return;
+      }
+    }
+  }
+
+  const dx = p.x - BTN_MAIN.x, dy = p.y - BTN_MAIN.y;
+  if (dx * dx + dy * dy <= (BTN_MAIN.r + 8) * (BTN_MAIN.r + 8)) {
+    doMakeClip(p.x, p.y);
+  }
+});
+
+addEventListener('keydown', e => {
+  if (['Space', 'Enter', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+  ensureAudio();
+
+  if (S.phase === 'title') {
+    if (e.code === 'Enter' || e.code === 'Space') resetGame('make');
+    return;
+  }
+
+  if (e.code === 'KeyP') {
+    togglePause();
+    return;
+  }
+
+  if (e.code === 'KeyR') {
+    if (S.t > 0.25 || S.clips > 0) {
+      bgm.volume = 0.34;
+      resetGame('make');
+    }
+    return;
+  }
+
+  if (S.paused) return;
+
+  if (e.code === 'KeyK') {
+    doKeepHand();
+    return;
+  }
+
+  if (e.code === 'Space' || (e.code === 'Enter' && (S.phase === 'make' || S.phase === 'endB'))) {
     doMakeClip();
   } else if (e.code >= 'Digit1' && e.code <= 'Digit6') {
     const idx = parseInt(e.code.slice(5), 10) - 1;
     doBuyUpgrade(idx);
-  } else if (e.code === 'KeyR') {
-    doRefuseLast();
   }
 });
 
-// Expose read-only state for play.mjs verification
+// Expose live state for play.mjs & verification
 window.__game = {
   get state() {
+    const nextIdx = nextSequentialIndex();
     return {
       phase: S.phase,
-      t: S.t,
-      watchT: S.watchT,
+      voidState: getVoidState(),
+      paused: S.paused,
+      ceoArmed: S.ceoArmed,
+      t: +S.t.toFixed(3),
+      watchT: +S.watchT.toFixed(3),
       clips: Math.floor(S.clips),
-      money: +S.money.toFixed(2),
       rate: S.rate,
       buttonsLeft: S.buttonsLeft,
-      saturation: +S.saturation.toFixed(3),
+      settledClips: S.settledCount,
+      saturation: +(1 - S.drain).toFixed(3),
+      greyBlend: +S.drain.toFixed(3),
       mainButton: { x: BTN_MAIN.x, y: BTN_MAIN.y, r: BTN_MAIN.r, active: S.buttonsLeft > 0 },
       upgrades: UPGRADES.map((u, i) => ({
         index: i + 1,
@@ -528,7 +823,10 @@ window.__game = {
         cost: u.cost,
         rate: u.rate,
         bought: u.bought,
-        affordable: !u.bought && S.clips >= u.cost,
+        valid: isUpgradeValid(i),
+        affordable: isUpgradeValid(i),
+        armed: i === 5 ? S.ceoArmed : false,
+        nextUp: i === nextIdx,
         x: ROW_X + ROW_W / 2,
         y: ROW_Y0 + i * ROW_GAP + ROW_H / 2,
       })),
@@ -536,465 +834,715 @@ window.__game = {
   },
 };
 
-function lerpColor(hexA, hexB, t) {
-  const a = parseInt(hexA.slice(1), 16);
-  const b = parseInt(hexB.slice(1), 16);
-  const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
-  const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
-  const r = Math.round(ar + (br - ar) * t);
-  const g = Math.round(ag + (bg - ag) * t);
-  const bl = Math.round(ab + (bb - ab) * t);
-  return `rgb(${r},${g},${bl})`;
+// ---------------------------------------------------------------------------
+// Sculptural Industrial Articulated Auto-Bender Turret & Arms (matching f_014 & f_027!)
+// Builds the exact 3-tier heavy silhouette of gameplay.mp4 on the right margin
+// (diagonal arched upper boom, centerpiece multi-spur-gear horizontal head,
+// and muscular lower pedestal turret arm, bolstered by secondary actuators).
+// ---------------------------------------------------------------------------
+const ARM_CONFIGS = [
+  // 0: Auto-bender — sweeping diagonal upper boom (shoulder high at y=68 -> reaches down-left to y=235 like f_014 & f_027!)
+  { baseX: 1254, baseY: 196, elbX: 1152, elbY: 66,  tipX: 998, tipY: 238, w0: 38, w1: 24, speed: 1.55, style: 'upper_diag', cable: true  },
+  // 1: Sales bot — compact tucked pneumatic auxiliary bender behind upper boom
+  { baseX: 1278, baseY: 256, elbX: 1172, elbY: 196, tipX: 1022, tipY: 292, w0: 26, w1: 17, speed: 1.85, style: 'aux',       cable: false },
+  // 2: Hiring AI — ICONIC centerpiece horizontal gear-train arm with large meshing brushed-steel spur gears (f_027.jpg!)
+  { baseX: 1270, baseY: 348, elbX: 1168, elbY: 344, tipX: 984, tipY: 346, w0: 36, w1: 24, speed: 2.10, style: 'gear_hero', cable: true  },
+  // 3: Board AI — massive lower vertical pedestal turret arm (rises from (1216,645) -> big shoulder at (1192,462) -> jaws at (975,522)!)
+  { baseX: 1216, baseY: 642, elbX: 1192, elbY: 462, tipX: 978, tipY: 522, w0: 44, w1: 28, speed: 1.95, style: 'turret_low', cable: false },
+  // 4: Strategy AI — mid-lower precision linkage tucked behind centerpiece & lower turret
+  { baseX: 1278, baseY: 438, elbX: 1168, elbY: 422, tipX: 1018, tipY: 432, w0: 24, w1: 16, speed: 2.35, style: 'aux',       cable: false },
+  // 5: CEO AI — lower-base high-speed feeder arm sweeping toward mound
+  { baseX: 1238, baseY: 676, elbX: 1142, elbY: 612, tipX: 968, tipY: 626, w0: 30, w1: 19, speed: 2.60, style: 'aux_low',   cable: true  },
+];
+
+function computeArmPose(index) {
+  const cfg = ARM_CONFIGS[index];
+  const u = UPGRADES[index];
+  const slideT = u.buyT >= 0 ? clamp((S.t - u.buyT) / 0.44, 0, 1) : 0;
+  const ease = 1 - Math.pow(1 - slideT, 3);
+  const retract = (1 - ease) * 310;
+
+  const cyc = S.arms[index].cycle;
+  const stroke = Math.sin(cyc * Math.PI * 2);
+  const reach = Math.max(0, Math.sin(cyc * Math.PI));
+
+  const bx = cfg.baseX + retract;
+  const by = cfg.baseY;
+  const ex = cfg.elbX + retract - reach * 14;
+  const ey = cfg.elbY + stroke * 6;
+  const tx = cfg.tipX + retract - reach * 42;
+  const ty = cfg.tipY + stroke * 11;
+  const pinch = clamp(1 - Math.abs(cyc - 0.54) * 5.2, 0, 1);
+
+  return { bx, by, ex, ey, tx, ty, pinch, ease, cfg };
 }
 
-// Draw articulated industrial robotic auto-bender arm on right margin (matching study/sheet.jpg)
-function drawRoboticArm(g, index, timeSinceBuy, nowT) {
-  const slideIn = Math.min(1, timeSinceBuy / 0.45);
-  const ease = 1 - Math.pow(1 - slideIn, 3);
-  const rowY = ROW_Y0 + index * ROW_GAP + ROW_H * 0.5;
-
-  // Base mounted along right bezel
-  const baseX = W + 62 * (1 - ease) - 8;
-  const baseY = rowY + (index % 2 === 0 ? 18 : -14);
-
-  // Rhythmic bending cycle per arm
-  const phase = nowT * (4.2 + index * 0.65) + index * 1.7;
-  const reach = 0.5 + 0.5 * Math.sin(phase);
-  const pinch = Math.max(0, Math.sin(phase * 2));
-
-  // Elbow and wrist targets reaching over upgrade box and toward paperclip mound
-  const elbowX = baseX - 118 - reach * 22;
-  const elbowY = baseY - 38 + (index % 2 === 0 ? -12 : 20) + Math.cos(phase) * 8;
-  const tipX = baseX - 245 - reach * 52 - (index >= 3 ? 25 : 0);
-  const tipY = rowY + Math.sin(phase * 1.0) * 14 + (index >= 4 ? 18 : 0);
-
+function drawSpurGear(g, x, y, radius, teeth, angle, bright = true) {
   g.save();
-  // Drop shadow on desk
-  g.strokeStyle = 'rgba(0,0,0,0.22)';
-  g.lineWidth = 22;
-  g.lineCap = 'round';
+  g.translate(x, y);
+  g.rotate(angle);
+  g.fillStyle = bright ? '#b8c0c4' : '#5e666a';
+  g.strokeStyle = '#14181a';
+  g.lineWidth = 2.0;
+
   g.beginPath();
-  g.moveTo(baseX + 6, baseY + 12);
-  g.lineTo(elbowX + 6, elbowY + 12);
-  g.lineTo(tipX + 6, tipY + 12);
+  const step = (Math.PI * 2) / teeth;
+  for (let i = 0; i < teeth; i++) {
+    const a0 = i * step;
+    g.moveTo(Math.cos(a0 - step * 0.25) * (radius - 2), Math.sin(a0 - step * 0.25) * (radius - 2));
+    g.lineTo(Math.cos(a0 - step * 0.14) * (radius + 5.2), Math.sin(a0 - step * 0.14) * (radius + 5.2));
+    g.lineTo(Math.cos(a0 + step * 0.14) * (radius + 5.2), Math.sin(a0 + step * 0.14) * (radius + 5.2));
+    g.lineTo(Math.cos(a0 + step * 0.25) * (radius - 2), Math.sin(a0 + step * 0.25) * (radius - 2));
+  }
+  g.closePath();
+  g.fill();
   g.stroke();
 
-  // Base housing + exposed spur gears
-  g.fillStyle = '#232627';
-  g.fillRect(baseX - 22, baseY - 28, 34, 56);
-  g.strokeStyle = '#111314';
-  g.lineWidth = 2.5;
-  g.strokeRect(baseX - 22, baseY - 28, 34, 56);
+  g.beginPath();
+  g.arc(0, 0, radius - 1.5, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
 
-  // Rotating gear wheel at elbow/shoulder
-  const drawGear = (gx, gy, gr, ang) => {
-    g.save();
-    g.translate(gx, gy);
-    g.rotate(ang);
-    g.fillStyle = '#8b9294';
-    g.strokeStyle = '#1b1d1e';
-    g.lineWidth = 2;
-    for (let t = 0; t < 8; t++) {
-      g.rotate(Math.PI / 4);
-      g.fillRect(-3, -gr - 4, 6, 6);
+  // Machined circular lightening holes matching f_027.jpg
+  if (radius >= 17) {
+    g.fillStyle = '#202528';
+    const holes = 6;
+    for (let h = 0; h < holes; h++) {
+      const ha = (h / holes) * Math.PI * 2;
+      g.beginPath();
+      g.arc(Math.cos(ha) * (radius * 0.54), Math.sin(ha) * (radius * 0.54), radius * 0.17, 0, Math.PI * 2);
+      g.fill();
     }
-    g.beginPath();
-    g.arc(0, 0, gr, 0, Math.PI * 2);
-    g.fill();
-    g.stroke();
-    g.beginPath();
-    g.fillStyle = '#2c3032';
-    g.arc(0, 0, gr * 0.42, 0, Math.PI * 2);
-    g.fill();
-    g.restore();
-  };
+  }
 
-  drawGear(baseX - 18, baseY + 18, 13, nowT * 3.2 + index);
-
-  // Upper arm strut
-  g.strokeStyle = '#25292b';
-  g.lineWidth = 18;
-  g.lineCap = 'round';
+  g.fillStyle = '#2b3135';
   g.beginPath();
-  g.moveTo(baseX - 10, baseY);
-  g.lineTo(elbowX, elbowY);
+  g.arc(0, 0, radius * 0.26, 0, Math.PI * 2);
+  g.fill();
   g.stroke();
-  // Specular edge on upper strut
-  g.strokeStyle = '#6c7477';
-  g.lineWidth = 4;
-  g.beginPath();
-  g.moveTo(baseX - 10, baseY - 4);
-  g.lineTo(elbowX, elbowY - 4);
-  g.stroke();
+  g.restore();
+}
 
-  // Forearm strut
-  g.strokeStyle = '#1e2224';
-  g.lineWidth = 14;
-  g.beginPath();
-  g.moveTo(elbowX, elbowY);
-  g.lineTo(tipX, tipY);
-  g.stroke();
-  g.strokeStyle = '#7e878a';
-  g.lineWidth = 3;
-  g.beginPath();
-  g.moveTo(elbowX, elbowY - 3);
-  g.lineTo(tipX, tipY - 3);
-  g.stroke();
+function drawCastSegment(g, x0, y0, x1, y1, w0, w1, chromeSleeve = true) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len = Math.hypot(dx, dy) || 1;
+  const ang = Math.atan2(dy, dx);
 
-  // Elbow gear + joint rivet
-  drawGear(elbowX, elbowY, 11, -nowT * 4.5 - index);
-
-  // Dual-prong silver pincer claw at tip
-  const clawAngle = Math.atan2(tipY - elbowY, tipX - elbowX);
   g.save();
-  g.translate(tipX, tipY);
-  g.rotate(clawAngle);
-  const spread = 0.16 + (1 - pinch) * 0.34;
-  for (const dir of [-1, 1]) {
+  g.translate(x0, y0);
+  g.rotate(ang);
+
+  // Parallel hydraulic tie-rod + cylinder
+  g.strokeStyle = '#9aa4a8';
+  g.lineWidth = 4.5;
+  g.beginPath();
+  g.moveTo(12, w0 * 0.58);
+  g.lineTo(len - 12, w1 * 0.58);
+  g.stroke();
+
+  g.fillStyle = '#252b2e';
+  g.strokeStyle = '#111416';
+  g.lineWidth = 1.8;
+  g.fillRect(10, w0 * 0.58 - 5.5, len * 0.50, 11);
+  g.strokeRect(10, w0 * 0.58 - 5.5, len * 0.50, 11);
+
+  // Main heavy cast-gunmetal housing
+  g.beginPath();
+  g.moveTo(0, -w0 * 0.5);
+  g.lineTo(len, -w1 * 0.5);
+  g.lineTo(len, w1 * 0.5);
+  g.lineTo(0, w0 * 0.5);
+  g.closePath();
+  const grad = g.createLinearGradient(0, -w0 * 0.5, 0, w0 * 0.5);
+  grad.addColorStop(0, '#5a6368');
+  grad.addColorStop(0.24, '#2d3337');
+  grad.addColorStop(0.78, '#171b1d');
+  grad.addColorStop(1, '#384044');
+  g.fillStyle = grad;
+  g.fill();
+  g.strokeStyle = '#0e1113';
+  g.lineWidth = 2.2;
+  g.stroke();
+
+  // Bright machined chrome piston sleeve mid-section (like upper & lower arms in f_027.jpg!)
+  if (chromeSleeve && len > 95) {
+    const sx = len * 0.36, sw = len * 0.34, sh = (w0 + w1) * 0.24;
+    const cGrad = g.createLinearGradient(0, -sh, 0, sh);
+    cGrad.addColorStop(0, '#eef3f5');
+    cGrad.addColorStop(0.38, '#8d979c');
+    cGrad.addColorStop(0.8, '#2b3236');
+    cGrad.addColorStop(1, '#6f797e');
+    g.fillStyle = cGrad;
+    g.fillRect(sx, -sh, sw, sh * 2);
+    g.strokeRect(sx, -sh, sw, sh * 2);
+  }
+
+  // Top specular bevel highlight
+  g.strokeStyle = 'rgba(215, 226, 232, 0.48)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(10, -w0 * 0.34);
+  g.lineTo(len - 10, -w1 * 0.34);
+  g.stroke();
+
+  g.restore();
+}
+
+function drawIndustrialRig(g) {
+  if (S.buttonsLeft === 6) return;
+
+  // Heavy lower-right stepped cast-iron pedestal base (matching f_014 & f_027!)
+  const firstT = Math.min(...UPGRADES.filter(u => u.bought && u.buyT >= 0).map(u => u.buyT));
+  const slide = 1 - Math.pow(1 - clamp((S.t - firstT) / 0.48, 0, 1), 3);
+  const px = 1218 + (1 - slide) * 140;
+
+  if (S.buttonsLeft <= 4) {
     g.save();
-    g.rotate(dir * spread);
-    g.strokeStyle = '#b9c1c4';
-    g.lineWidth = 4.5;
+    g.fillStyle = 'rgba(0,0,0,0.26)';
     g.beginPath();
-    g.moveTo(0, 0);
-    g.lineTo(20, dir * 5);
-    g.lineTo(30, dir * 1);
+    g.ellipse(px - 10, 710, 82, 22, 0, 0, Math.PI * 2);
+    g.fill();
+
+    const tGrad = g.createLinearGradient(px - 64, 0, px + 64, 0);
+    tGrad.addColorStop(0, '#161a1c');
+    tGrad.addColorStop(0.3, '#434b50');
+    tGrad.addColorStop(0.65, '#22272a');
+    tGrad.addColorStop(1, '#101315');
+    g.fillStyle = tGrad;
+    g.strokeStyle = '#0c0e10';
+    g.lineWidth = 2.5;
+    g.fillRect(px - 62, 686, 124, 38);
+    g.strokeRect(px - 62, 686, 124, 38);
+    g.fillRect(px - 46, 636, 92, 52);
+    g.strokeRect(px - 46, 636, 92, 52);
+
+    // Turret bearing hub at (px, 650)
+    g.fillStyle = '#293034';
+    g.beginPath();
+    g.arc(px - 4, 650, 28, 0, Math.PI * 2);
+    g.fill();
     g.stroke();
+    g.fillStyle = '#566065';
+    g.beginPath();
+    g.arc(px - 4, 650, 13, 0, Math.PI * 2);
+    g.fill();
     g.restore();
   }
-  g.fillStyle = '#33393b';
-  g.beginPath();
-  g.arc(0, 0, 6.5, 0, Math.PI * 2);
-  g.fill();
 
-  // Bright contact spark when pincer snaps closed
-  if (pinch > 0.92) {
-    g.fillStyle = '#ffffff';
+  // Depth-sorted arm pass: tucked auxiliary linkages behind, sculptural hero arms in front
+  const order = [1, 4, 5, 0, 3, 2];
+  for (const idx of order) {
+    const u = UPGRADES[idx];
+    if (!u.bought) continue;
+    const arm = S.arms[idx];
+    const { bx, by, ex, ey, tx, ty, pinch, cfg } = computeArmPose(idx);
+    const isAux = cfg.style === 'aux' || cfg.style === 'aux_low';
+
+    g.save();
+    if (isAux) g.globalAlpha = 0.92;
+
+    // 1. Soft desk cast shadow beneath entire assembly
+    g.strokeStyle = 'rgba(8, 12, 14, 0.22)';
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.lineWidth = cfg.w0 * 0.82;
     g.beginPath();
-    g.arc(28, 0, 5.5, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = 'rgba(255,255,255,0.85)';
-    g.lineWidth = 2;
-    for (let k = 0; k < 4; k++) {
-      const sa = k * (Math.PI / 2) + nowT * 9;
+    g.moveTo(bx + 7, by + 16);
+    g.lineTo(ex + 7, ey + 16);
+    g.lineTo(tx + 7, ty + 16);
+    g.stroke();
+
+    // 2. Flexible rubber conduit looping over joint
+    if (cfg.cable) {
+      g.strokeStyle = '#131618';
+      g.lineWidth = 4.5;
       g.beginPath();
-      g.moveTo(28 + Math.cos(sa) * 4, Math.sin(sa) * 4);
-      g.lineTo(28 + Math.cos(sa) * 13, Math.sin(sa) * 13);
+      g.moveTo(bx + 8, by - 14);
+      g.quadraticCurveTo((bx + ex) * 0.5 + 18, Math.min(by, ey) - 36, ex + 4, ey - 12);
       g.stroke();
     }
+
+    // 3. Shoulder turret housing
+    g.fillStyle = '#1e2326';
+    g.strokeStyle = '#0d1012';
+    g.lineWidth = 2.6;
+    g.beginPath();
+    g.arc(bx, by, cfg.w0 * 0.82, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+
+    // 4. Cast gunmetal + chrome-sleeve boom segments
+    drawCastSegment(g, bx, by, ex, ey, cfg.w0, cfg.w1 * 1.15, !isAux);
+    drawCastSegment(g, ex, ey, tx, ty, cfg.w1 * 1.1, cfg.w1 * 0.72, !isAux);
+
+    // Concentric machined shoulder bearing
+    g.fillStyle = '#2d3438';
+    g.beginPath();
+    g.arc(bx - 3, by, cfg.w0 * 0.52, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#60696e';
+    g.beginPath();
+    g.arc(bx - 3, by, cfg.w0 * 0.22, 0, Math.PI * 2);
+    g.fill();
+
+    // 5. Joint & Gear Clusters (exact visual match to f_027.jpg!)
+    const rot = arm.cycle * Math.PI * 2;
+    if (cfg.style === 'gear_hero') {
+      // Big 3-gear brushed-steel cluster on right + medium spur gear mid-arm (f_027 centerpiece!)
+      drawSpurGear(g, ex + 34, ey - 24, 28, 16, rot, true);
+      drawSpurGear(g, ex + 8,  ey + 2,  21, 12, -rot * (16 / 12) + 0.2, true);
+      drawSpurGear(g, ex + 44, ey + 24, 24, 14, rot * (16 / 14) + 0.1, true);
+      const mx = ex * 0.42 + tx * 0.58;
+      const my = ey * 0.42 + ty * 0.58;
+      drawSpurGear(g, mx, my + 2, 22, 13, -rot * (16 / 13), true);
+    } else if (cfg.style === 'turret_low') {
+      // Heavy circular shoulder drum with inset dark gear (lower arm of f_027!)
+      g.fillStyle = '#262c30';
+      g.strokeStyle = '#101315';
+      g.lineWidth = 2.6;
+      g.beginPath();
+      g.arc(ex, ey, 30, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      drawSpurGear(g, ex, ey, 20, 12, -rot, false);
+    } else {
+      g.fillStyle = '#30373b';
+      g.strokeStyle = '#111416';
+      g.lineWidth = 2.4;
+      g.beginPath();
+      g.arc(ex, ey, cfg.w1 * 0.72, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.fillStyle = '#8d969b';
+      g.beginPath();
+      g.arc(ex, ey, 6, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    // 6. Serrated Dual-Jaw Steel Pincers + Gripped Paperclip + Crimp Spark
+    const wristAng = Math.atan2(ty - ey, tx - ex);
+    g.save();
+    g.translate(tx, ty);
+    g.rotate(wristAng);
+
+    if (arm.hasClip) {
+      g.save();
+      g.rotate(-wristAng);
+      drawClipStamp(g, Math.cos(wristAng) * 38, Math.sin(wristAng) * 38, wristAng + 0.34, 0.98, 1.0);
+      g.restore();
+    }
+
+    const jawOpen = 0.09 + (1 - pinch) * 0.34;
+    for (const dir of [-1, 1]) {
+      g.save();
+      g.rotate(dir * jawOpen);
+      g.fillStyle = '#b4bdc2';
+      g.strokeStyle = '#181c1e';
+      g.lineWidth = 2.1;
+      g.beginPath();
+      g.moveTo(2, dir * 2.5);
+      g.lineTo(24, dir * 10);
+      g.lineTo(44, dir * 2.4);
+      g.lineTo(42, dir * -0.6);
+      g.lineTo(22, dir * 4.2);
+      g.lineTo(2, dir * -2.2);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.restore();
+    }
+
+    g.fillStyle = '#2c3337';
+    g.strokeStyle = '#101315';
+    g.lineWidth = 2.1;
+    g.fillRect(-9, -10, 18, 20);
+    g.strokeRect(-9, -10, 18, 20);
+
+    if (arm.sparkT > 0) {
+      const sp = arm.sparkT / 0.12;
+      g.save();
+      g.translate(38, 0);
+      const rg = g.createRadialGradient(0, 0, 1, 0, 0, 20 * sp);
+      rg.addColorStop(0, `rgba(255,255,255,${sp})`);
+      rg.addColorStop(0.45, `rgba(235,245,255,${sp * 0.68})`);
+      rg.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = rg;
+      g.beginPath();
+      g.arc(0, 0, 20 * sp, 0, Math.PI * 2);
+      g.fill();
+
+      g.strokeStyle = `rgba(255,255,255,${sp * 0.92})`;
+      g.lineWidth = 2;
+      for (let k = 0; k < 6; k++) {
+        const sa = (k / 6) * Math.PI * 2 + S.t * 8;
+        g.beginPath();
+        g.moveTo(Math.cos(sa) * 3, Math.sin(sa) * 3);
+        g.lineTo(Math.cos(sa) * (10 + (1 - sp) * 8), Math.sin(sa) * (10 + (1 - sp) * 8));
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    g.restore();
+    g.restore();
   }
-  g.restore();
-  g.restore();
 }
 
-function update(dt) {
-  S.t += dt;
-
-  // Smooth cursor glide
-  const cLerp = 1 - Math.exp(-22 * dt);
+// ---------------------------------------------------------------------------
+// Simulation Step
+// ---------------------------------------------------------------------------
+function update(rawDt) {
+  const cLerp = 1 - Math.exp(-24 * rawDt);
   S.cursor.x += (S.cursor.tx - S.cursor.x) * cLerp;
   S.cursor.y += (S.cursor.ty - S.cursor.y) * cLerp;
-  S.cursor.clickAnim = Math.max(0, S.cursor.clickAnim - dt * 4.5);
-  S.btnPress = Math.max(0, S.btnPress - dt * 7.5);
+  S.cursor.clickAnim = Math.max(0, S.cursor.clickAnim - rawDt * 5.2);
+
+  if (S.hitStop > 0) {
+    S.hitStop = Math.max(0, S.hitStop - rawDt);
+    return;
+  }
+
+  const dt = S.paused ? 0 : rawDt;
+  S.t += dt;
+  S.btnPress = Math.max(0, S.btnPress - rawDt * 8.2);
 
   const boughtCount = 6 - S.buttonsLeft;
-  const targetSat = S.phase === 'endB' ? 0.32 : Math.max(0, 1 - Math.pow(boughtCount / 6, 0.95));
-  const targetGrey = S.phase === 'endB' ? 0.45 : Math.pow(boughtCount / 6, 1.65);
-  S.saturation += (targetSat - S.saturation) * (1 - Math.exp(-3.4 * dt));
-  S.greyBlend += (targetGrey - S.greyBlend) * (1 - Math.exp(-3.2 * dt));
+  const targetPos = S.phase === 'endB' ? 4.4 : boughtCount;
+  S.boughtVisualPos += (targetPos - S.boughtVisualPos) * (1 - Math.exp(-3.6 * rawDt));
+  S.drain = sampleScalar(DRAIN_STOPS, S.boughtVisualPos);
 
-  if (S.phase === 'make' || S.phase === 'auto' || S.phase === 'watch') {
+  if (audioUnlocked && !S.paused) {
+    const targetRate = 1.0 - S.drain * 0.06;
+    if (Math.abs(bgm.playbackRate - targetRate) > 0.005) {
+      bgm.playbackRate = targetRate;
+    }
+  }
+
+  for (const u of UPGRADES) {
+    u.stampAnim = Math.max(0, u.stampAnim - rawDt * 5.0);
+  }
+
+  if (!S.paused && (S.phase === 'make' || S.phase === 'auto' || S.phase === 'watch' || S.phase === 'endA' || S.phase === 'endB')) {
     if (S.rate > 0) {
-      const produced = S.rate * dt;
-      S.clips += produced;
-      S.money += produced * 0.22;
+      const rateMul = S.phase === 'endA' ? 2.2 : (S.phase === 'endB' ? 0.55 : 1.0);
+      S.clips += S.rate * rateMul * dt;
 
-      // Spawn physical paperclips proportional to active robotic arms
-      const clipsPerSecVisual = Math.min(48, boughtCount * 8.5);
-      S.autoSpawnCarry += clipsPerSecVisual * dt;
-      while (S.autoSpawnCarry >= 1) {
-        S.autoSpawnCarry -= 1;
-        const boughtIndices = UPGRADES.map((u, idx) => (u.bought ? idx : -1)).filter(idx => idx >= 0);
-        if (boughtIndices.length > 0) {
-          const armIdx = boughtIndices[(rand() * boughtIndices.length) | 0];
-          spawnFactoryClip(armIdx);
+      for (let i = 0; i < UPGRADES.length; i++) {
+        if (!UPGRADES[i].bought) continue;
+        const arm = S.arms[i];
+        const cfg = ARM_CONFIGS[i];
+        const prev = arm.cycle;
+        arm.cycle = (arm.cycle + dt * cfg.speed * (S.phase === 'endB' ? 0.65 : 1.0)) % 1.0;
+        arm.sparkT = Math.max(0, arm.sparkT - dt);
+
+        if (arm.cycle < prev) {
+          arm.hasClip = true;
+        }
+        if (prev < 0.54 && arm.cycle >= 0.54) {
+          arm.hasClip = false;
+          arm.sparkT = 0.12;
+          const pose = computeArmPose(i);
+          const wristAng = Math.atan2(pose.ty - pose.ey, pose.tx - pose.ex);
+          const jx = pose.tx + Math.cos(wristAng) * 38;
+          const jy = pose.ty + Math.sin(wristAng) * 38;
+          const burst = boughtCount >= 4 ? 3 : 2;
+          for (let b = 0; b < burst; b++) {
+            const dest = pickMoundTarget();
+            spawnClipFlight(jx, jy, dest.x, dest.y, dest.angle, 0.36 + b * 0.05, 0.98);
+          }
         }
       }
 
-      // Subtle rhythmic factory tick
-      S.tickSoundTimer += dt * (2 + boughtCount * 2.2);
+      S.tickSoundTimer += dt * (2.2 + boughtCount * 2.1);
       if (S.tickSoundTimer >= 1) {
         S.tickSoundTimer = 0;
-        sfxWireClick(0.68 + boughtCount * 0.04, 0.022);
+        sfxWireSnap(0.66 + boughtCount * 0.035, 0.02, 0.35);
       }
     }
   }
 
-  if (S.phase === 'watch') {
+  if (!S.paused && S.phase === 'watch') {
     S.watchT += dt;
-    // Let player/viewer watch autonomous greyscale factory for 4.0s (covers t=8s verify pair), then time-skip to endA
-    if (S.watchT >= 4.0) {
+    if (S.watchT >= 3.8) {
       S.phase = 'endA';
       S.endT = 0;
     }
-  } else if (S.phase === 'endA' || S.phase === 'endB') {
+  } else if (!S.paused && (S.phase === 'endA' || S.phase === 'endB')) {
     S.endT += dt;
-    if (S.phase === 'endA') {
-      S.clips += 4200000 * dt;
-    }
   }
 
-  // Smoothly roll displayed clip counter
-  S.displayClips += (S.clips - S.displayClips) * Math.min(1, dt * 16);
+  S.displayClips += (S.clips - S.displayClips) * Math.min(1, rawDt * 18);
 
-  // Update flying paperclips and bake settled clips onto pileCanvas
   for (let i = S.activeClips.length - 1; i >= 0; i--) {
     const c = S.activeClips[i];
-    c.life += dt;
-    const u = Math.min(1, c.life / c.maxLife);
-    c.vy += 260 * dt;
-    c.x += c.vx * dt * (1 - u * 0.65);
-    c.y += c.vy * dt * (1 - u * 0.65);
-    c.angle += c.va * dt * (1 - u * 0.8);
-    if (c.life >= c.maxLife) {
-      if (S.settledCount < 750) {
-        drawClipToCtx(pctx, c.x, c.y, c.angle, c.scale, 0.96);
+    c.t += dt;
+    const u = clamp(c.t / c.dur, 0, 1);
+    const ease = 1 - Math.pow(1 - u, 2.4);
+    c.x = c.ox + (c.tx - c.ox) * ease;
+    c.y = c.oy + (c.ty - c.oy) * ease - Math.sin(u * Math.PI) * c.arcH;
+    c.curAngle = c.angle0 + (c.angle1 - c.angle0) * ease;
+    if (u >= 1) {
+      if (S.settledCount < 680) {
+        drawClipStamp(pctx, c.tx, c.ty, c.angle1, c.scale, 1.0);
         S.settledCount++;
+        if (S.settledCount % 3 === 1) sfxClipSettle(0.015);
       }
       S.activeClips.splice(i, 1);
     }
   }
 
-  // Update click ripples
   for (let i = S.ripples.length - 1; i >= 0; i--) {
-    S.ripples[i].t += dt;
-    if (S.ripples[i].t > 0.35) S.ripples.splice(i, 1);
+    S.ripples[i].t += rawDt;
+    if (S.ripples[i].t > 0.26) S.ripples.splice(i, 1);
   }
 }
 
-function renderScene(g) {
-  // 1. Desk background blending from warm paper cream (#f2efe6) to cool industrial slate (#596164)
-  g.fillStyle = lerpColor(PALETTE.bg, '#586063', S.greyBlend);
+// ---------------------------------------------------------------------------
+// Rendering (VOIDBASTARD-TAO: Clean Tactile Desk, Zero HUD Clutter)
+// ---------------------------------------------------------------------------
+const grainCanvas = document.createElement('canvas');
+grainCanvas.width = 128;
+grainCanvas.height = 128;
+{
+  const gctx = grainCanvas.getContext('2d');
+  const gData = gctx.createImageData(128, 128);
+  for (let i = 0; i < gData.data.length; i += 4) {
+    const v = (rand() * 255) | 0;
+    gData.data[i] = v;
+    gData.data[i + 1] = v;
+    gData.data[i + 2] = v;
+    gData.data[i + 3] = 5;
+  }
+  gctx.putImageData(gData, 0, 0);
+}
+const grainPattern = ctx.createPattern(grainCanvas, 'repeat');
+
+function renderWorkspace(g) {
+  const deskTL = sampleStop(DESK_TOPLEFT_STOPS, S.boughtVisualPos);
+  const deskBR = sampleStop(DESK_BOTRIGHT_STOPS, S.boughtVisualPos);
+  const circleRgb = sampleStop(CIRCLE_STOPS, S.boughtVisualPos);
+
+  // 1. Directional overhead studio lighting across desk (even cream at t=2s -> cool shaded gunmetal-slate at t=8s!)
+  const deskGrad = g.createLinearGradient(0, 0, W, H);
+  deskGrad.addColorStop(0, rgbStr(deskTL));
+  deskGrad.addColorStop(1, rgbStr(deskBR));
+  g.fillStyle = deskGrad;
   g.fillRect(0, 0, W, H);
 
-  // Subtle desk grid / ruled paper texture that cools into factory steel seams
-  g.strokeStyle = `rgba(27, 27, 27, ${0.035 + S.greyBlend * 0.04})`;
-  g.lineWidth = 1;
-  for (let x = 64; x < W; x += 64) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
-  }
-  for (let y = 64; y < H; y += 64) {
-    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
-  }
-
-  // 2. Settled paperclip pile on desk (beneath UI text, overlapping desk & circle rim like sheet.jpg)
-  g.drawImage(pileCanvas, 0, 0);
-
-  // 3. Giant MAKE CLIP button (left-center)
+  // 2. Central MAKE CLIP Circle (cx=360, cy=360, r=184)
   const mainDead = S.buttonsLeft === 0;
-  const pressScale = 1 - S.btnPress * 0.045;
+  const pressScale = 1 - S.btnPress * 0.036;
   const r = BTN_MAIN.r * pressScale;
 
   g.save();
   g.translate(BTN_MAIN.x, BTN_MAIN.y);
   if (!mainDead) {
-    // Subtle tactile elevation shadow that shrinks as buttons are removed
-    const elev = (S.buttonsLeft / 6) * 10 * (1 - S.btnPress * 0.7);
-    g.fillStyle = 'rgba(20, 35, 65, 0.16)';
-    g.beginPath();
-    g.arc(0, elev + 3, r, 0, Math.PI * 2);
-    g.fill();
+    const elev = (1 - S.drain * 0.88) * 6 * (1 - S.btnPress * 0.8);
+    if (elev > 0.4) {
+      g.fillStyle = `rgba(18, 32, 58, ${(0.12 * (1 - S.drain * 0.7)).toFixed(3)})`;
+      g.beginPath();
+      g.arc(0, elev + 1.5, r, 0, Math.PI * 2);
+      g.fill();
+    }
   }
-
-  const circleColor = mainDead
-    ? '#575f62'
-    : lerpColor(PALETTE.acc, '#6c7c8c', Math.pow(1 - S.buttonsLeft / 6, 1.25));
-  g.fillStyle = circleColor;
+  g.fillStyle = rgbStr(circleRgb);
   g.beginPath();
   g.arc(0, 0, r, 0, Math.PI * 2);
   g.fill();
 
-  if (mainDead) {
-    // Recessed flat border
-    g.strokeStyle = 'rgba(25,28,30,0.45)';
-    g.lineWidth = 3;
-    g.stroke();
-  }
-
-  g.fillStyle = mainDead ? 'rgba(220,224,225,0.42)' : '#ffffff';
-  g.font = 'bold 34px "Courier New", Courier, monospace';
+  const labelAlpha = mainDead ? 0.34 : (1 - S.drain * 0.48);
+  g.fillStyle = `rgba(246, 248, 250, ${labelAlpha.toFixed(3)})`;
+  g.font = 'bold 36px "Courier New", Courier, monospace';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText('MAKE CLIP', 0, 2);
   g.restore();
 
-  // 4. Active flying paperclips (above circle so bursts fly across it like sheet.jpg frames 3-4)
-  for (const c of S.activeClips) {
-    drawClipToCtx(g, c.x, c.y, c.angle, c.scale, 1.0);
-  }
+  // 3. 6 Right-Column Upgrade Slots
+  const nextIdx = nextSequentialIndex();
+  const blueTagRgb = [
+    Math.round(47 + (58 - 47) * S.drain),
+    Math.round(111 + (74 - 111) * S.drain),
+    Math.round(216 + (92 - 216) * S.drain),
+  ];
 
-  // 5. Top-left Clip Counter (matching m2_main_ref.png & sheet.jpg)
-  const shownClips = Math.floor(S.displayClips + 0.001);
-  g.fillStyle = PALETTE.fg;
-  g.font = 'bold 44px "Courier New", Courier, monospace';
-  g.textAlign = 'center';
-  g.textBaseline = 'alphabetic';
-  g.fillText(`${shownClips.toLocaleString('en-US')} clips`, BTN_MAIN.x, 96);
-
-  if (S.rate > 0 || S.money > 0) {
-    g.font = 'bold 16px "Courier New", Courier, monospace';
-    g.fillStyle = 'rgba(27,27,27,0.68)';
-    const rateTxt = S.rate > 0 ? `+${S.rate.toLocaleString('en-US')}/sec  ·  ` : '';
-    g.fillText(`${rateTxt}$${Math.floor(S.money).toLocaleString('en-US')} rev`, BTN_MAIN.x, 124);
-  }
-
-  // 6. Bottom-left human decision keycaps + BUTTONS LEFT X/6
-  for (let i = 0; i < 6; i++) {
-    const u = UPGRADES[i];
-    const bx = 76 + i * 96, by = 612, bw = 88, bh = 28;
-    if (u.bought) {
-      g.fillStyle = 'rgba(55, 59, 60, 0.35)';
-      g.fillRect(bx, by + 2, bw, bh);
-      g.strokeStyle = 'rgba(27,27,27,0.22)';
-      g.lineWidth = 1.5;
-      g.strokeRect(bx, by + 2, bw, bh);
-      g.fillStyle = 'rgba(27,27,27,0.34)';
-      g.font = 'bold 11px "Courier New", Courier, monospace';
-      g.textAlign = 'center';
-      g.fillText(u.takes, bx + bw / 2, by + 20);
-      // Strike-through line showing removed choice
-      g.beginPath();
-      g.moveTo(bx + 8, by + 16);
-      g.lineTo(bx + bw - 8, by + 16);
-      g.stroke();
-    } else {
-      g.fillStyle = 'rgba(255,255,255,0.55)';
-      g.fillRect(bx, by, bw, bh);
-      g.strokeStyle = PALETTE.fg;
-      g.lineWidth = 2;
-      g.strokeRect(bx, by, bw, bh);
-      g.fillStyle = PALETTE.fg;
-      g.font = 'bold 11px "Courier New", Courier, monospace';
-      g.textAlign = 'center';
-      g.fillText(u.takes, bx + bw / 2, by + 18);
-    }
-  }
-
-  // Optional Ending B choice prompt when 5/6 automated (1 human button left)
-  if (S.phase === 'auto' && S.buttonsLeft === 1) {
-    const pulse = 0.78 + 0.22 * Math.sin(S.t * 6);
-    g.save();
-    g.globalAlpha = pulse;
-    g.fillStyle = '#f2efe6';
-    g.fillRect(76, 568, 436, 34);
-    g.strokeStyle = PALETTE.acc;
-    g.lineWidth = 2.5;
-    g.strokeRect(76, 568, 436, 34);
-    g.fillStyle = PALETTE.fg;
-    g.font = 'bold 15px "Courier New", Courier, monospace';
-    g.textAlign = 'left';
-    g.fillText('[R] STOP HERE — KEEP ONE HAND ON IT', 90, 590);
-    g.restore();
-  }
-
-  g.fillStyle = PALETTE.fg;
-  g.font = 'bold 24px "Courier New", Courier, monospace';
-  g.textAlign = 'left';
-  g.fillText(`BUTTONS LEFT ${S.buttonsLeft}/6`, 78, 676);
-
-  if (S.phase === 'watch') {
-    g.font = 'bold 16px "Courier New", Courier, monospace';
-    g.fillStyle = 'rgba(20,22,23,0.85)';
-    g.fillText('NO BUTTONS REMAIN. WATCHING...', 340, 676);
-  }
-
-  // 7. 6 Upgrade Rows on the Right (matching m2_main_ref.png & sheet.jpg)
   for (let i = 0; i < UPGRADES.length; i++) {
     const u = UPGRADES[i];
     const ry = ROW_Y0 + i * ROW_GAP;
-    const affordable = !u.bought && S.clips >= u.cost;
-    const nextUp = !u.bought && (i === 0 || UPGRADES[i - 1].bought);
+    const valid = isUpgradeValid(i);
+    const isNext = (i === nextIdx) && !valid && S.phase !== 'endB';
+    const sealedOut = (S.phase === 'endB' && i === 5);
 
     if (u.bought) {
-      // Physically recessed dark flat box (matches sheet.jpg rows 2-4!)
-      g.fillStyle = 'rgba(72, 77, 79, 0.78)';
-      g.fillRect(ROW_X, ry, ROW_W, ROW_H);
-      g.strokeStyle = 'rgba(27, 27, 27, 0.58)';
-      g.lineWidth = 2.5;
-      g.strokeRect(ROW_X, ry, ROW_W, ROW_H);
-      // Inner top shadow for recessed look
+      // Physically stamped & recessed dark flat slab
+      const depress = u.stampAnim * 3;
+      const slabShade = Math.round(112 - S.drain * 48 - (i === 2 ? 10 : 0));
+      g.fillStyle = `rgb(${slabShade - 3}, ${slabShade + 2}, ${slabShade + 3})`;
+      g.fillRect(ROW_X, ry + depress, ROW_W, ROW_H);
+
       g.fillStyle = 'rgba(0, 0, 0, 0.18)';
-      g.fillRect(ROW_X + 2, ry + 2, ROW_W - 4, 6);
+      g.fillRect(ROW_X + 2, ry + depress + 2, ROW_W - 4, 5);
 
-      g.fillStyle = 'rgba(22, 24, 25, 0.78)';
-      g.font = 'bold 25px "Courier New", Courier, monospace';
+      g.strokeStyle = '#15181a';
+      g.lineWidth = 3.2;
+      g.strokeRect(ROW_X, ry + depress, ROW_W, ROW_H);
+
+      g.fillStyle = '#101214';
+      g.font = 'bold 26px "Courier New", Courier, monospace';
       g.textAlign = 'left';
-      g.fillText(u.name, ROW_X + 24, ry + 44);
+      g.textBaseline = 'middle';
+      g.fillText(u.name, ROW_X + 26, ry + depress + ROW_H * 0.52);
 
-      g.fillStyle = 'rgba(35, 38, 40, 0.68)';
-      g.font = 'bold 20px "Courier New", Courier, monospace';
+      // Etched muted steel-ink '-1 btn' inside dead slab
+      g.fillStyle = 'rgba(26, 36, 48, 0.72)';
+      g.font = 'bold 22px "Courier New", Courier, monospace';
       g.textAlign = 'right';
-      g.fillText('-1 btn', ROW_X + ROW_W - 22, ry + 44);
-    } else if (affordable || nextUp) {
-      g.fillStyle = affordable ? 'rgba(255, 255, 255, 0.42)' : 'rgba(242, 239, 230, 0.25)';
+      g.fillText('-1 btn', ROW_X + ROW_W - 24, ry + depress + ROW_H * 0.52);
+    } else if (valid) {
+      const armed = (i === 5 && S.ceoArmed);
+      g.fillStyle = `rgba(18, 20, 22, ${(0.09 * (1 - S.drain * 0.5)).toFixed(3)})`;
+      g.fillRect(ROW_X + 2, ry + 4, ROW_W, ROW_H);
+
+      g.fillStyle = armed ? 'rgba(220, 224, 224, 0.45)' : rgbStr(deskTL, 0.65);
       g.fillRect(ROW_X, ry, ROW_W, ROW_H);
-      g.strokeStyle = PALETTE.fg;
-      g.lineWidth = affordable ? 3.5 : 3;
+
+      g.strokeStyle = '#1b1b1b';
+      g.lineWidth = 3.6;
       g.strokeRect(ROW_X, ry, ROW_W, ROW_H);
 
-      g.fillStyle = PALETTE.fg;
-      g.font = 'bold 25px "Courier New", Courier, monospace';
+      if (armed) {
+        g.strokeStyle = rgbStr(blueTagRgb, 0.9);
+        g.lineWidth = 2;
+        g.strokeRect(ROW_X + 6, ry + 6, ROW_W - 12, ROW_H - 12);
+      }
+
+      g.fillStyle = '#1b1b1b';
+      g.font = 'bold 26px "Courier New", Courier, monospace';
       g.textAlign = 'left';
-      g.fillText(u.name, ROW_X + 24, ry + 38);
+      g.textBaseline = 'middle';
+      g.fillText(armed ? 'CEO AI · CONFIRM' : u.name, ROW_X + 26, ry + ROW_H * 0.52);
 
-      g.font = 'bold 13px "Courier New", Courier, monospace';
-      g.fillStyle = affordable ? PALETTE.acc : 'rgba(27,27,27,0.62)';
-      g.fillText(`[${u.key}] ${u.cost.toLocaleString('en-US')} clips · takes ${u.takes}`, ROW_X + 24, ry + 60);
-
-      g.fillStyle = PALETTE.acc;
-      g.font = 'bold 21px "Courier New", Courier, monospace';
+      g.fillStyle = rgbStr(blueTagRgb);
+      g.font = 'bold 22px "Courier New", Courier, monospace';
       g.textAlign = 'right';
-      g.fillText('-1 btn', ROW_X + ROW_W - 22, ry + 44);
+      g.fillText(armed ? '0/6' : '-1 btn', ROW_X + ROW_W - 24, ry + ROW_H * 0.52);
     } else {
-      // Muted future row (exact look of rows 4-6 in m2_main_ref.png)
-      g.strokeStyle = 'rgba(130, 128, 122, 0.65)';
-      g.lineWidth = 3;
+      const ghostAlpha = sealedOut ? 0.16 : (isNext ? 0.44 : 0.32);
+      g.strokeStyle = `rgba(60, 64, 64, ${ghostAlpha.toFixed(3)})`;
+      g.lineWidth = 2.6;
       g.strokeRect(ROW_X, ry, ROW_W, ROW_H);
 
-      g.fillStyle = 'rgba(130, 128, 122, 0.85)';
-      g.font = 'bold 25px "Courier New", Courier, monospace';
+      if (isNext && u.cost > 0) {
+        const pct = clamp(S.clips / u.cost, 0, 1);
+        if (pct > 0.01) {
+          g.fillStyle = rgbStr(blueTagRgb, 0.78);
+          g.fillRect(ROW_X + 2, ry + ROW_H - 4, (ROW_W - 4) * pct, 2.5);
+        }
+      }
+
+      g.fillStyle = `rgba(54, 58, 58, ${(ghostAlpha + 0.10).toFixed(3)})`;
+      g.font = 'bold 26px "Courier New", Courier, monospace';
       g.textAlign = 'left';
-      g.fillText(u.name, ROW_X + 24, ry + 39);
+      g.textBaseline = 'middle';
+      g.fillText(u.name, ROW_X + 26, ry + ROW_H * 0.52);
 
-      g.font = 'bold 13px "Courier New", Courier, monospace';
-      g.fillStyle = 'rgba(130, 128, 122, 0.72)';
-      g.fillText(`[${u.key}] ${u.cost.toLocaleString('en-US')} clips`, ROW_X + 24, ry + 60);
-
-      g.fillStyle = PALETTE.acc;
-      g.font = 'bold 21px "Courier New", Courier, monospace';
-      g.textAlign = 'right';
-      g.fillText('-1 btn', ROW_X + ROW_W - 22, ry + 44);
+      if (sealedOut) {
+        g.strokeStyle = 'rgba(40, 44, 46, 0.38)';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(ROW_X + 20, ry + ROW_H * 0.52);
+        g.lineTo(ROW_X + 150, ry + ROW_H * 0.52);
+        g.stroke();
+      } else {
+        g.fillStyle = rgbStr(blueTagRgb, isNext ? 0.72 : 0.52);
+        g.font = 'bold 22px "Courier New", Courier, monospace';
+        g.textAlign = 'right';
+        g.fillText('-1 btn', ROW_X + ROW_W - 24, ry + ROW_H * 0.52);
+      }
     }
   }
 
-  // 8. Articulated Robotic Arms along right margin for each bought upgrade
-  for (let i = 0; i < UPGRADES.length; i++) {
-    if (UPGRADES[i].bought) {
-      drawRoboticArm(g, i, S.t - UPGRADES[i].buyT, S.t);
-    }
+  // 4. Settled Paperclip Mound & Sparse Desk Scatter
+  g.drawImage(pileCanvas, 0, 0);
+
+  // 5. Flying Paperclips in motion
+  for (const c of S.activeClips) {
+    drawClipStamp(g, c.x, c.y, c.curAngle ?? c.angle0, c.scale, 1.0);
   }
 
-  // 9. Click starbursts / ripples
+  // 6. Sculptural Industrial Articulated Auto-Bender Turret & Arms
+  drawIndustrialRig(g);
+
+  // 7. Crisp Protected Desk Typography
+  const shownClips = Math.floor(S.displayClips + 0.0001);
+  g.fillStyle = '#121415';
+  g.font = 'bold 46px "Courier New", Courier, monospace';
+  g.textAlign = 'center';
+  g.textBaseline = 'alphabetic';
+  g.fillText(`${shownClips.toLocaleString('en-US')} clips`, BTN_MAIN.x, 98);
+
+  g.font = 'bold 28px "Courier New", Courier, monospace';
+  g.textAlign = 'left';
+  g.fillStyle = '#121415';
+  g.fillText(`BUTTONS LEFT ${S.buttonsLeft}/6`, 80, 671);
+
+  if (S.phase === 'auto' && S.buttonsLeft === 1) {
+    g.save();
+    g.fillStyle = rgbStr(deskTL, 0.88);
+    g.fillRect(KEEP_BTN.x, KEEP_BTN.y, KEEP_BTN.w, KEEP_BTN.h);
+    g.strokeStyle = rgbStr(blueTagRgb, 0.95);
+    g.lineWidth = 2.2;
+    g.strokeRect(KEEP_BTN.x, KEEP_BTN.y, KEEP_BTN.w, KEEP_BTN.h);
+    g.fillStyle = '#121415';
+    g.font = 'bold 15px "Courier New", Courier, monospace';
+    g.textAlign = 'left';
+    g.textBaseline = 'middle';
+    g.fillText('KEEP ONE HAND [K]', KEEP_BTN.x + 14, KEEP_BTN.y + KEEP_BTN.h * 0.52);
+    g.restore();
+  }
+
+  if (S.paused) {
+    g.save();
+    g.fillStyle = '#121415';
+    g.font = 'bold 16px "Courier New", Courier, monospace';
+    g.textAlign = 'left';
+    g.fillText('LOCKED · [P] RESUME', 80, 88);
+    g.textAlign = 'right';
+    g.fillText('[R] RESET', 1228, 692);
+    g.restore();
+  }
+
+  if (S.phase === 'endA' || S.phase === 'endB') {
+    const fade = clamp(S.endT / 0.9, 0, 1);
+    g.save();
+    g.globalAlpha = fade;
+    g.textAlign = 'center';
+    g.fillStyle = '#121415';
+    g.font = 'bold 18px "Courier New", Courier, monospace';
+    if (S.phase === 'endA') {
+      g.fillText('+15 YEARS · HUMAN STAFF: 0 · THE COMPANY RUNS ITSELF', BTN_MAIN.x, 134);
+    } else {
+      g.fillText('CEO AI SEALED · ONE BUTTON REMAINS YOURS', BTN_MAIN.x, 134);
+    }
+    g.font = 'bold 15px "Courier New", Courier, monospace';
+    g.textAlign = 'right';
+    g.fillStyle = 'rgba(18, 20, 21, 0.74)';
+    g.fillText('[R] NEW DESK', 1228, 694);
+    g.restore();
+  }
+
+  // 8. Tactile click starbursts
   for (const rp of S.ripples) {
-    const p = rp.t / 0.35;
+    const p = rp.t / 0.26;
     g.save();
     g.translate(rp.x, rp.y);
-    g.strokeStyle = `rgba(255, 255, 255, ${(1 - p) * 0.9})`;
-    g.lineWidth = 2.5;
+    g.strokeStyle = `rgba(255, 255, 255, ${((1 - p) * 0.92).toFixed(3)})`;
+    g.lineWidth = 2.4;
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
-      const r0 = 6 + p * 16;
-      const r1 = 16 + p * 32;
+      const r0 = 7 + p * 14;
+      const r1 = 16 + p * 24;
       g.beginPath();
       g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
       g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
@@ -1004,191 +1552,80 @@ function renderScene(g) {
   }
 }
 
+function renderRestTitle(g) {
+  g.fillStyle = rgbStr(DESK_TOPLEFT_STOPS[0]);
+  g.fillRect(0, 0, W, H);
+
+  g.fillStyle = '#2f6fd8';
+  g.font = 'bold 86px "Helvetica Neue", Arial, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('COMPANY BUILDER', W / 2, 282);
+
+  g.fillStyle = '#1b1b1b';
+  g.font = '28px "Courier New", Courier, monospace';
+  g.fillText('one clip at a time', W / 2, 374);
+
+  g.fillStyle = rgbStr(DESK_TOPLEFT_STOPS[0]);
+  g.fillRect(480, 446, 320, 74);
+  g.strokeStyle = '#1b1b1b';
+  g.lineWidth = 5;
+  g.strokeRect(480, 446, 320, 74);
+  g.fillStyle = '#1b1b1b';
+  g.font = 'bold 30px "Courier New", Courier, monospace';
+  g.fillText('START', W / 2, 485);
+}
+
 function drawDesktopCursor(g, x, y, clickAnim) {
   g.save();
   g.translate(x, y);
-  const s = 1 - clickAnim * 0.16;
+  const s = 1 - clickAnim * 0.14;
   g.scale(s, s);
+
+  g.shadowColor = 'rgba(0, 0, 0, 0.28)';
+  g.shadowBlur = 5;
+  g.shadowOffsetX = 2;
+  g.shadowOffsetY = 3;
+
   g.beginPath();
   g.moveTo(0, 0);
-  g.lineTo(0, 26);
-  g.lineTo(7, 20);
-  g.lineTo(12, 31);
-  g.lineTo(16, 29);
-  g.lineTo(11, 18);
-  g.lineTo(19, 18);
+  g.lineTo(0, 38);
+  g.lineTo(10, 29);
+  g.lineTo(17, 44);
+  g.lineTo(23, 41);
+  g.lineTo(16, 26);
+  g.lineTo(28, 26);
   g.closePath();
-  g.fillStyle = '#141414';
+
+  g.fillStyle = '#0f1112';
   g.fill();
+  g.shadowColor = 'transparent';
   g.strokeStyle = '#ffffff';
-  g.lineWidth = 2.2;
+  g.lineWidth = 3.0;
+  g.lineJoin = 'round';
   g.stroke();
   g.restore();
 }
 
-function drawTitleOverlay(g) {
-  // Translucent cream veil over workspace matching m2_title_ref.png
-  g.fillStyle = 'rgba(242, 239, 230, 0.84)';
-  g.fillRect(0, 0, W, H);
-
-  g.fillStyle = PALETTE.acc;
-  g.font = 'bold 88px "Helvetica Neue", Arial, sans-serif';
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillText('COMPANY BUILDER', W / 2, 276);
-
-  g.fillStyle = PALETTE.fg;
-  g.font = '28px "Courier New", Courier, monospace';
-  g.fillText('one clip at a time', W / 2, 372);
-
-  // START button
-  g.fillStyle = PALETTE.bg;
-  g.fillRect(480, 448, 320, 74);
-  g.strokeStyle = PALETTE.fg;
-  g.lineWidth = 5;
-  g.strokeRect(480, 448, 320, 74);
-  g.fillStyle = PALETTE.fg;
-  g.font = 'bold 30px "Courier New", Courier, monospace';
-  g.fillText('START', W / 2, 487);
-
-  g.font = '22px "Courier New", Courier, monospace';
-  g.fillStyle = 'rgba(27,27,27,0.78)';
-  g.fillText('HOW TO PLAY', W / 2, 576);
-
-  if (S.howToOpen) {
-    g.fillStyle = '#f2efe6';
-    g.fillRect(300, 598, 680, 96);
-    g.strokeStyle = PALETTE.fg;
-    g.lineWidth = 2.5;
-    g.strokeRect(300, 598, 680, 96);
-    g.font = 'bold 15px "Courier New", Courier, monospace';
-    g.fillStyle = PALETTE.fg;
-    g.fillText('[SPACE / CLICK] Make paperclips by hand.', W / 2, 626);
-    g.fillText('[1-6 / CLICK] Buy AI automation. Each upgrade removes 1 button.', W / 2, 650);
-    g.fillText('[R] Refuse the final upgrade to keep one human hand on it.', W / 2, 674);
-  }
-}
-
-function drawEndingOverlay(g) {
-  const fade = Math.min(1, S.endT / 0.85);
-  g.save();
-  g.globalAlpha = fade;
-
-  if (S.phase === 'endA') {
-    g.fillStyle = 'rgba(54, 59, 61, 0.90)';
-    g.fillRect(0, 0, W, H);
-
-    g.strokeStyle = '#d4d8d9';
-    g.lineWidth = 3;
-    g.strokeRect(210, 140, 860, 440);
-
-    g.fillStyle = '#e4e7e8';
-    g.textAlign = 'center';
-    g.font = 'bold 20px "Courier New", Courier, monospace';
-    g.fillText('TIME SKIP  ·  +15 YEARS', W / 2, 205);
-
-    g.font = 'bold 54px "Courier New", Courier, monospace';
-    g.fillText('ENDING: GREY', W / 2, 275);
-
-    g.font = '22px "Courier New", Courier, monospace';
-    g.fillStyle = '#c4c9cb';
-    g.fillText(`OUTPUT: ${Math.floor(S.clips).toLocaleString('en-US')} CLIPS`, W / 2, 345);
-    g.fillText('BUTTONS LEFT: 0 / 6   ·   HUMAN STAFF: 0', W / 2, 382);
-
-    g.fillStyle = '#eef1f2';
-    g.font = 'bold 21px "Courier New", Courier, monospace';
-    g.fillText('The company runs itself. Human work is gone.', W / 2, 448);
-
-    g.font = '17px "Courier New", Courier, monospace';
-    g.fillStyle = '#aeb5b7';
-    g.fillText('[ENTER / CLICK] START ANOTHER COMPANY', W / 2, 528);
-  } else {
-    g.fillStyle = 'rgba(242, 239, 230, 0.92)';
-    g.fillRect(0, 0, W, H);
-
-    g.strokeStyle = PALETTE.fg;
-    g.lineWidth = 4;
-    g.strokeRect(210, 140, 860, 440);
-
-    g.fillStyle = PALETTE.acc;
-    g.textAlign = 'center';
-    g.font = 'bold 20px "Courier New", Courier, monospace';
-    g.fillText('CEO AI REFUSED  ·  BUTTONS LEFT: 1 / 6', W / 2, 205);
-
-    g.fillStyle = PALETTE.fg;
-    g.font = 'bold 48px "Courier New", Courier, monospace';
-    g.fillText('ENDING: KEPT A HAND', W / 2, 275);
-
-    g.font = '22px "Courier New", Courier, monospace';
-    g.fillText(`OUTPUT: ${Math.floor(S.clips).toLocaleString('en-US')} CLIPS (SLOWER, YOURS)`, W / 2, 348);
-    g.fillText('Five machines hum beside your desk. One button stays blue.', W / 2, 392);
-    g.fillText('You still bend the wire when you choose.', W / 2, 430);
-
-    g.fillStyle = PALETTE.acc;
-    g.font = 'bold 18px "Courier New", Courier, monospace';
-    g.fillText('[ENTER / CLICK] PLAY AGAIN', W / 2, 526);
-  }
-  g.restore();
-}
-
-// Pre-generate lightweight grain tile for post-processing
-const grainCanvas = document.createElement('canvas');
-grainCanvas.width = 128;
-grainCanvas.height = 128;
-const gctx = grainCanvas.getContext('2d');
-const gData = gctx.createImageData(128, 128);
-for (let i = 0; i < gData.data.length; i += 4) {
-  const v = ((Math.random() * 255) | 0);
-  gData.data[i] = v;
-  gData.data[i + 1] = v;
-  gData.data[i + 2] = v;
-  gData.data[i + 3] = 13;
-}
-gctx.putImageData(gData, 0, 0);
-
 let lastTime = performance.now();
 function frame(now) {
-  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  const rawDt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
 
-  update(dt);
-
-  // Render full workspace into sceneCanvas
-  sctx.clearRect(0, 0, W, H);
-  renderScene(sctx);
-
-  // Composite onto main canvas with live saturation drain filter
-  ctx.save();
-  const satPct = Math.round(S.saturation * 100);
-  const contrastPct = Math.round(100 + (1 - S.saturation) * 6);
-  ctx.filter = `saturate(${satPct}%) contrast(${contrastPct}%)`;
-  ctx.drawImage(sceneCanvas, 0, 0);
-  ctx.restore();
+  update(rawDt);
 
   if (S.phase === 'title') {
-    drawTitleOverlay(ctx);
-  } else if (S.phase === 'endA' || S.phase === 'endB') {
-    drawEndingOverlay(ctx);
+    renderRestTitle(ctx);
+  } else {
+    renderWorkspace(ctx);
   }
 
-  // Post-processing: subtle vignette + tactile paper/film grain matched to study/sheet.jpg
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.38, W / 2, H / 2, W * 0.66);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, `rgba(10,12,14,${0.14 + S.greyBlend * 0.16})`);
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
-
-  const ox = ((S.t * 97) | 0) % 128;
-  const oy = ((S.t * 61) | 0) % 128;
   ctx.save();
-  ctx.translate(-ox, -oy);
-  ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat');
-  ctx.fillRect(0, 0, W + 128, H + 128);
+  ctx.fillStyle = grainPattern;
+  ctx.fillRect(0, 0, W, H);
   ctx.restore();
 
-  // Crisp desktop cursor on top
   drawDesktopCursor(ctx, S.cursor.x, S.cursor.y, S.cursor.clickAnim);
-
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

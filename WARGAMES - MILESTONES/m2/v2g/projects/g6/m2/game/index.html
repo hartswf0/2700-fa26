@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Boxing Day Blues — Group 6 (M2)</title>
+<title>Boxing Day Blues</title>
 <link rel="icon" href="data:,">
 <style>
   * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -13,7 +13,7 @@
     height: 100%;
     overflow: hidden;
     background: #1b1622;
-    font-family: "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -24,14 +24,15 @@
     height: 56.25vw;
     max-height: 100vh;
     max-width: 177.78vh;
-    background: #e9e6f2;
-    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+    background: #2b2740;
+    box-shadow: 0 20px 64px rgba(0, 0, 0, 0.6);
     overflow: hidden;
   }
   canvas {
     display: block;
     width: 100%;
     height: 100%;
+    cursor: default;
   }
 </style>
 </head>
@@ -48,103 +49,176 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
-  // URL params: ?autostart skips title, ?seed=N sets deterministic RNG
+  // URL params: ?autostart skips REST title whisper, ?seed=N sets deterministic PRNG
   const params = new URLSearchParams(window.location.search);
   const AUTOSTART = params.has('autostart');
-  let rngState = (parseInt(params.get('seed') || '7', 10) || 7) >>> 0;
+  const INITIAL_SEED = (parseInt(params.get('seed') || '7', 10) || 7) >>> 0;
+  let rngState = INITIAL_SEED;
   function rand() {
     rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
     return rngState / 4294967296;
   }
 
-  // Palette from spec.json & Omni study.json
+  // Palette harmonized between spec.json & study/study.json
   const PAL = {
     bg: '#e9e6f2',
     fg: '#2b2740',
     dark: '#1b1622',
     acc: '#8f6cd9',
-    softViolet: '#b5acc5',
-    warmPeach: '#f8e3d2',
-    paleBubble: '#ece9f8',
-    midBubble: '#8b7ec4',
+    periwinkle: '#a4a5c4',
+    roseDusk: '#c5b7ca',
+    paleBubble: '#eae6f7',
+    violetBubble: '#8d7ec2',
+    peachBubble: '#f7dfca',
+    slateBubble: '#9a95b5',
+    ledAmber: '#f9dfc6',
   };
 
-  // Exact crop rectangles from 4_scene_backgrounds_morning_to_evening.png (1376x768)
-  const SCENE_RECTS = [
-    { name: 'MORNING',      sx: 2,   sy: 2,   sw: 684, sh: 380, baseMin: 9 * 60 + 40 },
-    { name: 'AFTERNOON',    sx: 690, sy: 2,   sw: 684, sh: 380, baseMin: 13 * 60 + 20 },
-    { name: 'DUSK TRANSIT', sx: 2,   sy: 386, sw: 684, sh: 380, baseMin: 16 * 60 + 10 },
-    { name: 'EVENING',      sx: 690, sy: 386, sw: 684, sh: 380, baseMin: 17 * 60 + 45 },
+  // Calibrated 4-scene crops from 4_scene_backgrounds_morning_to_evening.png (1376x768)
+  // Inset from x=688 & y=384 seams so zero seam bleed occurs; vertical crops align platform floor & canopies!
+  const SCENES = [
+    {
+      name: 'MORNING',
+      sx: 4, sy: 18, sw: 680, sh: 362,
+      baseMin: 9 * 60 + 42,
+      skyWashTop: 'rgba(136, 138, 182, 0.34)',
+      skyWashMid: 'rgba(192, 174, 198, 0.22)',
+      lampAlpha: 0.14,
+      hasBakedTrain: false,
+      pillars: [{ px: 36, pw: 25 }, { px: 645, pw: 24 }],
+      curbPy: 318,
+      clockQuad: { lx: 602, lty: 139, lby: 162, rx: 625, rty: 131, rby: 158 },
+    },
+    {
+      name: 'AFTERNOON',
+      sx: 692, sy: 18, sw: 680, sh: 362,
+      baseMin: 13 * 60 + 20,
+      skyWashTop: 'rgba(138, 136, 182, 0.36)',
+      skyWashMid: 'rgba(188, 170, 194, 0.26)',
+      lampAlpha: 0.18,
+      hasBakedTrain: false,
+      pillars: [{ px: 724, pw: 25 }, { px: 1333, pw: 24 }],
+      curbPy: 318,
+      clockQuad: { lx: 1290, lty: 139, lby: 162, rx: 1313, rty: 131, rby: 158 },
+    },
+    {
+      name: 'DUSK',
+      sx: 4, sy: 386, sw: 680, sh: 376,
+      baseMin: 16 * 60 + 35,
+      skyWashTop: 'rgba(142, 136, 182, 0.16)',
+      skyWashMid: 'rgba(218, 188, 196, 0.10)',
+      lampAlpha: 0.22,
+      hasBakedTrain: true,
+      pillars: [{ px: 36, pw: 25 }, { px: 645, pw: 24 }],
+      curbPy: 534 + 168,
+      clockQuad: { lx: 602, lty: 504, lby: 527, rx: 625, rty: 496, rby: 523 },
+    },
+    {
+      name: 'EVENING',
+      sx: 692, sy: 386, sw: 680, sh: 376,
+      baseMin: 17 * 60 + 48,
+      skyWashTop: 'rgba(28, 22, 42, 0.14)',
+      skyWashMid: 'rgba(88, 68, 104, 0.10)',
+      lampAlpha: 0.30,
+      hasBakedTrain: true,
+      pillars: [{ px: 724, pw: 25 }, { px: 1333, pw: 24 }],
+      curbPy: 534 + 168,
+      clockQuad: { lx: 1290, lty: 504, lby: 527, rx: 1313, rty: 496, rby: 523 },
+    },
   ];
 
-  // Exact sprite cutouts from citizen_silhouettes.png (1024x1024 RGBA)
-  // Player sprites (facing right natively: winter coat + glowing headphone ring)
+  // Cleaned citizen cutouts from citizen_silhouettes.png (1024x1024 RGBA, 0 studio grey islands)
   const PLAYER_FRAMES = {
-    idle:  { x: 174, y: 46,  w: 53,  h: 219 }, // [1] standing side profile with headphone ring
-    walkA: { x: 155, y: 539, w: 92,  h: 208 }, // [17] mid-stride with headphone ring
-    walkB: { x: 282, y: 778, w: 86,  h: 210 }, // [26] alternate stride with headphone ring
+    idle:  { x: 174, y: 46,  w: 53, h: 219 }, // Standing winter coat + glowing headphone ring
+    walkA: { x: 155, y: 539, w: 92, h: 208 }, // Mid-stride A with headphone ring
+    walkB: { x: 283, y: 778, w: 85, h: 210 }, // Mid-stride B with headphone ring
   };
 
-  // Passing citizen silhouettes across scenes (natively facing right; flipped horizontally when facing left)
+  // Waiting citizens across the 4 transit stops (natively facing right; mirrored cleanly to face left)
   const NPC_SPRITES = [
-    { x: 797, y: 293, w: 57, h: 214, label: 'Commuter in Hooded Coat' }, // [14] matches Omni video right figure!
-    { x: 274, y: 43,  w: 94, h: 222, label: 'Citizen with Warm Cup' },   // [2]
-    { x: 546, y: 529, w: 81, h: 218, label: 'Platform Regular' },        // [20] matches Omni dusk figure!
-    { x: 912, y: 43,  w: 69, h: 223, label: 'Evening Traveler' },        // [7]
+    { x: 797, y: 293, w: 57, h: 214 }, // Stop 0: Hooded parka profile (matches study/f_014.jpg!)
+    { x: 173, y: 774, w: 62, h: 214 }, // Stop 1: Winter beanie & warm cup commuter
+    { x: 658, y: 533, w: 94, h: 214 }, // Stop 2: Dusk platform commuter, hands in coat
+    { x: 793, y: 773, w: 79, h: 216 }, // Stop 3: Evening traveler in long parka
   ];
 
-  // AI-curated worn-out idioms (Asset #3: Phrase list — old idioms, half-understood)
-  // Each dialogue exchange offers 3 system-curated fragments; resonant=true creates near-harmony,
-  // resonant=false ("phrase misread") causes speech glyphs to drift apart prematurely.
+  // Worn-away human idioms offered by the network across the 4 stops
   const PHRASE_SETS = [
     {
-      prompt: 'SYSTEM SUGGESTION // GREETING PROTOCOL 01',
       choices: [
-        { text: '"Happy Boxing Day."', resonant: true,  reply: '"Happy Boxing Day... my feed highlighted that too."', resonanceNote: 'familiar cadence' },
-        { text: '"What is in the box?"', resonant: false, reply: '"Sorry—I did not order a parcel today."', resonanceNote: 'literal misread' },
-        { text: '"Same to you, citizen."', resonant: false, reply: '"Auto-acknowledged. Safe transit."', resonanceNote: 'hollow template' },
+        { text: '"Happy Boxing Day."', resonant: true, reply: '"Happy Boxing Day... whatever the box was."', chord: [293.66, 349.23, 440.0, 523.25] },
+        { text: '"Did a parcel arrive?"', resonant: false, reply: '"No delivery scheduled on my feed."', chord: [311.13, 277.18] },
+        { text: '"Seasonal greeting."', resonant: false, reply: '"Auto-acknowledged. Safe transit."', chord: [293.66, 261.63] },
       ],
     },
     {
-      prompt: 'SYSTEM SUGGESTION // SMALL-TALK FRAGMENT 04',
       choices: [
-        { text: '"Cold enough to break the ice?"', resonant: false, reply: '"Platform heating is nominal at 19 degrees."', resonanceNote: 'idiom lost' },
-        { text: '"Funny how everyone still says it."', resonant: true,  reply: '"Yes... nobody on my line remembers why."', resonanceNote: 'shared curiosity' },
-        { text: '"Let us circle back offline."', resonant: false, reply: '"My calendar has no circle-back slot."', resonanceNote: 'corporate fossil' },
+        { text: '"Cold enough to break the ice?"', resonant: false, reply: '"Platform de-icing is nominal."', chord: [329.63, 293.66] },
+        { text: '"Everyone still says it..."', resonant: true, reply: '"Funny—nobody on my line remembers why."', chord: [329.63, 392.0, 493.88, 587.33] },
+        { text: '"Let\'s circle back."', resonant: false, reply: '"Transit line is linear, citizen."', chord: [293.66, 246.94] },
       ],
     },
     {
-      prompt: 'SYSTEM SUGGESTION // ARCHIVAL IDIOM 09',
       choices: [
-        { text: '"Do you ever miss a voice unscripted?"', resonant: true,  reply: '"I think they called this the Boxing Day blues..."', resonanceNote: 'almost touching' },
-        { text: '"Keep me in the loop."', resonant: false, reply: '"Loop synced. Goodbye."', resonanceNote: 'protocol close' },
-        { text: '"Have a good one."', resonant: false, reply: '"One what? ...Oh. You too."', resonanceNote: 'faded echo' },
+        { text: '"Don\'t be a stranger."', resonant: true, reply: '"Wait... what did \'stranger\' used to mean?"', chord: [349.23, 440.0, 523.25, 659.25] },
+        { text: '"Under the weather."', resonant: false, reply: '"Precipitation is light snow."', chord: [311.13, 261.63] },
+        { text: '"Keep me in the loop."', resonant: false, reply: '"Schedule loop synced."', chord: [293.66, 246.94] },
       ],
     },
     {
-      prompt: 'SYSTEM SUGGESTION // TWILIGHT FALLBACK 12',
       choices: [
-        { text: '"Don\'t be a stranger."', resonant: true,  reply: '"Wait—what did \'stranger\' mean before the mesh?"', resonanceNote: 'fleeting warmth' },
-        { text: '"Touch base tomorrow."', resonant: false, reply: '"Base terminal acknowledged."', resonanceNote: 'dead metaphor' },
-        { text: '"Under the weather."', resonant: false, reply: '"Precipitation is light snow, actually."', resonanceNote: 'literal misread' },
+        { text: '"Unpack that with me?"', resonant: true, reply: '"They called this the Boxing Day blues..."', chord: [293.66, 369.99, 440.0, 554.37] },
+        { text: '"Touch base tomorrow."', resonant: false, reply: '"Base terminal closes at six."', chord: [277.18, 233.08] },
+        { text: '"Have a good one."', resonant: false, reply: '"One what? ...Goodnight."', chord: [261.63, 220.0] },
       ],
     },
   ];
 
-  // Load visual & audio assets
+  const GLYPH_RUNES = ['⚯', '∿', '◌', 'Ψ', '☍', '≈', '⋮', 'ㄓ'];
+
+  // Asset loading with extra client-side safety matting check
   const imgBg = new Image();
   let bgLoaded = false;
   imgBg.onload = () => { bgLoaded = true; };
+  imgBg.onerror = () => { bgLoaded = false; };
   imgBg.src = '../assets/4_scene_backgrounds_morning_to_evening.png';
 
-  const imgSprites = new Image();
+  const imgSpritesRaw = new Image();
+  let spriteSource = null;
   let spritesLoaded = false;
-  imgSprites.onload = () => { spritesLoaded = true; };
-  imgSprites.src = '../assets/citizen_silhouettes.png';
+  imgSpritesRaw.onload = () => {
+    // Offscreen verification pass ensuring zero residual studio-grey fringe even if cached
+    try {
+      const off = document.createElement('canvas');
+      off.width = imgSpritesRaw.naturalWidth;
+      off.height = imgSpritesRaw.naturalHeight;
+      const octx = off.getContext('2d');
+      octx.drawImage(imgSpritesRaw, 0, 0);
+      const id = octx.getImageData(0, 0, off.width, off.height);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] === 0) continue;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+        const lum = (r + g + b) * 0.3333;
+        if (maxC - minC <= 6 && lum >= 192 && lum <= 220) {
+          d[i + 3] = 0;
+        }
+      }
+      octx.putImageData(id, 0, 0);
+      spriteSource = off;
+    } catch (_) {
+      spriteSource = imgSpritesRaw;
+    }
+    spritesLoaded = true;
+  };
+  imgSpritesRaw.onerror = () => { spritesLoaded = false; };
+  imgSpritesRaw.src = '../assets/citizen_silhouettes.png';
 
+  // Audio: Lyria loop + procedural winter wind, snow footsteps, and harmonizing->detuning dyads
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.42;
+  bgm.volume = 0.38;
   let audioUnlocked = false;
   let audioCtx = null;
 
@@ -158,7 +232,7 @@
         const AC = window.AudioContext || window.webkitAudioContext;
         if (AC) {
           audioCtx = new AC();
-          startWindAmbience();
+          startWinterWind();
         }
       } catch (_) {}
     }
@@ -167,27 +241,27 @@
     }
   }
 
-  function startWindAmbience() {
+  function startWinterWind() {
     if (!audioCtx) return;
     try {
-      const len = audioCtx.sampleRate * 3;
+      const len = audioCtx.sampleRate * 4;
       const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
       const data = buf.getChannelData(0);
       let last = 0;
       for (let i = 0; i < len; i++) {
         const white = Math.random() * 2 - 1;
-        last = (last + 0.02 * white) / 1.02;
-        data[i] = last * 0.35;
+        last = (last + 0.018 * white) / 1.018;
+        data[i] = last * 0.32;
       }
       const src = audioCtx.createBufferSource();
       src.buffer = buf;
       src.loop = true;
       const filter = audioCtx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.value = 340;
-      filter.Q.value = 1.8;
+      filter.frequency.value = 310;
+      filter.Q.value = 1.6;
       const gain = audioCtx.createGain();
-      gain.gain.value = 0.05;
+      gain.gain.value = 0.042;
       src.connect(filter);
       filter.connect(gain);
       gain.connect(audioCtx.destination);
@@ -195,243 +269,487 @@
     } catch (_) {}
   }
 
-  function playTone(freqs, dur = 0.7, vol = 0.06, type = 'sine') {
-    if (!audioCtx) return;
+  function playSnowStep() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
     try {
       const now = audioCtx.currentTime;
-      freqs.forEach((f, idx) => {
+      const len = Math.floor(audioCtx.sampleRate * 0.055);
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const f = audioCtx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1350 + Math.random() * 320;
+      f.Q.value = 1.9;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.018, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+      src.connect(f);
+      f.connect(g);
+      g.connect(audioCtx.destination);
+      src.start(now);
+    } catch (_) {}
+  }
+
+  // Expressive WebAudio dyad: almost locks into warm consonance, then gently detunes into the snow
+  function playHarmonyArc(freqs, resonant) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    try {
+      const now = audioCtx.currentTime;
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(resonant ? 1480 : 920, now);
+      lp.frequency.exponentialRampToValueAtTime(380, now + (resonant ? 3.8 : 1.3));
+      lp.connect(audioCtx.destination);
+
+      if (resonant) {
+        freqs.forEach((f, idx) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.07);
+          // Citizen upper voices start slightly flat, glide nearly into pure lock, then wistfully detune!
+          if (idx >= 1) {
+            osc.detune.setValueAtTime(idx % 2 === 1 ? -26 : 22, now);
+            osc.detune.linearRampToValueAtTime(idx % 2 === 1 ? -2 : 3, now + 1.85);
+            osc.detune.linearRampToValueAtTime(idx % 2 === 1 ? -42 : 36, now + 3.7);
+          }
+          const peak = idx === 0 ? 0.042 : 0.028;
+          g.gain.setValueAtTime(0.0001, now + idx * 0.06);
+          g.gain.exponentialRampToValueAtTime(peak, now + idx * 0.06 + 0.35);
+          g.gain.setValueAtTime(peak * 0.92, now + 1.9);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + 3.85);
+          osc.connect(g);
+          g.connect(lp);
+          osc.start(now + idx * 0.06);
+          osc.stop(now + 3.95);
+        });
+      } else {
+        freqs.forEach((f, idx) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.14);
+          osc.detune.linearRampToValueAtTime(-28, now + 1.1);
+          g.gain.setValueAtTime(0.0001, now + idx * 0.14);
+          g.gain.exponentialRampToValueAtTime(0.028, now + idx * 0.14 + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.14 + 0.95);
+          osc.connect(g);
+          g.connect(lp);
+          osc.start(now + idx * 0.14);
+          osc.stop(now + idx * 0.14 + 1.0);
+        });
+      }
+    } catch (_) {}
+  }
+
+  function playSnowDissolveChime() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    try {
+      const now = audioCtx.currentTime;
+      [659.25, 587.33, 493.88].forEach((f, i) => {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(f, now + idx * 0.04);
-        g.gain.setValueAtTime(0.0001, now + idx * 0.04);
-        g.gain.exponentialRampToValueAtTime(vol, now + idx * 0.04 + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + dur);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now + i * 0.12);
+        osc.detune.setValueAtTime(8 + i * 7, now + i * 0.12);
+        g.gain.setValueAtTime(0.0001, now + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.016, now + i * 0.12 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 1.15);
         osc.connect(g);
         g.connect(audioCtx.destination);
-        osc.start(now + idx * 0.04);
-        osc.stop(now + idx * 0.04 + dur + 0.05);
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 1.2);
       });
     } catch (_) {}
   }
 
-  // Snow particle system (multi-layer depth matching Omni frames)
-  const SNOW_COUNT = 165;
+  // Multi-layer parallax snowfall
+  const SNOW_COUNT = 175;
   const snowflakes = [];
-  for (let i = 0; i < SNOW_COUNT; i++) {
-    const layer = i < 105 ? 0 : (i < 148 ? 1 : 2); // 0=far, 1=mid, 2=foreground bokeh
-    snowflakes.push({
-      x: rand() * W,
-      y: rand() * H,
-      r: layer === 0 ? 1.3 + rand() * 1.6 : (layer === 1 ? 2.4 + rand() * 2.0 : 4.2 + rand() * 3.0),
-      vy: layer === 0 ? 18 + rand() * 16 : (layer === 1 ? 30 + rand() * 22 : 46 + rand() * 26),
-      vx: -10 + rand() * 16,
-      phase: rand() * Math.PI * 2,
-      alpha: layer === 0 ? 0.45 + rand() * 0.3 : (layer === 1 ? 0.65 + rand() * 0.28 : 0.38 + rand() * 0.25),
-      layer,
-    });
-  }
-
-  // Floating speech-bubble & worn-glyph particles between silhouettes (matching f_015 / f_021 / f_033)
-  const GLYPH_RUNES = ['...', '—', '···', '⚯', 'ㄓ', 'Ψ', '☍', '∿', '◌'];
-  let speechBubbles = [];
-  let snowMotes = [];
-
-  function spawnConversationCluster(resonant, intensity = 1) {
-    const midX = (S.playerX + S.npcX) * 0.5;
-    const count = resonant ? 6 + intensity * 2 : 4;
-    for (let i = 0; i < count; i++) {
-      const fromPlayer = i % 2 === 0;
-      const startX = fromPlayer ? S.playerX + 26 : S.npcX - 26;
-      const targetX = midX + (rand() - 0.5) * (resonant ? 170 : 260);
-      const targetY = 185 + rand() * 175;
-      const palettePick = resonant
-        ? (i % 3 === 0 ? PAL.warmPeach : (i % 3 === 1 ? PAL.midBubble : PAL.paleBubble))
-        : (i % 2 === 0 ? '#9c96b8' : '#cfcbe0');
-      const kind = i < 4 ? 'pill' : 'rune';
-      speechBubbles.push({
-        x: startX + (rand() - 0.5) * 24,
-        y: 355 + (rand() - 0.5) * 30,
-        tx: targetX,
-        ty: targetY,
-        vx: (rand() - 0.5) * 14,
-        vy: -14 - rand() * 18,
-        w: 48 + rand() * 38,
-        h: 28 + rand() * 16,
-        color: palettePick,
-        kind,
-        rune: GLYPH_RUNES[Math.floor(rand() * GLYPH_RUNES.length)],
-        tailLeft: fromPlayer,
-        age: 0,
-        maxAge: resonant ? 7.5 + rand() * 3.0 : 2.6 + rand() * 1.2,
-        resonant,
-        arcSeed: rand() * Math.PI * 2,
-      });
-    }
-    // Luminous comet-arc motes between the two speakers
-    for (let j = 0; j < (resonant ? 12 : 7); j++) {
-      snowMotes.push({
-        x: midX + (rand() - 0.5) * 180,
-        y: 230 + rand() * 150,
-        vx: (rand() - 0.5) * (resonant ? 28 : 65),
-        vy: -18 - rand() * 28,
-        r: 1.8 + rand() * 2.6,
-        color: resonant && j % 2 === 0 ? '#fff0de' : '#dcd6f5',
-        age: 0,
-        maxAge: 2.2 + rand() * 1.8,
+  function initSnow() {
+    snowflakes.length = 0;
+    for (let i = 0; i < SNOW_COUNT; i++) {
+      const layer = i < 110 ? 0 : (i < 154 ? 1 : 2);
+      snowflakes.push({
+        x: rand() * W,
+        y: rand() * H,
+        r: layer === 0 ? 1.2 + rand() * 1.5 : (layer === 1 ? 2.2 + rand() * 1.9 : 3.8 + rand() * 2.6),
+        vy: layer === 0 ? 17 + rand() * 15 : (layer === 1 ? 28 + rand() * 20 : 44 + rand() * 24),
+        vx: -9 + rand() * 15,
+        phase: rand() * Math.PI * 2,
+        alpha: layer === 0 ? 0.42 + rand() * 0.28 : (layer === 1 ? 0.62 + rand() * 0.28 : 0.34 + rand() * 0.22),
+        layer,
       });
     }
   }
 
-  function scatterBubblesIntoSnow() {
-    for (const b of speechBubbles) {
-      b.maxAge = Math.min(b.maxAge, b.age + 1.35);
-      b.vx += (b.x < (S.playerX + S.npcX) * 0.5 ? -36 : 36) + (rand() - 0.5) * 30;
-      b.vy -= 12 + rand() * 20;
-      for (let k = 0; k < 4; k++) {
-        snowMotes.push({
-          x: b.x + (rand() - 0.5) * 30,
-          y: b.y + (rand() - 0.5) * 18,
-          vx: (rand() - 0.5) * 55,
-          vy: -10 - rand() * 30,
-          r: 1.6 + rand() * 2.4,
-          color: '#f5ecff',
-          age: 0,
-          maxAge: 2.0 + rand() * 1.4,
-        });
-      }
-    }
-  }
+  // Interactive spatial hit-boxes
+  const PILL_BOXES = [];
+  let resetHitBox = null;
 
-  // Core M2 game state (matches spec.json states: title, scene, talk, near, end)
+  // Game state mapped cleanly to VOIDBASTARD-TAO states:
+  // 'rest' | 'ready' | 'working' | 'changed' | 'complete'
   const S = {
-    phase: AUTOSTART ? 'scene' : 'title',
+    phase: AUTOSTART ? 'ready' : 'rest',
+    paused: false,
+    titleFade: AUTOSTART ? 0 : 1,
+    stopIndex: 0,
     sceneIndex: 0,
     prevSceneIndex: 0,
     sceneBlend: 1,
-    clockMinutes: 9 * 60 + 40, // 09:40 AM -> 18:00 (6:00 PM)
-    playerX: 305,
+    clockMinutes: 9 * 60 + 42,
+    playerX: 235,
     playerDir: 1,
     walkCycle: 0,
+    lastStepHalf: 0,
     isMoving: false,
-    npcX: 830,
-    npcSpriteIdx: 0,
-    phraseSetIdx: 0,
+    walkTargetX: null,
+    npcX: 838,
+    npcAlpha: 1,
+    stopSpoken: false,
+    pillsAlpha: 0,
     selectedOpt: 0,
+    exchangeTimer: 0,
+    exchangeResonant: true,
+    exchangeReply: '',
+    bowAmount: 0,
     realReplies: 0,
     misreadCount: 0,
     almostReached: false,
-    nearTimer: 0,
-    replyToast: '',
-    replyToastTimer: 0,
-    talkCooldown: 0,
+    completeWhisperAlpha: 0,
     hasActed: false,
-    trainX: -620,
-    trainActive: false,
+    // Train physics: sleek 2-car train gliding left -> right on non-baked stops
+    trainFrontX: -465,
+    trainSpeed: 245,
+    bubbles: [],
+    wisps: [],
+    motes: [],
+    traces: [], // Persistent warm lingering traces left across the day's stops
     t: 0,
   };
 
-  function resetDay(skipTitle) {
-    S.phase = skipTitle ? 'scene' : 'title';
+  function resetDay(skipRest) {
+    rngState = INITIAL_SEED;
+    initSnow();
+    S.phase = skipRest ? 'ready' : 'rest';
+    S.paused = false;
+    S.titleFade = skipRest ? 0 : 1;
+    S.stopIndex = 0;
     S.sceneIndex = 0;
     S.prevSceneIndex = 0;
     S.sceneBlend = 1;
-    S.clockMinutes = 9 * 60 + 40;
-    S.playerX = 305;
+    S.clockMinutes = SCENES[0].baseMin;
+    S.playerX = 235;
     S.playerDir = 1;
     S.walkCycle = 0;
+    S.lastStepHalf = 0;
     S.isMoving = false;
-    S.npcX = 830;
-    S.npcSpriteIdx = 0;
-    S.phraseSetIdx = 0;
+    S.walkTargetX = null;
+    S.npcX = 838;
+    S.npcAlpha = 1;
+    S.stopSpoken = false;
+    S.pillsAlpha = 0;
     S.selectedOpt = 0;
+    S.exchangeTimer = 0;
+    S.exchangeResonant = true;
+    S.exchangeReply = '';
+    S.bowAmount = 0;
     S.realReplies = 0;
     S.misreadCount = 0;
     S.almostReached = false;
-    S.nearTimer = 0;
-    S.replyToast = '';
-    S.replyToastTimer = 0;
-    S.talkCooldown = 0;
+    S.completeWhisperAlpha = 0;
     S.hasActed = false;
-    S.trainX = -620;
-    S.trainActive = false;
-    speechBubbles = [];
-    snowMotes = [];
+    S.trainFrontX = -465;
+    S.trainSpeed = 245;
+    S.bubbles = [];
+    S.wisps = [];
+    S.motes = [];
+    S.traces = [];
+    S.t = 0;
+  }
+  initSnow();
+
+  function formatClock24(mins) {
+    const total = Math.max(0, Math.min(23 * 60 + 59, Math.floor(mins)));
+    const hh = Math.floor(total / 60);
+    const mm = total % 60;
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   }
 
-  function advanceScene(extraMinutes) {
-    S.clockMinutes = Math.min(18 * 60, S.clockMinutes + extraMinutes);
-    const nextIdx = Math.min(3, S.sceneIndex + 1);
-    if (nextIdx !== S.sceneIndex) {
-      S.prevSceneIndex = S.sceneIndex;
-      S.sceneIndex = nextIdx;
-      S.sceneBlend = 0;
-      S.npcSpriteIdx = nextIdx % NPC_SPRITES.length;
-      if (nextIdx === 2) {
-        S.trainActive = true;
-        S.trainX = -460;
-      }
-      playTone([392, 587.33], 0.9, 0.045, 'triangle');
+  // Launch rising player & citizen speech-glyph bubbles + runes (modeled directly on f_014 & f_027)
+  function spawnExchangeGlyphs(choice) {
+    S.bubbles = [];
+    S.wisps = [];
+    const midX = (S.playerX + S.npcX) * 0.5;
+    const res = choice.resonant;
+
+    // Primary bubbles: player lavender-white pill, citizen muted-violet pill, shared warm-peach reply pill, and secondary echo pills
+    const defs = res
+      ? [
+          { fromP: true,  dx: -92, ty: 282, w: 66, h: 35, col: PAL.paleBubble,   style: 'dots',  lingers: false, delay: 0.0 },
+          { fromP: false, dx:  92, ty: 254, w: 72, h: 36, col: PAL.violetBubble, style: 'dots',  lingers: true,  delay: 0.14 },
+          { fromP: false, dx:   6, ty: 192, w: 86, h: 40, col: PAL.peachBubble,  style: 'reply', lingers: false, delay: 0.24 },
+          { fromP: true,  dx: -38, ty: 234, w: 54, h: 29, col: PAL.violetBubble, style: 'dots',  lingers: false, delay: 0.32 },
+          { fromP: false, dx:  46, ty: 232, w: 64, h: 34, col: PAL.paleBubble,   style: 'dots',  lingers: false, delay: 0.40 },
+          { fromP: false, dx:  86, ty: 306, w: 58, h: 30, col: PAL.peachBubble,  style: 'dash',  lingers: false, delay: 0.48 },
+        ]
+      : [
+          { fromP: true,  dx: -115, ty: 285, w: 62, h: 32, col: PAL.paleBubble,  style: 'dots',  lingers: false, delay: 0.0 },
+          { fromP: false, dx:  118, ty: 262, w: 76, h: 35, col: PAL.slateBubble, style: 'reply', lingers: true,  delay: 0.12 },
+          { fromP: true,  dx:  -72, ty: 242, w: 50, h: 27, col: PAL.slateBubble, style: 'dash',  lingers: false, delay: 0.22 },
+        ];
+
+    for (const d of defs) {
+      const startX = d.fromP ? S.playerX + 32 : S.npcX - 32;
+      const startY = 342 + (rand() - 0.5) * 18;
+      S.bubbles.push({
+        kind: 'pill',
+        x: startX,
+        y: startY,
+        sx: startX,
+        sy: startY,
+        tx: midX + d.dx + (rand() - 0.5) * 14,
+        ty: d.ty + (rand() - 0.5) * 10,
+        vx: 0,
+        vy: 0,
+        w: d.w,
+        h: d.h,
+        col: d.col,
+        style: d.style,
+        replyText: d.style === 'reply' ? choice.reply : '',
+        tailLeft: d.fromP,
+        lingers: d.lingers,
+        delay: d.delay,
+        age: -d.delay,
+        maxAge: d.lingers ? 5.1 : (res ? 4.35 : 2.5),
+        scattered: false,
+        seed: rand() * Math.PI * 2,
+      });
+    }
+
+    // Delicate worn cultural runes floating between the pills (matching f_014 & f_027)
+    const runeCount = res ? 8 : 4;
+    for (let i = 0; i < runeCount; i++) {
+      const fromP = i % 2 === 0;
+      const sx = fromP ? S.playerX + 44 : S.npcX - 44;
+      const sy = 346 + (rand() - 0.5) * 26;
+      S.bubbles.push({
+        kind: 'rune',
+        x: sx,
+        y: sy,
+        sx,
+        sy,
+        tx: midX + (rand() - 0.5) * 210,
+        ty: 185 + rand() * 145,
+        vx: 0,
+        vy: 0,
+        col: i % 3 === 0 ? PAL.peachBubble : '#e6e0f8',
+        rune: GLYPH_RUNES[Math.floor(rand() * GLYPH_RUNES.length)],
+        delay: 0.1 + i * 0.06,
+        age: -(0.1 + i * 0.06),
+        maxAge: res ? 4.2 + rand() * 0.6 : 2.3,
+        scattered: false,
+        seed: rand() * Math.PI * 2,
+      });
+    }
+
+    // Graceful comet-arc wisps (matching the curved light stroke in f_014 & f_033)
+    const wispCount = res ? 3 : 1;
+    for (let w = 0; w < wispCount; w++) {
+      S.wisps.push({
+        x0: midX - 75 + w * 42,
+        y0: 315 - w * 28,
+        cx: midX - 10 + (rand() - 0.5) * 40,
+        cy: 245 - w * 24,
+        x1: midX + 35 + w * 28,
+        y1: 215 - w * 26,
+        age: -0.18 * w,
+        maxAge: res ? 3.9 : 1.9,
+      });
     }
   }
 
-  function formatClock(mins) {
-    const total = Math.floor(mins);
-    const h24 = Math.floor(total / 60) % 24;
-    const m = total % 60;
-    const ampm = h24 >= 12 ? 'PM' : 'AM';
-    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  function triggerDetuneScatter() {
+    playSnowDissolveChime();
+    const midX = (S.playerX + S.npcX) * 0.5;
+    for (const b of S.bubbles) {
+      if (b.scattered) continue;
+      b.scattered = true;
+      // Leave 1 faint violet '...' pill lingering briefly near the citizen (matches pair_008 left half!)
+      if (b.lingers) {
+        b.vx = 14;
+        b.vy = -8;
+        continue;
+      }
+      b.maxAge = Math.min(b.maxAge, Math.max(b.age + 0.85, 0.9));
+      const dir = b.x < midX ? -1 : 1;
+      b.vx = dir * (22 + rand() * 26) + (rand() - 0.5) * 18;
+      b.vy = -18 - rand() * 24;
+
+      const moteN = b.kind === 'pill' ? 6 : 3;
+      for (let k = 0; k < moteN; k++) {
+        S.motes.push({
+          x: b.x + (rand() - 0.5) * 32,
+          y: b.y + (rand() - 0.5) * 20,
+          vx: (rand() - 0.5) * 34 - 6,
+          vy: -9 - rand() * 20,
+          r: 1.6 + rand() * 2.3,
+          col: k % 2 === 0 ? '#fff1df' : '#e4defa',
+          comet: k <= 1 && b.kind === 'pill',
+          age: 0,
+          maxAge: 2.65 + rand() * 1.25,
+        });
+      }
+    }
+
+    // Add delicate rising comet wisps into upper-left snow (matching f_033 / pair_008)
+    S.wisps.push({
+      x0: midX - 24,
+      y0: 282,
+      cx: midX - 88,
+      cy: 222,
+      x1: midX - 148,
+      y1: 172,
+      age: 0,
+      maxAge: 2.75,
+    });
+    S.wisps.push({
+      x0: midX + 20,
+      y0: 298,
+      cx: midX - 28,
+      cy: 256,
+      x1: midX - 72,
+      y1: 232,
+      age: 0.15,
+      maxAge: 2.65,
+    });
   }
 
-  // Input handling
+  function selectPhrase(idx) {
+    if (S.phase !== 'ready' || S.stopSpoken || S.pillsAlpha < 0.2) return;
+    const set = PHRASE_SETS[S.stopIndex % PHRASE_SETS.length];
+    const choice = set.choices[idx];
+    if (!choice) return;
+
+    S.hasActed = true;
+    S.stopSpoken = true;
+    S.walkTargetX = null;
+    S.isMoving = false;
+    S.playerDir = S.npcX >= S.playerX ? 1 : -1;
+    S.phase = 'working';
+    S.exchangeTimer = 0;
+    S.exchangeResonant = choice.resonant;
+    S.exchangeReply = choice.reply;
+
+    // Ensure the mid-ground sleek transit train glides past if not already approaching
+    if (!SCENES[S.sceneIndex].hasBakedTrain && (S.trainFrontX < -420 || S.trainFrontX > 1180)) {
+      S.trainFrontX = 95;
+      S.trainSpeed = 240;
+    }
+
+    if (choice.resonant) {
+      S.realReplies = Math.min(3, S.realReplies + 1);
+      if (S.stopIndex === 3 || S.realReplies >= 3) {
+        S.almostReached = true;
+      }
+    } else {
+      S.misreadCount++;
+    }
+
+    spawnExchangeGlyphs(choice);
+    playHarmonyArc(choice.chord, choice.resonant);
+  }
+
+  function advanceToNextStop() {
+    // Record a warm lingering shimmer trace in world space before stepping into the next stop
+    S.traces.push({
+      x: (S.playerX + S.npcX) * 0.5 - 40 * S.traces.length,
+      y: 545 - (S.traces.length % 2) * 18,
+      warm: S.exchangeResonant,
+      phase: rand() * Math.PI * 2,
+    });
+
+    if (S.stopIndex >= 3) {
+      // Final stop (Evening 18:00) settles peacefully into COMPLETE without any modal demand
+      S.clockMinutes = 18 * 60;
+      S.phase = 'complete';
+      S.completeWhisperAlpha = 1;
+      return;
+    }
+
+    S.stopIndex++;
+    S.prevSceneIndex = S.sceneIndex;
+    S.sceneIndex = S.stopIndex;
+    S.sceneBlend = 0;
+    S.clockMinutes = Math.max(S.clockMinutes, SCENES[S.sceneIndex].baseMin);
+
+    // Smooth onward bay shift: player arrives into the left bay while the next commuter waits ahead
+    S.playerX = 335;
+    S.npcX = 838;
+    S.npcAlpha = 0;
+    S.stopSpoken = false;
+    S.pillsAlpha = 0;
+    S.selectedOpt = 0;
+    S.bowAmount = 0;
+    S.phase = 'ready';
+
+    if (!SCENES[S.sceneIndex].hasBakedTrain) {
+      S.trainFrontX = -260;
+      S.trainSpeed = 235;
+    }
+  }
+
+  // Input handling (Keyboard + Spatial Pointer)
   const keys = new Set();
-  const CHOICE_BOXES = [];
 
   window.addEventListener('keydown', (e) => {
     unlockAudio();
-    keys.add(e.code);
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) {
       e.preventDefault();
     }
+
+    // Law 8: Reversible change exposes quiet [R] reset anytime
+    if (e.code === 'KeyR') {
+      resetDay(true);
+      return;
+    }
+
+    // Law 7: Active work exposes quiet Pause [P]
+    if (e.code === 'KeyP') {
+      S.paused = !S.paused;
+      return;
+    }
+    if (S.paused) {
+      S.paused = false;
+    }
+
+    keys.add(e.code);
     S.hasActed = true;
 
-    if (S.phase === 'title') {
-      if (e.code === 'Space' || e.code === 'Enter') {
-        S.phase = 'scene';
-        playTone([329.63, 440, 523.25], 0.8, 0.06, 'sine');
-      }
-      return;
+    if (S.phase === 'rest') {
+      S.phase = 'ready';
     }
 
-    if (S.phase === 'end') {
-      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') {
-        resetDay(true);
-        playTone([329.63, 440], 0.7, 0.05, 'sine');
-      }
-      return;
-    }
-
-    if (S.phase === 'scene') {
-      const dist = Math.abs(S.playerX - S.npcX);
-      if ((e.code === 'Space' || e.code === 'Enter') && dist < 245 && S.talkCooldown <= 0) {
-        enterConversation();
-      }
-      return;
-    }
-
-    if (S.phase === 'talk') {
-      if (e.code === 'Digit1' || e.code === 'Numpad1') choosePhrase(0);
-      else if (e.code === 'Digit2' || e.code === 'Numpad2') choosePhrase(1);
-      else if (e.code === 'Digit3' || e.code === 'Numpad3') choosePhrase(2);
-      else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+    if (S.phase === 'ready' && !S.stopSpoken && S.pillsAlpha > 0.25) {
+      if (e.code === 'Digit1' || e.code === 'Numpad1') { selectPhrase(0); return; }
+      if (e.code === 'Digit2' || e.code === 'Numpad2') { selectPhrase(1); return; }
+      if (e.code === 'Digit3' || e.code === 'Numpad3') { selectPhrase(2); return; }
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') {
         S.selectedOpt = (S.selectedOpt + 2) % 3;
-        playTone([493.88], 0.16, 0.03, 'sine');
-      } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+        return;
+      }
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') {
         S.selectedOpt = (S.selectedOpt + 1) % 3;
-        playTone([440], 0.16, 0.03, 'sine');
-      } else if (e.code === 'Enter' || e.code === 'Space') {
-        choosePhrase(S.selectedOpt);
+        return;
+      }
+      if (e.code === 'Space' || e.code === 'Enter') {
+        selectPhrase(S.selectedOpt);
+        return;
       }
     }
   });
@@ -440,437 +758,706 @@
     keys.delete(e.code);
   });
 
+  function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      mx: ((e.clientX - rect.left) / rect.width) * W,
+      my: ((e.clientY - rect.top) / rect.height) * H,
+    };
+  }
+
   canvas.addEventListener('pointerdown', (e) => {
     unlockAudio();
-    const rect = canvas.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * W;
-    const my = ((e.clientY - rect.top) / rect.height) * H;
+    if (S.paused) { S.paused = false; return; }
+    const { mx, my } = getCanvasCoords(e);
 
-    if (S.phase === 'title') {
-      S.hasActed = true;
-      S.phase = 'scene';
-      playTone([329.63, 440, 523.25], 0.8, 0.06, 'sine');
-      return;
+    if (S.phase === 'rest') {
+      S.phase = 'ready';
     }
-    if (S.phase === 'end') {
+
+    // Check subtle [R] reset glyph hit-box
+    if (resetHitBox && mx >= resetHitBox.x && mx <= resetHitBox.x + resetHitBox.w &&
+        my >= resetHitBox.y && my <= resetHitBox.y + resetHitBox.h) {
       resetDay(true);
       return;
     }
-    if (S.phase === 'talk') {
-      for (let i = 0; i < CHOICE_BOXES.length; i++) {
-        const b = CHOICE_BOXES[i];
+
+    // Check spatial floating speech-glyph pills beside the citizen
+    if (S.phase === 'ready' && !S.stopSpoken && S.pillsAlpha > 0.25) {
+      for (let i = 0; i < PILL_BOXES.length; i++) {
+        const b = PILL_BOXES[i];
         if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
-          S.hasActed = true;
-          choosePhrase(i);
+          selectPhrase(i);
           return;
         }
+      }
+    }
+
+    // Law 13: Empty sky remains inactive; clicking the snowy platform floor or citizen walks smoothly there
+    const clickedCitizen = Math.abs(mx - S.npcX) < 75 && my >= 320 && my <= 610 && !S.stopSpoken;
+    if ((clickedCitizen || (my >= 485 && my <= 670)) && (S.phase === 'ready' || S.phase === 'changed')) {
+      S.hasActed = true;
+      if (clickedCitizen) {
+        S.walkTargetX = S.npcX - 360;
+      } else {
+        S.walkTargetX = Math.max(150, Math.min(1090, mx));
       }
     }
   });
 
   canvas.addEventListener('pointermove', (e) => {
-    if (S.phase !== 'talk') return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * W;
-    const my = ((e.clientY - rect.top) / rect.height) * H;
-    for (let i = 0; i < CHOICE_BOXES.length; i++) {
-      const b = CHOICE_BOXES[i];
-      if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
-        S.selectedOpt = i;
+    const { mx, my } = getCanvasCoords(e);
+    let hoveringInteractive = false;
+    if (S.phase === 'ready' && !S.stopSpoken && S.pillsAlpha > 0.25) {
+      for (let i = 0; i < PILL_BOXES.length; i++) {
+        const b = PILL_BOXES[i];
+        if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
+          S.selectedOpt = i;
+          hoveringInteractive = true;
+        }
       }
     }
+    if (resetHitBox && mx >= resetHitBox.x && mx <= resetHitBox.x + resetHitBox.w &&
+        my >= resetHitBox.y && my <= resetHitBox.y + resetHitBox.h) {
+      hoveringInteractive = true;
+    }
+    canvas.style.cursor = hoveringInteractive ? 'pointer' : 'default';
   });
 
-  function enterConversation() {
-    S.phase = 'talk';
-    S.selectedOpt = 0;
-    S.playerDir = S.npcX >= S.playerX ? 1 : -1;
-    // Initial soft greeting bubble so the conversation feels alive immediately
-    spawnConversationCluster(true, 1);
-    playTone([440, 554.37], 0.45, 0.04, 'sine');
-  }
-
-  function choosePhrase(idx) {
-    if (S.phase !== 'talk') return;
-    const set = PHRASE_SETS[S.phraseSetIdx % PHRASE_SETS.length];
-    const choice = set.choices[idx];
-    if (!choice) return;
-
-    S.phraseSetIdx++;
-    S.replyToast = choice.reply;
-    S.replyToastTimer = 2.6;
-
-    if (choice.resonant) {
-      S.realReplies++;
-      spawnConversationCluster(true, S.realReplies + 1);
-      playTone([329.63, 415.3, 493.88, 659.25], 1.1, 0.055, 'sine');
-
-      if (S.realReplies >= 3) {
-        // Edge: talk -> near ("three real replies")
-        S.phase = 'near';
-        S.almostReached = true;
-        S.nearTimer = 3.4;
-        S.prevSceneIndex = S.sceneIndex;
-        S.sceneIndex = 2; // Dusk Transit with glowing train
-        S.sceneBlend = 0.35;
-        S.clockMinutes = Math.max(S.clockMinutes, 17 * 60 + 25);
-        return;
-      }
-      // Advance gently to next time-of-day scene while staying open to deeper talk
-      advanceScene(115);
-      S.talkCooldown = 0.45;
-      S.phase = 'scene';
-    } else {
-      // Edge: talk -> scene ("phrase misread")
-      S.misreadCount++;
-      spawnConversationCluster(false, 1);
-      scatterBubblesIntoSnow();
-      playTone([311.13, 293.66], 0.75, 0.05, 'triangle');
-      advanceScene(135);
-      S.talkCooldown = 0.85;
-      S.phase = 'scene';
-      if (S.clockMinutes >= 18 * 60) {
-        S.prevSceneIndex = S.sceneIndex;
-        S.sceneIndex = 3;
-        S.sceneBlend = 0;
-        S.phase = 'end';
-      }
-    }
-  }
-
-  // Expose read-only state for play.mjs & verification
+  // Expose state for play.mjs & automated verification
   window.__game = {
     get state() {
-      const set = PHRASE_SETS[S.phraseSetIdx % PHRASE_SETS.length];
+      const set = PHRASE_SETS[S.stopIndex % PHRASE_SETS.length];
       return {
-        phase: S.phase,
+        phase: S.paused ? 'paused' : S.phase,
+        stopIndex: S.stopIndex,
         sceneIndex: S.sceneIndex,
-        sceneName: SCENE_RECTS[S.sceneIndex].name,
+        sceneName: SCENES[S.sceneIndex].name,
         clockMinutes: Math.floor(S.clockMinutes),
-        clockText: formatClock(S.clockMinutes),
+        clockText: formatClock24(S.clockMinutes),
         playerX: Math.round(S.playerX),
         npcX: Math.round(S.npcX),
         distToNpc: Math.round(Math.abs(S.playerX - S.npcX)),
+        pillsVisible: S.phase === 'ready' && !S.stopSpoken && S.pillsAlpha > 0.45,
         realReplies: S.realReplies,
         misreadCount: S.misreadCount,
         almostReached: S.almostReached,
         selectedOpt: S.selectedOpt,
-        options: S.phase === 'talk' ? set.choices.map((c, i) => ({ index: i + 1, text: c.text, resonant: c.resonant })) : [],
+        options: (S.phase === 'ready' && !S.stopSpoken && S.pillsAlpha > 0.25)
+          ? set.choices.map((c, i) => ({ index: i + 1, text: c.text, resonant: c.resonant }))
+          : [],
         t: +S.t.toFixed(2),
       };
     },
   };
 
-  // Update loop
-  let lastNow = performance.now();
   function update(dt) {
+    if (S.paused) return;
     S.t += dt;
 
-    if (S.sceneBlend < 1) {
-      S.sceneBlend = Math.min(1, S.sceneBlend + dt * 0.85);
-    }
-    if (S.replyToastTimer > 0) {
-      S.replyToastTimer = Math.max(0, S.replyToastTimer - dt);
-    }
-    if (S.talkCooldown > 0) {
-      S.talkCooldown = Math.max(0, S.talkCooldown - dt);
+    if (S.phase !== 'rest' && S.titleFade > 0) {
+      S.titleFade = Math.max(0, S.titleFade - dt * 2.4);
     }
 
-    // Update snow
+    if (S.sceneBlend < 1) {
+      S.sceneBlend = Math.min(1, S.sceneBlend + dt * 0.95);
+    }
+    if (!S.stopSpoken && S.npcAlpha < 1) {
+      S.npcAlpha = Math.min(1, S.npcAlpha + dt * 1.4);
+    }
+
+    // Snowfall drift
     for (const f of snowflakes) {
       f.y += f.vy * dt;
-      f.x += (f.vx + Math.sin(S.t * 1.1 + f.phase) * 10) * dt;
+      f.x += (f.vx + Math.sin(S.t * 1.05 + f.phase) * 9) * dt;
       if (f.y > H + 8) { f.y = -8; f.x = rand() * W; }
       if (f.x < -10) f.x = W + 10;
       if (f.x > W + 10) f.x = -10;
     }
 
-    // Update floating speech bubbles & motes
-    for (let i = speechBubbles.length - 1; i >= 0; i--) {
-      const b = speechBubbles[i];
-      b.age += dt;
-      if (b.age >= b.maxAge) {
-        speechBubbles.splice(i, 1);
-        continue;
-      }
-      if (S.phase === 'near' && b.age < 2.0) {
-        // Almost harmonizing: converge gently toward golden-violet center chord
-        const cx = (S.playerX + S.npcX) * 0.5 + Math.cos(S.t * 1.4 + b.arcSeed) * 65;
-        const cy = 245 + Math.sin(S.t * 1.7 + b.arcSeed) * 42;
-        b.x += (cx - b.x) * Math.min(1, dt * 2.4);
-        b.y += (cy - b.y) * Math.min(1, dt * 2.4);
-      } else {
-        b.x += (b.tx - b.x) * Math.min(1, dt * 1.8) + Math.sin(S.t * 1.3 + b.arcSeed) * 8 * dt + b.vx * 0.15 * dt;
-        b.y += (b.ty - b.y) * Math.min(1, dt * 1.5) + b.vy * 0.25 * dt;
+    // Sleek 2-car transit train physics: begins rolling once day movement begins
+    if (!SCENES[S.sceneIndex].hasBakedTrain && S.hasActed) {
+      const targetSpeed = (S.trainFrontX > 80 && S.trainFrontX < 920) ? 182 : 248;
+      S.trainSpeed += (targetSpeed - S.trainSpeed) * Math.min(1, dt * 2.5);
+      S.trainFrontX += S.trainSpeed * dt;
+      if (S.trainFrontX > W + 980) {
+        S.trainFrontX = -520;
       }
     }
 
-    for (let i = snowMotes.length - 1; i >= 0; i--) {
-      const m = snowMotes[i];
-      m.age += dt;
-      if (m.age >= m.maxAge) {
-        snowMotes.splice(i, 1);
+    // Gentle day-clock progression while active
+    if (S.phase !== 'rest' && S.phase !== 'complete' && S.hasActed) {
+      S.clockMinutes = Math.min(18 * 60, S.clockMinutes + dt * 1.8);
+    }
+
+    // Player walking (keyboard A/D or Left/Right, or spatial click-to-walk)
+    const keyDir = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) -
+                   (keys.has('ArrowLeft')  || keys.has('KeyA') ? 1 : 0);
+    if (keyDir !== 0) {
+      S.walkTargetX = null;
+    }
+
+    let moveDir = keyDir;
+    if (moveDir === 0 && S.walkTargetX !== null) {
+      const dx = S.walkTargetX - S.playerX;
+      if (Math.abs(dx) > 6) {
+        moveDir = dx > 0 ? 1 : -1;
+      } else {
+        S.walkTargetX = null;
+      }
+    }
+
+    // Allow free movement during 'ready' and 'changed' (and gentle micro-step during 'working')
+    const canWalk = S.phase === 'ready' || S.phase === 'changed' || S.phase === 'complete';
+    S.isMoving = canWalk && moveDir !== 0;
+    if (S.isMoving) {
+      S.playerDir = moveDir;
+      const walkSpeed = 104;
+      S.playerX = Math.max(150, Math.min(1090, S.playerX + moveDir * walkSpeed * dt));
+      S.walkCycle += dt * 5.6;
+      const stepHalf = Math.floor(S.walkCycle);
+      if (stepHalf !== S.lastStepHalf) {
+        S.lastStepHalf = stepHalf;
+        playSnowStep();
+      }
+    }
+
+    // Spatial proximity check for floating speech-glyph choice pills
+    const dist = Math.abs(S.playerX - S.npcX);
+    const shouldShowPills = S.phase === 'ready' && !S.stopSpoken && dist <= 415 && S.npcAlpha > 0.7;
+    const pillTarget = shouldShowPills ? 1 : 0;
+    S.pillsAlpha += (pillTarget - S.pillsAlpha) * Math.min(1, dt * 6.5);
+
+    // State machine for WORKING (rising near-harmony) -> CHANGED (detuning & snow dissolution)
+    if (S.phase === 'working') {
+      S.exchangeTimer += dt;
+      // Subtle mutual lean-in of 6px while voices nearly harmonize
+      const idealP = Math.min(S.npcX - 385, Math.max(415, S.playerX));
+      S.playerX += (idealP - S.playerX) * Math.min(1, dt * 0.9);
+
+      const detuneAt = S.exchangeResonant ? 2.55 : 1.15;
+      if (S.exchangeTimer >= detuneAt) {
+        S.phase = 'changed';
+        triggerDetuneScatter();
+      }
+    } else if (S.phase === 'changed') {
+      S.exchangeTimer += dt;
+      // Gentle head/posture bow as the near-connection dissolves into snow (matches sheet.jpg row 3-4!)
+      const bowWindow = S.exchangeTimer - (S.exchangeResonant ? 2.55 : 1.15);
+      const wantBow = bowWindow < 2.55
+        ? Math.sin(Math.min(1, bowWindow / 0.6) * Math.PI * 0.5)
+        : Math.max(0, 1 - (bowWindow - 2.55) * 1.2);
+      S.bowAmount += (wantBow - S.bowAmount) * Math.min(1, dt * 4.0);
+
+      // Keep citizen solid on the platform during the shared bow, fading only right before stop change
+      if (bowWindow > 2.65) {
+        S.npcAlpha = Math.max(0, S.npcAlpha - dt * 1.5);
+      }
+
+      // Advance to next transit stop when player walks onward past the trace OR after natural beat
+      if ((bowWindow > 1.25 && S.isMoving && S.playerDir > 0 && S.playerX > 515) || bowWindow > 3.25) {
+        advanceToNextStop();
+      }
+    } else if (S.phase === 'complete') {
+      S.bowAmount += (0.35 - S.bowAmount) * Math.min(1, dt * 1.5);
+      if (S.completeWhisperAlpha > 0) {
+        S.completeWhisperAlpha = Math.max(0, S.completeWhisperAlpha - dt * 0.14);
+      }
+    } else {
+      S.bowAmount += (0 - S.bowAmount) * Math.min(1, dt * 4.0);
+    }
+
+    // Update rising/detuning speech bubbles & runes
+    for (let i = S.bubbles.length - 1; i >= 0; i--) {
+      const b = S.bubbles[i];
+      b.age += dt;
+      if (b.age < 0) continue;
+      if (b.age >= b.maxAge) {
+        S.bubbles.splice(i, 1);
         continue;
       }
+      if (!b.scattered) {
+        // Rise smoothly toward twilight archway and converge softly toward shared harmonic center
+        const u = Math.min(1, b.age / 1.85);
+        const ease = 1 - Math.pow(1 - u, 3);
+        const pull = (S.exchangeResonant && b.age > 0.8) ? Math.sin(Math.min(1, (b.age - 0.8) / 1.3) * Math.PI * 0.5) * 16 : 0;
+        const midX = (S.playerX + S.npcX) * 0.5;
+        const dirToMid = b.tx > midX ? -1 : 1;
+        b.x = b.sx + (b.tx + dirToMid * pull - b.sx) * ease + Math.sin(S.t * 1.5 + b.seed) * 4;
+        b.y = b.sy + (b.ty - b.sy) * ease + Math.cos(S.t * 1.3 + b.seed) * 3;
+      } else {
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.vx *= (1 - 0.5 * dt);
+      }
+    }
+
+    // Update comet wisps & snow motes
+    for (let i = S.wisps.length - 1; i >= 0; i--) {
+      S.wisps[i].age += dt;
+      if (S.wisps[i].age >= S.wisps[i].maxAge) S.wisps.splice(i, 1);
+    }
+    for (let i = S.motes.length - 1; i >= 0; i--) {
+      const m = S.motes[i];
+      m.age += dt;
+      if (m.age >= m.maxAge) { S.motes.splice(i, 1); continue; }
       m.x += m.vx * dt;
       m.y += m.vy * dt;
     }
-
-    // Gliding transit train on mid-ground track
-    if (S.sceneIndex >= 1 || S.trainActive) {
-      S.trainActive = true;
-      S.trainX += 115 * dt;
-      if (S.trainX > W + 450) S.trainX = -720;
-    }
-
-    if (S.phase === 'scene') {
-      // Only tick the day clock once player has begun interacting (keeps warmup stable)
-      if (S.hasActed) {
-        S.clockMinutes += dt * 7.5;
-      }
-      const moveDir = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) -
-                      (keys.has('ArrowLeft')  || keys.has('KeyA') ? 1 : 0);
-      S.isMoving = moveDir !== 0;
-      if (S.isMoving) {
-        S.playerDir = moveDir;
-        S.playerX = Math.max(155, Math.min(1090, S.playerX + moveDir * 145 * dt));
-        S.walkCycle += dt * 6.2;
-      }
-
-      const dist = Math.abs(S.playerX - S.npcX);
-      // Automatically initiate conversation when approaching comfortably close
-      if (S.hasActed && dist <= 385 && S.talkCooldown <= 0 && !S.isMoving) {
-        enterConversation();
-      } else if (S.hasActed && dist <= 375 && S.talkCooldown <= 0) {
-        enterConversation();
-      }
-
-      if (S.clockMinutes >= 18 * 60) {
-        S.clockMinutes = 18 * 60;
-        S.prevSceneIndex = S.sceneIndex;
-        S.sceneIndex = 3;
-        S.sceneBlend = 0;
-        S.phase = 'end';
-        playTone([293.66, 220], 1.3, 0.055, 'sine');
-      }
-    } else if (S.phase === 'talk') {
-      S.isMoving = false;
-      if (S.hasActed) {
-        S.clockMinutes += dt * 3.2;
-        if (S.clockMinutes >= 18 * 60) {
-          S.clockMinutes = 18 * 60;
-          S.prevSceneIndex = S.sceneIndex;
-          S.sceneIndex = 3;
-          S.sceneBlend = 0;
-          S.phase = 'end';
-        }
-      }
-    } else if (S.phase === 'near') {
-      S.isMoving = false;
-      S.nearTimer -= dt;
-      // Gently step 12px closer during ALMOST moment, then scatter into evening snow
-      const wantP = 452;
-      const wantN = 812;
-      S.playerX += (wantP - S.playerX) * Math.min(1, dt * 1.6);
-      S.npcX += (wantN - S.npcX) * Math.min(1, dt * 1.6);
-      if (S.nearTimer < 1.35 && S.nearTimer + dt >= 1.35) {
-        scatterBubblesIntoSnow();
-        playTone([523.25, 493.88, 392, 329.63], 1.5, 0.055, 'sine');
-      }
-      if (S.nearTimer <= 0) {
-        // Edge: near -> end ("day ends")
-        S.clockMinutes = 18 * 60;
-        S.prevSceneIndex = S.sceneIndex;
-        S.sceneIndex = 3;
-        S.sceneBlend = 0;
-        S.phase = 'end';
-      }
-    }
   }
 
-  // Drawing helpers
-  function drawSceneBackground() {
-    if (!bgLoaded) {
+  // Coordinate mapping helper from 1376x768 background panel space to 1280x720 canvas space
+  function getSceneViewport(camShift) {
+    return { dx: -16 - camShift, dy: -4, dw: W + 32, dh: H + 8 };
+  }
+
+  function drawSceneLayer(idx, alpha, camShift) {
+    const sc = SCENES[idx];
+    const vp = getSceneViewport(camShift);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (bgLoaded) {
+      ctx.drawImage(imgBg, sc.sx, sc.sy, sc.sw, sc.sh, vp.dx, vp.dy, vp.dw, vp.dh);
+    } else {
+      // Fault-tolerant procedural twilight station gradient
       const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#b5acc5');
-      g.addColorStop(0.65, '#e9e6f2');
-      g.addColorStop(1, '#2b2740');
+      g.addColorStop(0, idx === 3 ? '#262038' : '#a4a5c4');
+      g.addColorStop(0.68, idx === 3 ? '#524362' : '#dfd6e6');
+      g.addColorStop(1, '#1b1622');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
-      return;
     }
 
-    // Subtle slow side-pan parallax synced to player position (matches Omni camera drift)
-    const camShift = ((S.playerX - 560) / 560) * 10;
+    // Harmonizing twilight atmosphere wash matching study/sheet.jpg palette
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.82);
+    skyGrad.addColorStop(0, sc.skyWashTop);
+    skyGrad.addColorStop(0.62, sc.skyWashMid);
+    skyGrad.addColorStop(1, 'rgba(27, 22, 34, 0)');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
 
-    const drawQuad = (idx, alpha) => {
-      const r = SCENE_RECTS[idx];
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(imgBg, r.sx, r.sy, r.sw, r.sh, -14 - camShift, -8, W + 28, H + 16);
-      ctx.restore();
-    };
-
-    if (S.sceneBlend < 1 && S.prevSceneIndex !== S.sceneIndex) {
-      drawQuad(S.prevSceneIndex, 1);
-      drawQuad(S.sceneIndex, S.sceneBlend);
+    // Sleek 2.5D gliding transit train on open-track stops (occluded behind real foreground pillars & curb!)
+    if (!sc.hasBakedTrain) {
+      drawGlidingTrain(S.trainFrontX - camShift * 0.75);
+      if (bgLoaded) {
+        // Re-stamp foreground platform floor slab (py >= curbPy) so train wheels sit cleanly behind platform curb
+        const curbFrac = (sc.curbPy - sc.sy) / sc.sh;
+        const syFloor = sc.curbPy;
+        const shFloor = (sc.sy + sc.sh) - syFloor;
+        if (shFloor > 2) {
+          ctx.drawImage(
+            imgBg,
+            sc.sx, syFloor, sc.sw, shFloor,
+            vp.dx, vp.dy + curbFrac * vp.dh, vp.dw, (shFloor / sc.sh) * vp.dh
+          );
+        }
+        // Re-stamp left & right foreground vertical station pillars for true 2.5D train occlusion
+        const pyTop = sc.sy + 95;
+        const pyH = (sc.sy + sc.sh) - pyTop;
+        for (const p of sc.pillars) {
+          const sxP = p.px;
+          const dxP = vp.dx + ((sxP - sc.sx) / sc.sw) * vp.dw;
+          const dwP = (p.pw / sc.sw) * vp.dw;
+          const dyP = vp.dy + ((pyTop - sc.sy) / sc.sh) * vp.dh;
+          const dhP = (pyH / sc.sh) * vp.dh;
+          ctx.drawImage(imgBg, sxP, pyTop, p.pw, pyH, dxP, dyP, dwP, dhP);
+        }
+      }
     } else {
-      drawQuad(S.sceneIndex, 1);
+      // Subtle warm window/headlight breath on baked Dusk/Evening transit trains
+      const shimmer = 0.08 + 0.04 * Math.sin(S.t * 2.7);
+      const gx = idx === 2 ? 780 : 390;
+      const rg = ctx.createRadialGradient(gx - camShift, 488, 12, gx - camShift, 488, 250);
+      rg.addColorStop(0, `rgba(255, 232, 202, ${shimmer})`);
+      rg.addColorStop(1, 'rgba(255, 232, 202, 0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(gx - 260 - camShift, 350, 520, 240);
     }
 
-    // Sleek animated transit train gliding on mid-platform track during Afternoon/Evening
-    // (In Scene 2 Dusk Transit, the Nano Banana background already features the train, so we add a subtle moving light sweep!)
-    if (S.trainActive && S.sceneIndex !== 2) {
-      drawGlidingTrain(S.trainX);
-    } else if (S.sceneIndex === 2) {
-      // Subtle warm window shimmer & headlight glow matching f_021.jpg
-      const pulse = 0.12 + 0.05 * Math.sin(S.t * 3.2);
-      const grad = ctx.createRadialGradient(820, 495, 10, 820, 495, 220);
-      grad.addColorStop(0, `rgba(255, 234, 205, ${pulse})`);
-      grad.addColorStop(1, 'rgba(255, 234, 205, 0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(580, 380, 460, 200);
-    }
+    // Soft warm volumetric canopy lamp cones (left & right station overheads)
+    drawLampCone(282 - camShift, 184, sc.lampAlpha);
+    drawLampCone(1002 - camShift, 184, sc.lampAlpha);
+
+    // Diegetic perspective station clock mounted directly inside the right canopy's hanging sign
+    drawDiegeticClock(sc, vp);
+
+    ctx.restore();
   }
 
-  function drawGlidingTrain(tx) {
+  function drawLampCone(cx, topY, strength) {
     ctx.save();
-    // Clip between the foreground station pillars (x: 112..1172) and above platform floor (y < 556)
+    const grad = ctx.createLinearGradient(cx, topY, cx, 595);
+    grad.addColorStop(0, `rgba(255, 239, 216, ${strength})`);
+    grad.addColorStop(0.55, `rgba(244, 224, 212, ${strength * 0.35})`);
+    grad.addColorStop(1, 'rgba(244, 224, 212, 0)');
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.rect(112, 360, 1060, 196);
-    ctx.clip();
+    ctx.moveTo(cx - 88, topY);
+    ctx.lineTo(cx + 88, topY);
+    ctx.lineTo(cx + 185, 595);
+    ctx.lineTo(cx - 185, 595);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
 
-    const ty = 420;
-    const tw = 640;
-    const th = 122;
-    ctx.fillStyle = 'rgba(62, 56, 78, 0.88)';
+  // Streamlined 2-car futuristic transit train modeled on study/f_014.jpg & f_027.jpg
+  function drawGlidingTrain(frontX) {
+    const trainLen = 845;
+    const tailX = frontX - trainLen;
+    if (frontX < -180 || tailX > W + 180) return;
+
+    const railY = 532;
+    const h = 128;
+    const topY = railY - h;
+    const midGap = tailX + trainLen * 0.5;
+
+    ctx.save();
+
+    // Forward warm headlight sweep ahead of streamlined nose
+    const beam = ctx.createLinearGradient(frontX - 24, railY - 38, frontX + 195, railY + 12);
+    beam.addColorStop(0, 'rgba(255, 236, 206, 0.36)');
+    beam.addColorStop(1, 'rgba(255, 236, 206, 0)');
+    ctx.fillStyle = beam;
     ctx.beginPath();
-    ctx.moveTo(tx, ty + th);
-    ctx.lineTo(tx + 30, ty + 14);
-    ctx.quadraticCurveTo(tx + 55, ty, tx + 95, ty);
-    ctx.lineTo(tx + tw - 110, ty);
-    ctx.quadraticCurveTo(tx + tw - 35, ty + 4, tx + tw, ty + th - 16);
-    ctx.lineTo(tx + tw, ty + th);
+    ctx.moveTo(frontX - 22, railY - 42);
+    ctx.lineTo(frontX + 205, railY - 12);
+    ctx.lineTo(frontX + 205, railY + 18);
+    ctx.lineTo(frontX - 10, railY - 8);
     ctx.closePath();
     ctx.fill();
 
-    // Warm glowing cabin windows
-    ctx.fillStyle = 'rgba(248, 224, 196, 0.58)';
-    for (let i = 0; i < 6; i++) {
-      const wx = tx + 85 + i * 76;
+    // Trailing soft tail-cone glow
+    const tailGlow = ctx.createLinearGradient(tailX + 22, railY - 34, tailX - 135, railY + 8);
+    tailGlow.addColorStop(0, 'rgba(255, 228, 198, 0.22)');
+    tailGlow.addColorStop(1, 'rgba(255, 228, 198, 0)');
+    ctx.fillStyle = tailGlow;
+    ctx.beginPath();
+    ctx.moveTo(tailX + 18, railY - 38);
+    ctx.lineTo(tailX - 135, railY - 6);
+    ctx.lineTo(tailX - 135, railY + 14);
+    ctx.lineTo(tailX + 10, railY - 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // Streamlined 2-car hull silhouette with soft twilight atmospheric perspective
+    const hullGrad = ctx.createLinearGradient(0, topY, 0, railY);
+    hullGrad.addColorStop(0, '#6a6279');
+    hullGrad.addColorStop(0.52, '#51495f');
+    hullGrad.addColorStop(1, '#383145');
+    ctx.fillStyle = hullGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(tailX + 6, railY);
+    ctx.quadraticCurveTo(tailX - 4, railY - 26, tailX + 34, topY + 42);
+    ctx.quadraticCurveTo(tailX + 92, topY + 2, tailX + 162, topY);
+    ctx.lineTo(frontX - 162, topY);
+    ctx.quadraticCurveTo(frontX - 92, topY + 2, frontX - 34, topY + 42);
+    ctx.quadraticCurveTo(frontX + 4, railY - 26, frontX - 6, railY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Center articulated coupling seam
+    ctx.fillStyle = 'rgba(27, 22, 34, 0.72)';
+    ctx.fillRect(midGap - 5, topY + 3, 10, h - 6);
+
+    // Warm illuminated cabin windows & twin transit doors (matching f_027.jpg)
+    const winGrad = ctx.createLinearGradient(0, topY + 22, 0, topY + 76);
+    winGrad.addColorStop(0, 'rgba(238, 214, 192, 0.74)');
+    winGrad.addColorStop(1, 'rgba(196, 170, 156, 0.56)');
+    ctx.fillStyle = winGrad;
+
+    // Front & rear sloped cockpit windshields
+    ctx.beginPath();
+    ctx.moveTo(frontX - 132, topY + 20);
+    ctx.quadraticCurveTo(frontX - 78, topY + 22, frontX - 36, topY + 58);
+    ctx.lineTo(frontX - 50, topY + 70);
+    ctx.lineTo(frontX - 132, topY + 70);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(tailX + 132, topY + 20);
+    ctx.quadraticCurveTo(tailX + 78, topY + 22, tailX + 36, topY + 58);
+    ctx.lineTo(tailX + 50, topY + 70);
+    ctx.lineTo(tailX + 132, topY + 70);
+    ctx.closePath();
+    ctx.fill();
+
+    // Passenger cabin windows & paired sliding door lights on each car
+    const carSpans = [
+      { x0: tailX + 150, x1: midGap - 18 },
+      { x0: midGap + 18, x1: frontX - 150 },
+    ];
+    for (const car of carSpans) {
+      // Two wide passenger windows + twin narrow door windows
+      const w1 = car.x0;
       ctx.beginPath();
-      ctx.roundRect(wx, ty + 24, 52, 46, 6);
+      ctx.roundRect(w1, topY + 22, 68, 50, 5);
+      ctx.roundRect(w1 + 80, topY + 20, 18, 58, 3);
+      ctx.roundRect(w1 + 103, topY + 20, 18, 58, 3);
+      ctx.roundRect(w1 + 134, topY + 22, 74, 50, 5);
       ctx.fill();
     }
-    // Glowing trim stripe matching Omni train
-    ctx.strokeStyle = 'rgba(255, 235, 208, 0.78)';
-    ctx.lineWidth = 2.5;
+
+    // Signature continuous warm-ivory trim stripe curving gracefully into nose & tail
+    ctx.strokeStyle = 'rgba(255, 236, 206, 0.86)';
+    ctx.shadowColor = 'rgba(255, 224, 186, 0.65)';
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2.4;
     ctx.beginPath();
-    ctx.moveTo(tx + 24, ty + 86);
-    ctx.lineTo(tx + tw - 18, ty + 86);
+    ctx.moveTo(tailX + 24, railY - 22);
+    ctx.quadraticCurveTo(tailX + 52, topY + 86, tailX + 95, topY + 86);
+    ctx.lineTo(frontX - 95, topY + 86);
+    ctx.quadraticCurveTo(frontX - 52, topY + 86, frontX - 24, railY - 22);
     ctx.stroke();
 
     ctx.restore();
   }
 
-  function drawSilhouette(sprite, x, footY, targetH, faceRight, tintAlpha = 0) {
-    if (!spritesLoaded) {
-      // Minimalist fallback capsule matching m2_main_ref.png while image decodes
-      ctx.fillStyle = PAL.fg;
+  // Perspective-transformed LED transit clock inside the physical right-canopy hanging sign
+  function drawDiegeticClock(sc, vp) {
+    const q = sc.clockQuad;
+    const mapX = (px) => vp.dx + ((px - sc.sx) / sc.sw) * vp.dw;
+    const mapY = (py) => vp.dy + ((py - sc.sy) / sc.sh) * vp.dh;
+
+    const tlx = mapX(q.lx), tly = mapY(q.lty);
+    const trx = mapX(q.rx), try_ = mapY(q.rty);
+    const blx = mapX(q.lx), bly = mapY(q.lby);
+
+    const localW = 92;
+    const localH = 54;
+
+    ctx.save();
+    ctx.transform(
+      (trx - tlx) / localW,
+      (try_ - tly) / localW,
+      (blx - tlx) / localH,
+      (bly - tly) / localH,
+      tlx,
+      tly
+    );
+
+    // Recessed matte slate-plum sign face (cleanly replaces garbled AI 08:86:49 pixels)
+    ctx.fillStyle = '#261f2d';
+    ctx.fillRect(-3, -3, localW + 6, localH + 6);
+    ctx.strokeStyle = 'rgba(198, 182, 204, 0.24)';
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(-1, -1, localW + 2, localH + 2);
+
+    // Warm dot-matrix transit clock time
+    const timeStr = S.paused ? 'II:II' : formatClock24(S.clockMinutes);
+    const colonBlink = S.paused || Math.sin(S.t * Math.PI * 2) > -0.35;
+    const shown = colonBlink ? timeStr : timeStr.replace(':', ' ');
+
+    ctx.fillStyle = PAL.ledAmber;
+    ctx.shadowColor = 'rgba(255, 214, 172, 0.65)';
+    ctx.shadowBlur = 4;
+    ctx.font = '700 22px "SF Mono", "Menlo", "Consolas", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(shown, localW * 0.5, localH * 0.44);
+
+    // 3 tiny diegetic amber rim LEDs tracking the day's near-connections without HUD chrome
+    ctx.shadowBlur = 0;
+    for (let i = 0; i < 3; i++) {
+      const lit = i < S.realReplies;
       ctx.beginPath();
-      ctx.roundRect(x - 28, footY - targetH, 56, targetH, 28);
+      ctx.arc(localW * 0.5 + (i - 1) * 14, localH * 0.81, 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = lit ? '#ffd9b0' : 'rgba(181, 172, 197, 0.22)';
       ctx.fill();
-      return;
     }
+
+    ctx.restore();
+  }
+
+  function drawSilhouette(sprite, x, footY, targetH, faceRight, alpha, bowRad) {
+    if (alpha <= 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
 
     const scale = targetH / sprite.h;
     const dw = sprite.w * scale;
     const dh = targetH;
 
-    // Ground shadow cast toward bottom-left (matches f_009 / f_021 lighting!)
-    ctx.save();
-    ctx.fillStyle = 'rgba(34, 28, 48, 0.28)';
+    // Low-angle dusk ground shadow cast softly across the snowy platform
+    ctx.fillStyle = 'rgba(27, 22, 34, 0.25)';
     ctx.beginPath();
-    ctx.moveTo(x - dw * 0.25, footY - 2);
-    ctx.lineTo(x + dw * 0.25, footY - 2);
-    ctx.lineTo(x - dw * 1.35, footY + 22);
-    ctx.lineTo(x - dw * 1.75, footY + 18);
+    ctx.moveTo(x - dw * 0.24, footY - 2);
+    ctx.lineTo(x + dw * 0.24, footY - 2);
+    ctx.lineTo(x - dw * 1.45, footY + 20);
+    ctx.lineTo(x - dw * 1.85, footY + 15);
     ctx.closePath();
     ctx.fill();
 
+    // Subtle breathing + walk bob + melancholy head/posture bow
+    const breath = 1 + Math.sin(S.t * 2.1 + x * 0.01) * 0.004;
     ctx.translate(x, footY);
     if (!faceRight) ctx.scale(-1, 1);
-    if (tintAlpha > 0) {
-      ctx.shadowColor = PAL.acc;
-      ctx.shadowBlur = 18;
+    if (bowRad > 0.001) {
+      ctx.rotate(bowRad);
     }
-    ctx.drawImage(imgSprites, sprite.x, sprite.y, sprite.w, sprite.h, -dw * 0.5, -dh, dw, dh);
+
+    if (spritesLoaded && spriteSource) {
+      ctx.drawImage(spriteSource, sprite.x, sprite.y, sprite.w, sprite.h, -dw * 0.5, -dh * breath, dw, dh * breath);
+    } else {
+      ctx.fillStyle = PAL.fg;
+      ctx.beginPath();
+      ctx.roundRect(-26, -targetH, 52, targetH, 26);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
-  function drawFloatingGlyphs() {
-    // Luminous connecting arc trails during talk / near
-    if (speechBubbles.length > 1) {
+  // Persistent warm shimmer traces left in the platform air from earlier stops
+  function drawLingeringTraces() {
+    for (let i = 0; i < S.traces.length; i++) {
+      const tr = S.traces[i];
+      const pulse = 0.35 + 0.2 * Math.sin(S.t * 1.8 + tr.phase);
+      const y = tr.y + Math.sin(S.t * 1.2 + tr.phase) * 5;
       ctx.save();
-      for (let i = 0; i < speechBubbles.length; i++) {
-        const b = speechBubbles[i];
-        const life = 1 - b.age / b.maxAge;
-        if (b.resonant && i % 2 === 0) {
-          ctx.strokeStyle = `rgba(248, 227, 210, ${0.24 * life})`;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(S.playerX + 18, 375);
-          ctx.quadraticCurveTo((S.playerX + b.x) * 0.5, b.y + 45, b.x, b.y);
-          ctx.stroke();
-        }
-      }
+      ctx.globalAlpha = pulse;
+      const col = tr.warm ? '#fae0c8' : '#b5acc5';
+      const rg = ctx.createRadialGradient(tr.x, y, 1, tr.x, y, 22);
+      rg.addColorStop(0, col);
+      rg.addColorStop(1, 'rgba(250, 224, 200, 0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(tr.x, y, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(tr.x, y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Rising near-harmony speech-bubbles, worn runes, comet wisps & dissolving snow motes
+  function drawExchangeGlyphs() {
+    // Soft harmonic warm aura between the two bubbles when nearly locking into consonance
+    if (S.phase === 'working' && S.exchangeResonant && S.exchangeTimer > 0.45) {
+      const midX = (S.playerX + S.npcX) * 0.5;
+      const swell = Math.sin(Math.min(1, (S.exchangeTimer - 0.45) / 1.75) * Math.PI * 0.85);
+      ctx.save();
+      const rg = ctx.createRadialGradient(midX, 246, 8, midX, 246, 155);
+      rg.addColorStop(0, `rgba(255, 232, 208, ${0.26 * swell})`);
+      rg.addColorStop(0.55, `rgba(182, 162, 226, ${0.14 * swell})`);
+      rg.addColorStop(1, 'rgba(182, 162, 226, 0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(midX - 170, 90, 340, 310);
+
+      // Delicate concentric harmonic waveform ring
+      ctx.strokeStyle = `rgba(250, 226, 204, ${0.22 * swell})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(midX, 244, 34 + swell * 42, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
     }
 
-    // Speech bubble pills & worn glyphs (modeled directly on f_015.jpg & f_021.jpg!)
-    for (const b of speechBubbles) {
-      const fadeIn = Math.min(1, b.age / 0.35);
-      const fadeOut = Math.min(1, (b.maxAge - b.age) / 0.85);
+    // Curved comet-like light wisps (modeled on f_014 & f_033)
+    for (const w of S.wisps) {
+      if (w.age < 0) continue;
+      const fadeIn = Math.min(1, w.age / 0.35);
+      const fadeOut = Math.min(1, (w.maxAge - w.age) / 0.65);
+      const a = Math.max(0, fadeIn * fadeOut);
+      ctx.save();
+      ctx.globalAlpha = a * 0.78;
+      const lg = ctx.createLinearGradient(w.x0, w.y0, w.x1, w.y1);
+      lg.addColorStop(0, 'rgba(248, 228, 212, 0)');
+      lg.addColorStop(0.65, 'rgba(250, 234, 220, 0.65)');
+      lg.addColorStop(1, 'rgba(255, 246, 236, 0.95)');
+      ctx.strokeStyle = lg;
+      ctx.lineWidth = 2.6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(w.x0, w.y0);
+      ctx.quadraticCurveTo(w.cx, w.cy, w.x1, w.y1);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff5e8';
+      ctx.shadowColor = '#fff0dc';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(w.x1, w.y1, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Speech-bubble pills & worn runes
+    for (const b of S.bubbles) {
+      if (b.age < 0) continue;
+      const fadeIn = Math.min(1, b.age / 0.32);
+      const fadeOut = Math.min(1, (b.maxAge - b.age) / 0.72);
       const alpha = Math.max(0, fadeIn * fadeOut);
 
       ctx.save();
       ctx.globalAlpha = alpha * 0.92;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = b.resonant ? 18 : 8;
+      ctx.shadowColor = b.col;
+      ctx.shadowBlur = 14;
 
       if (b.kind === 'pill') {
-        ctx.fillStyle = b.color;
-        const bx = b.x - b.w * 0.5;
+        // Measure if whispered citizen reply is still softly visible inside the rising pill
+        const textFade = b.replyText ? Math.max(0, 1 - Math.max(0, b.age - 0.95) / 0.55) : 0;
+        let pw = b.w;
+        if (textFade > 0.04) {
+          ctx.font = 'italic 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          const tw = ctx.measureText(b.replyText).width + 28;
+          pw = b.w + (tw - b.w) * textFade;
+        }
+        const bx = b.x - pw * 0.5;
         const by = b.y - b.h * 0.5;
+
+        ctx.fillStyle = b.col;
         ctx.beginPath();
-        ctx.roundRect(bx, by, b.w, b.h, b.h * 0.46);
+        ctx.roundRect(bx, by, pw, b.h, b.h * 0.48);
         ctx.fill();
 
-        // Speech tail
+        // Delicate speech tail
         ctx.beginPath();
-        const tx = b.tailLeft ? bx + 12 : bx + b.w - 12;
-        ctx.moveTo(tx - 5, by + b.h - 2);
-        ctx.lineTo(tx + (b.tailLeft ? -7 : 7), by + b.h + 8);
-        ctx.lineTo(tx + 5, by + b.h - 2);
+        const tx = b.tailLeft ? bx + 13 : bx + pw - 13;
+        ctx.moveTo(tx - 4.5, by + b.h - 1.5);
+        ctx.lineTo(tx + (b.tailLeft ? -6.5 : 6.5), by + b.h + 7.5);
+        ctx.lineTo(tx + 4.5, by + b.h - 1.5);
         ctx.closePath();
         ctx.fill();
 
-        // Three soft ellipsis dots or horizontal bar inside pill
         ctx.shadowBlur = 0;
-        ctx.fillStyle = b.color === PAL.midBubble ? '#ede9f8' : 'rgba(68, 56, 96, 0.55)';
-        if (b.w > 66) {
-          ctx.fillRect(b.x - b.w * 0.24, b.y - 1.5, b.w * 0.48, 3);
-        } else {
-          for (let d = -1; d <= 1; d++) {
+        const innerDark = b.col === PAL.violetBubble || b.col === PAL.slateBubble
+          ? 'rgba(244, 240, 252, 0.85)'
+          : 'rgba(62, 50, 86, 0.58)';
+
+        if (textFade > 0.12) {
+          ctx.globalAlpha = alpha * textFade * 0.92;
+          ctx.fillStyle = b.col === PAL.slateBubble ? '#f4f1fc' : '#3a2f52';
+          ctx.font = 'italic 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.replyText, b.x, b.y + 0.5);
+        }
+
+        const glyphAlpha = 1 - textFade;
+        if (glyphAlpha > 0.08) {
+          ctx.globalAlpha = alpha * glyphAlpha * 0.88;
+          ctx.fillStyle = innerDark;
+          if (b.style === 'dash') {
             ctx.beginPath();
-            ctx.arc(b.x + d * 9, b.y, 2.7, 0, Math.PI * 2);
+            ctx.roundRect(b.x - b.w * 0.24, b.y - 1.3, b.w * 0.48, 2.6, 1.3);
             ctx.fill();
+          } else {
+            for (let d = -1; d <= 1; d++) {
+              ctx.beginPath();
+              ctx.arc(b.x + d * 8.5, b.y, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
           }
         }
       } else {
-        // Floating worn cultural glyph rune
-        ctx.fillStyle = b.color;
-        ctx.font = '600 20px "SF Mono", "Menlo", monospace';
+        ctx.fillStyle = b.col;
+        ctx.font = '500 17px -apple-system, "Segoe UI Symbol", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(b.rune, b.x, b.y);
@@ -878,19 +1465,90 @@
       ctx.restore();
     }
 
-    // Sparkling snow/light motes
-    for (const m of snowMotes) {
+    // Dissolving snow/light motes
+    for (const m of S.motes) {
       const a = Math.max(0, 1 - m.age / m.maxAge);
       ctx.save();
-      ctx.globalAlpha = a * 0.85;
-      ctx.fillStyle = m.color;
-      ctx.shadowColor = m.color;
-      ctx.shadowBlur = 10;
+      ctx.globalAlpha = a * 0.86;
+      if (m.comet) {
+        ctx.strokeStyle = m.col;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x - m.vx * 0.16, m.y - m.vy * 0.16);
+        ctx.stroke();
+      }
+      ctx.fillStyle = m.col;
+      ctx.shadowColor = m.col;
+      ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
+  }
+
+  // Spatial floating speech-glyph pills blooming ONLY when close beside a citizen
+  function drawSpatialChoicePills() {
+    PILL_BOXES.length = 0;
+    if (S.pillsAlpha <= 0.02 || S.stopSpoken) return;
+
+    const set = PHRASE_SETS[S.stopIndex % PHRASE_SETS.length];
+    const anchorX = (S.playerX + S.npcX) * 0.5 + 14;
+    const baseY = 334;
+
+    ctx.save();
+    for (let i = 0; i < set.choices.length; i++) {
+      const c = set.choices[i];
+      const active = S.selectedOpt === i;
+      const staggerX = (i - 1) * 10;
+      const floatY = Math.sin(S.t * 2.0 + i * 1.1) * 2.2;
+      const bloomOffset = (1 - S.pillsAlpha) * 14;
+
+      ctx.font = active
+        ? '500 13.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+        : '400 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const label = c.text;
+      const pw = Math.max(186, Math.min(268, ctx.measureText(label).width + 52));
+      const ph = 30;
+      const px = anchorX + staggerX - pw * 0.5;
+      const py = baseY + i * 38 + floatY + bloomOffset;
+
+      PILL_BOXES.push({ x: px, y: py, w: pw, h: ph });
+
+      ctx.globalAlpha = S.pillsAlpha * (active ? 0.94 : 0.76);
+      ctx.fillStyle = active ? 'rgba(249, 228, 210, 0.92)' : 'rgba(236, 233, 248, 0.80)';
+      ctx.strokeStyle = active ? 'rgba(143, 108, 217, 0.65)' : 'rgba(143, 108, 217, 0.28)';
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor = active ? 'rgba(249, 220, 196, 0.45)' : 'rgba(43, 39, 64, 0.14)';
+      ctx.shadowBlur = active ? 12 : 6;
+
+      ctx.beginPath();
+      ctx.roundRect(px, py, pw, ph, 15);
+      ctx.fill();
+      ctx.stroke();
+
+      // Small circular glyph key badge (1 / 2 / 3)
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = active ? PAL.acc : 'rgba(143, 108, 217, 0.20)';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + ph * 0.5, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = active ? '#ffffff' : '#534675';
+      ctx.font = '600 10.5px "SF Mono", "Menlo", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), px + 16, py + ph * 0.5 + 0.5);
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = active
+        ? '500 13.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+        : '400 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, px + 31, py + ph * 0.5 + 0.5);
+    }
+    ctx.restore();
   }
 
   function drawSnowLayer(minLayer, maxLayer) {
@@ -899,12 +1557,8 @@
       if (f.layer < minLayer || f.layer > maxLayer) continue;
       ctx.globalAlpha = f.alpha;
       ctx.fillStyle = '#f6f3fc';
-      if (f.layer === 2) {
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 6;
-      } else {
-        ctx.shadowBlur = 0;
-      }
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = f.layer === 2 ? 5 : 0;
       ctx.beginPath();
       ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
       ctx.fill();
@@ -912,258 +1566,103 @@
     ctx.restore();
   }
 
-  function drawHUD() {
-    // Minimalist top-right clock & resonance pips (matching m2_main_ref.png "4:10 PM")
-    ctx.save();
-    const isDarkScene = S.sceneIndex === 3;
-    const textCol = isDarkScene ? '#e9e6f2' : PAL.fg;
+  // Quiet REST opening whisper & COMPLETE discreet [R] cue (zero boxes, zero modal chrome)
+  function drawDiegeticWhispers() {
+    resetHitBox = null;
 
-    ctx.fillStyle = isDarkScene ? 'rgba(27, 22, 34, 0.52)' : 'rgba(233, 230, 242, 0.62)';
-    ctx.strokeStyle = isDarkScene ? 'rgba(233, 230, 242, 0.25)' : 'rgba(43, 39, 64, 0.22)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(W - 238, 22, 210, 54, 6);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = textCol;
-    ctx.font = '600 21px "SF Mono", "Menlo", monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(formatClock(S.clockMinutes), W - 44, 48);
-
-    ctx.font = '11px "SF Mono", "Menlo", monospace';
-    ctx.fillStyle = isDarkScene ? '#b5acc5' : '#5e5578';
-    ctx.fillText(SCENE_RECTS[S.sceneIndex].name, W - 44, 66);
-
-    // 3 subtle resonance pips on left side of clock pill
-    for (let i = 0; i < 3; i++) {
-      const filled = i < S.realReplies;
-      ctx.beginPath();
-      ctx.arc(W - 216 + i * 16, 46, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = filled ? PAL.acc : 'rgba(143, 108, 217, 0.22)';
-      ctx.fill();
-      if (filled) {
-        ctx.strokeStyle = PAL.warmPeach;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-
-    // Subtle movement prompt if in SCENE and far from citizen
-    if (S.phase === 'scene' && Math.abs(S.playerX - S.npcX) > 385 && S.replyToastTimer <= 0) {
+    // Non-autostart REST: title breathes gently in the open upper twilight sky and vanishes on first step
+    if (S.titleFade > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = S.titleFade * 0.88;
       ctx.textAlign = 'center';
-      ctx.font = '14px "SF Mono", "Menlo", monospace';
-      ctx.fillStyle = 'rgba(233, 230, 242, 0.78)';
-      ctx.fillText('← / →  approach passing citizen before evening falls', W * 0.5, H - 26);
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '300 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.letterSpacing = '4px';
+      ctx.fillText('BOXING DAY BLUES', W * 0.5, 86);
+      ctx.restore();
     }
 
-    // Floating stranger reply whisper
-    if (S.replyToastTimer > 0 && S.replyToast) {
-      const a = Math.min(1, S.replyToastTimer / 0.5);
-      ctx.globalAlpha = a;
-      ctx.textAlign = 'center';
-      ctx.font = 'italic 16px "SF Mono", "Menlo", monospace';
-      const pillW = Math.min(720, ctx.measureText(S.replyToast).width + 44);
-      ctx.fillStyle = 'rgba(27, 22, 34, 0.72)';
-      ctx.beginPath();
-      ctx.roundRect(W * 0.5 - pillW * 0.5, 92, pillW, 34, 17);
-      ctx.fill();
-      ctx.fillStyle = PAL.warmPeach;
-      ctx.fillText(S.replyToast, W * 0.5, 114);
-    }
-    ctx.restore();
-  }
-
-  function drawDialogueBox() {
-    CHOICE_BOXES.length = 0;
-    if (S.phase !== 'talk') return;
-
-    const set = PHRASE_SETS[S.phraseSetIdx % PHRASE_SETS.length];
-    const bx = 210;
-    const by = 602;
-    const bw = W - 420;
-    const bh = 104;
-
-    ctx.save();
-    // Styled directly after m2_main_ref.png (#e9e6f2 box, crisp #2b2740 frame, #8f6cd9 active line)
-    // Compacted into the bottom foreground apron so the full silhouettes & platform remain visible!
-    ctx.fillStyle = 'rgba(233, 230, 242, 0.88)';
-    ctx.strokeStyle = PAL.fg;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.rect(bx, by, bw, bh);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.font = '11px "SF Mono", "Menlo", monospace';
-    ctx.fillStyle = '#6c6289';
-    ctx.textAlign = 'left';
-    ctx.fillText(set.prompt, bx + 20, by + 17);
-
-    for (let i = 0; i < set.choices.length; i++) {
-      const c = set.choices[i];
-      const ry = by + 23 + i * 25;
-      const active = S.selectedOpt === i;
-      CHOICE_BOXES.push({ x: bx + 12, y: ry, w: bw - 24, h: 24 });
-
-      if (active) {
-        ctx.fillStyle = 'rgba(143, 108, 217, 0.13)';
-        ctx.fillRect(bx + 12, ry, bw - 24, 23);
+    // Quiet evening whisper fading naturally into the snow at 18:00 COMPLETE, plus discreet [R] glyph
+    if (S.phase === 'complete') {
+      if (S.completeWhisperAlpha > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, S.completeWhisperAlpha) * 0.82;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = PAL.peachBubble;
+        ctx.font = 'italic 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText(
+          S.almostReached
+            ? '"Boxing Day blues" — neither of us remembering what the box was.'
+            : 'Evening fell across the line before a single phrase held.',
+          W * 0.5,
+          248
+        );
+        ctx.restore();
       }
 
-      ctx.font = active ? '600 16px "SF Mono", "Menlo", monospace' : '16px "SF Mono", "Menlo", monospace';
-      ctx.fillStyle = active ? PAL.acc : PAL.fg;
-      ctx.fillText(`${i + 1}. ${c.text}`, bx + 22, ry + 17);
+      // Subtle diegetic [R] reset glyph tucked in the dark bottom-right margin (Law 8 & 12)
+      const rx = W - 54;
+      const ry = H - 36;
+      resetHitBox = { x: rx - 8, y: ry - 6, w: 42, h: 26 };
+      ctx.save();
+      ctx.globalAlpha = 0.52;
+      ctx.fillStyle = '#c5b7ca';
+      ctx.font = '500 12px "SF Mono", "Menlo", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('[R]', W - 22, H - 19);
+      ctx.restore();
     }
-    ctx.restore();
-  }
-
-  function drawNearOverlay() {
-    if (S.phase !== 'near') return;
-    ctx.save();
-    const alpha = Math.min(1, (3.4 - S.nearTimer) / 0.5) * Math.min(1, S.nearTimer / 0.45);
-    ctx.globalAlpha = alpha;
-    const bx = 230;
-    const by = 612;
-    const bw = W - 460;
-    const bh = 86;
-    ctx.fillStyle = 'rgba(43, 39, 64, 0.84)';
-    ctx.strokeStyle = PAL.warmPeach;
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 6);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = PAL.warmPeach;
-    ctx.font = '600 17px "SF Mono", "Menlo", monospace';
-    ctx.fillText('"Boxing Day blues... my network suggested that phrase."', W * 0.5, by + 34);
-    ctx.fillStyle = '#dcd6f2';
-    ctx.font = '14px "SF Mono", "Menlo", monospace';
-    ctx.fillText('"Do you know what the box used to be?"   [ALMOST CONNECTED]', W * 0.5, by + 62);
-    ctx.restore();
-  }
-
-  function drawTitleOverlay() {
-    if (S.phase !== 'title') return;
-    ctx.save();
-    ctx.fillStyle = 'rgba(233, 230, 242, 0.78)';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.strokeStyle = PAL.fg;
-    ctx.lineWidth = 2.5;
-    ctx.fillStyle = 'rgba(233, 230, 242, 0.94)';
-    ctx.fillRect(280, 195, 720, 320);
-    ctx.strokeRect(280, 195, 720, 320);
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = PAL.acc;
-    ctx.font = '600 14px "SF Mono", "Menlo", monospace';
-    ctx.fillText('GROUP 6 // MILESTONE 2', W * 0.5, 248);
-
-    ctx.fillStyle = PAL.fg;
-    ctx.font = '700 42px "SF Mono", "Menlo", monospace';
-    ctx.fillText('BOXING DAY BLUES', W * 0.5, 305);
-
-    ctx.font = '17px "SF Mono", "Menlo", monospace';
-    ctx.fillStyle = '#4a4363';
-    ctx.fillText('Everyone says "Happy Boxing Day."', W * 0.5, 358);
-    ctx.fillText('Nobody knows what the box was.', W * 0.5, 386);
-
-    const pulse = 0.55 + 0.45 * Math.sin(S.t * 3.2);
-    ctx.globalAlpha = pulse;
-    ctx.fillStyle = PAL.acc;
-    ctx.font = '600 17px "SF Mono", "Menlo", monospace';
-    ctx.fillText('[ PRESS SPACE OR CLICK TO STEP ONTO THE PLATFORM ]', W * 0.5, 458);
-    ctx.restore();
-  }
-
-  function drawEndOverlay() {
-    if (S.phase !== 'end') return;
-    ctx.save();
-    ctx.fillStyle = 'rgba(27, 22, 34, 0.68)';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.fillStyle = 'rgba(43, 39, 64, 0.92)';
-    ctx.strokeStyle = PAL.acc;
-    ctx.lineWidth = 2;
-    ctx.fillRect(260, 190, 760, 340);
-    ctx.strokeRect(260, 190, 760, 340);
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = PAL.acc;
-    ctx.font = '600 14px "SF Mono", "Menlo", monospace';
-    ctx.fillText('6:00 PM — EVENING', W * 0.5, 242);
-
-    ctx.fillStyle = '#e9e6f2';
-    ctx.font = '700 32px "SF Mono", "Menlo", monospace';
-    ctx.fillText(
-      S.almostReached ? 'YOU ALMOST REACHED SOMEONE.' : 'THE DAY ENDED BEFORE YOU GOT THERE.',
-      W * 0.5,
-      295
-    );
-
-    ctx.fillStyle = PAL.warmPeach;
-    ctx.font = 'italic 17px "SF Mono", "Menlo", monospace';
-    ctx.fillText(
-      S.almostReached
-        ? '"Boxing Day blues," they said — neither of you knowing what the box meant.'
-        : 'Every system-suggested greeting arrived on time, and drifted apart in the snow.',
-      W * 0.5,
-      352
-    );
-
-    ctx.fillStyle = '#b5acc5';
-    ctx.font = '15px "SF Mono", "Menlo", monospace';
-    ctx.fillText(
-      `Resonant replies: ${S.realReplies} / 3   ·   Misread idioms: ${S.misreadCount}`,
-      W * 0.5,
-      408
-    );
-
-    ctx.fillStyle = '#e9e6f2';
-    ctx.font = '600 16px "SF Mono", "Menlo", monospace';
-    ctx.fillText('[ PRESS SPACE OR ENTER FOR ANOTHER DAY ]', W * 0.5, 474);
-    ctx.restore();
   }
 
   function render() {
     ctx.clearRect(0, 0, W, H);
 
-    // 1. Twilight transit platform background (4 scenes morning -> evening)
-    drawSceneBackground();
+    // Gentle side-pan camera parallax synced to player walk
+    const camShift = ((S.playerX - 540) / 540) * 14;
 
-    // 2. Distant & mid snow layers behind silhouettes
+    // 1. Aligned 4-stop transit architecture, 2.5D train, lamp cones, & perspective hanging clock
+    if (S.sceneBlend < 1 && S.prevSceneIndex !== S.sceneIndex) {
+      drawSceneLayer(S.prevSceneIndex, 1, camShift);
+      drawSceneLayer(S.sceneIndex, S.sceneBlend, camShift);
+    } else {
+      drawSceneLayer(S.sceneIndex, 1, camShift);
+    }
+
+    // 2. Distant & mid-ground snowfall behind silhouettes
     drawSnowLayer(0, 1);
 
-    // 3. Floating speech-bubble pills & worn cultural glyphs between citizens
-    drawFloatingGlyphs();
+    // 3. Lingering warm shimmer traces & rising/detuning speech-glyph bubbles
+    drawLingeringTraces();
+    drawExchangeGlyphs();
 
-    // 4. Citizen silhouettes on the snowy platform (feet grounded at y=608)
-    const footY = 608;
+    // 4. Clean matte winter silhouettes grounded on the snowy platform slab (y = 598)
+    const footY = 598;
     const playerSprite = S.isMoving
       ? (Math.floor(S.walkCycle) % 2 === 0 ? PLAYER_FRAMES.walkA : PLAYER_FRAMES.walkB)
       : PLAYER_FRAMES.idle;
-    const npcSprite = NPC_SPRITES[S.npcSpriteIdx % NPC_SPRITES.length];
+    const npcSprite = NPC_SPRITES[S.stopIndex % NPC_SPRITES.length];
+    const bowRad = S.bowAmount * 0.048; // ~2.8 deg subtle melancholy head/posture bow
 
-    const nearGlow = S.phase === 'near' ? 0.16 : 0;
-    drawSilhouette(playerSprite, S.playerX, footY, 268, S.playerDir >= 0, nearGlow);
-    drawSilhouette(npcSprite, S.npcX, footY, 272, false, nearGlow);
+    drawSilhouette(playerSprite, S.playerX - camShift * 0.35, footY, 262, S.playerDir >= 0, 1, bowRad);
+    drawSilhouette(npcSprite, S.npcX - camShift * 0.35, footY, 266, false, S.npcAlpha, bowRad);
 
-    // 5. Foreground snow bokeh
+    // 5. Spatial floating speech-glyph pills (ONLY when close & choosing)
+    drawSpatialChoicePills();
+
+    // 6. Foreground snow bokeh + subtle cinematic vignette matching sheet.jpg
     drawSnowLayer(2, 2);
 
-    // 6. Minimalist twilight HUD & phrase choices
-    if (S.phase !== 'title') {
-      drawHUD();
-      drawDialogueBox();
-      drawNearOverlay();
-    }
-    drawTitleOverlay();
-    drawEndOverlay();
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.46, H * 0.38, W * 0.5, H * 0.5, W * 0.68);
+    vig.addColorStop(0, 'rgba(27, 22, 34, 0)');
+    vig.addColorStop(1, 'rgba(20, 15, 28, 0.32)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
+    // 7. Zero-chrome diegetic whispers (REST title / COMPLETE [R])
+    drawDiegeticWhispers();
   }
 
+  let lastNow = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000));
     lastNow = now;

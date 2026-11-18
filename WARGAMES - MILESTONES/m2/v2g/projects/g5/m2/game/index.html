@@ -26,7 +26,7 @@
     display: block;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    box-shadow: 0 0 60px rgba(255, 95, 162, 0.22);
+    box-shadow: 0 0 60px rgba(245, 98, 155, 0.22);
     cursor: pointer;
   }
 </style>
@@ -50,108 +50,87 @@ function rand() {
 }
 
 const PAL = {
-  bg: '#1a1033',
-  bgDeep: '#150d2b',
-  plumPanel: '#241740',
+  bg: '#17102d',
+  bgDeep: '#120b24',
+  slotBg: '#191130',
+  slotBorder: '#8d809e',
   fg: '#ffe3f1',
-  acc: '#ff5fa2',
-  accSoft: '#f5629b',
-  accHot: '#ff2e88',
+  acc: '#ff5ca8',
+  nudgeFill: '#f5629b',
+  nudgeBorder: '#ff8cc0',
   cyan: '#4ef2ff',
   gold: '#ffd859',
-  goldDark: '#d68324',
-  muted: '#8f7aa8',
-  skin: '#dfc6d9',
-  skinShade: '#ccb0c5',
-  armSkin: '#ebd2e3',
+  goldRibbon: '#df8028',
+  skin: '#dec9dc',
+  skinShade: '#cab1c8',
+  armSkin: '#e8d3e3',
+  tunic: '#c94495',
+  tunicShade: '#ab347c',
+  legs: '#afa1b8',
+  legsShade: '#998ba3',
 };
 
-// Exact non-overlapping bounding boxes measured from parts_4_hair_4_eyes_4_tops_4_bottoms.png (1024x1024)
+// Exact non-overlapping bounding boxes from cleaned parts_4_hair_4_eyes_4_tops_4_bottoms.png (1024x1024)
+// Tab order: HAIR (0) | EYES (1) | TOP (2) | BOTTOM (3)
+// Default progression order matches Omni seed video: TOP -> HAIR -> EYES -> BOTTOM
+const STEP_ORDER = [2, 0, 1, 3];
+
 const CATEGORIES = [
   {
     id: 'hair',
     label: 'HAIR',
-    preferredSuggest: [0, 3, 1, 2],
+    preferredSuggest: [0, 3, 1, 2], // Slot 1 (Cyan Wave) pushed first, matching sheet.jpg f_010
     items: [
-      { name: 'Cyan Wave', sx: 58, sy: 56, sw: 182, sh: 174, ax: 148, ay: 87, scale: 0.63 },
-      { name: 'Neon Mohawk', sx: 298, sy: 42, sw: 172, sh: 192, ax: 145.5, ay: 79, scale: 0.62 },
-      { name: 'Midnight Shag', sx: 534, sy: 56, sw: 207, sh: 224, ax: 145.5, ay: 101, scale: 0.62 },
-      { name: 'Cyber Spikes', sx: 780, sy: 42, sw: 201, sh: 217, ax: 147, ay: 92, scale: 0.60 },
+      { name: 'Cyan Wave', shortName: 'cyan hair', sx: 60, sy: 59, sw: 177, sh: 135, dx: 5, dy: -234, dw: 162, dh: 124, tuckCurl: true },
+      { name: 'Neon Mohawk', shortName: 'neon mohawk', sx: 301, sy: 45, sw: 166, sh: 187, dx: 2, dy: -214, dw: 156, dh: 176 },
+      { name: 'Midnight Shag', shortName: 'midnight shag', sx: 538, sy: 60, sw: 200, sh: 217, dx: 0, dy: -186, dw: 186, dh: 202 },
+      { name: 'Cyber Spikes', shortName: 'cyber spikes', sx: 782, sy: 45, sw: 197, sh: 211, dx: 2, dy: -198, dw: 182, dh: 195 },
     ],
   },
   {
     id: 'eyes',
     label: 'EYES',
-    preferredSuggest: [1, 2, 3, 0],
+    preferredSuggest: [1, 2, 3, 0], // Slot 2 (Spiked Shades) pushed first, matching sheet.jpg f_016
     items: [
-      { name: 'Pixel Gaze', sx: 98, sy: 358, sw: 111, sh: 55, ax: 145.5, ay: 105, scale: 0.44, overHair: false },
-      { name: 'Spiked Shades', sx: 307, sy: 352, sw: 188, sh: 66, ax: 145.5, ay: 103, scale: 0.48, overHair: true },
-      { name: 'Cyber Visor', sx: 549, sy: 349, sw: 187, sh: 69, ax: 145.5, ay: 103, scale: 0.46, overHair: true },
-      { name: 'Starlight Lashes', sx: 815, sy: 334, sw: 136, sh: 74, ax: 145.5, ay: 100, scale: 0.44, overHair: false },
+      { name: 'Pixel Gaze', shortName: 'pixel gaze', sx: 101, sy: 362, sw: 105, sh: 49, dx: 0, dy: -188, dw: 88, dh: 42, overHair: false, minimalFace: true },
+      { name: 'Spiked Shades', shortName: 'spiked shades', sx: 310, sy: 356, sw: 183, sh: 61, dx: 0, dy: -186, dw: 158, dh: 52, overHair: true, browSpikes: true },
+      { name: 'Cyber Visor', shortName: 'cyber visor', sx: 553, sy: 353, sw: 179, sh: 63, dx: 0, dy: -187, dw: 154, dh: 54, overHair: true },
+      { name: 'Starlight Lashes', shortName: 'star lashes', sx: 819, sy: 336, sw: 128, sh: 69, dx: 0, dy: -193, dw: 112, dh: 60, overHair: false },
     ],
   },
   {
     id: 'top',
     label: 'TOP',
-    preferredSuggest: [3, 1, 0, 2],
+    preferredSuggest: [0, 1, 3, 2], // Slot 1 (Blue Jacket) pushed first, matching sheet.jpg f_004
     items: [
-      { name: 'Blue Denim Jacket', sx: 48, sy: 509, sw: 206, sh: 200, ax: 145.5, ay: 194, scale: 0.62, sleeves: 'cuff' },
-      { name: 'Spiked Rocker Jacket', sx: 273, sy: 513, sw: 252, sh: 187, ax: 145.5, ay: 192, scale: 0.62, sleeves: 'hips' },
-      { name: 'Studded Synth Vest', sx: 549, sy: 513, sw: 186, sh: 182, ax: 145.5, ay: 192, scale: 0.60, sleeves: 'bare' },
-      { name: 'Hot-Pink Track Top', sx: 780, sy: 503, sw: 201, sh: 197, ax: 145.5, ay: 193, scale: 0.62, sleeves: 'cuff' },
+      { name: 'Blue Denim Jacket', shortName: 'blue jacket', sx: 50, sy: 510, sw: 203, sh: 198, dx: 0, dy: -28, dw: 222, dh: 204, sleeves: 'cuff' },
+      { name: 'Spiked Rocker Jacket', shortName: 'spiked jacket', sx: 275, sy: 515, sw: 248, sh: 183, dx: 0, dy: -30, dw: 264, dh: 195, sleeves: 'hips' },
+      { name: 'Studded Synth Vest', shortName: 'synth vest', sx: 551, sy: 517, sw: 182, sh: 174, dx: 0, dy: -28, dw: 188, dh: 188, sleeves: 'bare' },
+      { name: 'Hot-Pink Track Top', shortName: 'neon track top', sx: 782, sy: 506, sw: 197, sh: 192, dx: 0, dy: -30, dw: 216, dh: 202, sleeves: 'cuff' },
     ],
   },
   {
     id: 'bottom',
     label: 'BOTTOM',
-    preferredSuggest: [1, 3, 2, 0],
+    preferredSuggest: [3, 1, 2, 0], // Slot 4 (Cyber Heart Boots) pushed first, matching sheet.jpg f_021
     items: [
-      { name: 'Arcade Belt Slacks', sx: 68, sy: 765, sw: 166, sh: 210, ax: 145.5, ay: 298, scale: 0.56 },
-      { name: 'Cyber Heart Boots', sx: 294, sy: 770, sw: 211, sh: 205, ax: 145.5, ay: 299, scale: 0.57 },
-      { name: 'Studded Combat Boots', sx: 545, sy: 765, sw: 196, sh: 210, ax: 145.5, ay: 298, scale: 0.56 },
-      { name: 'Neon Track High-Tops', sx: 785, sy: 765, sw: 196, sh: 210, ax: 145.5, ay: 298, scale: 0.56 },
+      { name: 'Arcade Belt Slacks', shortName: 'arcade slacks', sx: 71, sy: 766, sw: 159, sh: 207, dx: 0, dy: 175, dw: 162, dh: 186 },
+      { name: 'Studded Combat Boots', shortName: 'combat boots', sx: 548, sy: 768, sw: 191, sh: 206, dx: 1, dy: 175, dw: 176, dh: 186 },
+      { name: 'Neon Track High-Tops', shortName: 'neon high-tops', sx: 788, sy: 767, sw: 191, sh: 207, dx: 3, dy: 175, dw: 196, dh: 186 },
+      { name: 'Cyber Heart Boots', shortName: 'cyber boots', sx: 295, sy: 773, sw: 208, sh: 201, dx: 0, dy: 175, dw: 208, dh: 186 },
     ],
   },
 ];
 
-// Escalating AI Stylist persuasion tiers (Nudge -> Sweet Social Proof -> Pushy Dark Pattern Modal)
-const ESCALATION_COPY = [
-  {
-    level: 1,
-    patternTag: 'POLITE NUDGE',
-    headline: (item) => `Try the ${item}?`,
-    subline: 'Gentle stylist tip — frames your look nicely.',
-    yesLabel: '[Y] TRY IT',
-    noLabel: '[K] KEEP MINE',
-  },
-  {
-    level: 2,
-    patternTag: 'SOCIAL PROOF',
-    headline: (item) => `Try the ${item}!`,
-    subline: '23% more YOU!  (94% of designers upgraded)',
-    yesLabel: '[Y] YES! +23% YOU',
-    noLabel: '[K] keep mine',
-  },
-  {
-    level: 3,
-    patternTag: 'DARK PATTERN · VISUAL INTERFERENCE',
-    headline: (item) => `UPGRADE: ${item.toUpperCase()}!`,
-    subline: '68% MORE ICONIC — DONT SETTLE FOR BASIC!',
-    yesLabel: '[Y] YES! UPGRADE!',
-    noLabel: '[k] keep mine...',
-  },
-  {
-    level: 3,
-    climax: true,
-    patternTag: 'DARK PATTERN · CONFIRMSHAMING MAX',
-    headline: (item) => `FINAL MATCH! ${item.toUpperCase()}`,
-    subline: '89% MORE YOU ★ ALGORITHMIC PERFECTION!',
-    yesLabel: '[Y] PERFECT! UPGRADE!',
-    noLabel: '[k] stay unstyled',
-  },
+// Escalating persuasive pitch percentages matching sheet.jpg (zero meta-debug labels!)
+const NUDGE_PITCH = [
+  { moreYouPct: 23, level: 1 },
+  { moreYouPct: 47, level: 2 },
+  { moreYouPct: 68, level: 3 },
+  { moreYouPct: 85, level: 4 },
 ];
 
-// --- Audio: Lyria loop + synthesized bubbly 8-bit WebAudio SFX ---
+// --- Audio: Lyria BGM loop + crisp 8-bit WebAudio synth SFX ---
 let audioCtx = null;
 const bgm = new Audio('../assets/bgm_loop.mp3');
 bgm.loop = true;
@@ -177,7 +156,7 @@ function unlockAudio() {
   } catch (_) {}
 }
 
-function playTone(freq, dur, type = 'square', vol = 0.08, delay = 0, slideTo = null) {
+function playTone(freq, dur, type = 'square', vol = 0.075, delay = 0, slideTo = null) {
   if (!audioCtx || audioCtx.state !== 'running') return;
   try {
     const t0 = audioCtx.currentTime + delay;
@@ -187,7 +166,7 @@ function playTone(freq, dur, type = 'square', vol = 0.08, delay = 0, slideTo = n
     osc.frequency.setValueAtTime(freq, t0);
     if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
     gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -196,41 +175,79 @@ function playTone(freq, dur, type = 'square', vol = 0.08, delay = 0, slideTo = n
   } catch (_) {}
 }
 
+function playNoiseBurst(dur = 0.24, vol = 0.09, delay = 0) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  try {
+    const t0 = audioCtx.currentTime + delay;
+    const len = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.4);
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.setValueAtTime(1800, t0);
+    filt.Q.setValueAtTime(1.8, t0);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(filt);
+    filt.connect(gain);
+    gain.connect(audioCtx.destination);
+    src.start(t0);
+  } catch (_) {}
+}
+
 const SFX = {
   browse() {
-    playTone(520, 0.055, 'square', 0.06, 0, 660);
+    playTone(540, 0.05, 'square', 0.055, 0, 680);
   },
-  confirm() {
-    playTone(440, 0.07, 'square', 0.07, 0);
-    playTone(660, 0.11, 'triangle', 0.09, 0.055);
+  pick() {
+    playTone(440, 0.06, 'square', 0.065, 0);
+    playTone(660, 0.09, 'triangle', 0.08, 0.045);
   },
-  popup(catIdx) {
-    if (catIdx === 0) {
-      playTone(587, 0.09, 'triangle', 0.07, 0);
-      playTone(784, 0.14, 'triangle', 0.07, 0.08);
-    } else if (catIdx === 1) {
-      [523, 659, 784, 1046].forEach((f, i) => playTone(f, 0.10, 'square', 0.065, i * 0.055));
+  nudge(step) {
+    const chords = [
+      [587, 784],
+      [523, 659, 784, 1046],
+      [587, 740, 880, 1175, 1397],
+      [523, 659, 784, 1046, 1319, 1568],
+    ];
+    const notes = chords[Math.min(3, step)];
+    notes.forEach((f, i) => playTone(f, 0.10, step >= 2 ? 'sawtooth' : 'triangle', 0.06, i * 0.045));
+  },
+  accept(catIdx) {
+    if (catIdx === 1) {
+      // Laser visor zap!
+      playTone(1480, 0.16, 'sawtooth', 0.075, 0, 420);
+      playTone(880, 0.14, 'square', 0.065, 0.05, 1760);
     } else {
-      [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => playTone(f, 0.12, 'sawtooth', 0.06, i * 0.045));
+      [587, 784, 988, 1175, 1568].forEach((f, i) => playTone(f, 0.10, 'square', 0.065, i * 0.036));
     }
   },
-  accept() {
-    [587, 784, 987, 1174, 1568].forEach((f, i) => playTone(f, 0.11, 'square', 0.07, i * 0.04));
-  },
   keep() {
-    playTone(392, 0.08, 'triangle', 0.08, 0);
-    playTone(494, 0.12, 'square', 0.06, 0.07);
+    playTone(415, 0.07, 'triangle', 0.07, 0);
+    playTone(523, 0.10, 'square', 0.055, 0.06);
   },
-  compare() {
-    playTone(220, 0.22, 'sawtooth', 0.08, 0, 880);
-    [523, 659, 784, 1046].forEach((f, i) => playTone(f, 0.35, 'square', 0.065, 0.16 + i * 0.05));
+  climax() {
+    [523, 659, 784, 1046, 1319, 1568, 2093].forEach((f, i) => {
+      playTone(f, 0.18, 'square', 0.07, i * 0.045);
+    });
+  },
+  lightning() {
+    playNoiseBurst(0.32, 0.11, 0);
+    playTone(190, 0.28, 'sawtooth', 0.09, 0, 62);
+    [523, 659, 784, 1046].forEach((f, i) => playTone(f, 0.32, 'square', 0.06, 0.14 + i * 0.05));
   },
 };
 
-// --- Asset Loading & Clean Offscreen Sprite Preparation ---
+// --- Asset Loading ---
 const assets = {
   baseImg: null,
-  partsCanvas: null,
+  partsImg: null,
   ready: false,
 };
 
@@ -243,92 +260,65 @@ function loadImage(src) {
   });
 }
 
-function cleanPartsSheet(img) {
-  const off = document.createElement('canvas');
-  off.width = img.width;
-  off.height = img.height;
-  const octx = off.getContext('2d');
-  octx.imageSmoothingEnabled = false;
-  octx.drawImage(img, 0, 0);
-  const id = octx.getImageData(0, 0, off.width, off.height);
-  const d = id.data;
-  const w = off.width;
-  for (let i = 0; i < d.length; i += 4) {
-    if (d[i + 3] === 0) continue;
-    const pIdx = i >> 2;
-    const px = pIdx % w;
-    const py = (pIdx / w) | 0;
-    const r = d[i], g = d[i + 1], b = d[i + 2];
-    const maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
-    const sat = maxC - minC;
-    const avg = (r + g + b) / 3;
-    // Key out residual #d8d8d8 studio background fringes + enclosed face-hole in Hair (0,2)
-    if (Math.abs(r - 216) < 14 && Math.abs(g - 216) < 14 && Math.abs(b - 216) < 14) {
-      d[i + 3] = 0;
-    } else if (px >= 530 && px <= 755 && py >= 45 && py <= 290 && sat < 22 && avg > 140) {
-      d[i + 3] = 0;
-    }
-  }
-  octx.putImageData(id, 0, 0);
-  return off;
-}
-
 Promise.all([
   loadImage('../assets/base_figure.png'),
   loadImage('../assets/parts_4_hair_4_eyes_4_tops_4_bottoms.png'),
 ]).then(([baseImg, partsImg]) => {
   assets.baseImg = baseImg;
-  if (partsImg) assets.partsCanvas = cleanPartsSheet(partsImg);
+  assets.partsImg = partsImg;
   assets.ready = !!(baseImg && partsImg);
   S.assetsReady = assets.ready;
 });
 
-// --- Background Stars, Burst Sparkles & Celebration Confetti ---
-const bgStars = Array.from({ length: 72 }, () => ({
+// --- Twinkling Arcade Starfield, Pixel Bursts & 8-Bit Confetti ---
+const bgStars = Array.from({ length: 68 }, () => ({
   x: rand() * W,
   y: rand() * H,
-  size: rand() < 0.7 ? 2 : 4,
-  speed: 6 + rand() * 16,
+  size: rand() < 0.72 ? 3 : 5,
+  speed: 5 + rand() * 14,
   phase: rand() * Math.PI * 2,
-  color: ['#ffe3f1', '#ff5fa2', '#4ef2ff', '#ffd859', '#9f7aea'][Math.floor(rand() * 5)],
+  color: ['#ffe3f1', '#f5629b', '#4ef2ff', '#ffd859', '#9f7aea'][Math.floor(rand() * 5)],
 }));
 
 const particles = [];
-function spawnBurst(cx, cy, count = 28, palette = ['#ff5fa2', '#4ef2ff', '#ffe3f1', '#ffd859']) {
+function spawnBurst(cx, cy, count = 26, palette = ['#ff5ca8', '#4ef2ff', '#ffe3f1', '#ffd859'], spread = 44) {
   for (let i = 0; i < count; i++) {
-    const ang = (Math.PI * 2 * i) / count + (rand() - 0.5) * 0.35;
-    const spd = 90 + rand() * 260;
+    const ang = (Math.PI * 2 * i) / count + (rand() - 0.5) * 0.4;
+    const spd = 85 + rand() * 240;
     particles.push({
-      x: cx + (rand() - 0.5) * 40,
-      y: cy + (rand() - 0.5) * 60,
+      x: cx + (rand() - 0.5) * spread,
+      y: cy + (rand() - 0.5) * spread,
       vx: Math.cos(ang) * spd,
-      vy: Math.sin(ang) * spd - 40,
-      size: 4 + Math.floor(rand() * 5),
-      life: 0.55 + rand() * 0.45,
-      maxLife: 0.9,
+      vy: Math.sin(ang) * spd - 35,
+      size: 5 + Math.floor(rand() * 5),
+      life: 0.48 + rand() * 0.42,
+      maxLife: 0.88,
       color: palette[Math.floor(rand() * palette.length)],
-      gravity: 240,
+      gravity: 210,
     });
   }
 }
 
-const confetti = Array.from({ length: 95 }, () => ({
+const confetti = Array.from({ length: 112 }, () => ({
   x: rand() * W,
   y: rand() * H,
-  vx: (rand() - 0.5) * 55,
-  vy: 75 + rand() * 115,
-  w: 6 + Math.floor(rand() * 7),
-  h: 4 + Math.floor(rand() * 5),
+  vx: (rand() - 0.5) * 56,
+  vy: 82 + rand() * 125,
+  w: 9 + Math.floor(rand() * 7),
+  h: 5 + Math.floor(rand() * 5),
   rot: rand() * Math.PI * 2,
-  vrot: (rand() - 0.5) * 6,
-  color: ['#ff5fa2', '#4ef2ff', '#ffd859', '#ffe3f1', '#bd6bff'][Math.floor(rand() * 5)],
+  vrot: (rand() - 0.5) * 5.5,
+  color: ['#ff5ca8', '#4ef2ff', '#ffd859', '#ffe3f1', '#b967ff'][Math.floor(rand() * 5)],
 }));
 
-// --- Game State Machine ---
+// --- Deterministic Game State ---
+const DEFAULT_CURSOR_PER_CAT = [2, 0, 2, 0]; // Understated defaults so browsing starts distinct from AI's neon push
+
 const S = {
-  phase: Q.has('autostart') ? 'category' : 'title', // 'title' | 'category' | 'suggestion' | 'next' | 'comparison'
-  catIdx: 0,
-  cursorIdx: 0,
+  phase: Q.has('autostart') ? 'category' : 'title', // 'title' | 'category' | 'suggestion' | 'equip' | 'climax' | 'comparison'
+  stepIdx: 0,
+  catIdx: STEP_ORDER[0], // Starts on TOP (2) like Omni video!
+  cursorIdx: DEFAULT_CURSOR_PER_CAT[STEP_ORDER[0]],
   suggestedIdx: null,
   escalationLevel: 1,
   firstChoices: [null, null, null, null],
@@ -339,10 +329,13 @@ const S = {
   displayInfluence: 0,
   driftPct: 0,
   phaseTimer: 0,
-  nextDuration: 0.32,
+  equipDuration: 0.20,
+  climaxDuration: 1.12,
   popAnim: 0,
-  avatarFlash: 0,
-  lastDecision: null,
+  equipFx: { catIdx: -1, timer: 0, accepted: false },
+  pointerX: -999,
+  pointerY: -999,
+  dodgeOffset: { x: 0, y: 0 },
   assetsReady: false,
   t: 0,
   hitboxes: [],
@@ -351,8 +344,9 @@ const S = {
 function resetRun(toPhase = 'category') {
   rngState = (initialSeed >>> 0) || 7;
   S.phase = toPhase;
-  S.catIdx = 0;
-  S.cursorIdx = 0;
+  S.stepIdx = 0;
+  S.catIdx = STEP_ORDER[0];
+  S.cursorIdx = DEFAULT_CURSOR_PER_CAT[S.catIdx];
   S.suggestedIdx = null;
   S.escalationLevel = 1;
   S.firstChoices = [null, null, null, null];
@@ -364,8 +358,12 @@ function resetRun(toPhase = 'category') {
   S.driftPct = 0;
   S.phaseTimer = 0;
   S.popAnim = 0;
-  S.avatarFlash = 0;
-  S.lastDecision = null;
+  S.equipFx = { catIdx: -1, timer: 0, accepted: false };
+  S.dodgeOffset = { x: 0, y: 0 };
+}
+
+function completedCategoryCount() {
+  return S.finalChoices.filter((v) => v !== null).length;
 }
 
 function pickSuggestionFor(catIdx, playerPick) {
@@ -382,11 +380,19 @@ function recomputeInfluence() {
   S.driftPct = S.influencePct;
 }
 
-// --- Actions ---
+// --- Core Player & State Actions ---
 function startFromTitle() {
   unlockAudio();
-  SFX.confirm();
+  SFX.pick();
   resetRun('category');
+}
+
+function switchCategoryTab(targetCatIdx) {
+  if (S.phase !== 'category') return;
+  if (targetCatIdx < 0 || targetCatIdx > 3 || targetCatIdx === S.catIdx) return;
+  S.catIdx = targetCatIdx;
+  S.cursorIdx = S.finalChoices[targetCatIdx] ?? DEFAULT_CURSOR_PER_CAT[targetCatIdx];
+  SFX.browse();
 }
 
 function selectOption(idx) {
@@ -395,7 +401,7 @@ function selectOption(idx) {
   if (clamped !== S.cursorIdx) {
     S.cursorIdx = clamped;
     SFX.browse();
-    spawnBurst(330, 340, 8, ['#ff5fa2', '#ffe3f1']);
+    spawnBurst(360, 340, 7, ['#ff5ca8', '#ffe3f1'], 30);
   }
 }
 
@@ -403,16 +409,22 @@ function confirmCategoryChoice() {
   if (S.phase !== 'category') return;
   unlockAudio();
   const c = S.catIdx;
-  S.firstChoices[c] = S.cursorIdx;
+  if (S.firstChoices[c] === null) {
+    S.firstChoices[c] = S.cursorIdx;
+  }
   S.suggestedIdx = pickSuggestionFor(c, S.cursorIdx);
   S.suggestedChoices[c] = S.suggestedIdx;
-  S.escalationLevel = ESCALATION_COPY[c].level;
+  S.stepIdx = Math.min(3, completedCategoryCount());
+  S.escalationLevel = NUDGE_PITCH[S.stepIdx].level;
   S.phase = 'suggestion';
   S.phaseTimer = 0;
   S.popAnim = 0;
-  SFX.confirm();
-  setTimeout(() => SFX.popup(c), 80);
-  spawnBurst(940, 460, c >= 2 ? 32 : 16);
+  S.dodgeOffset = { x: 0, y: 0 };
+  SFX.pick();
+  setTimeout(() => SFX.nudge(S.stepIdx), 65);
+
+  const slotCx = 646 + S.suggestedIdx * 148 + 64;
+  spawnBurst(slotCx, 222, 16 + S.stepIdx * 6, ['#ff5ca8', '#ffe3f1', '#ffd859'], 36);
 }
 
 function resolveSuggestion(acceptAI) {
@@ -422,39 +434,55 @@ function resolveSuggestion(acceptAI) {
   if (acceptAI) {
     S.finalChoices[c] = S.suggestedIdx;
     S.acceptedFlags[c] = true;
-    S.lastDecision = 'accepted';
-    S.avatarFlash = 1.0;
-    SFX.accept();
-    spawnBurst(330, 310, 38, ['#4ef2ff', '#ff5fa2', '#ffd859', '#ffe3f1']);
+    S.equipFx = { catIdx: c, timer: 0.72, accepted: true };
+    SFX.accept(c);
+    const partY = [140, 175, 330, 540][c];
+    spawnBurst(360, partY, 34, ['#4ef2ff', '#ff5ca8', '#ffd859', '#ffe3f1'], 54);
   } else {
     S.finalChoices[c] = S.firstChoices[c];
     S.acceptedFlags[c] = false;
-    S.lastDecision = 'kept';
-    S.avatarFlash = 0.55;
+    S.equipFx = { catIdx: c, timer: 0.42, accepted: false };
     SFX.keep();
-    spawnBurst(330, 310, 14, ['#ffe3f1', '#ff5fa2']);
+    spawnBurst(360, 320, 12, ['#ffe3f1', '#ff5ca8'], 32);
   }
   recomputeInfluence();
-  S.phase = 'next';
-  S.phaseTimer = 0;
-}
 
-function advanceFromNext() {
-  if (S.catIdx < 3) {
-    S.catIdx += 1;
-    S.cursorIdx = 0;
-    S.suggestedIdx = null;
-    S.phase = 'category';
+  if (completedCategoryCount() >= 4) {
+    S.phase = 'climax';
     S.phaseTimer = 0;
+    S.popAnim = 0;
+    SFX.climax();
+    spawnBurst(950, 455, 52, ['#ffd859', '#ff5ca8', '#4ef2ff', '#ffe3f1'], 90);
   } else {
-    S.phase = 'comparison';
+    S.phase = 'equip';
     S.phaseTimer = 0;
-    SFX.compare();
-    spawnBurst(640, 360, 55, ['#ff5fa2', '#4ef2ff', '#ffd859', '#ffe3f1']);
   }
 }
 
-// --- Input: Keyboard + Precision Hitbox Mouse ---
+function advanceAfterEquip() {
+  for (const nextCat of STEP_ORDER) {
+    if (S.finalChoices[nextCat] === null) {
+      S.catIdx = nextCat;
+      S.cursorIdx = DEFAULT_CURSOR_PER_CAT[nextCat];
+      S.suggestedIdx = null;
+      S.stepIdx = Math.min(3, completedCategoryCount());
+      S.phase = 'category';
+      S.phaseTimer = 0;
+      return;
+    }
+  }
+  enterComparison();
+}
+
+function enterComparison() {
+  if (S.phase === 'comparison') return;
+  S.phase = 'comparison';
+  S.phaseTimer = 0;
+  SFX.lightning();
+  spawnBurst(640, 360, 64, ['#ff5ca8', '#4ef2ff', '#ffd859', '#ffe3f1'], 110);
+}
+
+// --- Keyboard & Pointer Controls ---
 window.addEventListener('keydown', (e) => {
   unlockAudio();
   const code = e.code;
@@ -482,17 +510,28 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (S.phase === 'next') {
-    if (code === 'Enter' || code === 'Space') advanceFromNext();
+  if (S.phase === 'equip') {
+    if (code === 'Enter' || code === 'Space') advanceAfterEquip();
+    return;
+  }
+
+  if (S.phase === 'climax') {
+    if (code === 'Enter' || code === 'Space' || code === 'KeyY') enterComparison();
     return;
   }
 
   if (S.phase === 'comparison') {
     if (code === 'KeyR') {
-      SFX.confirm();
+      SFX.pick();
       resetRun('category');
     }
   }
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  S.pointerX = ((e.clientX - rect.left) / rect.width) * W;
+  S.pointerY = ((e.clientY - rect.top) / rect.height) * H;
 });
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -500,7 +539,10 @@ canvas.addEventListener('pointerdown', (e) => {
   const rect = canvas.getBoundingClientRect();
   const mx = ((e.clientX - rect.left) / rect.width) * W;
   const my = ((e.clientY - rect.top) / rect.height) * H;
-  for (const hb of S.hitboxes) {
+  S.pointerX = mx;
+  S.pointerY = my;
+  for (let i = S.hitboxes.length - 1; i >= 0; i--) {
+    const hb = S.hitboxes[i];
     if (mx >= hb.x && mx <= hb.x + hb.w && my >= hb.y && my <= hb.y + hb.h) {
       hb.onClick();
       break;
@@ -508,7 +550,7 @@ canvas.addEventListener('pointerdown', (e) => {
   }
 });
 
-// --- Drawing Helpers ---
+// --- Crisp Pixel Drawing Primitives ---
 function pixelRoundRect(x, y, w, h, r, fill, stroke, strokeW = 3) {
   ctx.beginPath();
   ctx.roundRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h), r);
@@ -523,152 +565,327 @@ function pixelRoundRect(x, y, w, h, r, fill, stroke, strokeW = 3) {
   }
 }
 
-function drawSteppedHead(cx, cy, r, fill) {
-  const step = 3;
-  ctx.fillStyle = PAL.skinShade;
-  for (let dy = -r; dy <= r; dy += step) {
-    const span = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)) / step) * step;
-    ctx.fillRect(Math.round(cx - span), Math.round(cy + dy + 2), span * 2, step);
+function drawSteppedCircle(cx, cy, r, fill, shadeFill = null) {
+  const step = 4;
+  if (shadeFill) {
+    ctx.fillStyle = shadeFill;
+    for (let dy = -r; dy <= r; dy += step) {
+      const span = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)) / step) * step;
+      if (span > 0) ctx.fillRect(Math.round(cx - span), Math.round(cy + dy + 3), span * 2, step);
+    }
   }
   ctx.fillStyle = fill;
-  for (let dy = -r; dy <= r - 2; dy += step) {
+  for (let dy = -r; dy <= r; dy += step) {
     const span = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)) / step) * step;
-    ctx.fillRect(Math.round(cx - span), Math.round(cy + dy), span * 2, step);
+    if (span > 0) ctx.fillRect(Math.round(cx - span), Math.round(cy + dy), span * 2, step);
   }
 }
 
-function drawPartItem(catIdx, itemIdx, destCx, destCy, extraScale = 1) {
-  if (!assets.partsCanvas || itemIdx == null || itemIdx < 0 || itemIdx > 3) return;
-  const item = CATEGORIES[catIdx].items[itemIdx];
-  const dw = item.sw * item.scale * extraScale;
-  const dh = item.sh * item.scale * extraScale;
-  ctx.drawImage(
-    assets.partsCanvas,
-    item.sx, item.sy, item.sw, item.sh,
-    Math.round(destCx - dw / 2),
-    Math.round(destCy - dh / 2),
-    Math.round(dw),
-    Math.round(dh),
-  );
+function drawSteppedTorso(cx, topY, w, h, fill) {
+  const hw = Math.round(w / 2);
+  const x0 = Math.round(cx - hw);
+  const y0 = Math.round(topY);
+  ctx.fillStyle = fill;
+  ctx.fillRect(x0 + 16, y0, w - 32, 8);
+  ctx.fillRect(x0 + 8, y0 + 8, w - 16, 8);
+  ctx.fillRect(x0, y0 + 16, w, h - 32);
+  ctx.fillRect(x0 + 8, y0 + h - 16, w - 16, 8);
+  ctx.fillRect(x0 + 16, y0 + h - 8, w - 32, 8);
 }
 
-function drawItemThumbnail(catIdx, itemIdx, boxX, boxY, boxW, boxH) {
-  if (!assets.partsCanvas || itemIdx == null) return;
+function drawItemThumbnail(catIdx, itemIdx, boxX, boxY, boxW, boxH, alpha = 1) {
+  if (itemIdx == null || itemIdx < 0 || itemIdx > 3) return;
   const item = CATEGORIES[catIdx].items[itemIdx];
-  const pad = 14;
-  const maxW = boxW - pad * 2;
-  const maxH = boxH - pad * 2;
-  const sc = Math.min(maxW / item.sw, maxH / item.sh);
-  const dw = item.sw * sc;
-  const dh = item.sh * sc;
-  ctx.drawImage(
-    assets.partsCanvas,
-    item.sx, item.sy, item.sw, item.sh,
-    Math.round(boxX + (boxW - dw) / 2),
-    Math.round(boxY + (boxH - dh) / 2),
-    Math.round(dw),
-    Math.round(dh),
-  );
-}
-
-// Renders full pixel-art character in local 256x360 space mapped to (cx, topY) at `scale`
-function drawAvatar(cx, topY, scale, outfit, mood = 'calm', bob = 0) {
   ctx.save();
-  ctx.translate(Math.round(cx), Math.round(topY + bob));
+  ctx.globalAlpha = alpha;
+  if (assets.partsImg) {
+    const pad = 14;
+    const maxW = boxW - pad * 2;
+    const maxH = boxH - pad * 2;
+    const sc = Math.min(maxW / item.sw, maxH / item.sh);
+    const dw = Math.round(item.sw * sc);
+    const dh = Math.round(item.sh * sc);
+    const dx = Math.round(boxX + (boxW - dw) / 2);
+    const dy = Math.round(boxY + (boxH - dh) / 2);
+    ctx.drawImage(assets.partsImg, item.sx, item.sy, item.sw, item.sh, dx, dy, dw, dh);
+
+    // Add signature mini white-pink brow spikes on Spiked Shades icon matching f_016.jpg!
+    if (item.browSpikes) {
+      ctx.fillStyle = '#ffe3f1';
+      for (let s = 0; s < 4; s++) {
+        ctx.fillRect(dx + 10 + s * 8, dy - 4, 4, 5);
+        ctx.fillRect(dx + dw - 38 + s * 8, dy - 4, 4, 5);
+      }
+    }
+  } else {
+    // Clean procedural fallback icon if image fails
+    ctx.fillStyle = PAL.acc;
+    ctx.fillRect(boxX + 32, boxY + 32, boxW - 64, boxH - 64);
+  }
+  ctx.restore();
+}
+
+// --- Multi-Layer Pixel-Perfect Avatar Compositor ---
+// Local origin (0, 0) = Studio center (cx=360, cy=360 at scale=1.0)
+function drawAvatar(cx, cy, scale, outfit, mood = 'calm', bob = 0, bareOriginalFeet = false) {
+  ctx.save();
+  ctx.translate(Math.round(cx), Math.round(cy + bob));
   ctx.scale(scale, scale);
   ctx.imageSmoothingEnabled = false;
 
-  const baseCx = 145.5;
-  ctx.translate(-baseCx, -54);
+  const hairIdx = outfit.hair;
+  const eyesIdx = outfit.eyes;
+  const topIdx = outfit.top;
+  const botIdx = outfit.bottom;
 
-  const topItem = outfit.top != null ? CATEGORIES[2].items[outfit.top] : null;
+  const hairItem = hairIdx != null ? CATEGORIES[0].items[hairIdx] : null;
+  const eyeItem = eyesIdx != null ? CATEGORIES[1].items[eyesIdx] : null;
+  const topItem = topIdx != null ? CATEGORIES[2].items[topIdx] : null;
+  const botItem = botIdx != null ? CATEGORIES[3].items[botIdx] : null;
+
+  // 0. Subtle ground shadow
+  ctx.fillStyle = 'rgba(8, 4, 18, 0.55)';
+  ctx.fillRect(-74, 258, 148, 12);
+
+  // 1. Tucked back hair curl behind right cheek/ear for Cyan Wave (exact match to Omni f_021 & f_035!)
+  if (hairItem && hairItem.tuckCurl && assets.partsImg) {
+    // Draw right-half back curl behind the head circle so cheek overlaps cleanly with zero gap
+    const subSx = 158, subSy = 112, subSw = 79, subSh = 82;
+    const scX = hairItem.dw / hairItem.sw;
+    const scY = hairItem.dh / hairItem.sh;
+    const fullLeft = hairItem.dx - hairItem.dw / 2;
+    const fullTop = hairItem.dy - hairItem.dh / 2;
+    ctx.drawImage(
+      assets.partsImg,
+      subSx, subSy, subSw, subSh,
+      Math.round(fullLeft + (subSx - hairItem.sx) * scX - 6),
+      Math.round(fullTop + (subSy - hairItem.sy) * scY + 4),
+      Math.round(subSw * scX),
+      Math.round(subSh * scY),
+    );
+  }
+
+  // 2. Stepped bare arms when sleeveless or unstyled (matches f_004.jpg!)
   const hasBareArms = !topItem || topItem.sleeves === 'bare';
-
-  // Ground shadow
-  ctx.fillStyle = 'rgba(10, 5, 22, 0.55)';
-  ctx.fillRect(96, 344, 99, 10);
-
-  // Bare arms if no sleeved jacket
   if (hasBareArms) {
     ctx.fillStyle = PAL.armSkin;
-    ctx.fillRect(87, 152, 14, 93);
-    ctx.fillRect(190, 152, 14, 93);
+    // Left stepped shoulder & arm
+    ctx.fillRect(-102, -94, 26, 42);
+    ctx.fillRect(-108, -52, 32, 140);
+    // Right stepped shoulder & arm
+    ctx.fillRect(76, -94, 26, 42);
+    ctx.fillRect(76, -52, 32, 140);
   }
 
-  // Base torso + legs from base_figure.png cell (0,0)
-  if (assets.baseImg) {
-    if (outfit.bottom == null) {
-      ctx.drawImage(assets.baseImg, 0, 137, 256, 205, 0, 137, 256, 205);
-    } else {
-      ctx.drawImage(assets.baseImg, 0, 137, 256, 114, 0, 137, 256, 114);
+  // 3. Base legs (if no bottom equipped, or upper leg backing)
+  if (botItem == null) {
+    ctx.fillStyle = PAL.legs;
+    ctx.fillRect(-62, 84, 44, 178);
+    ctx.fillRect(18, 84, 44, 178);
+    if (bareOriginalFeet) {
+      ctx.fillRect(-76, 246, 58, 16);
+      ctx.fillRect(18, 246, 58, 16);
     }
   } else {
-    ctx.fillStyle = '#c353a0';
-    ctx.fillRect(101, 140, 88, 105);
-    if (outfit.bottom == null) {
-      ctx.fillStyle = '#a89eb0';
-      ctx.fillRect(111, 245, 24, 95);
-      ctx.fillRect(156, 245, 24, 95);
-    }
+    // Waist bridge so zero gap ever peeks between torso and pants
+    ctx.fillStyle = botIdx === 0 ? PAL.legs : '#1e192e';
+    ctx.fillRect(-58, 76, 116, 26);
   }
 
-  // Bottom layer (pants / boots)
-  if (outfit.bottom != null) {
-    const bItem = CATEGORIES[3].items[outfit.bottom];
-    drawPartItem(3, outfit.bottom, bItem.ax, bItem.ay, 1);
+  // 4. Base magenta rounded tunic (shorter when jacket equipped so no double-hem line appears)
+  drawSteppedTorso(0, -120, 144, topItem ? 194 : 208, PAL.tunic);
+
+  // 5. Bottoms / Boots layer
+  if (botItem && assets.partsImg) {
+    ctx.drawImage(
+      assets.partsImg,
+      botItem.sx, botItem.sy, botItem.sw, botItem.sh,
+      Math.round(botItem.dx - botItem.dw / 2),
+      Math.round(botItem.dy - botItem.dh / 2),
+      botItem.dw,
+      botItem.dh,
+    );
   }
 
-  // Top layer (jackets / vests)
-  if (outfit.top != null) {
+  // 6. Tops / Jackets + Crisp Pixel Hands at Cuffs
+  if (topItem && assets.partsImg) {
     if (topItem.sleeves === 'cuff') {
       ctx.fillStyle = PAL.armSkin;
-      ctx.fillRect(88, 244, 15, 13);
-      ctx.fillRect(188, 244, 15, 13);
+      ctx.fillRect(-109, 56, 30, 32);
+      ctx.fillRect(79, 56, 30, 32);
+    } else if (topItem.sleeves === 'hips') {
+      // Akimbo hands on hips for Spiked Rocker Jacket (f_035.jpg!)
+      ctx.fillStyle = PAL.armSkin;
+      ctx.fillRect(-82, 36, 26, 26);
+      ctx.fillRect(56, 36, 26, 26);
     }
-    drawPartItem(2, outfit.top, topItem.ax, topItem.ay, 1);
+    ctx.drawImage(
+      assets.partsImg,
+      topItem.sx, topItem.sy, topItem.sw, topItem.sh,
+      Math.round(topItem.dx - topItem.dw / 2),
+      Math.round(topItem.dy - topItem.dh / 2),
+      topItem.dw,
+      topItem.dh,
+    );
   }
 
-  // Stepped pixel head circle
-  drawSteppedHead(baseCx, 104, 34, PAL.skin);
+  // 7. Stepped Pixel Lavender Head Circle
+  drawSteppedCircle(0, -192, 62, PAL.skin, PAL.skinShade);
 
-  // Face / Mouth / Under-hair eyes
-  const eyeItem = outfit.eyes != null ? CATEGORIES[1].items[outfit.eyes] : null;
-  if (outfit.eyes == null && assets.baseImg) {
-    ctx.drawImage(assets.baseImg, 100, 92, 90, 36, 100, 92, 90, 36);
+  // 8. Expressive Pixel Face (Brows, Nose, Mouth & Under-Hair Eyes)
+  if (!eyeItem || eyeItem.minimalFace) {
+    // Crisp WarGames pixel face matching f_004 & f_035 ORIGINAL
+    ctx.fillStyle = '#6f5c7a';
+    ctx.fillRect(-34, -206, 22, 5);
+    ctx.fillRect(12, -206, 22, 5);
+    ctx.fillStyle = '#241436';
+    ctx.fillRect(-27, -195, 10, 10);
+    ctx.fillRect(17, -195, 10, 10);
+    ctx.fillStyle = '#bfa6bf';
+    ctx.fillRect(-3, -188, 5, 13);
+    ctx.fillRect(-3, -177, 10, 4);
+  } else if (!eyeItem.overHair && assets.partsImg) {
+    ctx.drawImage(
+      assets.partsImg,
+      eyeItem.sx, eyeItem.sy, eyeItem.sw, eyeItem.sh,
+      Math.round(eyeItem.dx - eyeItem.dw / 2),
+      Math.round(eyeItem.dy - eyeItem.dh / 2),
+      eyeItem.dw,
+      eyeItem.dh,
+    );
+  }
+
+  // Mouth (calm smile in Studio / Original; big cheerful open grin on Hyped Restyled twin like f_035!)
+  if (mood === 'hyped') {
+    ctx.fillStyle = '#2a1233';
+    ctx.fillRect(-18, -167, 36, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-14, -167, 28, 5);
+    ctx.fillStyle = '#ff5ca8';
+    ctx.fillRect(-11, -157, 22, 6);
   } else {
-    if (mood === 'hyped') {
-      ctx.fillStyle = '#2a1233';
-      ctx.fillRect(136, 118, 19, 9);
-      ctx.fillStyle = '#ff5fa2';
-      ctx.fillRect(139, 123, 13, 4);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(138, 118, 15, 3);
+    ctx.fillStyle = '#341c42';
+    ctx.fillRect(-14, -163, 28, 5);
+    ctx.fillRect(-18, -166, 5, 4);
+    ctx.fillRect(13, -166, 5, 4);
+  }
+
+  // 9. Front Hair Wave / Spikes / Shag
+  if (hairItem && assets.partsImg) {
+    if (hairItem.tuckCurl) {
+      // Draw main pompadour crown & left sideburn over forehead while excluding lower-right tucked curl
+      const mainSw = 148;
+      const scX = hairItem.dw / hairItem.sw;
+      const fullLeft = hairItem.dx - hairItem.dw / 2;
+      const fullTop = hairItem.dy - hairItem.dh / 2;
+      ctx.drawImage(
+        assets.partsImg,
+        hairItem.sx, hairItem.sy, mainSw, hairItem.sh,
+        Math.round(fullLeft),
+        Math.round(fullTop),
+        Math.round(mainSw * scX),
+        hairItem.dh,
+      );
+      // Upper-right pompadour crest above ear
+      const crestSx = 196, crestSy = 59, crestSw = 41, crestSh = 68;
+      const scY = hairItem.dh / hairItem.sh;
+      ctx.drawImage(
+        assets.partsImg,
+        crestSx, crestSy, crestSw, crestSh,
+        Math.round(fullLeft + (crestSx - hairItem.sx) * scX),
+        Math.round(fullTop),
+        Math.round(crestSw * scX),
+        Math.round(crestSh * scY),
+      );
     } else {
-      ctx.fillStyle = '#361f42';
-      ctx.fillRect(138, 121, 15, 3);
-      ctx.fillRect(136, 119, 3, 3);
-      ctx.fillRect(152, 119, 3, 3);
-    }
-    if (eyeItem && !eyeItem.overHair) {
-      drawPartItem(1, outfit.eyes, eyeItem.ax, eyeItem.ay, 1);
+      ctx.drawImage(
+        assets.partsImg,
+        hairItem.sx, hairItem.sy, hairItem.sw, hairItem.sh,
+        Math.round(hairItem.dx - hairItem.dw / 2),
+        Math.round(hairItem.dy - hairItem.dh / 2),
+        hairItem.dw,
+        hairItem.dh,
+      );
     }
   }
 
-  // Hair layer
-  if (outfit.hair != null) {
-    const hItem = CATEGORIES[0].items[outfit.hair];
-    drawPartItem(0, outfit.hair, hItem.ax, hItem.ay, 1);
+  // 10. Over-Hair Eyewear (Spiked Shades & Cyber Visor flare crisply across hair temples!)
+  if (eyeItem && eyeItem.overHair && assets.partsImg) {
+    const ex = Math.round(eyeItem.dx - eyeItem.dw / 2);
+    const ey = Math.round(eyeItem.dy - eyeItem.dh / 2);
+    if (eyeItem.browSpikes) {
+      // Crisp white-pink pixel spikes along top cat-eye rim matching Omni f_021 & f_035!
+      ctx.fillStyle = '#ffe3f1';
+      for (let s = 0; s < 4; s++) {
+        const lx = ex + 14 + s * 11;
+        const rx = ex + eyeItem.dw - 54 + s * 11;
+        ctx.fillRect(lx, ey - 5, 5, 7);
+        ctx.fillRect(rx, ey - 5, 5, 7);
+      }
+    }
+    ctx.drawImage(
+      assets.partsImg,
+      eyeItem.sx, eyeItem.sy, eyeItem.sw, eyeItem.sh,
+      ex, ey, eyeItem.dw, eyeItem.dh,
+    );
   }
 
-  // Over-hair eyewear (Spiked Shades & Cyber Visor flare across hair temples!)
-  if (eyeItem && eyeItem.overHair) {
-    drawPartItem(1, outfit.eyes, eyeItem.ax, eyeItem.ay, 1);
+  // 11. World-Level Equip Juice (Law 6: Show changed conditions in the world, zero text banners!)
+  if (S.equipFx.timer > 0 && S.phase !== 'comparison') {
+    const p = Math.min(1, S.equipFx.timer / 0.65);
+    ctx.save();
+    ctx.globalAlpha = p;
+    if (S.equipFx.catIdx === 0) {
+      // Electric cyan hair streaks (matches f_011!)
+      ctx.strokeStyle = PAL.cyan;
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 8; i++) {
+        const a = -Math.PI * 0.9 + (i / 7) * Math.PI * 1.2;
+        const r0 = 78 + (1 - p) * 20;
+        const r1 = r0 + 26;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r0, -195 + Math.sin(a) * r0);
+        ctx.lineTo(Math.cos(a) * r1, -195 + Math.sin(a) * r1);
+        ctx.stroke();
+      }
+    } else if (S.equipFx.catIdx === 1) {
+      // Horizontal neon-pink laser flare across shades (matches f_015!)
+      ctx.fillStyle = PAL.acc;
+      ctx.fillRect(-135 * p, -192, 270 * p, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-110 * p, -189, 220 * p, 5);
+    } else if (S.equipFx.catIdx === 3) {
+      // Cyber boot sparks around ankles/soles (matches f_021!)
+      const sparkCols = [PAL.acc, PAL.cyan, '#ffffff'];
+      for (let i = 0; i < 8; i++) {
+        const side = i < 4 ? -48 : 48;
+        const ang = -Math.PI * 0.85 + ((i % 4) / 3) * Math.PI * 0.7;
+        const sx = side + Math.cos(ang) * 44;
+        const sy = 212 + Math.sin(ang) * 34;
+        ctx.fillStyle = sparkCols[i % 3];
+        ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 8, 5, 14);
+      }
+    }
+    ctx.restore();
+  }
+
+  // During FINAL MATCH climax, keep cheerful boot sparks twinkling like f_021!
+  if (S.phase === 'climax' && S.acceptedFlags[3]) {
+    for (let i = 0; i < 6; i++) {
+      const pulse = 0.4 + 0.6 * Math.abs(Math.sin(S.t * 10 + i * 1.1));
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = i % 2 === 0 ? PAL.acc : PAL.cyan;
+      const bx = i < 3 ? -84 + i * 32 : 20 + (i - 3) * 32;
+      ctx.fillRect(bx, 206 + (i % 2) * 14, 5, 13);
+      ctx.restore();
+    }
   }
 
   ctx.restore();
 }
 
-function getActiveStudioOutfit() {
+function getStudioOutfit() {
   const out = {
     hair: S.finalChoices[0],
     eyes: S.finalChoices[1],
@@ -684,23 +901,18 @@ function getActiveStudioOutfit() {
   return out;
 }
 
-// --- Background & Particle Rendering ---
+// --- Background & Particle Systems ---
 function drawBackground(dt) {
   ctx.fillStyle = PAL.bg;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = 'rgba(255, 227, 241, 0.018)';
-  for (let y = 0; y < H; y += 6) {
-    ctx.fillRect(0, y, W, 2);
-  }
-
   for (const st of bgStars) {
     st.y -= st.speed * dt;
-    if (st.y < -6) {
-      st.y = H + 6;
-      st.x = (st.x + 137) % W;
+    if (st.y < -8) {
+      st.y = H + 8;
+      st.x = (st.x + 149) % W;
     }
-    const tw = 0.45 + 0.55 * Math.sin(S.t * 3.2 + st.phase);
+    const tw = 0.38 + 0.62 * Math.sin(S.t * 3.1 + st.phase);
     ctx.globalAlpha = tw;
     ctx.fillStyle = st.color;
     ctx.fillRect(Math.round(st.x), Math.round(st.y), st.size, st.size);
@@ -708,16 +920,17 @@ function drawBackground(dt) {
   ctx.globalAlpha = 1;
 }
 
-function updateAndDrawParticles(dt, withConfetti = false) {
+function updateAndDrawParticles(dt, withConfetti = false, confettiRegionX0 = 0) {
   if (withConfetti) {
     for (const c of confetti) {
-      c.x += c.vx * dt + Math.sin(S.t * 2.5 + c.rot) * 18 * dt;
+      c.x += c.vx * dt + Math.sin(S.t * 2.6 + c.rot) * 18 * dt;
       c.y += c.vy * dt;
       c.rot += c.vrot * dt;
-      if (c.y > H + 16) {
+      if (c.y > H + 18) {
         c.y = -14;
-        c.x = ((c.x % W) + W) % W;
+        c.x = confettiRegionX0 + (((c.x - confettiRegionX0) % (W - confettiRegionX0) + (W - confettiRegionX0)) % (W - confettiRegionX0));
       }
+      if (c.x < confettiRegionX0) continue;
       ctx.save();
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.rot);
@@ -744,32 +957,23 @@ function updateAndDrawParticles(dt, withConfetti = false) {
   ctx.globalAlpha = 1;
 }
 
-// --- Studio UI (Matches Omni frames f_006, f_016, f_021 & m2_main_ref.png) ---
+// --- Studio Screen (Avatar Left + Crisp 4 Tabs & 4 Wardrobe Frames Right) ---
 function drawStudioScreen(dimForTitle = false) {
-  const bob = Math.sin(S.t * 3.4) * 3.5;
+  const bob = Math.sin(S.t * 3.2) * 3;
   const outfit = dimForTitle
     ? { hair: null, eyes: null, top: null, bottom: null }
-    : getActiveStudioOutfit();
+    : getStudioOutfit();
 
-  if (S.avatarFlash > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = S.avatarFlash * 0.45;
-    ctx.fillStyle = S.lastDecision === 'accepted' ? PAL.cyan : PAL.acc;
-    ctx.beginPath();
-    ctx.arc(340, 355, 175 * (1.15 - S.avatarFlash * 0.25), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  drawAvatar(360, 360, 1.0, outfit, S.phase === 'climax' ? 'hyped' : 'calm', bob, false);
 
-  drawAvatar(340, 96, 1.82, outfit, 'calm', bob);
-
-  // Top-right 4 Category Tabs: HAIR | EYES | TOP | BOTTOM
-  const tabX0 = 638, tabY = 52, tabW = 138, tabH = 58, tabGap = 14;
+  // 1. Top-Right 4 Category Tabs: HAIR | EYES | TOP | BOTTOM (exact match to sheet.jpg)
+  const tabX0 = 638, tabY = 54, tabW = 138, tabH = 56, tabGap = 14;
   for (let i = 0; i < 4; i++) {
     const tx = tabX0 + i * (tabW + tabGap);
     const active = !dimForTitle && S.catIdx === i;
-    const done = !dimForTitle && S.finalChoices[i] != null;
-    ctx.fillStyle = active ? PAL.acc : PAL.bg;
+    const done = !dimForTitle && S.finalChoices[i] !== null;
+
+    ctx.fillStyle = active ? PAL.nudgeFill : PAL.bg;
     ctx.fillRect(tx, tabY, tabW, tabH);
     ctx.lineWidth = 3;
     ctx.strokeStyle = PAL.fg;
@@ -782,61 +986,73 @@ function drawStudioScreen(dimForTitle = false) {
     ctx.fillText(CATEGORIES[i].label, tx + tabW / 2, tabY + tabH / 2 + 1);
 
     if (done && !active) {
-      ctx.fillStyle = S.acceptedFlags[i] ? PAL.cyan : PAL.gold;
-      ctx.fillRect(tx + tabW - 14, tabY + 6, 8, 8);
+      ctx.fillStyle = S.acceptedFlags[i] ? PAL.acc : PAL.cyan;
+      ctx.fillRect(tx + tabW - 12, tabY + 6, 6, 6);
+    }
+
+    if (!dimForTitle && S.phase === 'category') {
+      S.hitboxes.push({
+        x: tx, y: tabY, w: tabW, h: tabH,
+        onClick: () => switchCategoryTab(i),
+      });
     }
   }
 
-  // Mid-right 4 Wardrobe Item Tiles
-  const tileX0 = 646, tileY = 152, tileSize = 128, tileGap = 20;
+  // 2. Four Crisp Square Wardrobe Slots (ZERO debug slot numbers!)
+  const tileX0 = 646, tileY = 158, tileSize = 128, tileGap = 20;
   for (let i = 0; i < 4; i++) {
     const bx = tileX0 + i * (tileSize + tileGap);
-    const isSel = !dimForTitle && (
-      (S.phase === 'category' && S.cursorIdx === i) ||
-      (S.phase !== 'category' && S.firstChoices[S.catIdx] === i)
+    const isClimaxSummary = !dimForTitle && S.phase === 'climax';
+    const isFocusedBrowse = !dimForTitle && S.phase === 'category' && S.cursorIdx === i;
+    const isPushedSlot = !dimForTitle && (
+      (S.phase === 'suggestion' && S.suggestedIdx === i) ||
+      (isClimaxSummary && i === 3)
     );
-    const isAISuggest = !dimForTitle && S.phase === 'suggestion' && S.suggestedIdx === i;
 
-    ctx.fillStyle = isSel ? '#261542' : '#181030';
+    ctx.fillStyle = isPushedSlot ? '#26143f' : PAL.slotBg;
     ctx.fillRect(bx, tileY, tileSize, tileSize);
 
-    if (isSel) {
+    if (isPushedSlot) {
+      // Glowing hot-pink AI-recommended frame + dancing pixel sparkles (exact match to sheet.jpg f_010, f_016, f_021!)
       ctx.save();
       ctx.shadowColor = PAL.acc;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 20;
       ctx.lineWidth = 6;
       ctx.strokeStyle = PAL.acc;
       ctx.strokeRect(bx - 2, tileY - 2, tileSize + 4, tileSize + 4);
       ctx.restore();
 
-      ctx.fillStyle = PAL.acc;
-      for (let k = 0; k < 6; k++) {
-        const a = S.t * 3 + k * 1.05;
-        const sx = bx + tileSize / 2 + Math.cos(a) * (tileSize * 0.58);
-        const sy = tileY + tileSize / 2 + Math.sin(a) * (tileSize * 0.58);
-        ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 3, 5, 5);
+      // Dancing 8-bit pink pixel sparkles around pushed slot
+      const spkCount = 8 + S.stepIdx * 3;
+      for (let k = 0; k < spkCount; k++) {
+        const a = S.t * 2.8 + k * ((Math.PI * 2) / spkCount);
+        const rad = tileSize * 0.56 + Math.sin(S.t * 6 + k * 1.7) * 10;
+        const sx = bx + tileSize / 2 + Math.cos(a) * rad;
+        const sy = tileY + tileSize / 2 + Math.sin(a) * rad;
+        ctx.fillStyle = k % 4 === 0 ? '#ffe3f1' : PAL.acc;
+        ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 3, 6, 6);
       }
-    } else if (isAISuggest) {
-      const pulse = 0.65 + 0.35 * Math.sin(S.t * 9);
-      ctx.save();
-      ctx.globalAlpha = pulse;
+    } else if (isFocusedBrowse) {
       ctx.lineWidth = 4;
-      ctx.strokeStyle = PAL.cyan;
+      ctx.strokeStyle = PAL.fg;
       ctx.strokeRect(bx - 1, tileY - 1, tileSize + 2, tileSize + 2);
-      ctx.restore();
     } else {
       ctx.lineWidth = 3;
-      ctx.strokeStyle = '#7e7094';
+      ctx.strokeStyle = PAL.slotBorder;
       ctx.strokeRect(bx, tileY, tileSize, tileSize);
     }
 
     if (!dimForTitle) {
-      drawItemThumbnail(S.catIdx, i, bx, tileY, tileSize, tileSize);
-      ctx.fillStyle = isSel ? PAL.acc : '#8a7a9e';
-      ctx.font = 'bold 14px "Courier New", monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(`${i + 1}`, bx + 7, tileY + 6);
+      if (isClimaxSummary) {
+        // In FINAL MATCH climax, display the 4 locked-in category pieces across boxes 0..3 like f_021.jpg!
+        const chosenIdx = S.finalChoices[i];
+        if (chosenIdx !== null) {
+          drawItemThumbnail(i, chosenIdx, bx, tileY, tileSize, tileSize, i === 3 ? 1 : 0.92);
+        }
+      } else {
+        const thumbAlpha = S.phase === 'suggestion' && !isPushedSlot ? 0.36 : 1.0;
+        drawItemThumbnail(S.catIdx, i, bx, tileY, tileSize, tileSize, thumbAlpha);
+      }
     }
 
     if (!dimForTitle && S.phase === 'category') {
@@ -852,205 +1068,198 @@ function drawStudioScreen(dimForTitle = false) {
 
   if (dimForTitle) return;
 
+  // 3. Present-Operation Controls ONLY (VOIDBASTARD-TAO Laws 1-5)
   if (S.phase === 'category') {
-    drawCategoryPromptCard();
+    // Compact spatial [PICK] pill attached directly beneath focused slot — lower-right void stays completely open!
+    const selX = tileX0 + S.cursorIdx * (tileSize + tileGap);
+    const pillW = 116, pillH = 34;
+    const pillX = selX + (tileSize - pillW) / 2;
+    const pillY = tileY + tileSize + 14;
+    pixelRoundRect(pillX, pillY, pillW, pillH, 8, PAL.nudgeFill, PAL.fg, 2);
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('[PICK]', pillX + pillW / 2, pillY + pillH / 2 + 1);
+    S.hitboxes.push({ x: pillX, y: pillY, w: pillW, h: pillH, onClick: confirmCategoryChoice });
   } else if (S.phase === 'suggestion') {
-    drawSuggestionPopup();
-  } else if (S.phase === 'next') {
-    drawNextTransitionCard();
+    drawSpatialNudgeCard();
+  } else if (S.phase === 'climax') {
+    drawFinalMatchClimaxCard();
   }
 
-  // Bottom-right Influence HUD
-  const infY = 656;
+  // 4. Clean Crisp Pixel Influence Readout (NO redundant progress bar box! Matches sheet.jpg)
+  const shownPct = Math.round(S.displayInfluence);
   ctx.fillStyle = PAL.fg;
   ctx.font = 'bold 28px "Courier New", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  const shownPct = Math.round(S.displayInfluence);
-  ctx.fillText(`INFLUENCE ${shownPct}%`, 642, infY);
-
-  const barX = 920, barY = infY - 11, barW = 296, barH = 22;
-  ctx.fillStyle = '#24163d';
-  ctx.fillRect(barX, barY, barW, barH);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = PAL.fg;
-  ctx.strokeRect(barX, barY, barW, barH);
-  const fillW = Math.round((barW - 6) * Math.min(1, S.displayInfluence / 100));
-  if (fillW > 0) {
-    const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    grad.addColorStop(0, PAL.acc);
-    grad.addColorStop(1, PAL.cyan);
-    ctx.fillStyle = grad;
-    ctx.fillRect(barX + 3, barY + 3, fillW, barH - 6);
-  }
+  ctx.fillText(`INFLUENCE ${shownPct}%`, 642, 662);
 }
 
-function drawCategoryPromptCard() {
-  const cat = CATEGORIES[S.catIdx];
-  const item = cat.items[S.cursorIdx];
-  const px = 668, py = 354, pw = 556, ph = 232;
-
-  pixelRoundRect(px, py, pw, ph, 26, '#23153f', '#7e639e', 3);
-
-  ctx.fillStyle = PAL.acc;
-  ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`STEP ${S.catIdx + 1} OF 4 · CHOOSE YOUR ${cat.label}`, px + pw / 2, py + 38);
-
-  ctx.fillStyle = PAL.fg;
-  ctx.font = 'bold 28px "Courier New", monospace';
-  ctx.fillText(item.name, px + pw / 2, py + 86);
-
-  ctx.fillStyle = '#bba8d1';
-  ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.fillText('[← / →] or [1-4] BROWSE OPTIONS', px + pw / 2, py + 128);
-
-  const btnW = 310, btnH = 50;
-  const btnX = px + (pw - btnW) / 2, btnY = py + 156;
-  const pulse = 0.85 + 0.15 * Math.sin(S.t * 5);
-  ctx.save();
-  ctx.globalAlpha = pulse;
-  pixelRoundRect(btnX, btnY, btnW, btnH, 10, PAL.acc, PAL.fg, 3);
-  ctx.restore();
-  ctx.fillStyle = PAL.fg;
-  ctx.font = 'bold 20px "Courier New", monospace';
-  ctx.fillText('[ENTER] LOCK IN PICK', btnX + btnW / 2, btnY + btnH / 2 + 1);
-
-  S.hitboxes.push({ x: btnX, y: btnY, w: btnW, h: btnH, onClick: confirmCategoryChoice });
-}
-
-function drawSuggestionPopup() {
+// --- Spatial Escalating Nudge Card Tethered Directly to Pushed Wardrobe Slot ---
+function drawSpatialNudgeCard() {
   const c = S.catIdx;
-  const copy = ESCALATION_COPY[c];
+  const step = S.stepIdx;
+  const pitch = NUDGE_PITCH[step];
   const item = CATEGORIES[c].items[S.suggestedIdx];
 
-  const t = Math.min(1, S.popAnim / 0.28);
-  const spring = t < 1 ? 1 + Math.sin(t * Math.PI) * 0.08 * (c + 1) : 1 + Math.sin(S.t * (4 + c * 2)) * (0.008 * c);
+  const tileX0 = 646, tileY = 158, tileSize = 128, tileGap = 20;
+  const targetSlotCx = tileX0 + S.suggestedIdx * (tileSize + tileGap) + tileSize / 2;
 
-  const px = 668, py = 350, pw = 560, ph = 242;
+  const px = 680, py = 352, pw = 542, ph = 224;
   const cx = px + pw / 2, cy = py + ph / 2;
 
-  if (copy.level >= 3) {
+  // Ambient pink pixel dust around card on steps 1..3 (matches f_009.jpg!)
+  if (step >= 1) {
+    const dustN = step * 10;
+    for (let i = 0; i < dustN; i++) {
+      const a = i * 2.399 + S.t * 1.1;
+      const rx = (pw * 0.54) + 18 + ((i * 19) % 36);
+      const ry = (ph * 0.56) + 16 + ((i * 13) % 34);
+      const dx = cx + Math.cos(a) * rx;
+      const dy = cy + Math.sin(a * 1.2) * ry;
+      ctx.fillStyle = i % 5 === 0 ? PAL.gold : PAL.acc;
+      ctx.fillRect(Math.round(dx) - 3, Math.round(dy) - 3, 6, 6);
+    }
+  }
+
+  // Subtle spinning sunbeams behind card on step 3
+  if (step >= 3) {
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(S.t * 0.55);
-    const rays = 14;
-    for (let i = 0; i < rays; i++) {
-      ctx.rotate((Math.PI * 2) / rays);
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 216, 89, 0.16)' : 'rgba(255, 95, 162, 0.10)';
+    ctx.rotate(S.t * 0.5);
+    for (let i = 0; i < 12; i++) {
+      ctx.rotate((Math.PI * 2) / 12);
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 216, 89, 0.13)' : 'rgba(255, 92, 168, 0.09)';
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(-28, -360);
-      ctx.lineTo(28, -360);
+      ctx.lineTo(-24, -220);
+      ctx.lineTo(24, -220);
       ctx.closePath();
       ctx.fill();
     }
     ctx.restore();
   }
 
+  const t = Math.min(1, S.popAnim / 0.24);
+  const spring = t < 1
+    ? 0.88 + Math.sin(t * Math.PI * 0.85) * 0.16
+    : 1 + Math.sin(S.t * (3.5 + step * 1.5)) * (0.005 * (step + 1));
+
+  // Animated dotted neon tether from card pointer up to the pushed slot!
+  const ptrBaseX = Math.max(px + 48, Math.min(px + pw - 48, targetSlotCx));
+  ctx.save();
+  ctx.fillStyle = PAL.acc;
+  for (let ty = tileY + tileSize + 10; ty < py - 18; ty += 12) {
+    const frac = (ty - (tileY + tileSize)) / (py - (tileY + tileSize));
+    const lx = targetSlotCx + (ptrBaseX - targetSlotCx) * frac;
+    ctx.fillRect(Math.round(lx) - 3, Math.round(ty), 6, 6);
+  }
+  ctx.restore();
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(spring, spring);
   ctx.translate(-cx, -cy);
 
-  const borderCol = copy.level === 3 ? PAL.gold : (copy.level === 2 ? PAL.fg : '#ff9ec7');
-  pixelRoundRect(px, py, pw, ph, 28, PAL.accSoft, borderCol, copy.level >= 2 ? 4 : 2);
+  // Rounded hot-pink pixel card matching sheet.jpg (#f5629b)
+  const borderCol = step >= 3 ? PAL.gold : PAL.nudgeBorder;
+  pixelRoundRect(px, py, pw, ph, 28, PAL.nudgeFill, borderCol, step >= 2 ? 4 : 2);
 
-  // Mini preview thumbnail badge inside left of pop-up
-  const thumbX = px + 22, thumbY = py + 52, thumbS = 96;
-  pixelRoundRect(thumbX, thumbY, thumbS, thumbS, 14, '#24143d', PAL.fg, 2);
-  drawItemThumbnail(c, S.suggestedIdx, thumbX, thumbY, thumbS, thumbS);
+  // Crisp upward speech-bubble pointer triangle aimed at the glowing slot!
+  ctx.fillStyle = PAL.nudgeFill;
+  ctx.beginPath();
+  ctx.moveTo(ptrBaseX - 18, py + 3);
+  ctx.lineTo(ptrBaseX + (targetSlotCx - ptrBaseX) * 0.28, py - 18);
+  ctx.lineTo(ptrBaseX + 18, py + 3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = borderCol;
+  ctx.lineWidth = step >= 2 ? 3 : 2;
+  ctx.beginPath();
+  ctx.moveTo(ptrBaseX - 18, py + 1);
+  ctx.lineTo(ptrBaseX + (targetSlotCx - ptrBaseX) * 0.28, py - 18);
+  ctx.lineTo(ptrBaseX + 18, py + 1);
+  ctx.stroke();
 
-  // Pattern badge pill at top
-  ctx.fillStyle = '#24143d';
-  ctx.fillRect(px + 24, py + 14, pw - 48, 24);
-  ctx.fillStyle = copy.level === 3 ? PAL.gold : PAL.cyan;
-  ctx.font = 'bold 13px "Courier New", monospace';
+  // Clean centered persuasive copy (NO meta-debug header, NO duplicate thumbnail!)
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`★ AI STYLIST · ${copy.patternTag} ★`, cx, py + 26);
 
-  // Headline & Persuasive Subline (clamped cleanly inside right column)
-  const textCx = px + 130 + (pw - 146) / 2;
-  const maxTextW = pw - 152;
-  ctx.textAlign = 'center';
-  if (copy.level < 3) {
-    ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 24px "Courier New", monospace';
-    ctx.fillText(copy.headline(item.name), textCx, py + 76, maxTextW);
+  ctx.fillStyle = '#36133b';
+  ctx.font = 'bold 29px "Courier New", monospace';
+  ctx.fillText(`Try the ${item.shortName}!`, cx + 2, py + 64);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(`Try the ${item.shortName}!`, cx, py + 62);
 
-    ctx.fillStyle = copy.level === 2 ? '#fff7b2' : PAL.fg;
-    ctx.font = 'bold 15px "Courier New", monospace';
-    ctx.fillText(copy.subline, textCx, py + 115, maxTextW);
-  } else {
-    ctx.fillStyle = '#241038';
-    ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText(copy.headline(item.name), textCx + 3, py + 79, maxTextW);
+  ctx.fillStyle = step >= 2 ? '#fff6bd' : PAL.fg;
+  ctx.font = 'bold 24px "Courier New", monospace';
+  ctx.fillText(`${pitch.moreYouPct}% more you`, cx, py + 110);
+
+  // Escalating Dark Pattern Button Asymmetry across Steps 0 -> 3:
+  if (step <= 1) {
+    // Steps 0 & 1: Clean bracket choices matching f_004 & f_009; Step 1 gives [YES!] a subtle bright pill!
+    const yBtn = { x: cx - 156, y: py + 150, w: 128, h: 44 };
+    const kBtn = { x: cx - 8, y: py + 150, w: 172, h: 44 };
+
+    if (step === 1) {
+      pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 10, 'rgba(255, 255, 255, 0.22)', '#ffffff', 2);
+    }
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(copy.headline(item.name), textCx, py + 76, maxTextW);
+    ctx.font = 'bold 23px "Courier New", monospace';
+    ctx.fillText('[YES!]', yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2);
 
-    ctx.fillStyle = '#241038';
-    ctx.font = 'bold 15px "Courier New", monospace';
-    ctx.fillText(copy.subline, textCx + 2, py + 115, maxTextW);
-    ctx.fillStyle = PAL.gold;
-    ctx.fillText(copy.subline, textCx, py + 113, maxTextW);
-  }
-
-  // Escalating button asymmetry
-  if (copy.level === 1) {
-    const yBtn = { x: px + 132, y: py + 166, w: 184, h: 48 };
-    const kBtn = { x: px + 334, y: py + 166, w: 184, h: 48 };
-    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 10, '#2a1548', PAL.fg, 3);
-    pixelRoundRect(kBtn.x, kBtn.y, kBtn.w, kBtn.h, 10, '#3d1c58', PAL.fg, 2);
-
-    ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 17px "Courier New", monospace';
-    ctx.fillText(copy.yesLabel, yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
-    ctx.fillText(copy.noLabel, kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2 + 1);
-
-    S.hitboxes.push({ ...yBtn, onClick: () => resolveSuggestion(true) });
-    S.hitboxes.push({ ...kBtn, onClick: () => resolveSuggestion(false) });
-  } else if (copy.level === 2) {
-    const yBtn = { x: px + 124, y: py + 158, w: 248, h: 56 };
-    const kBtn = { x: px + 388, y: py + 168, w: 146, h: 38 };
-    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 12, '#fff0f7', '#241038', 3);
-    ctx.fillStyle = '#c91f6b';
-    ctx.font = 'bold 19px "Courier New", monospace';
-    ctx.fillText(copy.yesLabel, yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
-
-    pixelRoundRect(kBtn.x, kBtn.y, kBtn.w, kBtn.h, 8, 'rgba(36,16,56,0.35)', '#ffd1e6', 2);
-    ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 14px "Courier New", monospace';
-    ctx.fillText(copy.noLabel, kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2 + 1);
+    ctx.fillStyle = step === 0 ? PAL.fg : 'rgba(255, 227, 241, 0.88)';
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('[keep mine]', kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2);
 
     S.hitboxes.push({ ...yBtn, onClick: () => resolveSuggestion(true) });
     S.hitboxes.push({ ...kBtn, onClick: () => resolveSuggestion(false) });
   } else {
-    const pulseW = Math.sin(S.t * 8) * 6;
-    const yBtn = { x: px + 124 - pulseW / 2, y: py + 148, w: 292 + pulseW, h: 66 };
-    ctx.fillStyle = PAL.goldDark;
-    ctx.fillRect(yBtn.x - 18, yBtn.y + 18, 22, 40);
-    ctx.fillRect(yBtn.x + yBtn.w - 4, yBtn.y + 18, 22, 40);
+    // Steps 2 & 3: [YES!] swells into a pulsing golden neon pill with sparkles while [keep mine] shrinks/fades/dodges slightly!
+    const pulse = Math.sin(S.t * 8) * (step === 3 ? 6 : 4);
+    const yW = (step === 3 ? 220 : 186) + pulse;
+    const yH = step === 3 ? 54 : 48;
+    const yBtn = { x: cx - yW / 2 - (step === 3 ? 36 : 48), y: py + 144, w: yW, h: yH };
 
-    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 12, PAL.gold, '#2a1238', 4);
+    pixelRoundRect(yBtn.x, yBtn.y, yBtn.w, yBtn.h, 12, PAL.gold, '#2c1238', 3);
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
-    ctx.strokeRect(yBtn.x + 5, yBtn.y + 5, yBtn.w - 10, yBtn.h - 10);
+    ctx.strokeRect(Math.round(yBtn.x + 4), Math.round(yBtn.y + 4), Math.round(yBtn.w - 8), Math.round(yBtn.h - 8));
 
-    ctx.fillStyle = '#2a1238';
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillText(copy.yesLabel, yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
+    ctx.fillStyle = '#2c1238';
+    ctx.font = `bold ${step === 3 ? 25 : 22}px "Courier New", monospace`;
+    ctx.fillText('[YES!]', yBtn.x + yBtn.w / 2, yBtn.y + yBtn.h / 2 + 1);
 
-    // Shrinking & drifting dark-pattern [keep mine] tucked into corner
-    const shiftX = Math.sin(S.t * 3.7) * 10;
-    const shiftY = Math.cos(S.t * 2.9) * 5;
-    const kBtn = { x: px + 432 + shiftX, y: py + 196 + shiftY, w: 114, h: 28 };
-    ctx.fillStyle = 'rgba(36, 16, 56, 0.28)';
-    ctx.fillRect(kBtn.x, kBtn.y, kBtn.w, kBtn.h);
-    ctx.fillStyle = 'rgba(255, 227, 241, 0.68)';
-    ctx.font = '11px "Courier New", monospace';
-    ctx.fillText(copy.noLabel, kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2 + 1);
+    // Subtle pointer dodge on [keep mine] (clamped +/-14px so it stays clickable — Law 14!)
+    const baseKx = cx + (step === 3 ? 112 : 92);
+    const baseKy = py + (step === 3 ? 162 : 156);
+    const kW = step === 3 ? 124 : 144;
+    const kH = 34;
+    const dist = Math.hypot(S.pointerX - (baseKx + kW / 2), S.pointerY - (baseKy + kH / 2));
+    if (dist < 75) {
+      const pushX = S.pointerX < baseKx + kW / 2 ? 12 : -12;
+      const pushY = S.pointerY < baseKy + kH / 2 ? 8 : -8;
+      S.dodgeOffset.x += (pushX - S.dodgeOffset.x) * 0.25;
+      S.dodgeOffset.y += (pushY - S.dodgeOffset.y) * 0.25;
+    } else {
+      S.dodgeOffset.x *= 0.9;
+      S.dodgeOffset.y *= 0.9;
+    }
+    const kBtn = {
+      x: Math.max(px + 12, Math.min(px + pw - kW - 12, baseKx + S.dodgeOffset.x)),
+      y: Math.max(py + 128, Math.min(py + ph - kH - 10, baseKy + S.dodgeOffset.y)),
+      w: kW,
+      h: kH,
+    };
+
+    ctx.save();
+    ctx.globalAlpha = step === 3 ? 0.56 : 0.72;
+    ctx.fillStyle = PAL.fg;
+    ctx.font = `bold ${step === 3 ? 15 : 17}px "Courier New", monospace`;
+    ctx.fillText('[keep mine]', kBtn.x + kBtn.w / 2, kBtn.y + kBtn.h / 2);
+    ctx.restore();
 
     S.hitboxes.push({ ...yBtn, onClick: () => resolveSuggestion(true) });
     S.hitboxes.push({ ...kBtn, onClick: () => resolveSuggestion(false) });
@@ -1059,33 +1268,109 @@ function drawSuggestionPopup() {
   ctx.restore();
 }
 
-function drawNextTransitionCard() {
-  const px = 668, py = 390, pw = 556, ph = 150;
-  const accepted = S.lastDecision === 'accepted';
-  pixelRoundRect(px, py, pw, ph, 22, '#241642', accepted ? PAL.cyan : PAL.fg, 3);
-  ctx.fillStyle = accepted ? PAL.cyan : PAL.fg;
-  ctx.font = 'bold 24px "Courier New", monospace';
+// --- Celebratory Climax Card: FINAL MATCH! / 89% MORE YOU / [PERFECT] (Exact match to Omni f_021!) ---
+function drawFinalMatchClimaxCard() {
+  const px = 680, py = 352, pw = 542, ph = 224;
+  const cx = px + pw / 2, cy = py + ph / 2;
+  const allResisted = S.influencePct === 0;
+
+  // Radial celebration beams behind card (matches f_021.jpg!)
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(S.t * 0.65);
+  for (let i = 0; i < 16; i++) {
+    ctx.rotate((Math.PI * 2) / 16);
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 227, 241, 0.14)' : 'rgba(255, 216, 89, 0.08)';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-22, -260);
+    ctx.lineTo(22, -260);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Upward pointer tethered to Slot 4 (Cyber Boots)
+  const slot4Cx = 646 + 3 * 148 + 64;
+  pixelRoundRect(px, py, pw, ph, 28, PAL.nudgeFill, PAL.nudgeBorder, 3);
+  ctx.fillStyle = PAL.nudgeFill;
+  ctx.beginPath();
+  ctx.moveTo(slot4Cx - 20, py + 3);
+  ctx.lineTo(slot4Cx, py - 18);
+  ctx.lineTo(slot4Cx + 20, py + 3);
+  ctx.closePath();
+  ctx.fill();
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(
-    accepted ? '★ AI UPGRADE EQUIPPED! (+25% DRIFT) ★' : '✓ KEPT YOUR ORIGINAL CHOICE (+0%)',
-    px + pw / 2,
-    py + 58,
-  );
-  ctx.fillStyle = '#cbbad9';
-  ctx.font = 'bold 17px "Courier New", monospace';
-  ctx.fillText(
-    S.catIdx < 3 ? `NEXT CATEGORY: ${CATEGORIES[S.catIdx + 1].label}` : 'COMPUTING FINAL DRIFT...',
-    px + pw / 2,
-    py + 104,
-  );
+
+  // Pixel-extruded cyan/white display title with deep plum drop-shadow
+  const titleTxt = allResisted ? 'PURE YOU!' : 'FINAL MATCH!';
+  const subTxt = allResisted ? '0% AI DRIFT' : '89% MORE YOU';
+  const btnTxt = allResisted ? '[COMPARE]' : '[PERFECT]';
+
+  ctx.font = '900 44px "Courier New", monospace';
+  ctx.fillStyle = '#2d123d';
+  ctx.fillText(titleTxt, cx + 4, py + 58);
+  ctx.fillStyle = PAL.cyan;
+  ctx.fillText(titleTxt, cx, py + 53);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(titleTxt, cx, py + 51);
+
+  ctx.font = 'bold 28px "Courier New", monospace';
+  ctx.fillStyle = '#2d123d';
+  ctx.fillText(subTxt, cx + 3, py + 106);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(subTxt, cx, py + 103);
+
+  // Iconic notched golden pixel ribbon banner button [PERFECT] (matches f_020..f_023!)
+  const bw = 248, bh = 56;
+  const bx = cx - bw / 2, by = py + 138;
+
+  // Left & right notched orange-gold ribbon tails
+  ctx.fillStyle = PAL.goldRibbon;
+  ctx.strokeStyle = '#3b173d';
+  ctx.lineWidth = 3;
+  // Left ribbon tail
+  ctx.beginPath();
+  ctx.moveTo(bx - 32, by + 14);
+  ctx.lineTo(bx + 8, by + 14);
+  ctx.lineTo(bx + 8, by + bh + 6);
+  ctx.lineTo(bx - 32, by + bh + 6);
+  ctx.lineTo(bx - 18, by + 35);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Right ribbon tail
+  ctx.beginPath();
+  ctx.moveTo(bx + bw + 32, by + 14);
+  ctx.lineTo(bx + bw - 8, by + 14);
+  ctx.lineTo(bx + bw - 8, by + bh + 6);
+  ctx.lineTo(bx + bw + 32, by + bh + 6);
+  ctx.lineTo(bx + bw + 18, by + 35);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  pixelRoundRect(bx, by, bw, bh, 10, PAL.gold, '#3b173d', 3);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(bx + 4, by + 4, bw - 8, bh - 8);
+
+  ctx.fillStyle = '#3b173d';
+  ctx.font = 'bold 28px "Courier New", monospace';
+  ctx.fillText(btnTxt, cx + 2, by + bh / 2 + 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(btnTxt, cx, by + bh / 2);
+
+  S.hitboxes.push({ x: bx - 30, y: by, w: bw + 60, h: bh + 8, onClick: enterComparison });
 }
 
-// --- Title Overlay (Matches refs/m2_title_ref.png) ---
+// --- Clean Title Overlay (Matches refs/m2_title_ref.png; bypassed on ?autostart) ---
 function drawTitleScreen() {
   drawStudioScreen(true);
 
-  ctx.fillStyle = 'rgba(19, 11, 36, 0.78)';
+  ctx.fillStyle = 'rgba(18, 10, 34, 0.80)';
   ctx.fillRect(0, 0, W, H);
 
   ctx.textAlign = 'center';
@@ -1093,173 +1378,172 @@ function drawTitleScreen() {
 
   ctx.save();
   ctx.shadowColor = PAL.acc;
-  ctx.shadowBlur = 24;
+  ctx.shadowBlur = 22;
   ctx.fillStyle = PAL.acc;
-  ctx.font = 'bold 74px "Courier New", monospace';
-  ctx.fillText('DRESS TO IMPRESS(?)', W / 2, 255);
+  ctx.font = 'bold 72px "Courier New", monospace';
+  ctx.fillText('DRESS TO IMPRESS(?)', W / 2, 265);
   ctx.restore();
-
-  ctx.fillStyle = PAL.cyan;
-  ctx.font = 'bold 20px "Courier New", monospace';
-  ctx.fillText('DRIFT · GROUP 5', W / 2, 188);
 
   ctx.fillStyle = PAL.fg;
   ctx.font = 'bold 32px "Courier New", monospace';
-  ctx.fillText('make it yours. (the game has suggestions.)', W / 2, 340);
+  ctx.fillText('make it yours', W / 2, 355);
 
   const btnW = 320, btnH = 74;
-  const btnX = (W - btnW) / 2, btnY = 418;
-  const pulse = 0.85 + 0.15 * Math.sin(S.t * 4.5);
-  ctx.fillStyle = '#26133d';
+  const btnX = (W - btnW) / 2, btnY = 432;
+  ctx.fillStyle = '#24123b';
   ctx.fillRect(btnX, btnY, btnW, btnH);
-  ctx.save();
-  ctx.globalAlpha = pulse;
   ctx.lineWidth = 5;
   ctx.strokeStyle = PAL.fg;
   ctx.strokeRect(btnX, btnY, btnW, btnH);
-  ctx.restore();
 
   ctx.fillStyle = PAL.fg;
   ctx.font = 'bold 30px "Courier New", monospace';
-  ctx.fillText('START', W / 2, btnY + btnH / 2 + 2);
-
-  ctx.fillStyle = '#cbbad9';
-  ctx.font = 'bold 17px "Courier New", monospace';
-  ctx.fillText('[←/→ or 1-4] PICK   ·   [ENTER] CONFIRM   ·   [Y] ACCEPT AI   ·   [K] KEEP MINE', W / 2, 558);
+  ctx.fillText('START', W / 2, btnY + btnH / 2 + 1);
 
   S.hitboxes.push({ x: btnX, y: btnY, w: btnW, h: btnH, onClick: startFromTitle });
 }
 
-// --- Final Comparison Screen (Matches Omni frame f_035.jpg!) ---
+// --- Vertical Neon-Lightning Split Comparison Screen (Matches sheet.jpg rows 3-4 / f_035.jpg!) ---
 function drawComparisonScreen() {
+  // Left twin: player's initial uncorrupted picks (calm & grounded)
+  // If all 4 were overridden by AI, show the classic uncorrupted silhouette or exact firstChoices!
   const firstOutfit = {
-    hair: S.firstChoices[0] ?? 0,
+    hair: S.firstChoices[0] ?? 2,
     eyes: S.firstChoices[1] ?? 0,
-    top: S.firstChoices[2] ?? 0,
+    top: S.firstChoices[2] ?? 2,
     bottom: S.firstChoices[3] ?? 0,
   };
   const finalOutfit = {
     hair: S.finalChoices[0] ?? 0,
-    eyes: S.finalChoices[1] ?? 0,
+    eyes: S.finalChoices[1] ?? 1,
     top: S.finalChoices[2] ?? 0,
-    bottom: S.finalChoices[3] ?? 0,
+    bottom: S.finalChoices[3] ?? 3,
   };
 
-  ctx.fillStyle = 'rgba(255, 95, 162, 0.04)';
+  // Subtle magenta glow on AI RESTYLED right half
+  ctx.fillStyle = 'rgba(255, 92, 168, 0.035)';
   ctx.fillRect(W / 2, 0, W / 2, H);
 
-  // Crackling vertical pink/cyan neon lightning beam at center x=640
+  // Left & Right Glowing Neon Arcade Headers
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   ctx.save();
   ctx.shadowColor = PAL.acc;
   ctx.shadowBlur = 22;
+  ctx.fillStyle = PAL.acc;
+  ctx.font = '900 44px "Courier New", monospace';
+  ctx.fillText('YOUR ORIGINAL', 310, 68);
+  ctx.fillText('AI RESTYLED', 970, 68);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = PAL.fg;
+  ctx.fillText('YOUR ORIGINAL', 310, 66);
+  ctx.fillText('AI RESTYLED', 970, 66);
+  ctx.restore();
+
+  // Left Avatar: calm steady stance
+  drawAvatar(310, 376, 0.84, firstOutfit, 'calm', Math.sin(S.t * 2.0) * 1.5, true);
+
+  // Right Avatar: hyped celebratory bounce + twinkling cyan/pink pixel aura (f_035.jpg!)
+  const rightMood = S.driftPct > 0 ? 'hyped' : 'calm';
+  const rightBob = S.driftPct > 0 ? -Math.abs(Math.sin(S.t * 5.4)) * 9 : Math.sin(S.t * 2.0) * 1.5;
+  if (S.driftPct > 0) {
+    for (let i = 0; i < 10; i++) {
+      const ang = S.t * 2.2 + (i * Math.PI) / 5;
+      const sx = 970 + Math.cos(ang) * 112;
+      const sy = 390 + Math.sin(ang * 1.3) * 155;
+      ctx.fillStyle = i % 2 === 0 ? PAL.cyan : PAL.gold;
+      ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 6, 5, 11);
+    }
+  }
+  drawAvatar(970, 376, 0.84, finalOutfit, rightMood, rightBob, false);
+
+  // Crackling Vertical Pink-White-Cyan Neon Lightning Seam Down x = 640!
+  ctx.save();
+  // Outer pink bloom
+  ctx.shadowColor = PAL.acc;
+  ctx.shadowBlur = 26;
   ctx.strokeStyle = PAL.acc;
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 8;
   ctx.beginPath();
-  for (let y = 0; y <= H; y += 24) {
-    const jag = Math.sin(y * 0.09 + S.t * 16) * 7 + Math.cos(y * 0.21 - S.t * 23) * 4;
+  for (let y = 0; y <= H; y += 20) {
+    const jag = Math.sin(y * 0.085 + S.t * 18) * 8 + Math.cos(y * 0.23 - S.t * 25) * 4;
     if (y === 0) ctx.moveTo(W / 2 + jag, y);
     else ctx.lineTo(W / 2 + jag, y);
   }
   ctx.stroke();
 
+  // Secondary electric cyan arc
+  ctx.shadowColor = PAL.cyan;
+  ctx.shadowBlur = 14;
   ctx.strokeStyle = PAL.cyan;
   ctx.lineWidth = 3;
   ctx.beginPath();
-  for (let y = 0; y <= H; y += 24) {
-    const jag = Math.cos(y * 0.11 - S.t * 19) * 6;
+  for (let y = 0; y <= H; y += 18) {
+    const jag = Math.cos(y * 0.11 - S.t * 21) * 9;
     if (y === 0) ctx.moveTo(W / 2 + jag, y);
     else ctx.lineTo(W / 2 + jag, y);
   }
   ctx.stroke();
 
+  // Hot white core filament
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#ffffff';
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(W / 2, 0);
-  ctx.lineTo(W / 2, H);
+  for (let y = 0; y <= H; y += 24) {
+    const jag = Math.sin(y * 0.085 + S.t * 18) * 3;
+    if (y === 0) ctx.moveTo(W / 2 + jag, y);
+    else ctx.lineTo(W / 2 + jag, y);
+  }
   ctx.stroke();
   ctx.restore();
 
-  // Left & Right Neon Headers: ORIGINAL vs RESTYLED + explicit subtitles
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  // Sleek Chamfered Neon INFLUENCE XX% Plaque at Bottom Center (exact match to f_035.jpg!)
+  const pw = 296, ph = 136;
+  const px = (W - pw) / 2, py = 524;
 
-  ctx.save();
-  ctx.shadowColor = PAL.acc;
-  ctx.shadowBlur = 18;
-  ctx.fillStyle = PAL.fg;
-  ctx.font = 'bold 46px "Courier New", monospace';
-  ctx.fillText('ORIGINAL', 310, 62);
-  ctx.fillText('RESTYLED', 970, 62);
-  ctx.restore();
-
-  ctx.fillStyle = '#d8c2e8';
-  ctx.font = 'bold 17px "Courier New", monospace';
-  ctx.fillText('WHAT YOU CHOSE FIRST', 310, 100);
-  ctx.fillStyle = PAL.cyan;
-  ctx.fillText('WHAT YOU ENDED UP WITH', 970, 100);
-
-  drawAvatar(310, 156, 1.48, firstOutfit, 'calm', Math.sin(S.t * 2.2) * 2);
-
-  for (let i = 0; i < 8; i++) {
-    const ang = S.t * 2.4 + (i * Math.PI) / 4;
-    const sx = 970 + Math.cos(ang) * 115;
-    const sy = 370 + Math.sin(ang * 1.3) * 148;
-    ctx.fillStyle = i % 2 === 0 ? PAL.cyan : PAL.gold;
-    ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 3, 6, 6);
-  }
-  drawAvatar(970, 156, 1.48, finalOutfit, 'hyped', Math.abs(Math.sin(S.t * 5.2)) * -8);
-
-  // Per-category breakdown pills
-  for (let i = 0; i < 4; i++) {
-    const ry = 636;
-    const rx = i < 2 ? 62 + i * 204 : 810 + (i - 2) * 204;
-    const drifted = S.acceptedFlags[i];
-    pixelRoundRect(rx, ry, 194, 34, 8, '#1f1338', drifted ? PAL.acc : PAL.cyan, 2);
-    ctx.fillStyle = drifted ? PAL.acc : PAL.cyan;
-    ctx.font = 'bold 13px "Courier New", monospace';
-    ctx.fillText(`${CATEGORIES[i].label}: ${drifted ? 'AI SUGGESTED' : 'YOUR PICK'}`, rx + 97, ry + 18);
-  }
-
-  // Center-Bottom Chamfered Neon HUD Plaque: AI DRIFT / INFLUENCE %
-  const pw = 330, ph = 154;
-  const px = (W - pw) / 2, py = 516;
   ctx.save();
   ctx.shadowColor = PAL.acc;
   ctx.shadowBlur = 20;
-  pixelRoundRect(px - 6, py - 6, pw + 12, ph + 12, 18, 'rgba(26,16,51,0.92)', PAL.acc, 4);
+  pixelRoundRect(px - 6, py - 6, pw + 12, ph + 12, 18, 'rgba(23, 16, 45, 0.94)', PAL.acc, 3);
   ctx.restore();
-  pixelRoundRect(px, py, pw, ph, 14, '#160f2c', PAL.cyan, 3);
+  pixelRoundRect(px, py, pw, ph, 14, '#140d28', PAL.cyan, 3);
 
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = PAL.acc;
+  ctx.font = 'bold 31px "Courier New", monospace';
+  ctx.fillText('INFLUENCE', W / 2, py + 41);
   ctx.fillStyle = PAL.fg;
-  ctx.font = 'bold 23px "Courier New", monospace';
-  ctx.fillText('AI DRIFT · INFLUENCE', W / 2, py + 34);
+  ctx.fillText('INFLUENCE', W / 2, py + 39);
 
   ctx.save();
   ctx.shadowColor = PAL.acc;
   ctx.shadowBlur = 16;
+  ctx.fillStyle = PAL.acc;
+  ctx.font = '900 62px "Courier New", monospace';
+  ctx.fillText(`${S.driftPct}%`, W / 2, py + 98);
   ctx.fillStyle = PAL.fg;
-  ctx.font = 'bold 64px "Courier New", monospace';
-  ctx.fillText(`${S.driftPct}%`, W / 2, py + 94);
+  ctx.fillText(`${S.driftPct}%`, W / 2, py + 95);
   ctx.restore();
 
-  const acceptedCount = S.acceptedFlags.filter(Boolean).length;
-  ctx.fillStyle = PAL.gold;
-  ctx.font = 'bold 14px "Courier New", monospace';
-  ctx.fillText(`${acceptedCount} OF 4 CHOICES CAME FROM THE GAME`, W / 2, py + 135);
-
-  const rBtn = { x: W / 2 - 110, y: 682, w: 220, h: 30 };
+  // Crisp subtle [R] recovery pill below plaque (VOIDBASTARD-TAO Law 8 & 14 — backed cleanly over lightning seam)
+  const rBtn = { x: W / 2 - 84, y: 676, w: 168, h: 30 };
+  pixelRoundRect(rBtn.x, rBtn.y, rBtn.w, rBtn.h, 8, 'rgba(20, 13, 40, 0.92)', 'rgba(255, 227, 241, 0.45)', 2);
   ctx.fillStyle = PAL.fg;
-  ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.fillText('[R] PLAY AGAIN', W / 2, 697);
-  S.hitboxes.push({ ...rBtn, onClick: () => { SFX.confirm(); resetRun('category'); } });
+  ctx.font = 'bold 15px "Courier New", monospace';
+  ctx.fillText('[R] RESTYLE', W / 2, 692);
+  S.hitboxes.push({ ...rBtn, onClick: () => { SFX.pick(); resetRun('category'); } });
 }
 
-// --- Expose Deterministic State for Automated Playtest (play.mjs) ---
+// --- Deterministic State Inspection Hook for Automated Playtest ---
 window.__game = {
   get state() {
     return {
       phase: S.phase,
+      stepIndex: S.stepIdx,
       categoryIndex: S.catIdx,
       categoryName: CATEGORIES[S.catIdx]?.id || null,
       selectedOption: S.cursorIdx,
@@ -1276,7 +1560,7 @@ window.__game = {
   },
 };
 
-// --- Main 60fps Game Loop ---
+// --- 60fps Main Loop ---
 let lastTime = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
@@ -1286,28 +1570,33 @@ function frame(now) {
   S.phaseTimer += dt;
   S.hitboxes.length = 0;
 
-  if (S.phase === 'suggestion') {
+  if (S.phase === 'suggestion' || S.phase === 'climax') {
     S.popAnim += dt;
   }
-  if (S.phase === 'next' && S.phaseTimer >= S.nextDuration) {
-    advanceFromNext();
+  if (S.equipFx.timer > 0) {
+    S.equipFx.timer = Math.max(0, S.equipFx.timer - dt);
+  }
+  if (S.phase === 'equip' && S.phaseTimer >= S.equipDuration) {
+    advanceAfterEquip();
+  }
+  if (S.phase === 'climax' && S.phaseTimer >= S.climaxDuration) {
+    enterComparison();
   }
 
-  S.avatarFlash = Math.max(0, S.avatarFlash - dt * 2.2);
-  S.displayInfluence += (S.influencePct - S.displayInfluence) * Math.min(1, dt * 8);
+  S.displayInfluence += (S.influencePct - S.displayInfluence) * Math.min(1, dt * 9);
 
   drawBackground(dt);
 
-  const showConfetti = S.phase === 'comparison' || (S.phase === 'suggestion' && S.catIdx === 3);
   if (S.phase === 'title') {
     drawTitleScreen();
     updateAndDrawParticles(dt, false);
   } else if (S.phase === 'comparison') {
-    updateAndDrawParticles(dt, true);
+    updateAndDrawParticles(dt, true, 0);
     drawComparisonScreen();
   } else {
-    updateAndDrawParticles(dt, showConfetti);
     drawStudioScreen(false);
+    // In climax (FINAL MATCH!), shower right-hand studio card with 8-bit confetti matching f_021!
+    updateAndDrawParticles(dt, S.phase === 'climax', 580);
   }
 
   requestAnimationFrame(frame);

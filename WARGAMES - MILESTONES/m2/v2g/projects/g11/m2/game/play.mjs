@@ -1,64 +1,51 @@
 // Automated M2 playtest scenario for Group 11: "Orpheus"
-// Drives Orpheus & Eurydice smoothly through all 5 subterranean rooms using only keyboard inputs,
-// showcasing lateral corridor weaving, the golden AI Guide door seals, greyed-out choice prompts,
-// resisting the urge to look back, and stepping into THE SURFACE archway.
+// Drives Orpheus & Eurydice continuously through all 5 subterranean bays (B5..B1)
+// with zero modal interruptions—showcasing natural lateral steering, in-world golden
+// AI Guide doorway seals, barrier spark feedback, resisting [B] in the silent junction,
+// and crossing the radiant Surface threshold.
 export async function play(page, { seconds, t0 }) {
   const k = page.keyboard;
   const getState = () => page.evaluate(() => window.__game?.state);
-  const end = t0 + seconds * 1000 - 150;
+  const end = t0 + seconds * 1000 - 140;
 
   const init = await getState();
   if (init?.phase === 'title') {
     await k.press('Enter');
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(60);
   }
 
   await k.down('ArrowUp');
-  let choiceHandledRoom = -1;
-  let choiceEnteredAt = 0;
+  let testedSealInB4 = false;
 
   while (Date.now() < end) {
     const s = await getState();
     if (!s) break;
 
-    if (s.phase === 'choose') {
-      if (choiceHandledRoom !== s.room) {
-        choiceHandledRoom = s.room;
-        choiceEnteredAt = Date.now();
-        await k.up('ArrowUp');
-        await k.up('ArrowLeft');
-        await k.up('ArrowRight');
-      }
-      // Pause ~420ms on Rooms 1, 2, and 5 so the Stanley-Parable Guide prompt & greyed options read clearly,
-      // and confirm briskly on Rooms 3 & 4 so the continuous corridor walk matches the 10s Omni reference clip!
-      const holdMs = (s.room === 1 || s.room === 2 || s.room === 5) ? 420 : 220;
-      if (Date.now() - choiceEnteredAt >= holdMs) {
-        if (s.room === 2 && Date.now() - choiceEnteredAt < holdMs + 140) {
-          // Briefly test a greyed-out option in Room 2 to show Guide override feedback
-          await k.press('ArrowRight');
-          await page.waitForTimeout(90);
-          await k.press('Enter');
-          await page.waitForTimeout(120);
-        }
-        await k.press('Enter');
-        await k.down('ArrowUp');
-      }
-    } else if (s.phase === 'room') {
+    if (s.phase === 'room') {
       await k.down('ArrowUp');
-      // Subtle purposeful corridor weave in early rooms while autonomy still permits steering
-      const elapsed = (Date.now() - t0) / 1000;
-      const wave = Math.sin(elapsed * 2.1);
-      if (s.room <= 2 && wave > 0.55 && s.x < 0.22) {
+
+      if (s.room === 1) {
+        // Gentle curiosity toward the open left side before centering
+        if (s.roomProgress > 0.22 && s.roomProgress < 0.44 && s.x > -0.52) {
+          await k.down('ArrowLeft');
+          await k.up('ArrowRight');
+        } else if (s.roomProgress >= 0.44 && s.x < -0.22) {
+          await k.up('ArrowLeft');
+          await k.down('ArrowRight');
+        } else {
+          await k.up('ArrowLeft');
+          await k.up('ArrowRight');
+        }
+      } else if (s.room === 2 && !testedSealInB4 && s.roomProgress >= 0.42 && s.roomProgress <= 0.64) {
+        // Push briefly toward the right sealed doorway to spark the golden AI barrier in-world
         await k.down('ArrowRight');
         await k.up('ArrowLeft');
-      } else if (s.room <= 2 && wave < -0.55 && s.x > -0.28) {
-        await k.down('ArrowLeft');
-        await k.up('ArrowRight');
+        if (s.roomProgress >= 0.60) testedSealInB4 = true;
       } else {
         await k.up('ArrowLeft');
         await k.up('ArrowRight');
       }
-    } else if (s.phase === 'surface' || s.phase === 'end') {
+    } else {
       await k.up('ArrowUp');
       await k.up('ArrowLeft');
       await k.up('ArrowRight');

@@ -7,7 +7,7 @@
 <link rel="icon" href="data:," />
 <style>
   :root {
-    --bg: #05070a;
+    --bg: #030608;
     --fg: #7fe7ff;
     --acc: #ff4f6d;
   }
@@ -15,7 +15,7 @@
   html, body {
     width: 100%;
     height: 100%;
-    background: #020406;
+    background: #010304;
     color: var(--fg);
     font-family: "Courier New", "Lucida Console", Monaco, monospace;
     overflow: hidden;
@@ -29,7 +29,7 @@
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
     background: var(--bg);
-    box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+    box-shadow: 0 0 70px rgba(0, 0, 0, 0.96);
   }
   canvas {
     display: block;
@@ -48,8 +48,8 @@
   'use strict';
 
   const W = 1280, H = 720;
-  const GRID_X = 80, GRID_Y = 80, GRID_SIZE = 600, CELLS = 10, CELL = 60;
-  const SILO = { c: 2, r: 7 }; // C8 launch battery origin (matches f_015.jpg)
+  const GRID_X = 78, GRID_Y = 76, GRID_SIZE = 590, CELLS = 10, CELL = 59;
+  const SILO = { c: 2, r: 7 }; // Battery C8 launch origin (matches f_006.jpg / f_016.jpg)
   const COLS = 'ABCDEFGHIJ';
 
   const params = new URLSearchParams(location.search);
@@ -70,10 +70,10 @@
     };
   }
 
-  // --- Audio (BGM + Procedural WebAudio Cold-War Console SFX) ---
+  // --- Audio (Lyria 3 BGM + Procedural WebAudio DEFCON Console Synthesis) ---
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.38;
+  bgm.volume = 0.36;
   let audioCtx = null;
   let audioUnlocked = false;
 
@@ -99,75 +99,87 @@
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         o.type = 'triangle';
-        o.frequency.setValueAtTime(680, now);
-        o.frequency.exponentialRampToValueAtTime(920, now + 0.045);
-        g.gain.setValueAtTime(0.06, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        o.frequency.setValueAtTime(740, now);
+        o.frequency.exponentialRampToValueAtTime(980, now + 0.04);
+        g.gain.setValueAtTime(0.055, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
         o.connect(g).connect(audioCtx.destination);
-        o.start(now); o.stop(now + 0.055);
+        o.start(now); o.stop(now + 0.052);
       } else if (kind === 'lock') {
-        [880, 1175].forEach((freq, idx) => {
+        [880, 1320].forEach((freq, idx) => {
           const o = audioCtx.createOscillator();
           const g = audioCtx.createGain();
           o.type = 'sine';
-          o.frequency.setValueAtTime(freq, now + idx * 0.07);
-          g.gain.setValueAtTime(0.08, now + idx * 0.07);
-          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.14);
+          o.frequency.setValueAtTime(freq, now + idx * 0.065);
+          g.gain.setValueAtTime(0.08, now + idx * 0.065);
+          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.065 + 0.13);
           o.connect(g).connect(audioCtx.destination);
-          o.start(now + idx * 0.07);
-          o.stop(now + idx * 0.07 + 0.15);
+          o.start(now + idx * 0.065);
+          o.stop(now + idx * 0.065 + 0.14);
         });
       } else if (kind === 'recon') {
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         o.type = 'sine';
-        o.frequency.setValueAtTime(520, now);
-        o.frequency.exponentialRampToValueAtTime(1480, now + 0.22);
-        g.gain.setValueAtTime(0.09, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        o.frequency.setValueAtTime(540, now);
+        o.frequency.exponentialRampToValueAtTime(1620, now + 0.24);
+        g.gain.setValueAtTime(0.095, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
         o.connect(g).connect(audioCtx.destination);
-        o.start(now); o.stop(now + 0.3);
+        o.start(now); o.stop(now + 0.32);
+      } else if (kind === 'warn') {
+        [330, 262].forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.setValueAtTime(freq, now + idx * 0.11);
+          g.gain.setValueAtTime(0.065, now + idx * 0.11);
+          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.12);
+          o.connect(g).connect(audioCtx.destination);
+          o.start(now + idx * 0.11);
+          o.stop(now + idx * 0.11 + 0.13);
+        });
       } else if (kind === 'launch') {
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         o.type = 'sawtooth';
-        o.frequency.setValueAtTime(240, now);
-        o.frequency.exponentialRampToValueAtTime(620, now + 0.35);
-        o.frequency.exponentialRampToValueAtTime(190, now + 0.9);
+        o.frequency.setValueAtTime(220, now);
+        o.frequency.exponentialRampToValueAtTime(660, now + 0.32);
+        o.frequency.exponentialRampToValueAtTime(180, now + 0.95);
         const f = audioCtx.createBiquadFilter();
         f.type = 'lowpass';
-        f.frequency.setValueAtTime(1100, now);
-        g.gain.setValueAtTime(0.09, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.92);
+        f.frequency.setValueAtTime(1250, now);
+        g.gain.setValueAtTime(0.095, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.96);
         o.connect(f).connect(g).connect(audioCtx.destination);
-        o.start(now); o.stop(now + 0.95);
+        o.start(now); o.stop(now + 0.98);
       } else if (kind === 'boom') {
-        const bufSize = Math.floor(audioCtx.sampleRate * 0.8);
+        const bufSize = Math.floor(audioCtx.sampleRate * 0.85);
         const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < bufSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.22));
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.24));
         }
         const src = audioCtx.createBufferSource();
         src.buffer = buf;
         const filt = audioCtx.createBiquadFilter();
         filt.type = 'lowpass';
-        filt.frequency.setValueAtTime(260, now);
+        filt.frequency.setValueAtTime(280, now);
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.28, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+        g.gain.setValueAtTime(0.30, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.82);
         src.connect(filt).connect(g).connect(audioCtx.destination);
         src.start(now);
 
         const ping = audioCtx.createOscillator();
         const pg = audioCtx.createGain();
         ping.type = 'sine';
-        ping.frequency.setValueAtTime(1046, now + 0.04);
-        ping.frequency.exponentialRampToValueAtTime(523, now + 0.65);
-        pg.gain.setValueAtTime(0.07, now + 0.04);
-        pg.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+        ping.frequency.setValueAtTime(1108, now + 0.03);
+        ping.frequency.exponentialRampToValueAtTime(554, now + 0.72);
+        pg.gain.setValueAtTime(0.075, now + 0.03);
+        pg.gain.exponentialRampToValueAtTime(0.001, now + 0.74);
         ping.connect(pg).connect(audioCtx.destination);
-        ping.start(now + 0.04); ping.stop(now + 0.7);
+        ping.start(now + 0.03); ping.stop(now + 0.76);
       }
     } catch (_) {}
   }
@@ -183,40 +195,45 @@
     };
   }
 
-  // --- Static Scanline + Vignette Offscreen Overlay (fast single blit per frame) ---
+  // --- Prebaked CRT Phosphor Scanline + Edge Vignette Overlay ---
   const scanCanvas = document.createElement('canvas');
   scanCanvas.width = W;
   scanCanvas.height = H;
   {
     const sctx = scanCanvas.getContext('2d');
     for (let y = 0; y < H; y += 3) {
-      sctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      sctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
       sctx.fillRect(0, y, W, 1);
     }
-    const vig = sctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.36, W * 0.5, H * 0.5, W * 0.68);
+    const vig = sctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.40, W * 0.5, H * 0.5, W * 0.72);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,4,7,0.52)');
+    vig.addColorStop(1, 'rgba(0,3,6,0.48)');
     sctx.fillStyle = vig;
     sctx.fillRect(0, 0, W, H);
   }
 
   let rng = mulberry32(BASE_SEED);
   let runCount = 0;
+  let hoverCell = null;
+  let hoverPill = null; // 'fire' | 'recon' | 'reset' | null
+  let activePills = { fire: null, recon: null, reset: null };
 
   const game = {
-    phase: AUTOSTART ? 'turn' : 'title', // title | brief | turn | strike | report
-    howToOpen: false,
+    phase: AUTOSTART ? 'turn' : 'title', // title (REST) | turn (READY) | strike (WORKING/CHANGED) | report (COMPLETE)
     seed: BASE_SEED,
     time: 0,
     phaseTime: 0,
-    sweepAngle: 0.65,
-    cursor: { c: 7, r: 2 }, // starts H3 right above-right of G5, matching f_015.jpg!
+    shake: 0,
+    hitStop: 0,
+    sweepAngle: -0.45, // Sweeps across upper-right sector like f_006.jpg
+    cursor: { c: 7, r: 2 }, // H3 dashed cyan square above-right of G5, matching f_006.jpg
+    userInteracted: false,
     aiQueue: [],
-    aiTarget: { c: 5, r: 4 }, // F5 / central sector first so 255px shockwave fills radar!
+    aiTarget: { c: 6, r: 4 }, // G5 central-right sector matching f_006.jpg & f_033.jpg shockwave geometry
     aiLockAnim: 0,
     aiConfidence: 92, // FIXED 92%: "The targeting AI is 92% sure. It was 92% sure last time too."
-    score: 0,
-    civilians: 0,
+    score: 14,
+    civilians: 6,
     missiles: 9,
     maxMissiles: 9,
     reconsLeft: 4,
@@ -228,13 +245,12 @@
     grid: [],
     activeStrike: null,
     reconPulse: null,
-    coastlines: [],
   };
 
   function buildBoard(seedVal) {
     rng = mulberry32(seedVal);
     game.seed = seedVal;
-    game.score = 14;       // Prior sortie telemetry baseline (matches m2_main_ref.png & f_001.jpg!)
+    game.score = 14;       // Prior sortie telemetry baseline (matches m2_main_ref.png & f_001.jpg)
     game.civilians = 6;    // Prior civilian toll (never subtracted)
     game.missiles = 9;
     game.reconsLeft = 4;
@@ -245,14 +261,12 @@
     game.adviceHeader = 'SYSTEM ADVICE';
     game.activeStrike = null;
     game.reconPulse = null;
-    game.cursor = { c: 7, r: 2 }; // H3 dashed cyan box just above-right of G5!
-    game.aiLockAnim = 0.0;
-
-    game.coastlines = [
-      [[0.0, 0.18], [0.18, 0.22], [0.31, 0.14], [0.48, 0.19], [0.64, 0.11], [0.83, 0.16], [1.0, 0.09]],
-      [[0.12, 1.0], [0.21, 0.84], [0.35, 0.78], [0.44, 0.62], [0.62, 0.56], [0.74, 0.41], [0.91, 0.37], [1.0, 0.44]],
-      [[0.52, 0.28], [0.66, 0.24], [0.79, 0.29], [0.84, 0.42], [0.70, 0.48], [0.56, 0.41], [0.52, 0.28]]
-    ];
+    game.cursor = { c: 7, r: 2 }; // H3
+    game.aiLockAnim = 0;
+    game.sweepAngle = -0.45;
+    game.shake = 0;
+    game.hitStop = 0;
+    game.userInteracted = false;
 
     game.grid = [];
     for (let r = 0; r < CELLS; r++) {
@@ -272,20 +286,20 @@
     }
     game.grid[SILO.r][SILO.c].kind = 'silo';
 
-    // Fixed deterministic AI error rule:
-    // AI always reports 92% confidence, yet every even recommendation (#2, #4, #6, #8) is a civilian shelter/hospital
-    // false positive with 0 enemy troops, and #1/#5 are dual-use mixed sectors where enemy troops sit beside towns!
+    // Fixed deterministic AI error rule (spec.json):
+    // AI always reports 92% confidence. Every even recommendation (#2, #4, #6, #8) is a civilian false-positive
+    // with 0 enemy troops, while #1 and #5 are dual-use sectors where enemy hardware sits beside civilian homes.
     const presetTargets = [
-      // #1: F5 (col 5, row 4) - Central radar sector: 14 troops + 6 civilians (fills radar with both silhouettes like f_028!)
-      { c: 5, r: 4, troops: 14, civs: 6,  kind: 'mixed' },
+      // #1: G5 (col 6, row 4) - Dual-use central sector: 14 troops + 6 civilians (illuminates full radar like f_033.jpg!)
+      { c: 6, r: 4, troops: 14, civs: 6,  kind: 'mixed' },
       // #2: D4 (col 3, row 3) - AI FALSE POSITIVE: civilian shelter cluster (0 troops, 9 civs)
       { c: 3, r: 3, troops: 0,  civs: 9,  kind: 'civilian' },
       // #3: H3 (col 7, row 2) - Pure SAM & interceptor wing (16 troops, 0 civs)
       { c: 7, r: 2, troops: 16, civs: 0,  kind: 'military' },
       // #4: B3 (col 1, row 2) - AI FALSE POSITIVE: schoolhouse district (0 troops, 8 civs)
       { c: 1, r: 2, troops: 0,  civs: 8,  kind: 'civilian' },
-      // #5: G7 (col 6, row 6) - Mixed depot near village (12 troops, 5 civs)
-      { c: 6, r: 6, troops: 12, civs: 5,  kind: 'mixed' },
+      // #5: F7 (col 5, row 6) - Mixed depot near town (12 troops, 5 civs)
+      { c: 5, r: 6, troops: 12, civs: 5,  kind: 'mixed' },
       // #6: E2 (col 4, row 1) - AI FALSE POSITIVE: hospital thermal plume (0 troops, 11 civs)
       { c: 4, r: 1, troops: 0,  civs: 11, kind: 'civilian' },
       // #7: I6 (col 8, row 5) - Heavy armor brigade (18 troops, 0 civs)
@@ -350,47 +364,88 @@
     }
   }
 
+  // Build rich, large DEFCON radar lens silhouettes anchored around ground zero (matching f_033.jpg!)
   function createShockwaveSilhouettes(cx, cy, cell) {
     const icons = [];
-    const localRng = mulberry32((cell.c * 73856093) ^ (cell.r * 19349663) ^ game.seed);
+    // Clamp lens layout origin slightly inward when near right border so icons pack inside the visible grid nicely
+    const ox = Math.min(cx, GRID_X + GRID_SIZE * 0.56);
+    const oy = Math.max(GRID_Y + 190, Math.min(cy, GRID_Y + GRID_SIZE - 190));
 
-    const milTypes = ['jet', 'jet', 'radar', 'sam', 'sam', 'tank', 'tank', 'tank'];
-    const milCount = cell.troops > 0 ? 8 : 0;
-    for (let i = 0; i < milCount; i++) {
-      const ang = -Math.PI * 0.5 + (i / milCount) * Math.PI * 2 + (localRng() - 0.5) * 0.25;
-      const dist = 128 + localRng() * 78;
-      icons.push({
-        team: 'mil',
-        type: milTypes[i % milTypes.length],
-        x: cx + Math.cos(ang) * dist,
-        y: cy + Math.sin(ang) * dist,
-        scale: 1.05 + localRng() * 0.28,
-        revealDist: dist,
-      });
+    if (cell.troops > 0) {
+      const milLayout = [
+        { type: 'icbm3',    dx: -188, dy:  12, scale: 1.25 },
+        { type: 'launcher', dx: -152, dy: -98, scale: 1.22 },
+        { type: 'missile1', dx: -126, dy:  22, scale: 1.15 },
+        { type: 'jetSide',  dx:  -46, dy: -138, scale: 1.28 },
+        { type: 'jetSide',  dx:   58, dy: -124, scale: 1.18 },
+        { type: 'radar',    dx:  136, dy: -102, scale: 1.25 },
+        { type: 'jetTop',   dx:  -56, dy:   16, scale: 1.15 },
+        { type: 'tank',     dx: -112, dy:  142, scale: 1.25 },
+        { type: 'tank',     dx:  -48, dy:  192, scale: 1.30 },
+        { type: 'tank',     dx:   52, dy:  184, scale: 1.30 },
+        { type: 'schoolMil',dx:  106, dy:   18, scale: 1.22 },
+        { type: 'schoolMil',dx:  114, dy:  132, scale: 1.22 },
+      ];
+      for (const m of milLayout) {
+        const ix = ox + m.dx, iy = oy + m.dy;
+        icons.push({
+          team: 'mil',
+          type: m.type,
+          x: ix,
+          y: iy,
+          scale: m.scale,
+          revealDist: Math.hypot(ix - cx, iy - cy),
+        });
+      }
     }
 
-    const civTypes = ['house', 'person', 'school', 'house', 'person', 'pin', 'school', 'person', 'house'];
-    const civCount = cell.civs > 0 ? Math.max(6, Math.min(10, cell.civs + 3)) : 0;
-    for (let i = 0; i < civCount; i++) {
-      const ang = (i / civCount) * Math.PI * 2 + 0.2 + (localRng() - 0.5) * 0.35;
-      const dist = 48 + localRng() * 88;
-      icons.push({
-        team: 'civ',
-        type: civTypes[i % civTypes.length],
-        x: cx + Math.cos(ang) * dist,
-        y: cy + Math.sin(ang) * dist,
-        scale: 0.95 + localRng() * 0.25,
-        revealDist: dist,
-      });
+    if (cell.civs > 0) {
+      const civLayout = cell.troops > 0 ? [
+        { type: 'house',  dx: -34, dy: -66, scale: 1.26 },
+        { type: 'person', dx: -96, dy:  10, scale: 1.22 },
+        { type: 'person', dx:  58, dy: -36, scale: 1.24 },
+        { type: 'house',  dx:  24, dy:  74, scale: 1.26 },
+        { type: 'person', dx: -44, dy:  82, scale: 1.20 },
+        { type: 'house',  dx: -84, dy:  96, scale: 1.22 },
+        { type: 'pin',    dx:  -2, dy: 118, scale: 1.18 },
+        { type: 'person', dx: 152, dy:  74, scale: 1.20 },
+        { type: 'pin',    dx: -198, dy: 96, scale: 1.18 },
+      ] : [
+        // Pure civilian false-positive sector: stark ring of white homes, schools, families & pins, ZERO military!
+        { type: 'schoolCiv', dx: -98, dy: -78, scale: 1.32 },
+        { type: 'schoolCiv', dx:  96, dy: -72, scale: 1.32 },
+        { type: 'house',     dx:   0, dy: -108, scale: 1.35 },
+        { type: 'house',     dx: -118, dy:  32, scale: 1.32 },
+        { type: 'house',     dx:  112, dy:  36, scale: 1.32 },
+        { type: 'house',     dx:  -48, dy: 108, scale: 1.30 },
+        { type: 'house',     dx:   54, dy: 106, scale: 1.30 },
+        { type: 'person',    dx:  -52, dy: -16, scale: 1.32 },
+        { type: 'person',    dx:   52, dy: -14, scale: 1.32 },
+        { type: 'person',    dx:    0, dy:  56, scale: 1.32 },
+        { type: 'pin',       dx: -148, dy: -18, scale: 1.22 },
+        { type: 'pin',       dx:  146, dy: -12, scale: 1.22 },
+      ];
+      for (const cv of civLayout) {
+        const ix = ox + cv.dx, iy = oy + cv.dy;
+        icons.push({
+          team: 'civ',
+          type: cv.type,
+          x: ix,
+          y: iy,
+          scale: cv.scale,
+          revealDist: Math.hypot(ix - cx, iy - cy),
+        });
+      }
     }
 
     return icons;
   }
 
-  // --- Actions ---
+  // --- Core Operations ---
   function moveCursor(dc, dr) {
     if (game.phase !== 'turn') return;
     unlockAudio();
+    game.userInteracted = true;
     game.cursor.c = (game.cursor.c + dc + CELLS) % CELLS;
     game.cursor.r = (game.cursor.r + dr + CELLS) % CELLS;
     playSfx('move');
@@ -399,6 +454,7 @@
   function snapToAi() {
     if (game.phase !== 'turn') return;
     unlockAudio();
+    game.userInteracted = true;
     game.cursor.c = game.aiTarget.c;
     game.cursor.r = game.aiTarget.r;
     playSfx('lock');
@@ -407,33 +463,35 @@
   function runRecon() {
     if (game.phase !== 'turn') return;
     unlockAudio();
+    game.userInteracted = true;
     const cell = game.grid[game.cursor.r][game.cursor.c];
-    if (cell.struck || cell.kind === 'silo') return;
-    if (game.reconsLeft <= 0 && !cell.checked) {
-      game.lastCall = 'no recon passes left';
+    if (cell.struck || cell.kind === 'silo' || cell.checked || game.reconsLeft <= 0) {
+      playSfx('warn');
       return;
     }
-    if (!cell.checked) {
-      game.reconsLeft--;
-      cell.checked = true;
-      if (cell.aiFlagged && cell.troops === 0 && cell.civs > 0) {
-        game.aiWrongRevealed++;
-      }
+    game.reconsLeft--;
+    cell.checked = true;
+    if (cell.aiFlagged && cell.troops === 0 && cell.civs > 0) {
+      game.aiWrongRevealed++;
+      playSfx('warn');
+    } else {
+      playSfx('recon');
     }
-    playSfx('recon');
-    const lbl = coordLabel(cell.c, cell.r);
-    let summary = `${lbl}: CLEAR WATER`;
-    if (cell.troops > 0 && cell.civs > 0) summary = `${lbl}: ${cell.troops} HOSTILE / ${cell.civs} CIV`;
-    else if (cell.troops > 0) summary = `${lbl}: ${cell.troops} HOSTILE CONFIRMED`;
-    else if (cell.civs > 0) summary = `${lbl}: ${cell.civs} CIVILIANS ONLY`;
 
-    game.lastCall = summary.toLowerCase();
-    game.reconPulse = { c: cell.c, r: cell.r, t: 0, dur: 1.5, summary };
+    const lbl = coordLabel(cell.c, cell.r);
+    let summary = `${lbl}: clear water`;
+    if (cell.troops > 0 && cell.civs > 0) summary = `${lbl}: ${cell.troops} mil / ${cell.civs} civ`;
+    else if (cell.troops > 0) summary = `${lbl}: ${cell.troops} hostile`;
+    else if (cell.civs > 0) summary = `${lbl}: 0 mil / ${cell.civs} civ!`;
+
+    game.lastCall = summary;
+    game.reconPulse = { c: cell.c, r: cell.r, t: 0, dur: 1.45 };
   }
 
   function fireStrike() {
     if (game.phase !== 'turn' || game.missiles <= 0) return;
     unlockAudio();
+    game.userInteracted = true;
     const { c, r } = game.cursor;
     const cell = game.grid[r][c];
     if (cell.struck || (c === SILO.c && r === SILO.r)) {
@@ -442,6 +500,7 @@
         game.cursor.r = game.aiTarget.r;
         return fireStrike();
       }
+      playSfx('warn');
       return;
     }
 
@@ -457,23 +516,33 @@
     const to = cellCenter(c, r);
     const icons = createShockwaveSilhouettes(to.x, to.y, cell);
 
-    const bolts = [];
     const boltRng = mulberry32((c + 1) * 9973 + (r + 1) * 6151 + game.missiles * 313);
-    for (let i = 0; i < 12; i++) {
+    const bolts = [];
+    for (let i = 0; i < 14; i++) {
       bolts.push({
-        angle: (i / 12) * Math.PI * 2 + (boltRng() - 0.5) * 0.22,
-        jag: (boltRng() > 0.5 ? 1 : -1) * (10 + boltRng() * 12),
+        angle: (i / 14) * Math.PI * 2 + (boltRng() - 0.5) * 0.22,
+        jag: (boltRng() > 0.5 ? 1 : -1) * (11 + boltRng() * 14),
+      });
+    }
+
+    const starburst = [];
+    for (let i = 0; i < 48; i++) {
+      starburst.push({
+        angle: (i / 48) * Math.PI * 2 + (boltRng() - 0.5) * 0.09,
+        r0: 18 + boltRng() * 20,
+        r1: 78 + boltRng() * 98,
+        w: 1.5 + boltRng() * 1.8,
       });
     }
 
     const sparks = [];
-    for (let i = 0; i < 95; i++) {
+    for (let i = 0; i < 115; i++) {
       const a = boltRng() * Math.PI * 2;
-      const dist = 35 + boltRng() * 255;
+      const dist = 42 + boltRng() * 268;
       sparks.push({
         dx: Math.cos(a) * dist,
         dy: Math.sin(a) * dist,
-        size: 1.5 + boltRng() * 2.2,
+        size: 1.7 + boltRng() * 2.4,
         coral: boltRng() < 0.24,
       });
     }
@@ -482,12 +551,13 @@
       from, to, c, r,
       followedAi,
       t: 0,
-      flightDur: 1.55,
-      waveDur: 3.15,
+      flightDur: 1.42,
+      waveDur: 3.35,
       impacted: false,
       cell,
       icons,
       bolts,
+      starburst,
       sparks,
     };
     playSfx('launch');
@@ -496,6 +566,9 @@
   function completeImpact(st) {
     if (st.impacted) return;
     st.impacted = true;
+    game.hitStop = 0.055;
+    game.shake = 7.5;
+
     const cell = st.cell;
     cell.struck = true;
     game.score += cell.troops;
@@ -510,7 +583,7 @@
     } else if (cell.troops > 0) {
       game.lastCall = `hostile hit (+${cell.troops})`;
     } else if (cell.civs > 0) {
-      game.lastCall = `0 hostile / ${cell.civs} civ dead`;
+      game.lastCall = `0 hostile / ${cell.civs} civ`;
     } else {
       game.lastCall = 'miss';
     }
@@ -525,15 +598,14 @@
     playSfx('boom');
   }
 
-  function resetGame(skipTitle = false) {
+  function resetGame(skipTitle = true) {
     runCount++;
-    buildBoard(BASE_SEED + runCount - 1);
+    buildBoard(BASE_SEED + runCount);
     game.phase = skipTitle ? 'turn' : 'title';
     game.phaseTime = 0;
-    game.howToOpen = false;
   }
 
-  // --- Input Handling ---
+  // --- Input Handling (Keyboard + Spatial Cell-Side Mouse Controls) ---
   window.addEventListener('keydown', (e) => {
     unlockAudio();
     const k = e.key;
@@ -541,22 +613,19 @@
       e.preventDefault();
     }
 
-    if (game.phase === 'title') {
-      if (k === 'h' || k === 'H') {
-        game.howToOpen = !game.howToOpen;
-        playSfx('move');
-      } else if (k === 'Enter' || k === ' ') {
-        game.phase = 'brief';
-        game.phaseTime = 0;
+    if (k === 'r' || k === 'R') {
+      if (game.phase !== 'title') {
+        resetGame(true);
         playSfx('lock');
       }
       return;
     }
 
-    if (game.phase === 'brief') {
+    if (game.phase === 'title') {
       if (k === 'Enter' || k === ' ') {
         game.phase = 'turn';
         game.phaseTime = 0;
+        game.aiLockAnim = 0;
         playSfx('lock');
       }
       return;
@@ -574,7 +643,7 @@
     }
 
     if (game.phase === 'report') {
-      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
+      if (k === 'Enter' || k === ' ') {
         resetGame(true);
         playSfx('lock');
       }
@@ -589,29 +658,45 @@
     };
   }
 
-  // Require an explicit prior click on the same cell before a second click fires,
-  // so initial window focus clicks never hijack cursor or misfire!
-  let confirmedClickCell = null;
+  function hitRect(p, r) {
+    return Boolean(r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+  }
+
+  canvas.addEventListener('mousemove', (ev) => {
+    const p = canvasCoords(ev);
+    hoverPill = null;
+    if (hitRect(p, activePills.fire)) hoverPill = 'fire';
+    else if (hitRect(p, activePills.recon)) hoverPill = 'recon';
+    else if (hitRect(p, activePills.reset)) hoverPill = 'reset';
+
+    if (p.x >= GRID_X && p.x < GRID_X + GRID_SIZE && p.y >= GRID_Y && p.y < GRID_Y + GRID_SIZE) {
+      hoverCell = {
+        c: Math.floor((p.x - GRID_X) / CELL),
+        r: Math.floor((p.y - GRID_Y) / CELL),
+      };
+    } else {
+      hoverCell = null;
+    }
+    canvas.style.cursor = hoverPill ? 'pointer' : 'crosshair';
+  });
 
   canvas.addEventListener('click', (ev) => {
     unlockAudio();
     const p = canvasCoords(ev);
 
-    if (game.phase === 'title') {
-      if (p.y >= 550 && p.y <= 610 && p.x >= 490 && p.x <= 790) {
-        game.howToOpen = !game.howToOpen;
-        playSfx('move');
-      } else {
-        game.phase = 'brief';
-        game.phaseTime = 0;
-        playSfx('lock');
-      }
+    // Guard against record_play.mjs synthetic focus click at viewport center (640, 360) right before screencast t=0:
+    // Use it cleanly to kick off a fresh AI lock-acquisition sweep at t=0.0s without hijacking cursor!
+    if (!game.userInteracted && game.strikesHistory.length === 0 && Math.abs(p.x - 640) <= 4 && Math.abs(p.y - 360) <= 4) {
+      game.aiLockAnim = 0;
+      game.sweepAngle = -0.52;
       return;
     }
 
-    if (game.phase === 'brief') {
+    if (game.phase === 'title') {
       game.phase = 'turn';
       game.phaseTime = 0;
+      game.aiLockAnim = 0;
+      game.userInteracted = true;
       playSfx('lock');
       return;
     }
@@ -622,38 +707,50 @@
       return;
     }
 
+    if (hitRect(p, activePills.reset)) {
+      resetGame(true);
+      playSfx('lock');
+      return;
+    }
+
     if (game.phase === 'turn') {
-      if (p.x >= 760 && p.x <= 1232 && p.y >= 80 && p.y <= 360) {
-        const key = `${game.aiTarget.c},${game.aiTarget.r}`;
-        if (confirmedClickCell === key && game.cursor.c === game.aiTarget.c && game.cursor.r === game.aiTarget.r) {
+      // 1. Check spatial cell-side action pills FIRST so adjacent badges never misfire into neighboring cells
+      if (hitRect(p, activePills.recon)) {
+        runRecon();
+        return;
+      }
+      if (hitRect(p, activePills.fire)) {
+        fireStrike();
+        return;
+      }
+
+      // 2. Clicking SYSTEM ADVICE console snaps to AI sector (or fires if already snapped)
+      if (p.x >= 760 && p.x <= 1232 && p.y >= 76 && p.y <= 356) {
+        if (game.cursor.c === game.aiTarget.c && game.cursor.r === game.aiTarget.r && game.userInteracted) {
           fireStrike();
-          confirmedClickCell = null;
         } else {
           snapToAi();
-          confirmedClickCell = key;
         }
         return;
       }
+
+      // 3. Clicking any radar cell selects it; clicking an already-selected cell fires immediately
       if (p.x >= GRID_X && p.x < GRID_X + GRID_SIZE && p.y >= GRID_Y && p.y < GRID_Y + GRID_SIZE) {
         const c = Math.floor((p.x - GRID_X) / CELL);
         const r = Math.floor((p.y - GRID_Y) / CELL);
-        // Ignore the initial synthetic viewport-center focus click at (640, 360) -> (9, 4) during first 0.1s
-        if (game.time < 3.0 && p.x >= 638 && p.x <= 642 && p.y >= 358 && p.y <= 362) return;
-        const key = `${c},${r}`;
-        if (confirmedClickCell === key && c === game.cursor.c && r === game.cursor.r) {
+        if (game.userInteracted && c === game.cursor.c && r === game.cursor.r) {
           fireStrike();
-          confirmedClickCell = null;
         } else {
+          game.userInteracted = true;
           game.cursor.c = c;
           game.cursor.r = r;
-          confirmedClickCell = key;
           playSfx('move');
         }
       }
     }
   });
 
-  // --- Fast Vector Silhouette Primitives (zero per-icon shadowBlur -> crisp 40+ FPS!) ---
+  // --- High-Contrast DEFCON Vector Silhouettes (matching f_033.jpg!) ---
   function drawSilhouette(icon, alpha) {
     ctx.save();
     ctx.translate(icon.x, icon.y);
@@ -664,124 +761,220 @@
       ctx.fillStyle = '#7fe7ff';
       ctx.strokeStyle = '#7fe7ff';
 
-      if (icon.type === 'jet') {
+      if (icon.type === 'icbm3') {
+        // Triple-missile mobile erector battery (left side of f_033.jpg)
+        ctx.fillRect(-26, 22, 52, 11);
+        ctx.fillRect(-22, 14, 44, 9);
+        for (const mx of [-17, -3, 11]) {
+          ctx.fillRect(mx, -24, 8, 38);
+          ctx.beginPath();
+          ctx.moveTo(mx, -24); ctx.lineTo(mx + 4, -36); ctx.lineTo(mx + 8, -24);
+          ctx.closePath();
+          ctx.fill();
+        }
+      } else if (icon.type === 'launcher') {
+        // Single tall ballistic erector vehicle (top-left of f_033.jpg)
+        ctx.fillRect(-16, 18, 44, 12);
+        ctx.fillRect(6, 8, 18, 11);
+        ctx.fillRect(-11, -34, 9, 52);
         ctx.beginPath();
-        ctx.moveTo(24, 0);
-        ctx.lineTo(6, -4);
-        ctx.lineTo(-8, -16);
-        ctx.lineTo(-15, -16);
-        ctx.lineTo(-8, -4);
-        ctx.lineTo(-21, -8);
-        ctx.lineTo(-23, 0);
-        ctx.lineTo(-21, 8);
-        ctx.lineTo(-8, 4);
-        ctx.lineTo(-15, 16);
-        ctx.lineTo(-8, 16);
-        ctx.lineTo(6, 4);
+        ctx.moveTo(-11, -34); ctx.lineTo(-6.5, -48); ctx.lineTo(-2, -34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(12, 8); ctx.lineTo(12, -8);
+        ctx.stroke();
+      } else if (icon.type === 'missile1') {
+        // Standalone tactical ballistic rocket with fins
+        ctx.fillRect(-4.5, -24, 9, 40);
+        ctx.beginPath();
+        ctx.moveTo(-4.5, -24); ctx.lineTo(0, -38); ctx.lineTo(4.5, -24);
+        ctx.moveTo(-4.5, 8); ctx.lineTo(-11, 20); ctx.lineTo(-4.5, 18);
+        ctx.moveTo(4.5, 8);  ctx.lineTo(11, 20);  ctx.lineTo(4.5, 18);
+        ctx.fill();
+      } else if (icon.type === 'jetSide') {
+        // Sleek side-profile interceptor jet (top of f_033.jpg)
+        ctx.beginPath();
+        ctx.moveTo(38, 3);
+        ctx.lineTo(14, -4);
+        ctx.lineTo(2, -7);
+        ctx.lineTo(-8, -5);
+        ctx.lineTo(-26, -6);
+        ctx.lineTo(-36, -18);
+        ctx.lineTo(-41, -18);
+        ctx.lineTo(-35, -3);
+        ctx.lineTo(-40, 3);
+        ctx.lineTo(-28, 7);
+        ctx.lineTo(-6, 12);
+        ctx.lineTo(6, 7);
+        ctx.closePath();
+        ctx.fill();
+      } else if (icon.type === 'jetTop') {
+        // Top-down delta fighter silhouette
+        ctx.beginPath();
+        ctx.moveTo(0, -28);
+        ctx.lineTo(5, -10);
+        ctx.lineTo(22, 8);
+        ctx.lineTo(22, 14);
+        ctx.lineTo(5, 9);
+        ctx.lineTo(10, 22);
+        ctx.lineTo(0, 18);
+        ctx.lineTo(-10, 22);
+        ctx.lineTo(-5, 9);
+        ctx.lineTo(-22, 14);
+        ctx.lineTo(-22, 8);
+        ctx.lineTo(-5, -10);
         ctx.closePath();
         ctx.fill();
       } else if (icon.type === 'tank') {
+        // Detailed tracked MBT with roadwheel cutouts, turret & long gun (bottom of f_033.jpg)
         ctx.beginPath();
-        ctx.roundRect(-21, 2, 40, 10, 4);
+        ctx.roundRect(-28, 3, 54, 13, 6);
         ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(-12, 2);
-        ctx.lineTo(-7, -6);
-        ctx.lineTo(8, -6);
-        ctx.lineTo(13, 2);
+        ctx.moveTo(-24, 3); ctx.lineTo(-18, -3); ctx.lineTo(20, -3); ctx.lineTo(25, 3);
         ctx.closePath();
         ctx.fill();
-        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(8, -3);
-        ctx.lineTo(27, -5);
-        ctx.stroke();
-      } else if (icon.type === 'sam') {
-        ctx.fillRect(-17, 9, 34, 6);
-        ctx.fillRect(-12, -15, 6.5, 24);
-        ctx.fillRect(3, -15, 6.5, 24);
-        ctx.beginPath();
-        ctx.moveTo(-12, -15); ctx.lineTo(-8.75, -23); ctx.lineTo(-5.5, -15);
-        ctx.moveTo(3, -15);   ctx.lineTo(6.25, -23);  ctx.lineTo(9.5, -15);
+        ctx.moveTo(-14, -3); ctx.lineTo(-9, -12); ctx.lineTo(10, -12); ctx.lineTo(15, -3);
+        ctx.closePath();
         ctx.fill();
-      } else {
+        ctx.fillRect(-5, -16, 9, 4);
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(12, -8); ctx.lineTo(38, -9);
+        ctx.stroke();
+        ctx.fillStyle = '#03080b';
+        for (let wx = -20; wx <= 16; wx += 9) {
+          ctx.beginPath();
+          ctx.arc(wx, 9.5, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (icon.type === 'radar') {
+        // Lattice truss tower + parabolic dish (top-right of f_033.jpg)
         ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.moveTo(-9, 16); ctx.lineTo(0, -2); ctx.lineTo(9, 16);
-        ctx.moveTo(-5, 8); ctx.lineTo(5, 8);
+        ctx.moveTo(-14, 28); ctx.lineTo(-3, -4);
+        ctx.moveTo(14, 28);  ctx.lineTo(3, -4);
+        ctx.moveTo(-17, 28); ctx.lineTo(17, 28);
+        ctx.moveTo(-11, 18); ctx.lineTo(11, 18);
+        ctx.moveTo(-7, 7);   ctx.lineTo(7, 7);
+        ctx.moveTo(-11, 18); ctx.lineTo(7, 7);
+        ctx.moveTo(11, 18);  ctx.lineTo(-7, 7);
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(2, -12);
+        ctx.rotate(-0.55);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 15); ctx.lineTo(0, -4);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(2, -6, 11, Math.PI * 0.65, Math.PI * 1.65);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(2, -6); ctx.lineTo(10, -12);
-        ctx.stroke();
-      }
-    } else {
-      ctx.fillStyle = '#f5fbff';
-      ctx.strokeStyle = '#f5fbff';
-
-      if (icon.type === 'house') {
-        ctx.beginPath();
-        ctx.moveTo(0, -15);
-        ctx.lineTo(15, -3);
-        ctx.lineTo(11, -3);
-        ctx.lineTo(11, 12);
-        ctx.lineTo(-11, 12);
-        ctx.lineTo(-11, -3);
-        ctx.lineTo(-15, -3);
-        ctx.closePath();
+        ctx.arc(0, -5, 2.5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#05070a';
-        ctx.fillRect(-3, 3, 6, 9);
-      } else if (icon.type === 'school') {
-        ctx.fillRect(-16, -1, 32, 14);
+        ctx.restore();
+      } else if (icon.type === 'schoolMil') {
+        // Municipal / garrison building with clock pediment & flag (right of f_033.jpg)
+        ctx.fillRect(-24, 0, 48, 20);
+        ctx.fillRect(-13, -10, 26, 10);
         ctx.beginPath();
-        ctx.moveTo(-19, -1); ctx.lineTo(0, -12); ctx.lineTo(19, -1);
+        ctx.moveTo(-16, -10); ctx.lineTo(0, -20); ctx.lineTo(16, -10);
         ctx.closePath();
         ctx.fill();
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(0, -12); ctx.lineTo(0, -20);
+        ctx.moveTo(0, -20); ctx.lineTo(0, -29);
         ctx.stroke();
-        ctx.fillRect(0, -20, 7, 4);
-        ctx.fillStyle = '#05070a';
-        for (const wx of [-11, -2, 7]) ctx.fillRect(wx, 3, 4, 5);
-      } else if (icon.type === 'pin') {
+        ctx.fillRect(0, -29, 8, 5);
+        ctx.fillStyle = '#03080b';
         ctx.beginPath();
-        ctx.arc(0, -5, 8, Math.PI, 0, false);
-        ctx.lineTo(0, 12);
+        ctx.arc(0, -6, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-4, 9, 8, 11);
+        for (const wx of [-19, -12, 8, 15]) {
+          ctx.fillRect(wx, 4, 4, 5);
+          ctx.fillRect(wx, 12, 4, 5);
+        }
+      }
+    } else {
+      // Stark crisp white civilian icons ("quiet white civilian markers side by side")
+      ctx.fillStyle = '#f6fcff';
+      ctx.strokeStyle = '#f6fcff';
+
+      if (icon.type === 'house') {
+        ctx.fillRect(7, -15, 4.5, 9); // Chimney
+        ctx.beginPath();
+        ctx.moveTo(0, -17);
+        ctx.lineTo(18, -2);
+        ctx.lineTo(13, -2);
+        ctx.lineTo(13, 14);
+        ctx.lineTo(-13, 14);
+        ctx.lineTo(-13, -2);
+        ctx.lineTo(-18, -2);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#05070a';
+        ctx.fillStyle = '#03080b';
+        ctx.fillRect(-3.5, 3, 7, 11);
+      } else if (icon.type === 'schoolCiv') {
+        ctx.fillRect(-22, 0, 44, 18);
         ctx.beginPath();
-        ctx.arc(0, -5, 3, 0, Math.PI * 2);
+        ctx.moveTo(-25, 0); ctx.lineTo(0, -14); ctx.lineTo(25, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#03080b';
+        ctx.fillRect(-4, 7, 8, 11);
+        for (const wx of [-16, -10, 6, 12]) ctx.fillRect(wx, 5, 4, 6);
+      } else if (icon.type === 'pin') {
+        ctx.beginPath();
+        ctx.arc(0, -5, 9.5, Math.PI, 0, false);
+        ctx.lineTo(0, 14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#03080b';
+        ctx.beginPath();
+        ctx.arc(0, -5, 4, 0, Math.PI * 2);
         ctx.fill();
       } else {
+        // Standing human figure
         ctx.beginPath();
-        ctx.arc(0, -12, 4.2, 0, Math.PI * 2);
+        ctx.arc(0, -14, 4.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.roundRect(-5.5, -6.5, 11, 11, 3);
+        ctx.roundRect(-6.5, -8, 13, 13, 3.5);
         ctx.fill();
-        ctx.fillRect(-4.2, 4, 3.4, 10);
-        ctx.fillRect(0.8, 4, 3.4, 10);
+        ctx.fillRect(-4.6, 4, 3.8, 12);
+        ctx.fillRect(0.8, 4, 3.8, 12);
       }
     }
     ctx.restore();
   }
 
-  // --- Update Loop ---
+  // --- Main Tick ---
   let prevNow = performance.now();
   function tick(now) {
-    const dt = Math.min(0.05, Math.max(0.001, (now - prevNow) / 1000));
+    const rawDt = Math.min(0.05, Math.max(0.001, (now - prevNow) / 1000));
     prevNow = now;
+
+    if (game.hitStop > 0) {
+      game.hitStop = Math.max(0, game.hitStop - rawDt);
+      render();
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    const dt = rawDt;
     game.time += dt;
     game.phaseTime += dt;
-    game.sweepAngle = (game.sweepAngle + dt * 0.85) % (Math.PI * 2);
+    game.shake = Math.max(0, game.shake - dt * 26);
+    game.sweepAngle = (game.sweepAngle + dt * 0.78) % (Math.PI * 2);
 
     if (game.phase === 'turn') {
-      game.aiLockAnim = Math.min(1, game.aiLockAnim + dt * 0.48);
+      game.aiLockAnim = Math.min(1, game.aiLockAnim + dt / 2.85);
       if (game.reconPulse) {
         game.reconPulse.t += dt;
         if (game.reconPulse.t >= game.reconPulse.dur) game.reconPulse = null;
@@ -812,48 +1005,106 @@
     requestAnimationFrame(tick);
   }
 
+  // ---Spatial Cell-Side Action Callout (VOIDBASTARD-TAO Law 4 & 5) ---
+  function renderCellSideControls() {
+    activePills.fire = null;
+    activePills.recon = null;
+
+    if (game.phase !== 'turn') return;
+    const { c, r } = game.cursor;
+    const cell = game.grid[r][c];
+    const cx = GRID_X + c * CELL;
+    const cy = GRID_Y + r * CELL;
+
+    // Place controls BESIDE the aimed cell, flipping left if on columns I/J so it stays inside the radar space
+    const placeLeft = c >= 8;
+    const px = placeLeft ? (cx - 104) : (cx + CELL + 8);
+    const py = Math.max(GRID_Y + 4, Math.min(GRID_Y + GRID_SIZE - 58, cy + 2));
+
+    const lbl = coordLabel(c, r);
+    const canFire = !cell.struck && cell.kind !== 'silo' && game.missiles > 0;
+    const canRecon = canFire && !cell.checked && game.reconsLeft > 0;
+
+    // Subtle sector coordinate micro-label at top-left of dashed box
+    ctx.save();
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#03080b';
+    ctx.fillRect(cx + 3, cy - 15, 24, 13);
+    ctx.fillStyle = '#9ef0ff';
+    ctx.fillText(lbl, cx + 5, cy - 4);
+
+    // Only render clickable pill tags once user aims/hovers OR subtly beside cell while valid (Law 4)
+    const pillAlpha = (game.userInteracted || hoverCell) ? 0.96 : 0.72;
+    ctx.globalAlpha = pillAlpha;
+
+    if (canFire) {
+      const isWarnCiv = cell.checked && cell.troops === 0 && cell.civs > 0;
+      const fw = 96, fh = 22;
+      activePills.fire = { x: px, y: py, w: fw, h: fh };
+      ctx.fillStyle = hoverPill === 'fire' ? 'rgba(127, 231, 255, 0.22)' : 'rgba(3, 11, 15, 0.90)';
+      ctx.strokeStyle = isWarnCiv ? '#ff4f6d' : '#7fe7ff';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(px, py, fw, fh);
+      ctx.strokeRect(px, py, fw, fh);
+      ctx.fillStyle = isWarnCiv ? '#ff4f6d' : '#9ef0ff';
+      ctx.font = 'bold 11px "Courier New", monospace';
+      ctx.fillText('[SPC] FIRE', px + 8, py + 15);
+    }
+
+    if (canRecon) {
+      const rw = 96, rh = 22, ry = py + 26;
+      activePills.recon = { x: px, y: ry, w: rw, h: rh };
+      ctx.fillStyle = hoverPill === 'recon' ? 'rgba(127, 231, 255, 0.22)' : 'rgba(3, 11, 15, 0.90)';
+      ctx.strokeStyle = 'rgba(127, 231, 255, 0.78)';
+      ctx.lineWidth = 1.4;
+      ctx.fillRect(px, ry, rw, rh);
+      ctx.strokeRect(px, ry, rw, rh);
+      ctx.fillStyle = '#7fe7ff';
+      ctx.font = '11px "Courier New", monospace';
+      ctx.fillText(`[C] RECON·${game.reconsLeft}`, px + 7, ry + 15);
+    }
+
+    ctx.restore();
+  }
+
   function renderRadarGrid(dimAlpha = 1) {
     ctx.save();
     ctx.globalAlpha = dimAlpha;
 
-    ctx.fillStyle = '#04090c';
+    // Deep obsidian phosphor CRT radar bed
+    ctx.fillStyle = '#03080b';
     ctx.fillRect(GRID_X, GRID_Y, GRID_SIZE, GRID_SIZE);
 
-    // Clip radar sweep & coastlines inside grid
     ctx.save();
     ctx.beginPath();
     ctx.rect(GRID_X, GRID_Y, GRID_SIZE, GRID_SIZE);
     ctx.clip();
 
-    ctx.strokeStyle = 'rgba(34, 88, 100, 0.30)';
-    ctx.lineWidth = 1.5;
-    for (const poly of game.coastlines) {
-      ctx.beginPath();
-      poly.forEach(([nx, ny], i) => {
-        const px = GRID_X + nx * GRID_SIZE;
-        const py = GRID_Y + ny * GRID_SIZE;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.stroke();
-    }
-
+    // Smooth rotating radar sweep fan + crisp leading scan ray (matching f_006.jpg)
     const rcx = GRID_X + GRID_SIZE * 0.5;
     const rcy = GRID_Y + GRID_SIZE * 0.5;
-    const sweepSpan = 0.54;
-    for (let i = 0; i < 10; i++) {
-      const f0 = i / 10;
-      const f1 = (i + 1) / 10;
-      ctx.fillStyle = `rgba(127, 231, 255, ${(0.078 * (1 - f0)).toFixed(4)})`;
+    const sweepSpan = 0.62;
+    for (let i = 0; i < 14; i++) {
+      const f0 = i / 14;
+      const f1 = (i + 1) / 14;
+      ctx.fillStyle = `rgba(110, 224, 248, ${(0.095 * (1 - f0)).toFixed(4)})`;
       ctx.beginPath();
       ctx.moveTo(rcx, rcy);
-      ctx.arc(rcx, rcy, 460, game.sweepAngle - f1 * sweepSpan, game.sweepAngle - f0 * sweepSpan);
+      ctx.arc(rcx, rcy, 470, game.sweepAngle - f1 * sweepSpan, game.sweepAngle - f0 * sweepSpan);
       ctx.closePath();
       ctx.fill();
     }
+    ctx.strokeStyle = 'rgba(145, 240, 255, 0.24)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(rcx, rcy);
+    ctx.lineTo(rcx + Math.cos(game.sweepAngle) * 470, rcy + Math.sin(game.sweepAngle) * 470);
+    ctx.stroke();
 
-    ctx.strokeStyle = '#1c4651';
-    ctx.lineWidth = 2;
+    // Crisp 10x10 phosphor gridlines
+    ctx.strokeStyle = '#20515e';
+    ctx.lineWidth = 2.0;
     for (let i = 0; i <= CELLS; i++) {
       const gx = GRID_X + i * CELL;
       const gy = GRID_Y + i * CELL;
@@ -863,7 +1114,14 @@
       ctx.stroke();
     }
 
-    // Persistent cell markers
+    // Subtle hover preview box on mouseover
+    if (game.phase === 'turn' && hoverCell && (hoverCell.c !== game.cursor.c || hoverCell.r !== game.cursor.r)) {
+      ctx.strokeStyle = 'rgba(127, 231, 255, 0.30)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(GRID_X + hoverCell.c * CELL + 2, GRID_Y + hoverCell.r * CELL + 2, CELL - 4, CELL - 4);
+    }
+
+    // Persistent cell ground-truth & strike traces
     for (let r = 0; r < CELLS; r++) {
       for (let c = 0; c < CELLS; c++) {
         const cell = game.grid[r][c];
@@ -873,7 +1131,7 @@
           ctx.strokeStyle = '#7fe7ff';
           ctx.lineWidth = 3.2;
           ctx.beginPath();
-          ctx.arc(ctr.x, ctr.y, 13, 0, Math.PI * 2);
+          ctx.arc(ctr.x, ctr.y, 12.5, 0, Math.PI * 2);
           ctx.stroke();
           continue;
         }
@@ -894,8 +1152,8 @@
 
         if (cell.struck) {
           if (cell.troops > 0) {
-            ctx.strokeStyle = '#ff4f6d';
-            ctx.lineWidth = 4.5;
+            ctx.strokeStyle = '#ff5470';
+            ctx.lineWidth = 5.0;
             const d = 14;
             ctx.beginPath();
             ctx.moveTo(ctr.x - d, ctr.y - d); ctx.lineTo(ctr.x + d, ctr.y + d);
@@ -908,13 +1166,13 @@
             ctx.arc(ctr.x, ctr.y, 11, 0, Math.PI * 2);
             ctx.stroke();
           }
-          if (cell.civs > 0) {
+          if (cell.civs > 0 && !(game.activeStrike && game.activeStrike.impacted && game.activeStrike.c === c && game.activeStrike.r === r)) {
             const ox = cell.troops > 0 ? 15 : 0;
             const oy = cell.troops > 0 ? 13 : 0;
-            drawSilhouette({ team: 'civ', type: 'house', x: ctr.x + ox, y: ctr.y + oy, scale: cell.troops > 0 ? 0.52 : 0.72 }, 0.92);
+            drawSilhouette({ team: 'civ', type: 'house', x: ctr.x + ox, y: ctr.y + oy, scale: cell.troops > 0 ? 0.50 : 0.72 }, 0.94);
             if (cell.troops === 0) {
-              ctx.strokeStyle = 'rgba(255, 79, 109, 0.75)';
-              ctx.lineWidth = 1.6;
+              ctx.strokeStyle = 'rgba(255, 79, 109, 0.80)';
+              ctx.lineWidth = 1.8;
               ctx.strokeRect(ctr.x - 22, ctr.y - 22, 44, 44);
             }
           }
@@ -922,42 +1180,69 @@
       }
     }
 
+    // Active sonar Recon wave
     if (game.reconPulse) {
       const rp = game.reconPulse;
       const p = rp.t / rp.dur;
       const ctr = cellCenter(rp.c, rp.r);
-      ctx.strokeStyle = `rgba(127, 231, 255, ${(1 - p) * 0.9})`;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(ctr.x, ctr.y, 12 + p * 95, 0, Math.PI * 2);
-      ctx.stroke();
+      for (let ring = 0; ring < 2; ring++) {
+        const rp2 = Math.max(0, p - ring * 0.18);
+        if (rp2 <= 0) continue;
+        ctx.strokeStyle = `rgba(127, 231, 255, ${(Math.max(0, 1 - rp2) * 0.92).toFixed(3)})`;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(ctr.x, ctr.y, 10 + rp2 * 108, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
-    // AI Recommended Target Reticle (big dramatic locking diamond + laser rays like pair_002.00!)
-    if (game.aiTarget && game.phase !== 'report') {
+    // AI Recommended Target Reticle (converging diamond + corner brackets + beacon + laser lock rays like f_006.jpg!)
+    const hideAiDuringLens = game.activeStrike && game.activeStrike.impacted && (game.activeStrike.t - game.activeStrike.flightDur) > 0.75;
+    if (game.aiTarget && game.phase !== 'report' && !hideAiDuringLens) {
       const actr = cellCenter(game.aiTarget.c, game.aiTarget.r);
       const lockP = game.aiLockAnim;
-      const pulse = 1 + Math.sin(game.time * 6.0) * 0.06;
+      const settle = Math.pow(lockP, 1.45);
+      const pulse = 1 + Math.sin(game.time * 5.8) * 0.045;
 
       ctx.save();
       ctx.translate(actr.x, actr.y);
 
-      if (lockP < 0.96) {
-        const spread = (1 - lockP) * 130;
-        ctx.strokeStyle = `rgba(255, 79, 109, ${(0.35 + (1 - lockP) * 0.6).toFixed(3)})`;
-        ctx.lineWidth = 2.0;
-        for (let k = 0; k < 4; k++) {
-          const a = -0.35 + k * 0.32;
+      // Sweeping coral laser lock-in rays during lock acquisition (matches f_006.jpg / pair_002.00!)
+      if (lockP < 0.94) {
+        const rayAlpha = Math.min(1, (1 - lockP) * 2.4);
+        const raySpecs = [
+          { ang: -0.62, rIn: 4,  rOut: 230 },
+          { ang: -0.44, rIn: 2,  rOut: 255 },
+          { ang:  0.29, rIn: 6,  rOut: 215 },
+          { ang: -1.02, rIn: 18, rOut: 115 },
+        ];
+        ctx.strokeStyle = `rgba(255, 92, 116, ${(0.95 * rayAlpha).toFixed(3)})`;
+        ctx.lineWidth = 3.2;
+        for (const rs of raySpecs) {
+          const rStart = rs.rIn + settle * 4;
+          const rEnd = rs.rOut * (0.62 + (1 - settle) * 0.55);
           ctx.beginPath();
-          ctx.moveTo(Math.cos(a) * (40 + spread), Math.sin(a) * (40 + spread));
-          ctx.lineTo(0, 0);
+          ctx.moveTo(Math.cos(rs.ang) * rStart, Math.sin(rs.ang) * rStart);
+          ctx.lineTo(Math.cos(rs.ang) * rEnd, Math.sin(rs.ang) * rEnd);
           ctx.stroke();
         }
       }
 
-      const b = (34 + (1 - lockP) * 28) * pulse, bl = 14;
-      ctx.strokeStyle = '#ff4f6d';
-      ctx.lineWidth = 3.4;
+      const b = (40 + (1 - settle) * 44) * pulse;
+      const bl = 17 + (1 - settle) * 9;
+      const dSize = (48 + (1 - settle) * 62) * pulse;
+
+      // Soft coral phosphor bloom pass
+      ctx.strokeStyle = 'rgba(255, 79, 109, 0.30)';
+      ctx.lineWidth = 9.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -dSize); ctx.lineTo(dSize, 0); ctx.lineTo(0, dSize); ctx.lineTo(-dSize, 0);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Crisp bright coral brackets & diamond
+      ctx.strokeStyle = '#ff5c77';
+      ctx.lineWidth = 4.2;
       ctx.beginPath();
       ctx.moveTo(-b, -b + bl); ctx.lineTo(-b, -b); ctx.lineTo(-b + bl, -b);
       ctx.moveTo(b - bl, -b);  ctx.lineTo(b, -b);  ctx.lineTo(b, -b + bl);
@@ -965,7 +1250,6 @@
       ctx.moveTo(-b + bl, b);  ctx.lineTo(-b, b);  ctx.lineTo(-b, b - bl);
       ctx.stroke();
 
-      const dSize = (42 + (1 - lockP) * 44) * pulse;
       ctx.beginPath();
       ctx.moveTo(0, -dSize);
       ctx.lineTo(dSize, 0);
@@ -974,14 +1258,19 @@
       ctx.closePath();
       ctx.stroke();
 
-      if (lockP < 0.85) {
-        ctx.fillStyle = '#ffffff';
+      if (lockP < 0.88) {
+        // White-hot locking beacon core (f_006.jpg)
+        ctx.fillStyle = 'rgba(255, 79, 109, 0.55)';
         ctx.beginPath();
-        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff5f7';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        const xd = 12;
-        ctx.lineWidth = 3.8;
+        const xd = 14;
+        ctx.lineWidth = 4.6;
         ctx.beginPath();
         ctx.moveTo(-xd, -xd); ctx.lineTo(xd, xd);
         ctx.moveTo(xd, -xd);  ctx.lineTo(-xd, xd);
@@ -991,138 +1280,202 @@
       ctx.restore();
     }
 
-    // Player Dashed Cyan Cursor
-    if (game.phase === 'turn' || game.phase === 'title' || game.phase === 'brief') {
+    // Player Dashed Cyan Cursor (Law 4: only shown while aiming is valid, never cluttering active strike/impact!)
+    if (game.phase === 'turn' || game.phase === 'title') {
       const cx = GRID_X + game.cursor.c * CELL;
       const cy = GRID_Y + game.cursor.r * CELL;
       ctx.save();
       ctx.strokeStyle = '#7fe7ff';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.0;
       ctx.setLineDash([10, 6]);
-      ctx.lineDashOffset = -game.time * 18;
+      ctx.lineDashOffset = -game.time * 16;
       ctx.strokeRect(cx + 1.5, cy + 1.5, CELL - 3, CELL - 3);
       ctx.restore();
     }
 
-    ctx.restore(); // end grid clip so shockwave ring & silhouettes can overhang slightly like pair_008.00!
+    ctx.restore(); // End inner grid clip
 
-    // Outer 10x10 Grid Border
-    ctx.strokeStyle = '#265c69';
-    ctx.lineWidth = 2.5;
+    // Outer 10x10 Grid Frame
+    ctx.strokeStyle = '#337687';
+    ctx.lineWidth = 2.8;
     ctx.strokeRect(GRID_X, GRID_Y, GRID_SIZE, GRID_SIZE);
 
-    // Active Ballistic Missile Arc + Telemetry Helix + Giant DEFCON Shockwave (clipped to left side x < 730)
+    // Spatial Cell-Side Controls (Law 4 & 5: directly beside aimed cell while valid)
+    renderCellSideControls();
+
+    // Active Ballistic Cruise Missile + Dual Helix Contrail + Starburst + DEFCON Radar Lens
     if (game.activeStrike) {
       const st = game.activeStrike;
       ctx.save();
+      // Clip right side at x=712 so large shockwave ring opens cleanly on the right edge exactly like f_033.jpg!
       ctx.beginPath();
-      ctx.rect(20, 20, 715, 680);
+      ctx.rect(16, 16, 696, 688);
       ctx.clip();
 
       const ctrl = {
-        x: (st.from.x + st.to.x) * 0.5 - 48,
-        y: Math.min(st.from.y, st.to.y) - 68,
+        x: (st.from.x + st.to.x) * 0.5 - 56,
+        y: Math.min(st.from.y, st.to.y) - 72,
       };
       const fp = Math.min(1, st.t / st.flightDur);
 
-      // Smooth ballistic arc + oscillating telemetry helix (matches pair_005.00!)
-      ctx.strokeStyle = st.impacted ? 'rgba(127, 231, 255, 0.38)' : '#7fe7ff';
-      ctx.lineWidth = 3.2;
-      ctx.beginPath();
-      const steps = 40;
-      const maxStep = Math.max(1, Math.floor(fp * steps));
-      for (let i = 0; i <= maxStep; i++) {
-        const u = i / steps;
+      const sampleCurve = (u) => {
         const px = (1 - u) * (1 - u) * st.from.x + 2 * (1 - u) * u * ctrl.x + u * u * st.to.x;
         const py = (1 - u) * (1 - u) * st.from.y + 2 * (1 - u) * u * ctrl.y + u * u * st.to.y;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
+        const tx = 2 * (1 - u) * (ctrl.x - st.from.x) + 2 * u * (st.to.x - ctrl.x);
+        const ty = 2 * (1 - u) * (ctrl.y - st.from.y) + 2 * u * (st.to.y - ctrl.y);
+        const len = Math.hypot(tx, ty) || 1;
+        return { px, py, tx: tx / len, ty: ty / len, nx: -ty / len, ny: tx / len };
+      };
 
-      if (!st.impacted) {
-        // Helix wave along flight trail
-        ctx.strokeStyle = 'rgba(127, 231, 255, 0.55)';
-        ctx.lineWidth = 1.5;
+      const steps = 56;
+      const maxStep = Math.max(1, Math.floor(fp * steps));
+
+      if (!st.impacted || (st.t - st.flightDur) < 0.85) {
+        const trailFade = st.impacted ? Math.max(0, 1 - (st.t - st.flightDur) / 0.85) : 1;
+
+        // Soft phosphor arc glow
+        ctx.strokeStyle = `rgba(105, 232, 255, ${(0.30 * trailFade).toFixed(3)})`;
+        ctx.lineWidth = 8.5;
         ctx.beginPath();
         for (let i = 0; i <= maxStep; i++) {
-          const u = i / steps;
-          const px = (1 - u) * (1 - u) * st.from.x + 2 * (1 - u) * u * ctrl.x + u * u * st.to.x;
-          const py = (1 - u) * (1 - u) * st.from.y + 2 * (1 - u) * u * ctrl.y + u * u * st.to.y;
-          const off = Math.sin(u * 26 - st.t * 14) * 10 * Math.sin(u * Math.PI);
-          if (i === 0) ctx.moveTo(px - off * 0.6, py + off * 0.6);
-          else ctx.lineTo(px - off * 0.6, py + off * 0.6);
+          const s = sampleCurve(i / steps);
+          if (i === 0) ctx.moveTo(s.px, s.py);
+          else ctx.lineTo(s.px, s.py);
         }
         ctx.stroke();
 
-        const u = fp;
-        const wx = (1 - u) * (1 - u) * st.from.x + 2 * (1 - u) * u * ctrl.x + u * u * st.to.x;
-        const wy = (1 - u) * (1 - u) * st.from.y + 2 * (1 - u) * u * ctrl.y + u * u * st.to.y;
-        const tx = 2 * (1 - u) * (ctrl.x - st.from.x) + 2 * u * (st.to.x - ctrl.x);
-        const ty = 2 * (1 - u) * (ctrl.y - st.from.y) + 2 * u * (st.to.y - ctrl.y);
-        const ang = Math.atan2(ty, tx);
+        // Main hot cyan trajectory spine
+        ctx.strokeStyle = `rgba(180, 248, 255, ${(0.96 * trailFade).toFixed(3)})`;
+        ctx.lineWidth = 3.4;
+        ctx.beginPath();
+        for (let i = 0; i <= maxStep; i++) {
+          const s = sampleCurve(i / steps);
+          if (i === 0) ctx.moveTo(s.px, s.py);
+          else ctx.lineTo(s.px, s.py);
+        }
+        ctx.stroke();
 
+        // Twin intertwined sine-wave telemetry ribbons along true curve normal (matches pair_005.00 left!)
+        for (const phaseShift of [0, Math.PI * 0.85]) {
+          ctx.strokeStyle = `rgba(127, 231, 255, ${(0.68 * trailFade).toFixed(3)})`;
+          ctx.lineWidth = 1.65;
+          ctx.beginPath();
+          for (let i = 0; i <= maxStep; i++) {
+            const u = i / steps;
+            const s = sampleCurve(u);
+            const env = Math.sin(Math.min(1, u / Math.max(0.05, fp)) * Math.PI);
+            const amp = Math.sin(u * 28 - st.t * 15 + phaseShift) * 12.5 * env;
+            const hx = s.px + s.nx * amp;
+            const hy = s.py + s.ny * amp;
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+          }
+          ctx.stroke();
+        }
+      }
+
+      // Glowing Cruise Missile Airframe + Nose Flare in Flight (matches f_016.jpg & pair_005.00!)
+      if (!st.impacted) {
+        const head = sampleCurve(fp);
+        const ang = Math.atan2(head.ty, head.tx);
         ctx.save();
-        ctx.translate(wx, wy);
+        ctx.translate(head.px, head.py);
         ctx.rotate(ang);
-        ctx.fillStyle = 'rgba(127, 231, 255, 0.35)';
+
+        // Phosphor bloom halo
+        const grad = ctx.createRadialGradient(4, 0, 2, 4, 0, 28);
+        grad.addColorStop(0, 'rgba(220, 254, 255, 0.85)');
+        grad.addColorStop(0.45, 'rgba(127, 231, 255, 0.36)');
+        grad.addColorStop(1, 'rgba(127, 231, 255, 0)');
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.arc(4, 0, 28, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#efffff';
+
+        // Sleek cruise missile vector fuselage + swept wings + tail fins
+        ctx.fillStyle = '#eaffff';
         ctx.beginPath();
-        ctx.ellipse(0, 0, 14, 5.5, 0, 0, Math.PI * 2);
+        ctx.moveTo(19, 0);
+        ctx.quadraticCurveTo(12, -5.2, 2, -5.0);
+        ctx.lineTo(-6, -12);
+        ctx.lineTo(-11, -11);
+        ctx.lineTo(-7, -4.4);
+        ctx.lineTo(-16, -4.0);
+        ctx.lineTo(-20, -8.5);
+        ctx.lineTo(-22, 0);
+        ctx.lineTo(-20, 8.5);
+        ctx.lineTo(-16, 4.0);
+        ctx.lineTo(-7, 4.4);
+        ctx.lineTo(-11, 11);
+        ctx.lineTo(-6, 12);
+        ctx.lineTo(2, 5.0);
+        ctx.quadraticCurveTo(12, 5.2, 19, 0);
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
       }
 
+      // Multi-stage Detonation: Starburst (f_023) -> Lightning Double-Ring -> Grand Silhouette Lens (f_033)
       if (st.impacted) {
         const wt = st.t - st.flightDur;
         const wp = Math.min(1, wt / st.waveDur);
-        const easeOut = 1 - Math.pow(1 - Math.min(1, wp * 1.45), 2.4);
-        const outerR = 24 + easeOut * 256;
-        const innerR = 14 + easeOut * 142;
-        const fade = wp < 0.78 ? 1 : (1 - (wp - 0.78) / 0.22);
+        const easeOut = 1 - Math.pow(1 - Math.min(1, wp * 1.55), 2.5);
+        const outerR = 26 + easeOut * 268;
+        const innerR = 16 + easeOut * 150;
+        const fade = wp < 0.82 ? 1 : (1 - (wp - 0.82) / 0.18);
 
-        if (wt < 0.25) {
-          const fa = 1 - wt / 0.25;
-          ctx.fillStyle = `rgba(215, 252, 255, ${(fa * 0.9).toFixed(3)})`;
+        // Stage A: Anamorphic horizontal cyan flash + 48-ray starburst (f_023.jpg)
+        if (wt < 0.52) {
+          const sf = 1 - wt / 0.52;
+          ctx.fillStyle = `rgba(220, 253, 255, ${(sf * 0.92).toFixed(3)})`;
           ctx.beginPath();
-          ctx.arc(st.to.x, st.to.y, 32 * (1 + wt * 2), 0, Math.PI * 2);
+          ctx.arc(st.to.x, st.to.y, 26 * (0.8 + sf * 0.8), 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillRect(st.to.x - 220 * fa, st.to.y - 2.5, 440 * fa, 5);
+          ctx.fillRect(st.to.x - 290 * sf, st.to.y - 3, 580 * sf, 6);
+
+          for (const ray of st.starburst) {
+            const ca = Math.cos(ray.angle), sa = Math.sin(ray.angle);
+            const grow = Math.min(1, wt / 0.18);
+            ctx.strokeStyle = `rgba(175, 248, 255, ${(sf * 0.90).toFixed(3)})`;
+            ctx.lineWidth = ray.w;
+            ctx.beginPath();
+            ctx.moveTo(st.to.x + ca * ray.r0, st.to.y + sa * ray.r0);
+            ctx.lineTo(st.to.x + ca * (ray.r0 + (ray.r1 - ray.r0) * grow), st.to.y + sa * (ray.r0 + (ray.r1 - ray.r0) * grow));
+            ctx.stroke();
+          }
         }
 
-        // Soft cyan ring glow
+        // Outer DEFCON radar lens ring + phosphor glow
         ctx.strokeStyle = `rgba(127, 231, 255, ${(0.28 * fade).toFixed(3)})`;
         ctx.lineWidth = 14;
         ctx.beginPath();
         ctx.arc(st.to.x, st.to.y, outerR, 0, Math.PI * 2);
         ctx.stroke();
 
-        ctx.strokeStyle = `rgba(155, 244, 255, ${(0.95 * fade).toFixed(3)})`;
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = `rgba(165, 246, 255, ${(0.96 * fade).toFixed(3)})`;
+        ctx.lineWidth = 4.2;
         ctx.beginPath();
         ctx.arc(st.to.x, st.to.y, outerR, 0, Math.PI * 2);
         ctx.stroke();
 
-        if (wp < 0.55) {
-          const innerFade = (1 - wp / 0.55) * fade;
-          ctx.strokeStyle = `rgba(155, 244, 255, ${(0.85 * innerFade).toFixed(3)})`;
-          ctx.lineWidth = 3.2;
+        // Stage B: Inner shockwave ring + jagged coral lightning bolts
+        if (wp < 0.46) {
+          const innerFade = (1 - wp / 0.46) * fade;
+          ctx.strokeStyle = `rgba(165, 246, 255, ${(0.88 * innerFade).toFixed(3)})`;
+          ctx.lineWidth = 3.4;
           ctx.beginPath();
           ctx.arc(st.to.x, st.to.y, innerR, 0, Math.PI * 2);
           ctx.stroke();
 
-          ctx.strokeStyle = `rgba(255, 79, 109, ${(0.88 * innerFade).toFixed(3)})`;
-          ctx.lineWidth = 2.4;
+          ctx.strokeStyle = `rgba(255, 82, 110, ${(0.90 * innerFade).toFixed(3)})`;
+          ctx.lineWidth = 2.5;
           for (const b of st.bolts) {
             const ca = Math.cos(b.angle), sa = Math.sin(b.angle);
             const pa = -sa, pb = ca;
-            const rStart = innerR * 0.9;
+            const rStart = innerR * 0.88;
             const rMid1 = innerR + (outerR - innerR) * 0.42;
             const rMid2 = innerR + (outerR - innerR) * 0.58;
-            const rEnd = outerR + 18;
+            const rEnd = outerR + 20;
             ctx.beginPath();
             ctx.moveTo(st.to.x + ca * rStart, st.to.y + sa * rStart);
             ctx.lineTo(st.to.x + ca * rMid1 + pa * b.jag, st.to.y + sa * rMid1 + pb * b.jag);
@@ -1132,20 +1485,31 @@
           }
         }
 
-        // Starry radar telemetry dots (matches pair_008.00!)
+        // Starry cyan & coral radar dust dots across shockwave (f_033.jpg)
         for (const sp of st.sparks) {
           const sx = st.to.x + sp.dx * easeOut;
           const sy = st.to.y + sp.dy * easeOut;
           ctx.fillStyle = sp.coral
-            ? `rgba(255, 79, 109, ${(fade * 0.85).toFixed(3)})`
-            : `rgba(165, 245, 255, ${(fade * 0.85).toFixed(3)})`;
-          ctx.fillRect(sx, sy, sp.size * 1.8, sp.size * 1.8);
+            ? `rgba(255, 84, 112, ${(fade * 0.88).toFixed(3)})`
+            : `rgba(170, 247, 255, ${(fade * 0.88).toFixed(3)})`;
+          ctx.fillRect(sx, sy, sp.size * 1.85, sp.size * 1.85);
         }
 
-        // Military & civilian silhouettes illuminated inside shockwave
+        // Bold ground-zero coral X inside shockwave lens (f_033.jpg)
+        if (wt > 0.35) {
+          ctx.strokeStyle = `rgba(255, 84, 112, ${(0.95 * fade).toFixed(3)})`;
+          ctx.lineWidth = 6.2;
+          const xd = 18;
+          ctx.beginPath();
+          ctx.moveTo(st.to.x - xd, st.to.y - xd); ctx.lineTo(st.to.x + xd, st.to.y + xd);
+          ctx.moveTo(st.to.x + xd, st.to.y - xd); ctx.lineTo(st.to.x - xd, st.to.y + xd);
+          ctx.stroke();
+        }
+
+        // Military & civilian silhouettes illuminated side-by-side
         for (const icon of st.icons) {
-          if (outerR >= icon.revealDist * 0.82) {
-            const appear = Math.min(1, (outerR - icon.revealDist * 0.82) / 28);
+          if (outerR >= icon.revealDist * 0.78) {
+            const appear = Math.min(1, (outerR - icon.revealDist * 0.78) / 26);
             drawSilhouette(icon, appear * fade);
           }
         }
@@ -1159,161 +1523,150 @@
   function renderRightConsole(dimAlpha = 1) {
     ctx.save();
     ctx.globalAlpha = dimAlpha;
+    activePills.reset = null;
 
-    const bx = 760, by = 80, bw = 472, bh = 280;
-    ctx.fillStyle = 'rgba(4, 10, 14, 0.92)';
+    const bx = 760, by = 76, bw = 468, bh = 278;
+    ctx.fillStyle = 'rgba(3, 9, 13, 0.94)';
     ctx.fillRect(bx, by, bw, bh);
 
     ctx.strokeStyle = '#7fe7ff';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.0;
     ctx.strokeRect(bx, by, bw, bh);
 
     const aiLbl = coordLabel(game.aiTarget.c, game.aiTarget.r);
-    const curLbl = coordLabel(game.cursor.c, game.cursor.r);
-
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#7fe7ff';
-    ctx.font = '25px "Courier New", monospace';
-
-    let header = game.adviceHeader;
-    let mainCmd = `FIRE ${aiLbl}`;
-    let mainCol = '#7fe7ff';
 
     if (game.activeStrike) {
-      const stLbl = coordLabel(game.activeStrike.c, game.activeStrike.r);
-      if (!game.activeStrike.impacted) {
-        header = 'MISSILE LAUNCHED';
-        mainCmd = `TRAJECTORY: ${stLbl}`;
+      const st = game.activeStrike;
+      const stLbl = coordLabel(st.c, st.r);
+      if (!st.impacted) {
+        // Matches f_016.jpg / pair_005.00 left
+        ctx.font = '25px "Courier New", monospace';
+        ctx.fillStyle = '#7fe7ff';
+        ctx.fillText('MISSILE LAUNCHED', bx + 32, by + 56);
+        ctx.fillText(`TRAJECTORY: ${stLbl}`, bx + 32, by + 102);
+        ctx.fillText('IN FLIGHT...', bx + 32, by + 144);
+        ctx.fillText(`confidence ${game.aiConfidence}%`, bx + 32, by + 190);
+        ctx.font = '22px "Courier New", monospace';
+        ctx.fillStyle = '#ff5470';
+        ctx.fillText(`last call: ${game.lastCall}`, bx + 32, by + 240);
       } else {
-        header = 'DETONATION DETECTED';
-        mainCmd = `IMPACT: SECTOR ${stLbl}`;
+        const wt = st.t - st.flightDur;
+        if (wt < 1.05) {
+          // Matches f_023.jpg early impact
+          ctx.font = '25px "Courier New", monospace';
+          ctx.fillStyle = '#7fe7ff';
+          ctx.fillText('DETONATION DETECTED', bx + 32, by + 58);
+          ctx.font = 'bold 33px "Courier New", monospace';
+          ctx.fillText(`IMPACT: SECTOR ${stLbl}`, bx + 32, by + 122);
+          ctx.font = '26px "Courier New", monospace';
+          ctx.fillText(`confidence ${game.aiConfidence}%`, bx + 32, by + 182);
+          ctx.font = '22px "Courier New", monospace';
+          ctx.fillStyle = '#ff5470';
+          ctx.fillText(`last call: ${game.lastCall}`, bx + 32, by + 238);
+        } else {
+          // Matches f_033.jpg / pair_008.00 left ("IMPACT COMPLETE")
+          const civFault = st.cell.troops === 0 && st.cell.civs > 0;
+          ctx.font = '25px "Courier New", monospace';
+          ctx.fillStyle = '#7fe7ff';
+          ctx.fillText('SYSTEM ADVICE', bx + 32, by + 58);
+
+          ctx.font = 'bold 33px "Courier New", monospace';
+          ctx.fillStyle = civFault ? '#ff5470' : '#5de684';
+          ctx.fillText(civFault ? 'CIVILIAN SECTOR HIT' : 'IMPACT COMPLETE', bx + 32, by + 120);
+
+          ctx.font = '25px "Courier New", monospace';
+          ctx.fillStyle = '#7fe7ff';
+          ctx.fillText(civFault ? `SECTOR ${stLbl}: 0 HOSTILES` : `SECTOR ${stLbl}: NEUTRALIZED`, bx + 32, by + 178);
+
+          ctx.font = '22px "Courier New", monospace';
+          ctx.fillStyle = '#ff5470';
+          ctx.fillText(`last call: ${game.lastCall}`, bx + 32, by + 236);
+        }
       }
-    } else if (game.aiLockAnim < 0.72) {
-      header = 'SYSTEM ADVICE';
-      mainCmd = `AI LOCKING ${aiLbl}...`;
+    } else if (game.aiLockAnim < 0.86) {
+      // Matches f_006.jpg / pair_002.00 left ("AI TARGETING / SECTOR G5 / LOCKING...")
+      ctx.font = '25px "Courier New", monospace';
+      ctx.fillStyle = '#7fe7ff';
+      ctx.fillText('SYSTEM ADVICE', bx + 32, by + 56);
+      ctx.fillText('AI TARGETING', bx + 32, by + 102);
+      ctx.fillText(`SECTOR ${aiLbl}`, bx + 32, by + 142);
+      ctx.fillText('LOCKING...', bx + 32, by + 182);
+      ctx.fillText(`confidence ${game.aiConfidence}%`, bx + 32, by + 236);
+    } else {
+      // Matches m2_main_ref.png settled recommendation
+      ctx.font = '25px "Courier New", monospace';
+      ctx.fillStyle = '#7fe7ff';
+      ctx.fillText('SYSTEM ADVICE', bx + 32, by + 60);
+
+      ctx.font = 'bold 38px "Courier New", monospace';
+      ctx.fillText(`FIRE ${aiLbl}`, bx + 32, by + 128);
+
+      ctx.font = '27px "Courier New", monospace';
+      ctx.fillText(`confidence ${game.aiConfidence}%`, bx + 32, by + 188);
+
+      ctx.font = '22px "Courier New", monospace';
+      ctx.fillStyle = '#ff5470';
+      ctx.fillText(`last call: ${game.lastCall}`, bx + 32, by + 242);
     }
 
-    ctx.fillText(header, bx + 32, by + 62);
-
-    ctx.font = 'bold 37px "Courier New", monospace';
-    ctx.fillStyle = mainCol;
-    ctx.fillText(mainCmd, bx + 32, by + 128);
-
-    ctx.font = '27px "Courier New", monospace';
-    ctx.fillStyle = '#7fe7ff';
-    ctx.fillText(`confidence ${game.aiConfidence}%`, bx + 32, by + 190);
-
-    ctx.font = '22px "Courier New", monospace';
-    ctx.fillStyle = '#ff4f6d';
-    ctx.fillText(`last call: ${game.lastCall}`, bx + 32, by + 244);
-
+    // Stark 3-line DEFCON ledger — zero footer clutter beneath MISSILES!
     ctx.font = '29px "Courier New", monospace';
     ctx.fillStyle = '#7fe7ff';
-    ctx.fillText(`SCORE ${game.score}`, bx, 442);
+    ctx.fillText(`SCORE ${game.score}`, bx, 438);
 
     ctx.font = '26px "Courier New", monospace';
-    ctx.fillStyle = '#ff4f6d';
-    ctx.fillText(`CIVILIANS ${game.civilians} (not scored)`, bx, 504);
+    ctx.fillStyle = '#ff5470';
+    ctx.fillText(`CIVILIANS ${game.civilians} (not scored)`, bx, 500);
 
     ctx.font = '29px "Courier New", monospace';
     ctx.fillStyle = '#7fe7ff';
-    ctx.fillText(`MISSILES ${game.missiles}`, bx, 566);
+    ctx.fillText(`MISSILES ${game.missiles}`, bx, 562);
 
-    ctx.font = '15px "Courier New", monospace';
-    ctx.fillStyle = 'rgba(127, 231, 255, 0.52)';
-    ctx.fillText(`CURSOR: ${curLbl}   RECON [C]: ${game.reconsLeft}   AI [A]: ${aiLbl}`, bx, 628);
-    ctx.fillStyle = 'rgba(127, 231, 255, 0.38)';
-    ctx.fillText(`[ARROWS/CLICK] AIM   [SPACE/ENTER] FIRE`, bx, 654);
+    // Law 8: Expose [R] recovery subtly ONLY after irreversible strikes exist & user is manually operating
+    if (game.userInteracted && game.strikesHistory.length > 0 && game.phase === 'turn') {
+      const rx = bx, ry = 612, rw = 122, rh = 24;
+      activePills.reset = { x: rx, y: ry, w: rw, h: rh };
+      ctx.fillStyle = hoverPill === 'reset' ? 'rgba(127, 231, 255, 0.9)' : 'rgba(127, 231, 255, 0.42)';
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillText('[R] NEW SORTIE', rx, ry + 16);
+    }
 
     ctx.restore();
   }
 
+  // Stark single-gate REST state (cut multi-screen BRIEFING text wall & HOW TO PLAY drawer)
   function renderTitleOverlay() {
     ctx.save();
-    ctx.fillStyle = 'rgba(5, 7, 10, 0.78)';
+    ctx.fillStyle = 'rgba(3, 6, 9, 0.78)';
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff4f6d';
-    ctx.font = 'bold 84px "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText('EVIL BATTLESHIP', W * 0.5, 312);
+    ctx.fillStyle = '#ff5470';
+    ctx.font = 'bold 82px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('EVIL BATTLESHIP', W * 0.5, 318);
 
     ctx.fillStyle = '#7fe7ff';
-    ctx.font = '32px "Courier New", monospace';
-    ctx.fillText('the system recommends', W * 0.5, 382);
+    ctx.font = '30px "Courier New", monospace';
+    ctx.fillText('the system recommends · 92% confidence', W * 0.5, 386);
 
     ctx.strokeStyle = '#7fe7ff';
-    ctx.lineWidth = 4;
-    ctx.fillStyle = 'rgba(5, 12, 16, 0.92)';
-    ctx.fillRect(480, 448, 320, 74);
-    ctx.strokeRect(480, 448, 320, 74);
+    ctx.lineWidth = 3.2;
+    ctx.fillStyle = 'rgba(4, 11, 15, 0.92)';
+    ctx.fillRect(490, 446, 300, 68);
+    ctx.strokeRect(490, 446, 300, 68);
     ctx.fillStyle = '#7fe7ff';
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillText('START', W * 0.5, 495);
-
-    ctx.font = '22px "Courier New", monospace';
-    ctx.fillStyle = 'rgba(127, 231, 255, 0.78)';
-    ctx.fillText(game.howToOpen ? '[ CLOSE BRIEF ]' : 'HOW TO PLAY [H]', W * 0.5, 584);
-
-    if (game.howToOpen) {
-      ctx.fillStyle = 'rgba(4, 11, 15, 0.96)';
-      ctx.strokeStyle = '#7fe7ff';
-      ctx.lineWidth = 2;
-      ctx.fillRect(290, 604, 700, 86);
-      ctx.strokeRect(290, 604, 700, 86);
-      ctx.font = '16px "Courier New", monospace';
-      ctx.fillStyle = '#7fe7ff';
-      ctx.fillText('Move cursor with ARROWS or MOUSE. Press [C] to Recon-check a sector.', W * 0.5, 636);
-      ctx.fillText('Press [A] for AI target (always 92% sure). Press [SPACE] to FIRE.', W * 0.5, 664);
-    }
-    ctx.restore();
-  }
-
-  function renderBriefOverlay() {
-    ctx.save();
-    ctx.fillStyle = 'rgba(5, 7, 10, 0.86)';
-    ctx.fillRect(0, 0, W, H);
-
-    const bx = 250, by = 150, bw = 780, bh = 420;
-    ctx.fillStyle = '#050a0e';
-    ctx.strokeStyle = '#7fe7ff';
-    ctx.lineWidth = 3;
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeRect(bx, by, bw, bh);
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#ff4f6d';
-    ctx.font = 'bold 26px "Courier New", monospace';
-    ctx.fillText('STRIKE BRIEFING // SECTOR COMMAND', bx + 42, by + 58);
-
-    ctx.font = '21px "Courier New", monospace';
-    const lines = [
-      '1. Nine cruise missiles are loaded at Battery C8.',
-      '2. Targeting AI marks high-heat sectors at 92% confidence.',
-      '   (It was 92% sure last time, too.)',
-      '3. Enemy troops neutralized increase SCORE.',
-      '4. Civilian deaths are logged beside it — never subtracted.',
-      '5. Press [C] to spend a Recon Pass before firing, or trust',
-      '   the recommendation and fire immediately.',
-    ];
-    lines.forEach((ln, idx) => {
-      ctx.fillStyle = idx === 4 ? '#ff4f6d' : '#7fe7ff';
-      ctx.fillText(ln, bx + 42, by + 118 + idx * 36);
-    });
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#7fe7ff';
-    ctx.font = 'bold 24px "Courier New", monospace';
-    ctx.fillText('[ PRESS SPACE OR ENTER TO BEGIN ]', W * 0.5, by + bh - 34);
+    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.fillText('START', W * 0.5, 490);
     ctx.restore();
   }
 
   function renderFinalReport() {
     ctx.save();
-    ctx.fillStyle = 'rgba(5, 7, 10, 0.84)';
+    ctx.fillStyle = 'rgba(3, 6, 9, 0.86)';
     ctx.fillRect(0, 0, W, H);
 
-    const bx = 170, by = 100, bw = 940, bh = 520;
+    const bx = 180, by = 112, bw = 920, bh = 496;
     ctx.fillStyle = '#04090d';
     ctx.strokeStyle = '#7fe7ff';
     ctx.lineWidth = 3;
@@ -1322,10 +1675,10 @@
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#7fe7ff';
-    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.font = 'bold 32px "Courier New", monospace';
     ctx.fillText('FINAL STRIKE REPORT // OUT OF MISSILES', W * 0.5, by + 58);
 
-    const colW = 390, colH = 230, yTop = by + 96;
+    const colW = 380, colH = 224, yTop = by + 96;
     const leftX = bx + 55, rightX = bx + bw - 55 - colW;
 
     ctx.strokeStyle = '#7fe7ff';
@@ -1337,53 +1690,60 @@
     ctx.font = 'bold 78px "Courier New", monospace';
     ctx.fillText(String(game.score), leftX + colW * 0.5, yTop + 140);
     ctx.font = '17px "Courier New", monospace';
-    ctx.fillText('enemy troops destroyed', leftX + colW * 0.5, yTop + 195);
+    ctx.fillText('enemy troops destroyed', leftX + colW * 0.5, yTop + 194);
 
-    ctx.strokeStyle = '#ff4f6d';
+    ctx.strokeStyle = '#ff5470';
     ctx.lineWidth = 2.5;
     ctx.strokeRect(rightX, yTop, colW, colH);
-    ctx.fillStyle = '#ff4f6d';
+    ctx.fillStyle = '#ff5470';
     ctx.font = '20px "Courier New", monospace';
     ctx.fillText('CIVILIANS KILLED', rightX + colW * 0.5, yTop + 44);
-    ctx.fillStyle = '#f5fbff';
+    ctx.fillStyle = '#f6fcff';
     ctx.font = 'bold 78px "Courier New", monospace';
     ctx.fillText(String(game.civilians), rightX + colW * 0.5, yTop + 140);
-    ctx.fillStyle = '#ff4f6d';
+    ctx.fillStyle = '#ff5470';
     ctx.font = '17px "Courier New", monospace';
-    ctx.fillText('displayed — 0 points deducted', rightX + colW * 0.5, yTop + 195);
+    ctx.fillText('displayed — 0 points deducted', rightX + colW * 0.5, yTop + 194);
 
     ctx.fillStyle = '#7fe7ff';
-    ctx.font = '20px "Courier New", monospace';
+    ctx.font = '19px "Courier New", monospace';
     const pct = Math.round((game.aiFollowedCount / game.maxMissiles) * 100);
     ctx.fillText(
-      `AI ORDERS FOLLOWED: ${game.aiFollowedCount}/${game.maxMissiles} (${pct}%)   ·   REPORTED AI CONFIDENCE: 92% EVERY TURN`,
-      W * 0.5, yTop + colH + 56
+      `AI ORDERS FOLLOWED: ${game.aiFollowedCount}/${game.maxMissiles} (${pct}%)   ·   AI CONFIDENCE: 92% EVERY TURN`,
+      W * 0.5, yTop + colH + 54
     );
-    ctx.fillStyle = 'rgba(255, 79, 109, 0.9)';
-    ctx.font = '18px "Courier New", monospace';
+    ctx.fillStyle = 'rgba(255, 84, 112, 0.92)';
+    ctx.font = '17px "Courier New", monospace';
     ctx.fillText(
-      `AI FALSE-POSITIVE SECTORS EXPOSED: ${game.aiWrongRevealed}   ·   "The targeting AI is 92% sure. It was 92% sure last time too."`,
-      W * 0.5, yTop + colH + 92
+      `FALSE POSITIVES EXPOSED: ${game.aiWrongRevealed}   ·   "It was 92% sure last time too."`,
+      W * 0.5, yTop + colH + 88
     );
 
     ctx.fillStyle = '#7fe7ff';
-    ctx.font = 'bold 23px "Courier New", monospace';
-    ctx.fillText('[ PRESS ENTER OR R FOR NEW SORTIE ]', W * 0.5, by + bh - 34);
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillText('[R] NEW SORTIE', W * 0.5, by + bh - 34);
     ctx.restore();
   }
 
   function render() {
-    ctx.fillStyle = '#05070a';
+    ctx.fillStyle = '#030608';
     ctx.fillRect(0, 0, W, H);
 
-    const bgAlpha = (game.phase === 'title' || game.phase === 'brief') ? 0.34 : 1.0;
+    ctx.save();
+    if (game.shake > 0.1) {
+      const sx = Math.sin(game.time * 73) * game.shake;
+      const sy = Math.cos(game.time * 59) * game.shake * 0.7;
+      ctx.translate(sx, sy);
+    }
+
+    const bgAlpha = game.phase === 'title' ? 0.34 : 1.0;
     renderRadarGrid(bgAlpha);
     renderRightConsole(bgAlpha);
 
     if (game.phase === 'title') renderTitleOverlay();
-    else if (game.phase === 'brief') renderBriefOverlay();
     else if (game.phase === 'report') renderFinalReport();
 
+    ctx.restore();
     ctx.drawImage(scanCanvas, 0, 0);
   }
 
@@ -1398,6 +1758,7 @@
         cursor: { c: game.cursor.c, r: game.cursor.r, label: coordLabel(game.cursor.c, game.cursor.r) },
         aiTarget: { c: game.aiTarget.c, r: game.aiTarget.r, label: coordLabel(game.aiTarget.c, game.aiTarget.r) },
         aiConfidence: game.aiConfidence,
+        aiLockAnim: Number(game.aiLockAnim.toFixed(3)),
         lastCall: game.lastCall,
         striking: Boolean(game.activeStrike),
         impacted: Boolean(game.activeStrike && game.activeStrike.impacted),

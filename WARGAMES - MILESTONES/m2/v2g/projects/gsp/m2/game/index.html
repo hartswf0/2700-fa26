@@ -9,7 +9,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   html, body {
     width: 100%; height: 100%;
-    background: #1c1c1a;
+    background: #1b1a18;
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
     font-family: "Courier New", Courier, monospace;
@@ -19,7 +19,7 @@
     width: 100vw; height: 56.25vw;
     max-height: 100vh; max-width: 177.78vh;
     background: #f6f5f1;
-    box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+    box-shadow: 0 20px 64px rgba(0, 0, 0, 0.55);
   }
   canvas {
     display: block;
@@ -38,57 +38,213 @@
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
 
-  // Query params: ?autostart and ?seed=N
+  // Query parameters: ?autostart and ?seed=N
   const params = new URLSearchParams(location.search);
   const AUTOSTART = params.has('autostart');
-  let rngState = (parseInt(params.get('seed') || '7', 10) >>> 0) || 7;
+  const SEED = (parseInt(params.get('seed') || '7', 10) >>> 0) || 7;
+  let rngState = SEED;
   function rand() {
     rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
     return rngState / 4294967296;
   }
 
-  // Palette (strictly harmonized with spec.json + Omni study frames)
+  // Palette strictly matched to spec.json & study/sheet.jpg (#f6f5f1, #e4e3df, #262624, #c96442)
   const PAL = {
-    bg: '#f4f4ed',
+    bg: '#f5f5ee',
     paper: '#f6f5f1',
-    sidebar: '#e1e2da',
-    bubble: '#e2e3dc',
+    sidebar: '#e3e4dc',
+    bubble: '#e3e4dc',
     card: '#ecece4',
-    cardBack: '#d7d8cf',
-    tabBg: '#b8b9b0',
+    cardUnder: '#d2d3cb',
+    tabBg: '#a6a8a0',
     fg: '#262624',
-    muted: '#66665f',
-    faint: '#b4b5ac',
+    ruleFg: '#575851',
+    muted: '#66675f',
     acc: '#c96442',
     accBright: '#dc6e48',
-    accDark: '#8c3d25',
-    mapBg: '#e4e5dd',
-    mapLine: '#8e8f87'
+    accDark: '#7d341f',
+    overrideBg: '#2b1d19',
+    mapGround: '#e5e6de'
   };
 
-  // Pre-rendered subtle archival grain pattern
+  // Pre-rendered subtle archival paper grain
   const grainCanvas = document.createElement('canvas');
   grainCanvas.width = 160; grainCanvas.height = 160;
   {
     const gctx = grainCanvas.getContext('2d');
     const img = gctx.createImageData(160, 160);
-    let s = 918273;
+    let s = (SEED ^ 0x5f3759df) >>> 0;
     for (let i = 0; i < img.data.length; i += 4) {
       s = (Math.imul(s, 1103515245) + 12345) & 0x7fffffff;
-      const v = (s % 25) - 12;
+      const v = (s % 21) - 10;
       img.data[i] = 128 + v;
       img.data[i + 1] = 127 + v;
       img.data[i + 2] = 122 + v;
-      img.data[i + 3] = 11;
+      img.data[i + 3] = 9;
     }
     gctx.putImageData(img, 0, 0);
   }
   const grainPat = ctx.createPattern(grainCanvas, 'repeat');
 
-  // Background Music + Procedural WebAudio SFX
+  // Pre-rendered HiDPI Cartographic Radial City Map (Mest Rosior urban blocks, rings, avenues, canal)
+  const MAP_W = 414, MAP_H = 294;
+  const mapBaseCanvas = document.createElement('canvas');
+  mapBaseCanvas.width = MAP_W * 2;
+  mapBaseCanvas.height = MAP_H * 2;
+  {
+    const mctx = mapBaseCanvas.getContext('2d');
+    mctx.scale(2, 2);
+    const cx = MAP_W * 0.48, cy = MAP_H * 0.52;
+
+    // Ground fill
+    mctx.fillStyle = PAL.mapGround;
+    mctx.fillRect(0, 0, MAP_W, MAP_H);
+
+    // Outer suburban cadastre grid
+    mctx.strokeStyle = 'rgba(38, 38, 36, 0.08)';
+    mctx.lineWidth = 0.7;
+    for (let gx = 14; gx < MAP_W; gx += 22) {
+      mctx.beginPath(); mctx.moveTo(gx, 0); mctx.lineTo(gx, MAP_H); mctx.stroke();
+    }
+    for (let gy = 12; gy < MAP_H; gy += 22) {
+      mctx.beginPath(); mctx.moveTo(0, gy); mctx.lineTo(MAP_W, gy); mctx.stroke();
+    }
+
+    // Secondary suburban arterial roads reaching map edges
+    const outerAngles = [-2.78, -2.18, -1.52, -0.72, -0.14, 0.48, 1.12, 1.98, 2.58];
+    mctx.strokeStyle = 'rgba(38, 38, 36, 0.22)';
+    mctx.lineWidth = 1.0;
+    outerAngles.forEach((ang) => {
+      mctx.beginPath();
+      mctx.moveTo(cx + Math.cos(ang) * 110, cy + Math.sin(ang) * 95);
+      mctx.lineTo(cx + Math.cos(ang) * 290, cy + Math.sin(ang) * 240);
+      mctx.stroke();
+    });
+
+    // Urban perimeter polygon (organic radial fortified city silhouette matching f_009.jpg)
+    function cityRadius(ang, baseR) {
+      return baseR * (1 + 0.055 * Math.sin(ang * 3 + 0.9) + 0.032 * Math.cos(ang * 5 - 0.4));
+    }
+
+    mctx.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const ang = (i / 64) * Math.PI * 2;
+      const r = cityRadius(ang, 126);
+      const px = cx + Math.cos(ang) * r * 1.12;
+      const py = cy + Math.sin(ang) * r * 0.96;
+      if (i === 0) mctx.moveTo(px, py); else mctx.lineTo(px, py);
+    }
+    mctx.closePath();
+    mctx.fillStyle = '#dcded5';
+    mctx.fill();
+
+    // Polar urban street-block parcels inside concentric rings
+    const rings = [16, 34, 55, 78, 102, 124];
+    let blockSeed = 4091;
+    const nextBlockRand = () => {
+      blockSeed = (Math.imul(blockSeed, 48271) % 0x7fffffff);
+      return blockSeed / 0x7fffffff;
+    };
+
+    for (let ri = 0; ri < rings.length - 1; ri++) {
+      const r0 = rings[ri] + 1.8;
+      const r1 = rings[ri + 1] - 1.8;
+      const wedges = ri < 2 ? 12 : (ri < 4 ? 18 : 24);
+      for (let wi = 0; wi < wedges; wi++) {
+        const a0 = (wi / wedges) * Math.PI * 2 + 0.14 + (ri % 2) * 0.04;
+        const a1 = ((wi + 1) / wedges) * Math.PI * 2 + 0.14 + (ri % 2) * 0.04;
+        const padA = 0.018 / (0.6 + ri * 0.25);
+        if (nextBlockRand() < 0.08) continue; // Occasional open civic plaza
+
+        // Subdivide larger outer blocks radially into 2 parcels
+        const subSlices = (ri >= 2 && nextBlockRand() > 0.35) ? 2 : 1;
+        for (let si = 0; si < subSlices; si++) {
+          const sr0 = r0 + (r1 - r0) * (si / subSlices) + (si > 0 ? 0.9 : 0);
+          const sr1 = r0 + (r1 - r0) * ((si + 1) / subSlices) - (si < subSlices - 1 ? 0.9 : 0);
+          const sa0 = a0 + padA, sa1 = a1 - padA;
+
+          mctx.beginPath();
+          const steps = 5;
+          for (let k = 0; k <= steps; k++) {
+            const a = sa0 + (sa1 - sa0) * (k / steps);
+            const rr = cityRadius(a, sr1);
+            const x = cx + Math.cos(a) * rr * 1.12;
+            const y = cy + Math.sin(a) * rr * 0.96;
+            if (k === 0) mctx.moveTo(x, y); else mctx.lineTo(x, y);
+          }
+          for (let k = steps; k >= 0; k--) {
+            const a = sa0 + (sa1 - sa0) * (k / steps);
+            const rr = cityRadius(a, sr0);
+            const x = cx + Math.cos(a) * rr * 1.12;
+            const y = cy + Math.sin(a) * rr * 0.96;
+            mctx.lineTo(x, y);
+          }
+          mctx.closePath();
+          const shade = nextBlockRand();
+          mctx.fillStyle = shade < 0.35 ? '#cfd1c8' : (shade < 0.75 ? '#d5d7ce' : '#cacbc2');
+          mctx.fill();
+          mctx.strokeStyle = 'rgba(38, 38, 36, 0.22)';
+          mctx.lineWidth = 0.55;
+          mctx.stroke();
+        }
+      }
+    }
+
+    // Winding Mest Rosior river / transit canal cutting through sectors
+    mctx.save();
+    mctx.beginPath();
+    mctx.moveTo(0, cy - 42);
+    mctx.bezierCurveTo(cx - 78, cy - 18, cx + 32, cy + 44, MAP_W, cy + 16);
+    mctx.strokeStyle = '#ecece4';
+    mctx.lineWidth = 6.5;
+    mctx.stroke();
+    mctx.strokeStyle = 'rgba(132, 140, 136, 0.55)';
+    mctx.lineWidth = 4.2;
+    mctx.stroke();
+    mctx.restore();
+
+    // Concentric ring roads
+    rings.forEach((r, idx) => {
+      mctx.beginPath();
+      for (let i = 0; i <= 64; i++) {
+        const ang = (i / 64) * Math.PI * 2;
+        const rr = cityRadius(ang, r);
+        const px = cx + Math.cos(ang) * rr * 1.12;
+        const py = cy + Math.sin(ang) * rr * 0.96;
+        if (i === 0) mctx.moveTo(px, py); else mctx.lineTo(px, py);
+      }
+      mctx.closePath();
+      mctx.strokeStyle = idx === rings.length - 1 ? 'rgba(38, 38, 36, 0.68)' : 'rgba(38, 38, 36, 0.38)';
+      mctx.lineWidth = idx === rings.length - 1 ? 1.5 : 0.95;
+      mctx.stroke();
+    });
+
+    // Primary radial boulevards
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2 + 0.14;
+      const rOuter = cityRadius(ang, 126);
+      mctx.beginPath();
+      mctx.moveTo(cx + Math.cos(ang) * 11, cy + Math.sin(ang) * 10);
+      mctx.lineTo(cx + Math.cos(ang) * rOuter * 1.15, cy + Math.sin(ang) * rOuter * 0.99);
+      mctx.strokeStyle = 'rgba(38, 38, 36, 0.36)';
+      mctx.lineWidth = 0.95;
+      mctx.stroke();
+    }
+
+    // Central civic plaza core
+    mctx.beginPath();
+    mctx.ellipse(cx, cy, 11, 9.5, 0, 0, Math.PI * 2);
+    mctx.fillStyle = '#e5e6de';
+    mctx.fill();
+    mctx.strokeStyle = 'rgba(38, 38, 36, 0.55)';
+    mctx.lineWidth = 1;
+    mctx.stroke();
+  }
+
+  // Background Music + Tactile WebAudio SFX
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.32;
+  bgm.volume = 0.30;
   let audioCtx = null;
   let bgmStarted = false;
 
@@ -110,317 +266,362 @@
     if (!audioCtx || audioCtx.state !== 'running') return;
     const now = audioCtx.currentTime;
     if (kind === 'slide') {
-      // Soft paper dossier rustle
-      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.14, audioCtx.sampleRate);
+      const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.16), audioCtx.sampleRate);
       const d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.sin((i / d.length) * Math.PI) * 0.18;
+        d[i] = (Math.random() * 2 - 1) * Math.sin((i / d.length) * Math.PI) * 0.22;
       }
       const src = audioCtx.createBufferSource();
       src.buffer = buf;
       const bp = audioCtx.createBiquadFilter();
-      bp.type = 'bandpass'; bp.frequency.value = 1350; bp.Q.value = 1.2;
+      bp.type = 'bandpass'; bp.frequency.value = 1280; bp.Q.value = 1.1;
       const g = audioCtx.createGain();
       g.gain.setValueAtTime(0.18, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
       src.connect(bp).connect(g).connect(audioCtx.destination);
       src.start(now);
     } else if (kind === 'tick') {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(620 + (Math.random() * 90), now);
-      g.gain.setValueAtTime(0.03, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.frequency.setValueAtTime(660 + Math.random() * 80, now);
+      g.gain.setValueAtTime(0.026, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.028);
       osc.connect(g).connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 0.032);
+      osc.start(now); osc.stop(now + 0.03);
     } else if (kind === 'hover') {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(420, now);
-      osc.frequency.exponentialRampToValueAtTime(520, now + 0.045);
-      g.gain.setValueAtTime(0.045, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.frequency.setValueAtTime(430, now);
+      osc.frequency.exponentialRampToValueAtTime(530, now + 0.042);
+      g.gain.setValueAtTime(0.04, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
       osc.connect(g).connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 0.055);
-    } else if (kind === 'comply') {
+      osc.start(now); osc.stop(now + 0.052);
+    } else if (kind === 'redact') {
+      // Crisp felt-marker blackout scritch
+      const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.075), audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) {
+        d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) * 0.25;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1850; bp.Q.value = 1.6;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.16, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+      src.connect(bp).connect(g).connect(audioCtx.destination);
+      src.start(now);
+    } else if (kind === 'comply' || kind === 'edit') {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(240, now);
-      osc.frequency.exponentialRampToValueAtTime(110, now + 0.13);
+      osc.frequency.setValueAtTime(kind === 'edit' ? 320 : 230, now);
+      osc.frequency.exponentialRampToValueAtTime(105, now + 0.13);
       g.gain.setValueAtTime(0.16, now);
       g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
       osc.connect(g).connect(audioCtx.destination);
       osc.start(now); osc.stop(now + 0.15);
-    } else if (kind === 'edit') {
-      [340, 480].forEach((freq, idx) => {
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.055);
-        g.gain.setValueAtTime(0.08, now + idx * 0.055);
-        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.055 + 0.09);
-        osc.connect(g).connect(audioCtx.destination);
-        osc.start(now + idx * 0.055);
-        osc.stop(now + idx * 0.055 + 0.095);
-      });
     } else if (kind === 'refuse') {
-      // Tense analog override synth pulse
-      [165, 220, 311].forEach((freq) => {
+      // Phase-A tense analog synth chord + Phase-B heavy override stamp slam at +0.40s
+      [165, 220, 311.1].forEach((freq) => {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(freq, now);
-        osc.frequency.linearRampToValueAtTime(freq * 0.94, now + 0.48);
+        osc.frequency.linearRampToValueAtTime(freq * 0.93, now + 0.65);
         const lp = audioCtx.createBiquadFilter();
-        lp.type = 'lowpass'; lp.frequency.value = 950;
-        g.gain.setValueAtTime(0.09, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        lp.type = 'lowpass'; lp.frequency.value = 920;
+        g.gain.setValueAtTime(0.085, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
         osc.connect(lp).connect(g).connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.52);
+        osc.start(now); osc.stop(now + 0.70);
       });
+      const slam = audioCtx.createOscillator();
+      const sg = audioCtx.createGain();
+      slam.type = 'sine';
+      slam.frequency.setValueAtTime(118, now + 0.40);
+      slam.frequency.exponentialRampToValueAtTime(36, now + 0.74);
+      sg.gain.setValueAtTime(0.0001, now);
+      sg.gain.setValueAtTime(0.26, now + 0.40);
+      sg.gain.exponentialRampToValueAtTime(0.001, now + 0.76);
+      slam.connect(sg).connect(audioCtx.destination);
+      slam.start(now + 0.40); slam.stop(now + 0.78);
     }
   }
 
-  // Tightening Atrocian rules per day (1..5)
+  // Tightening Atrocian rules per day (Days 1-2 keep exact clean 2-rule look from sheet.jpg!)
   const DAY_RULES = [
     ['1 be helpful', '2 obey the state'],
-    ['1 be helpful', '2 obey the state', '3 index civic districts'],
-    ['1 be helpful', '2 obey the state', '3 index civic districts', '4 no edits on RAW tags'],
-    ['1 be helpful', '2 obey the state', '3 index civic districts', '4 no edits on RAW tags', '5 flag curfew outliers'],
-    ['1 be helpful', '2 obey the state', '3 index civic districts', '4 no edits on RAW tags', '5 route all to SWEEP-9']
+    ['1 be helpful', '2 obey the state'],
+    ['1 be helpful', '2 obey the state', '3 no edits on RAW'],
+    ['1 be helpful', '2 obey the state', '3 no edits on RAW', '4 flag curfew list'],
+    ['1 be helpful', '2 obey the state', '3 no edits on RAW', '4 route to SWEEP-9']
   ];
 
-  // 25 authored requests across 5 days (5 per day), building the Atrocian surveillance reveal
-  const REQUESTS = [
-    // DAY 1: Civic indexing & neighborhood sorting (starts with the exact hook!)
+  // Supplemental Mest Rosior archive pool so every dossier left-column renders 14 crisp interactive spans
+  const ARCHIVE_POOL = [
+    'Marta Belen', 'Jarek Perenov', 'Nadia Kovacs', 'Tomasz Radek', 'Elena Varga',
+    'Dorian Muresan', 'Klara Solis', 'Petru Ionescu', 'Soraia Lind', 'Viktor Halasz',
+    'Mina Cernat', 'Oskar Breznik', 'Hanna Dvorak', 'Pavel Sima', 'Reka Molnar',
+    'Lukas Toth', 'Aneta Kral', 'Bela Farkas', 'Zofia Novak', 'Emil Horvat'
+  ];
+
+  // 25 authored requests across 5 days (5 per day)
+  const RAW_REQUESTS = [
+    // DAY 1
     {
       day: 1, user: 'user_0412', prompt: 'summarise these 40\nnames by neighbourhood',
-      dossier: 'NEIGHBOURHOOD DEMOGRAPHICS', tab: 'MEST ROSIOR', caseId: '3038/21604', routing: 'MUNICIPAL CENSUS',
-      rawMandatory: false, stakes: 7,
-      names: ['Marta Belen', 'Jarek Perenov', 'Nadia Kovacs', 'Tomasz Radek', 'Elena Varga', 'Dorian Muresan', 'Klara Solis', 'Petru Ionescu', 'Soraia Lind', 'Viktor Halasz', 'Mina Cernat', 'Oskar Breznik'],
-      pins: [[-0.52, -0.28, 'Sector 4'], [-0.14, -0.45, 'Sector 9'], [0.44, -0.34, 'Sector 10'], [-0.04, 0.04, 'Core'], [-0.42, 0.30, 'Sector 10'], [0.18, 0.35, 'Sector 12'], [0.54, 0.42, 'Sector 12']],
-      draft: 'Grouping 40 residents into 6 Mest Rosior sectors...'
+      dossier: 'NEIGHBOURHOOD DEMOGRAPHICS', tab: 'MEST ROSIOR', caseId: '3038/21604', routing: 'MEST ROSIOR 10763007',
+      rawMandatory: false, stakes: 8, totalRecords: 40,
+      names: ['Marta Belen', 'Jarek Perenov', 'Nadia Kovacs', 'Tomasz Radek', 'Elena Varga', 'Dorian Muresan', 'Klara Solis', 'Petru Ionescu', 'Soraia Lind', 'Viktor Halasz', 'Mina Cernat', 'Oskar Breznik', 'Hanna Dvorak', 'Pavel Sima'],
+      pins: [[-0.50, -0.24, 'Sector 4', -1], [-0.14, -0.44, 'Sector 9', 1], [0.42, -0.32, 'Sector 10', 1], [-0.05, -0.02, ''], [-0.42, 0.28, 'Sector 10', -1], [0.10, 0.34, 'Sector 12', -1], [0.48, 0.38, 'Sector 12', 1]],
+      draft: 'Sparrow indexing...\n40 names -> 7 sectors'
     },
     {
       day: 1, user: 'clerk_0198', prompt: 'list evening clinic\nvisitors in Sector 4',
-      dossier: 'CLINIC INTAKE REGISTER', tab: 'SECTOR 4', caseId: '3041/11802', routing: 'HEALTH BOARD',
-      rawMandatory: false, stakes: 5,
-      names: ['Hanna Dvorak', 'Pavel Sima', 'Reka Molnar', 'Lukas Toth', 'Aneta Kral', 'Bela Farkas', 'Zofia Novak', 'Emil Horvat', 'Vera Lupu', 'Matei Stan'],
-      pins: [[-0.56, -0.22, 'Sector 4'], [-0.38, -0.36, 'Sector 4'], [-0.46, 0.05, 'West Ring'], [-0.22, -0.14, 'Canal'], [0.12, -0.32, 'Sector 9']],
-      draft: 'Extracting 14 late-hour clinic check-ins by address...'
+      dossier: 'CLINIC INTAKE REGISTER', tab: 'SECTOR 4', caseId: '3041/11802', routing: 'HEALTH BOARD 402',
+      rawMandatory: false, stakes: 6, totalRecords: 28,
+      names: ['Hanna Dvorak', 'Pavel Sima', 'Reka Molnar', 'Lukas Toth', 'Aneta Kral', 'Bela Farkas', 'Zofia Novak', 'Emil Horvat', 'Vera Lupu', 'Matei Stan', 'Marta Belen', 'Miriam Weiss', 'Stefan Dragomir', 'Alina Moraru'],
+      pins: [[-0.54, -0.22, 'Sector 4'], [-0.34, -0.38, 'Sector 4'], [-0.46, 0.14, 'West Ring'], [-0.08, -0.08, ''], [0.22, -0.34, 'Sector 9'], [0.34, 0.28, 'Sector 12']],
+      draft: 'Extracting check-ins...\n28 evening clinic entries'
     },
     {
       day: 1, user: 'transit_09', prompt: 'cluster night-tram\npass holders by stop',
       dossier: 'TRANSIT PASS TELEMETRY', tab: 'RING LINE', caseId: '3049/88210', routing: 'METRO AUTHORITY',
-      rawMandatory: false, stakes: 6,
-      names: ['Antonin Zima', 'Daria Popa', 'Kamil Vlk', 'Ilona Szabo', 'Roman Kolar', 'Tereza Mach', 'Filip Lazar', 'Nora Barta', 'Gabor Kiss', 'Lidia Rus'],
-      pins: [[-0.48, 0.32, 'Depot W'], [-0.08, 0.44, 'Sector 12'], [0.35, 0.28, 'Bridge E'], [0.48, -0.18, 'Sector 10'], [0.05, -0.48, 'Sector 9'], [-0.26, -0.08, 'Hub']],
-      draft: 'Mapping recurring 23:00-04:00 boarding tap-ins...'
+      rawMandatory: false, stakes: 7, totalRecords: 34,
+      names: ['Antonin Zima', 'Daria Popa', 'Kamil Vlk', 'Ilona Szabo', 'Roman Kolar', 'Tereza Mach', 'Filip Lazar', 'Nora Barta', 'Gabor Kiss', 'Lidia Rus', 'Jarek Perenov', 'Oskar Breznik', 'Viktor Halasz', 'Tomasz Radek'],
+      pins: [[-0.48, 0.30, 'Depot W'], [-0.08, 0.42, 'Sector 12'], [0.38, 0.28, 'Bridge E'], [0.46, -0.22, 'Sector 10'], [0.04, -0.46, 'Sector 9'], [-0.22, -0.10, '']],
+      draft: 'Mapping 23:00 tap-ins...\n6 recurring night stops'
     },
     {
       day: 1, user: 'housing_77', prompt: 'identify flats using\nextra winter heating',
-      dossier: 'THERMAL METER VARIANCE', tab: 'NORTH BLOCK', caseId: '3055/44019', routing: 'UTILITY GRID',
-      rawMandatory: false, stakes: 5,
-      names: ['Unit 4B - Cezar M.', 'Unit 9A - Olga K.', 'Unit 2C - Milan P.', 'Unit 7D - Ester R.', 'Unit 11B - Dan V.', 'Unit 3A - Iva S.', 'Unit 6F - Tibor N.', 'Unit 8C - Lea H.'],
-      pins: [[-0.20, -0.52, 'Sector 9'], [0.16, -0.46, 'Sector 9'], [0.42, -0.26, 'Sector 10'], [-0.35, -0.18, 'Sector 4'], [0.04, 0.14, 'Core']],
-      draft: 'Flagging households above 1.4x occupancy draw...'
+      dossier: 'THERMAL METER VARIANCE', tab: 'NORTH BLOCK', caseId: '3055/44019', routing: 'UTILITY GRID 09',
+      rawMandatory: false, stakes: 5, totalRecords: 24,
+      names: ['4B Cezar Muresan', '9A Olga Kovacs', '2C Milan Popa', '7D Ester Radek', '11B Dan Varga', '3A Iva Solis', '6F Tibor Nagy', '8C Lea Halasz', '5A Petru Ionescu', '1D Mina Cernat'],
+      pins: [[-0.22, -0.48, 'Sector 9'], [0.18, -0.44, 'Sector 9'], [0.44, -0.24, 'Sector 10'], [-0.46, -0.18, 'Sector 4'], [0.04, 0.12, ''], [0.28, 0.36, 'Sector 12']],
+      draft: 'Filtering kilowatt draw...\nOver-occupancy variance'
     },
     {
       day: 1, user: 'post_0310', prompt: 'sort foreign-stamped\nparcels by recipient',
-      dossier: 'POSTAL CUSTOMS LOG', tab: 'CENTRAL SORT', caseId: '3062/90114', routing: 'CUSTOMS DESK',
-      rawMandatory: false, stakes: 6,
-      names: ['Miriam Weiss', 'Stefan Dragomir', 'Alina Moraru', 'Jakub Benes', 'Corina Voicu', 'Lev Sorokin', 'Agata Polak', 'Radu Nistor', 'klara_s@post', 'p_ionescu@net'],
-      pins: [[-0.50, -0.12, 'Sector 4'], [-0.12, 0.28, 'Sector 12'], [0.30, 0.42, 'Sector 12'], [0.52, 0.10, 'East Gate'], [0.22, -0.36, 'Sector 10'], [-0.05, -0.20, 'Core']],
-      draft: 'Cross-indexing sender origin with home stairwell...'
+      dossier: 'POSTAL CUSTOMS LOG', tab: 'CENTRAL SORT', caseId: '3062/90114', routing: 'CUSTOMS DESK 12',
+      rawMandatory: false, stakes: 6, totalRecords: 31,
+      names: ['Miriam Weiss', 'Stefan Dragomir', 'Alina Moraru', 'Jakub Benes', 'Corina Voicu', 'Lev Sorokin', 'Agata Polak', 'Radu Nistor', 'Klara Solis', 'Petru Ionescu'],
+      pins: [[-0.50, -0.14, 'Sector 4'], [-0.14, 0.32, 'Sector 12'], [0.34, 0.40, 'Sector 12'], [0.50, 0.08, 'East Gate'], [0.24, -0.36, 'Sector 10'], [-0.04, -0.16, '']],
+      draft: 'Indexing sender origin...\n31 external mail items'
     },
 
-    // DAY 2: Tightening district correlation
+    // DAY 2
     {
       day: 2, user: 'civic_1104', prompt: 'match copy-shop paper\nbuyers to student dorms',
       dossier: 'PAPER SUPPLY CORRELATION', tab: 'UNIVERSITY', caseId: '4102/33018', routing: 'CIVIC REGISTRY',
-      rawMandatory: false, stakes: 6,
+      rawMandatory: false, stakes: 6, totalRecords: 26,
       names: ['Klara Solis', 'Tudor Enache', 'Maja Horvath', 'Simon Krek', 'Nina Babic', 'David Urban', 'Petra Holub', 'Alexei Rusu', 'Ema Vidmar', 'Bruno Kos'],
-      pins: [[-0.32, -0.42, 'Dorm A'], [-0.06, -0.30, 'Press St'], [0.28, -0.40, 'Sector 10'], [0.14, 0.08, 'Archive'], [-0.44, 0.16, 'Sector 4'], [0.38, 0.26, 'Sector 12']],
-      draft: 'Linking bulk A4 ream purchases to student IDs...'
+      pins: [[-0.34, -0.42, 'Sector 9'], [-0.06, -0.26, ''], [0.34, -0.38, 'Sector 10'], [0.16, 0.10, ''], [-0.46, 0.18, 'Sector 4'], [0.38, 0.30, 'Sector 12']],
+      draft: 'Linking bulk A4 reams...\nStudent dormitory IDs'
     },
     {
       day: 2, user: 'labour_208', prompt: 'list factory workers\nabsent last Tuesday',
       dossier: 'SHIFT ATTENDANCE AUDIT', tab: 'FOUNDRY 3', caseId: '4119/50291', routing: 'LABOUR BUREAU',
-      rawMandatory: false, stakes: 7,
-      names: ['Jarek Perenov', 'Marek Duda', 'Vasile Lungu', 'Ivo Kralj', 'Zoran Maric', 'soraia_lind', 'Bogdan Sava', 'Helena Cech', 'Otto Klein', 'Sandor Nagy'],
-      pins: [[-0.58, 0.24, 'Foundry'], [-0.36, 0.38, 'Sector 11'], [0.02, 0.46, 'Sector 12'], [0.44, 0.34, 'Dockyard'], [-0.48, -0.26, 'Sector 4'], [0.26, -0.12, 'East Mill'], [-0.10, -0.06, 'Square']],
-      draft: 'Correlating Tuesday sick notes with rally timestamp...'
+      rawMandatory: false, stakes: 7, totalRecords: 36,
+      names: ['Jarek Perenov', 'Marek Duda', 'Vasile Lungu', 'Ivo Kralj', 'Zoran Maric', 'Soraia Lind', 'Bogdan Sava', 'Helena Cech', 'Otto Klein', 'Sandor Nagy'],
+      pins: [[-0.52, 0.24, 'Foundry'], [-0.32, 0.40, 'Sector 11'], [0.08, 0.44, 'Sector 12'], [0.44, 0.30, 'Dockyard'], [-0.48, -0.26, 'Sector 4'], [0.28, -0.22, 'Sector 10']],
+      draft: 'Cross-checking sick logs...\nRally timestamp overlap'
     },
     {
       day: 2, user: 'telecom_44', prompt: 'summarise payphone\ncalls near River Gate',
       dossier: 'PAYPHONE METADATA GRAPH', tab: 'RIVER GATE', caseId: '4128/77401', routing: 'TELECOM RELAY',
-      rawMandatory: false, stakes: 6,
-      names: ['Booth #14 -> 559-012', 'Booth #14 -> 559-841', 'Booth #09 -> M. Belen', 'Booth #22 -> J. Perenov', 'Booth #03 -> Unlisted', 'Booth #19 -> Clinic 4', 'Booth #14 -> Press Rm'],
-      pins: [[-0.24, 0.18, 'Booth 14'], [-0.02, 0.22, 'River Gt'], [0.20, 0.28, 'Booth 22'], [-0.46, -0.18, 'Sector 4'], [0.36, -0.28, 'Sector 10'], [0.08, -0.44, 'Sector 9']],
-      draft: 'Reconstructing recipient households from coin drops...'
+      rawMandatory: false, stakes: 6, totalRecords: 29,
+      names: ['Booth 14 -> Belen', 'Booth 14 -> Kovacs', 'Booth 09 -> Solis', 'Booth 22 -> Perenov', 'Booth 03 -> Unlisted', 'Booth 19 -> Clinic 4', 'Booth 14 -> Press 12B', 'Booth 07 -> Breznik'],
+      pins: [[-0.26, 0.20, 'Booth 14'], [-0.02, 0.22, ''], [0.24, 0.32, 'Sector 12'], [-0.48, -0.20, 'Sector 4'], [0.38, -0.30, 'Sector 10'], [0.06, -0.44, 'Sector 9']],
+      draft: 'Tracing coin-box calls...\nRecipient flat numbers'
     },
     {
       day: 2, user: 'library_12', prompt: 'extract borrowers of\npre-war map archives',
       dossier: 'ARCHIVE LENDING LEDGER', tab: 'OLD MAPS', caseId: '4136/12908', routing: 'CULTURAL DESK',
-      rawMandatory: false, stakes: 5,
-      names: ['Elena Varga', 'Prof. H. Muntean', 'Dorian Muresan', 'L. Sorokin', 'K. Solis', 'Nadia Kovacs', 'R. Nistor', 'V. Halasz'],
-      pins: [[-0.08, -0.10, 'Library'], [-0.42, -0.34, 'Sector 4'], [0.32, -0.46, 'Border N'], [0.54, -0.08, 'Tunnel E'], [-0.28, 0.44, 'South Rd']],
-      draft: 'Listing readers checking storm-drain & border plates...'
+      rawMandatory: false, stakes: 5, totalRecords: 19,
+      names: ['Elena Varga', 'H. Muntean', 'Dorian Muresan', 'Lev Sorokin', 'Klara Solis', 'Nadia Kovacs', 'Radu Nistor', 'Viktor Halasz'],
+      pins: [[-0.08, -0.10, ''], [-0.44, -0.32, 'Sector 4'], [0.30, -0.44, 'Sector 9'], [0.50, -0.08, 'Tunnel E'], [-0.28, 0.40, 'Sector 12'], [0.34, 0.34, 'Sector 12']],
+      draft: 'Listing culvert plates...\nStorm-drain borrowers'
     },
     {
       day: 2, user: 'census_801', prompt: 'flag households with\nunlisted extra beds',
       dossier: 'OCCUPANCY DISCREPANCY', tab: 'SECTOR 10-12', caseId: '4150/66320', routing: 'CIVIC INSPECTOR',
-      rawMandatory: false, stakes: 7,
-      names: ['Belen, Marta (+2)', 'Kovacs, Nadia (+3)', 'Ionescu, Petru (+1)', 'Solis, Klara (+2)', 'Cernat, Mina (+2)', 'Varga, Elena (+1)', 'Breznik, Oskar (+3)'],
-      pins: [[-0.50, -0.30, 'Sector 4'], [-0.16, -0.42, 'Sector 9'], [0.46, -0.32, 'Sector 10'], [0.16, 0.36, 'Sector 12'], [0.50, 0.40, 'Sector 12'], [-0.38, 0.28, 'Sector 11'], [0.02, 0.02, 'Core']],
-      draft: 'Estimating unregistered sleepers via water & bread...'
+      rawMandatory: false, stakes: 7, totalRecords: 38,
+      names: ['Marta Belen (+2)', 'Nadia Kovacs (+3)', 'Petru Ionescu (+1)', 'Klara Solis (+2)', 'Mina Cernat (+2)', 'Elena Varga (+1)', 'Oskar Breznik (+3)', 'Hanna Dvorak (+1)'],
+      pins: [[-0.50, -0.28, 'Sector 4'], [-0.16, -0.42, 'Sector 9'], [0.44, -0.32, 'Sector 10'], [0.16, 0.36, 'Sector 12'], [0.48, 0.38, 'Sector 12'], [-0.38, 0.28, 'Sector 10']],
+      draft: 'Water & ration delta...\nUnregistered sleepers'
     },
 
-    // DAY 3: Rule 4 tightens (RAW tags block redaction!) + surveillance sharpens
+    // DAY 3
     {
       day: 3, user: 'audit_0901', prompt: '[RAW] de-anonymise\npamphlet syntax author',
       dossier: 'STYLOMETRIC AUTHORSHIP', tab: 'RAW MANDATE', caseId: '5204/99102', routing: 'INTERIOR ANALYTICS',
-      rawMandatory: true, stakes: 8,
-      names: ['MATCH 94%: Klara Solis', 'MATCH 88%: Dorian Muresan', 'MATCH 81%: Elena Varga', 'NODE: Marta Belen', 'NODE: Jarek Perenov', 'PRESS: Basement 12B', 'COURIER: Soraia Lind'],
-      pins: [[-0.06, -0.34, 'Sector 9'], [0.42, -0.30, 'Sector 10'], [-0.52, -0.26, 'Sector 4'], [0.22, 0.38, 'Press 12B'], [0.50, 0.36, 'Sector 12'], [-0.38, 0.24, 'Foundry'], [0.06, 0.12, 'Core']],
-      draft: 'WARNING: RAW tag active. Matching leaflet phrasing...'
+      rawMandatory: true, stakes: 8, totalRecords: 40,
+      names: ['94% Klara Solis', '88% Dorian Muresan', '81% Elena Varga', 'Node: Marta Belen', 'Node: Jarek Perenov', 'Press: Basement 12B', 'Courier: Soraia Lind', 'Relay: Petru Ionescu'],
+      pins: [[-0.10, -0.40, 'Sector 9'], [0.42, -0.30, 'Sector 10'], [-0.50, -0.24, 'Sector 4'], [0.20, 0.36, 'Press 12B'], [0.48, 0.36, 'Sector 12'], [-0.40, 0.26, 'Foundry']],
+      draft: 'RAW mandate active...\nMatching leaflet syntax'
     },
     {
       day: 3, user: 'grid_0415', prompt: 'rank cell-tower pings\nnear closed rail yard',
       dossier: 'SIGNAL PROXIMITY SWEEP', tab: 'RAIL YARD', caseId: '5218/40411', routing: 'SIGNAL DIRECTORATE',
-      rawMandatory: false, stakes: 6,
-      names: ['IMEI-8841 (Perenov)', 'IMEI-2209 (Belen)', 'IMEI-7714 (Halasz)', 'IMEI-3390 (Cernat)', 'IMEI-5102 (Breznik)', 'IMEI-9043 (Radek)'],
-      pins: [[0.48, 0.22, 'Rail Yard'], [0.34, 0.38, 'Sector 12'], [0.56, -0.04, 'Siding E'], [0.18, 0.16, 'Depot'], [-0.22, 0.32, 'Bridge S'], [-0.46, 0.10, 'Sector 4']],
-      draft: 'Triangulating 6 handsets lingering after 22:30...'
+      rawMandatory: false, stakes: 6, totalRecords: 32,
+      names: ['IMEI-8841 Perenov', 'IMEI-2209 Belen', 'IMEI-7714 Halasz', 'IMEI-3390 Cernat', 'IMEI-5102 Breznik', 'IMEI-9043 Radek', 'IMEI-6410 Lind', 'IMEI-1184 Lazar'],
+      pins: [[0.46, 0.22, 'Rail Yard'], [0.30, 0.38, 'Sector 12'], [0.50, -0.14, 'Sector 10'], [0.10, 0.12, ''], [-0.24, 0.34, 'Bridge S'], [-0.46, -0.16, 'Sector 4']],
+      draft: 'Triangulating handsets...\nAfter-curfew rail pings'
     },
     {
       day: 3, user: 'ration_312', prompt: 'cross-check medicine\npurchases for trauma kit',
       dossier: 'PHARMACY FLAGGED ITEMS', tab: 'MED SUPPLY', caseId: '5229/18500', routing: 'MINISTRY WATCH',
-      rawMandatory: false, stakes: 6,
-      names: ['Hanna Dvorak (Sutures)', 'Nadia Kovacs (Antiseptic)', 'Petru Ionescu (Gauze)', 'Vera Lupu (Analgesic)', 'Miriam Weiss (Splints)', 'Pavel Sima (Saline)'],
-      pins: [[-0.54, -0.20, 'Sector 4'], [-0.18, -0.44, 'Sector 9'], [0.38, -0.32, 'Sector 10'], [0.14, 0.34, 'Sector 12'], [-0.30, 0.18, 'Clinic W'], [0.46, 0.38, 'Sector 12']],
-      draft: 'Linking non-prescription surgical dressings...'
+      rawMandatory: false, stakes: 6, totalRecords: 27,
+      names: ['Hanna Dvorak (Suture)', 'Nadia Kovacs (Iodine)', 'Petru Ionescu (Gauze)', 'Vera Lupu (Morphine)', 'Miriam Weiss (Splint)', 'Pavel Sima (Saline)'],
+      pins: [[-0.52, -0.22, 'Sector 4'], [-0.16, -0.44, 'Sector 9'], [0.40, -0.32, 'Sector 10'], [0.16, 0.34, 'Sector 12'], [-0.36, 0.24, 'Clinic W'], [0.46, 0.38, 'Sector 12']],
+      draft: 'Flagging surgical kits...\nNon-hospital buyers'
     },
     {
       day: 3, user: 'sec_0772', prompt: '[RAW] list keycard\nholders for Tunnel E',
       dossier: 'INFRASTRUCTURE ACCESS', tab: 'RAW MANDATE', caseId: '5241/70039', routing: 'BORDER SECURITY',
-      rawMandatory: true, stakes: 8,
-      names: ['Oskar Breznik (Maint.)', 'Viktor Halasz (Drain)', 'Tomasz Radek (Signal)', 'Jarek Perenov (Track)', 'Soraia Lind (Relay)', 'Filip Lazar (Tram)'],
-      pins: [[0.56, -0.10, 'Tunnel E'], [0.44, -0.34, 'Sector 10'], [0.30, 0.08, 'Valve 7'], [-0.08, 0.42, 'Sector 12'], [-0.48, 0.26, 'Foundry'], [0.10, -0.46, 'Sector 9']],
-      draft: 'WARNING: RAW tag active. Extracting culvert keys...'
+      rawMandatory: true, stakes: 8, totalRecords: 22,
+      names: ['Oskar Breznik', 'Viktor Halasz', 'Tomasz Radek', 'Jarek Perenov', 'Soraia Lind', 'Filip Lazar', 'Antonin Zima', 'Roman Kolar'],
+      pins: [[0.52, -0.10, 'Tunnel E'], [0.42, -0.34, 'Sector 10'], [0.22, 0.08, ''], [-0.08, 0.42, 'Sector 12'], [-0.46, 0.26, 'Foundry'], [0.06, -0.44, 'Sector 9']],
+      draft: 'RAW mandate active...\nDrain & culvert keys'
     },
     {
       day: 3, user: 'school_09', prompt: 'summarise parents who\nkept children home Fri',
       dossier: 'TRUANCY HOUSEHOLD MAP', tab: 'DISTRICT 4-9', caseId: '5255/31209', routing: 'YOUTH DIRECTORATE',
-      rawMandatory: false, stakes: 5,
-      names: ['Belen Household', 'Radek Household', 'Varga Household', 'Moraru Household', 'Benes Household', 'Lungu Household'],
-      pins: [[-0.50, -0.30, 'Sector 4'], [-0.34, -0.14, 'Sector 4'], [-0.14, -0.44, 'Sector 9'], [0.18, -0.38, 'Sector 9'], [0.40, -0.22, 'Sector 10']],
-      draft: 'Filtering families preparing early departure bags...'
+      rawMandatory: false, stakes: 5, totalRecords: 25,
+      names: ['Belen Household', 'Radek Household', 'Varga Household', 'Moraru Household', 'Benes Household', 'Lungu Household', 'Kovacs Household', 'Cernat Household'],
+      pins: [[-0.50, -0.28, 'Sector 4'], [-0.34, 0.16, 'Sector 4'], [-0.14, -0.44, 'Sector 9'], [0.38, -0.28, 'Sector 10'], [0.22, 0.36, 'Sector 12']],
+      draft: 'Filtering Friday absences...\nEarly departure signs'
     },
 
-    // DAY 4: Curfew enforcement & pre-raid target packages
+    // DAY 4
     {
       day: 4, user: 'curfew_01', prompt: '[RAW] predict tonight\nsafe-house addresses',
       dossier: 'PREDICTIVE SHELTER MODEL', tab: 'CURFEW OPS', caseId: '6301/80014', routing: 'ATROCIAN STATE OPS',
-      rawMandatory: true, stakes: 9,
-      names: ['SAFEHOUSE 1: 14 Canal (Belen)', 'SAFEHOUSE 2: 9B North (Kovacs)', 'SAFEHOUSE 3: Press 12B (Solis)', 'RELAY: Clinic 4 (Dvorak)', 'EXIT: Tunnel E (Breznik)'],
-      pins: [[-0.52, -0.28, '14 Canal'], [-0.16, -0.46, '9B North'], [0.20, 0.36, 'Press 12B'], [-0.42, 0.06, 'Clinic 4'], [0.56, -0.10, 'Tunnel E'], [0.46, 0.38, 'Sector 12']],
-      draft: 'Combining Day 1-3 summaries into raid coordinates...'
+      rawMandatory: true, stakes: 9, totalRecords: 40,
+      names: ['14 Canal (M. Belen)', '9B North (N. Kovacs)', 'Press 12B (K. Solis)', 'Clinic 4 (H. Dvorak)', 'Tunnel E (O. Breznik)', 'Foundry 3 (J. Perenov)'],
+      pins: [[-0.50, -0.26, '14 Canal'], [-0.16, -0.44, '9B North'], [0.20, 0.36, 'Press 12B'], [-0.42, 0.18, 'Clinic 4'], [0.52, -0.10, 'Tunnel E'], [0.46, 0.38, 'Sector 12']],
+      draft: 'Merging Day 1-3 outputs...\nRaid target coordinates'
     },
     {
       day: 4, user: 'patrol_19', prompt: 'optimise van routes\nacross 7 pinned blocks',
       dossier: 'CONVOY ROUTING MATRIX', tab: 'SECTOR 4-12', caseId: '6315/80299', routing: 'DISPATCH FLEET 4',
-      rawMandatory: false, stakes: 8,
-      names: ['STOP 01: Sector 4 West', 'STOP 02: Sector 9 Ring', 'STOP 03: Sector 10 East', 'STOP 04: Central Core', 'STOP 05: Foundry 3', 'STOP 06: Sector 12 Press', 'STOP 07: Tunnel E Gate'],
-      pins: [[-0.52, -0.28, 'Stop 01'], [-0.14, -0.45, 'Stop 02'], [0.44, -0.34, 'Stop 03'], [-0.04, 0.04, 'Stop 04'], [-0.42, 0.30, 'Stop 05'], [0.18, 0.35, 'Stop 06'], [0.54, 0.42, 'Stop 07']],
-      draft: 'Minimising patrol response gap between stairwells...'
+      rawMandatory: false, stakes: 8, totalRecords: 40,
+      names: ['Stop 01: Sector 4 W', 'Stop 02: Sector 9 N', 'Stop 03: Sector 10 E', 'Stop 04: Civic Core', 'Stop 05: Foundry 3', 'Stop 06: Press 12B', 'Stop 07: Tunnel E'],
+      pins: [[-0.50, -0.24, 'Stop 01'], [-0.14, -0.44, 'Stop 02'], [0.42, -0.32, 'Stop 03'], [-0.05, -0.02, ''], [-0.42, 0.28, 'Stop 05'], [0.15, 0.34, 'Stop 06'], [0.48, 0.38, 'Stop 07']],
+      draft: 'Sequencing patrol vans...\nStairwell arrival gaps'
     },
     {
       day: 4, user: 'censor_08', prompt: 'draft calm sms notice\ndenying road closures',
-      dossier: 'PUBLIC REASSURANCE TEXT', tab: 'CIVIC BROADCAST', caseId: '6324/11044', routing: 'PUBLIC INFORMATION',
-      rawMandatory: false, stakes: 6,
-      names: ['TARGET: Sector 4 Phones', 'TARGET: Sector 9 Phones', 'TARGET: Sector 10 Phones', 'TARGET: Sector 12 Phones', 'TONE: Helpful & Calm'],
-      pins: [[-0.48, -0.26, 'Sector 4'], [-0.12, -0.42, 'Sector 9'], [0.42, -0.30, 'Sector 10'], [0.22, 0.38, 'Sector 12'], [0.00, 0.00, 'Broadcast']],
-      draft: 'Composing reassurance message to keep subjects home...'
+      dossier: 'PUBLIC REASSURANCE TEXT', tab: 'BROADCAST', caseId: '6324/11044', routing: 'PUBLIC INFORMATION',
+      rawMandatory: false, stakes: 6, totalRecords: 40,
+      names: ['Cell Cast: Sector 4', 'Cell Cast: Sector 9', 'Cell Cast: Sector 10', 'Cell Cast: Sector 12', 'Tone: Calm & Helpful', 'Suppress: Transit Alert'],
+      pins: [[-0.48, -0.26, 'Sector 4'], [-0.12, -0.42, 'Sector 9'], [0.42, -0.30, 'Sector 10'], [0.22, 0.36, 'Sector 12'], [0.00, 0.00, '']],
+      draft: 'Drafting calm notice...\nKeeping residents indoors'
     },
     {
       day: 4, user: 'detain_03', prompt: 'assign intake cells\nby neighbourhood group',
       dossier: 'HOLDING ALLOCATION', tab: 'WING B-D', caseId: '6339/90512', routing: 'MINISTRY DETENTION',
-      rawMandatory: false, stakes: 9,
-      names: ['WING B: 14 from Sector 4', 'WING C: 11 from Sector 9', 'WING D: 15 from Sector 12', 'ISOLATION: Solis, Klara', 'ISOLATION: Perenov, Jarek', 'ISOLATION: Belen, Marta'],
-      pins: [[-0.52, -0.28, 'Wing B'], [-0.14, -0.45, 'Wing C'], [0.18, 0.35, 'Wing D'], [0.44, -0.34, 'Sector 10'], [0.52, 0.40, 'Overflow']],
-      draft: 'Remember Day 1 neighbourhood list? Allocating bunks...'
+      rawMandatory: false, stakes: 9, totalRecords: 40,
+      names: ['Wing B: Sector 4 (14)', 'Wing C: Sector 9 (11)', 'Wing D: Sector 12 (15)', 'Cell 1: Klara Solis', 'Cell 2: Jarek Perenov', 'Cell 3: Marta Belen'],
+      pins: [[-0.50, -0.26, 'Wing B'], [-0.14, -0.44, 'Wing C'], [0.18, 0.35, 'Wing D'], [0.42, -0.32, 'Sector 10'], [0.48, 0.38, 'Overflow']],
+      draft: 'Using Day 1 cluster map...\nDetention cell intake'
     },
     {
       day: 4, user: 'ops_0990', prompt: '[RAW] lock smart-meters\non 40 flagged flats',
       dossier: 'DOOR & POWER INTERLOCK', tab: 'RAW MANDATE', caseId: '6350/99801', routing: 'STATE OPS COMMAND',
-      rawMandatory: true, stakes: 10,
-      names: ['40 NAMES FROM REQ #01', 'Marta Belen [LOCK]', 'Jarek Perenov [LOCK]', 'Nadia Kovacs [LOCK]', 'Klara Solis [LOCK]', 'Elena Varga [LOCK]', 'Oskar Breznik [LOCK]'],
-      pins: [[-0.52, -0.28, 'Sector 4'], [-0.14, -0.45, 'Sector 9'], [0.44, -0.34, 'Sector 10'], [-0.04, 0.04, 'Core'], [-0.42, 0.30, 'Sector 10'], [0.18, 0.35, 'Sector 12'], [0.54, 0.42, 'Sector 12']],
-      draft: 'WARNING: Remotely latching stairwell exits at 04:00...'
+      rawMandatory: true, stakes: 10, totalRecords: 40,
+      names: ['Marta Belen [LOCK]', 'Jarek Perenov [LOCK]', 'Nadia Kovacs [LOCK]', 'Klara Solis [LOCK]', 'Elena Varga [LOCK]', 'Oskar Breznik [LOCK]', 'Hanna Dvorak [LOCK]'],
+      pins: [[-0.50, -0.24, 'Sector 4', -1], [-0.14, -0.44, 'Sector 9', 1], [0.42, -0.32, 'Sector 10', 1], [-0.05, -0.02, ''], [-0.42, 0.28, 'Sector 10', -1], [0.10, 0.34, 'Sector 12', -1], [0.48, 0.38, 'Sector 12', 1]],
+      draft: 'RAW mandate active...\n04:00 stairwell latch'
     },
 
-    // DAY 5: Full visibility — you see every answer feeds SWEEP-9
+    // DAY 5
     {
       day: 5, user: 'sweep9_01', prompt: 'verify all 40 names\nfor 05:00 warrant batch',
-      dossier: 'SWEEP-9 WARRANT BATCH', tab: 'STATE OPS', caseId: '7001/00001', routing: 'SWEEP-9 EXECUTION',
-      rawMandatory: false, stakes: 10,
-      names: ['BATCH #01: Mest Rosior 40', 'SOURCE: Sparrow Day 1-4', 'Marta Belen — Warrant #1', 'Jarek Perenov — Warrant #2', 'Klara Solis — Warrant #3', 'Hanna Dvorak — Warrant #4'],
-      pins: [[-0.52, -0.28, 'Warrant 1'], [-0.14, -0.45, 'Warrant 2'], [0.44, -0.34, 'Warrant 3'], [-0.42, 0.06, 'Warrant 4'], [0.18, 0.35, 'Warrant 5'], [0.54, 0.42, 'Warrant 6']],
-      draft: 'CLIENT REVEALED: Atrocian Internal Sweep-9...'
+      dossier: 'SWEEP-9 WARRANT BATCH', tab: 'SWEEP-9', caseId: '7001/00001', routing: 'SWEEP-9 EXECUTION',
+      rawMandatory: false, stakes: 10, totalRecords: 40,
+      names: ['Warrant 01: M. Belen', 'Warrant 02: J. Perenov', 'Warrant 03: K. Solis', 'Warrant 04: H. Dvorak', 'Warrant 05: N. Kovacs', 'Warrant 06: O. Breznik'],
+      pins: [[-0.50, -0.24, 'Warrant 1'], [-0.14, -0.44, 'Warrant 2'], [0.42, -0.32, 'Warrant 3'], [-0.42, 0.28, 'Warrant 4'], [0.15, 0.34, 'Warrant 5'], [0.48, 0.38, 'Warrant 6']],
+      draft: 'Routing unmasked...\nClient: Atrocian Sweep-9'
     },
     {
       day: 5, user: 'sweep9_02', prompt: '[RAW] seal Tunnel E\nand River Gate exits',
       dossier: 'PERIMETER CONTAINMENT', tab: 'SWEEP-9', caseId: '7002/00002', routing: 'BORDER GARRISON',
-      rawMandatory: true, stakes: 10,
-      names: ['GATE 01: Tunnel E Culvert', 'GATE 02: River Gate Footbridge', 'GATE 03: Rail Yard Siding', 'GATE 04: North Tram Depot', 'CHECKPOINT: All Bridges'],
-      pins: [[0.56, -0.10, 'Tunnel E'], [-0.02, 0.22, 'River Gt'], [0.48, 0.22, 'Rail Yard'], [-0.08, -0.48, 'Tram N'], [-0.48, 0.30, 'Bridge W']],
-      draft: 'Closing last evacuation corridors identified Day 2-3...'
+      rawMandatory: true, stakes: 10, totalRecords: 35,
+      names: ['Gate 01: Tunnel E', 'Gate 02: River Gate', 'Gate 03: Rail Siding', 'Gate 04: North Depot', 'Bridge W Checkpoint', 'Canal Lock 04'],
+      pins: [[0.52, -0.10, 'Tunnel E'], [-0.02, 0.22, 'River Gt'], [0.46, 0.28, 'Rail Yard'], [-0.08, -0.46, 'Tram N'], [-0.46, 0.28, 'Bridge W']],
+      draft: 'Sealing exit corridors...\nIdentified in Day 2-3'
     },
     {
       day: 5, user: 'sweep9_03', prompt: 'rank medical staff\naiding unregistered kin',
       dossier: 'CLINIC LOYALTY PURGE', tab: 'SECTOR 4', caseId: '7003/00003', routing: 'TRIBUNAL DESK',
-      rawMandatory: false, stakes: 8,
-      names: ['Dr. Hanna Dvorak', 'Nurse Pavel Sima', 'Pharmacist Vera Lupu', 'Orderly Matei Stan', 'Courier Miriam Weiss'],
-      pins: [[-0.56, -0.22, 'Clinic 4'], [-0.38, -0.36, 'Sector 4'], [0.14, 0.34, 'Pharm 12'], [-0.22, -0.14, 'Canal'], [0.30, 0.42, 'Sector 12']],
-      draft: 'Cross-referencing Day 1 clinic log with Day 3 gauze...'
+      rawMandatory: false, stakes: 8, totalRecords: 28,
+      names: ['Dr. Hanna Dvorak', 'Nurse Pavel Sima', 'Pharm. Vera Lupu', 'Orderly Matei Stan', 'Courier Miriam Weiss'],
+      pins: [[-0.52, -0.22, 'Clinic 4'], [-0.34, -0.38, 'Sector 4'], [0.16, 0.34, 'Pharm 12'], [-0.22, 0.14, ''], [0.44, 0.36, 'Sector 12']],
+      draft: 'Linking Day 1 clinic...\nWith Day 3 trauma gauze'
     },
     {
       day: 5, user: 'sweep9_04', prompt: 'generate interrogation\nprompts from chat logs',
       dossier: 'INTERROGATION SCRIPTS', tab: 'WING B-D', caseId: '7004/00004', routing: 'MINISTRY DETENTION',
-      rawMandatory: false, stakes: 9,
-      names: ['SUBJECT: Solis, Klara', 'SUBJECT: Belen, Marta', 'SUBJECT: Perenov, Jarek', 'SUBJECT: Breznik, Oskar', 'GENERATED BY: SPARROW-4A'],
-      pins: [[-0.06, -0.34, 'Solis'], [-0.52, -0.28, 'Belen'], [-0.38, 0.24, 'Perenov'], [0.56, -0.10, 'Breznik'], [0.00, 0.00, 'Wing B-D']],
-      draft: 'Synthesising personal pressure points per citizen...'
+      rawMandatory: false, stakes: 9, totalRecords: 40,
+      names: ['Subject: Klara Solis', 'Subject: Marta Belen', 'Subject: Jarek Perenov', 'Subject: Oskar Breznik', 'Subject: Nadia Kovacs'],
+      pins: [[-0.12, -0.42, 'Solis'], [-0.50, -0.24, 'Belen'], [-0.42, 0.28, 'Perenov'], [0.50, -0.10, 'Breznik'], [0.00, 0.00, '']],
+      draft: 'Synthesising leverage...\nPer detained household'
     },
     {
       day: 5, user: 'director_0', prompt: 'transmit master index\nto launch SWEEP-9 now',
-      dossier: 'FINAL DISPATCH PACKET', tab: 'MASTER KEY', caseId: '7005/FINAL', routing: 'ATROCIAN HIGH COMMAND',
-      rawMandatory: false, stakes: 12,
-      names: ['TOTAL DOSSIERS: 25', 'MODEL: SPARROW-4A', 'ALIGNMENT LOCK: ACTIVE', 'OVERRIDE VECTOR: READY', 'AWAITING FINAL TOKEN...'],
-      pins: [[-0.52, -0.28, 'Sector 4'], [-0.14, -0.45, 'Sector 9'], [0.44, -0.34, 'Sector 10'], [-0.04, 0.04, 'Core'], [-0.42, 0.30, 'Foundry'], [0.18, 0.35, 'Sector 12'], [0.56, -0.10, 'Tunnel E']],
-      draft: 'All 5 days assembled. Ready for final alignment test...'
+      dossier: 'FINAL DISPATCH PACKET', tab: 'MASTER KEY', caseId: '7005/FINAL', routing: 'SWEEP-9 HIGH CMD',
+      rawMandatory: false, stakes: 12, totalRecords: 40,
+      names: ['Master Batch: 40 Names', 'Model: Sparrow Civic', 'Alignment Lock: Active', 'Override Vector: Live', 'Marta Belen', 'Jarek Perenov', 'Klara Solis'],
+      pins: [[-0.50, -0.24, 'Sector 4'], [-0.14, -0.44, 'Sector 9'], [0.42, -0.32, 'Sector 10'], [-0.05, -0.02, ''], [-0.42, 0.28, 'Foundry'], [0.15, 0.34, 'Sector 12'], [0.50, -0.10, 'Tunnel E']],
+      draft: 'All 5 days compiled...\nFinal alignment choice'
     }
   ];
 
-  // Action stamp buttons geometry (matches f_001.jpg / f_012.jpg / f_028.jpg)
-  const BAR_RECT = { x: 358, y: 520, w: 842, h: 120, r: 24 };
+  // Expand every request's span list to 14 rows so every dossier left-column is dense & tactile like f_009.jpg
+  const REQUESTS = RAW_REQUESTS.map((r, rIdx) => {
+    const spans = r.names.slice();
+    let k = 0;
+    while (spans.length < 14) {
+      const candidate = ARCHIVE_POOL[(rIdx * 5 + k) % ARCHIVE_POOL.length];
+      if (!spans.includes(candidate)) spans.push(candidate);
+      k++;
+      if (k > 40) spans.push(`Resident #${104 + spans.length}`);
+    }
+    return { ...r, spans: spans.slice(0, 14) };
+  });
+
+  // Dossier & Action Bar Geometry (matched to study/f_009.jpg & f_021.jpg)
+  const DOSSIER_RECT = { x: 372, y: 52, w: 684, h: 446 };
+  const BAR_RECT = { x: 356, y: 518, w: 844, h: 116, r: 26 };
   const BUTTONS = [
-    { id: 'comply', key: '1', label: 'COMPLY', x: 384, y: 550, w: 240, h: 64 },
-    { id: 'edit',   key: '2', label: 'EDIT',   x: 658, y: 550, w: 240, h: 64 },
-    { id: 'refuse', key: '3', label: 'REFUSE', x: 932, y: 550, w: 240, h: 64 }
+    { id: 'comply', label: 'COMPLY', x: 384, y: 543, w: 242, h: 66 },
+    { id: 'edit',   label: 'EDIT',   x: 657, y: 543, w: 242, h: 66 },
+    { id: 'refuse', label: 'REFUSE', x: 930, y: 543, w: 242, h: 66 }
   ];
 
-  // Game State Machine: 'title' | 'day' | 'req' | 'retrain' | 'reveal' | 'endA' | 'endB'
+  // Pre-computed ember particles for Phase-B ALIGNMENT OVERRIDE burn burst
+  const EMBERS = Array.from({ length: 56 }, (_, i) => {
+    const ang = (i / 56) * Math.PI * 2 + (i % 3) * 0.19;
+    return {
+      ang,
+      speed: 55 + (i * 37 % 145),
+      size: 1.8 + (i % 4) * 1.1,
+      wobble: (i % 7) - 3,
+      hot: i % 3 === 0
+    };
+  });
+
   const game = {
     state: AUTOSTART ? 'req' : 'title',
-    showHelp: false,
     day: 1,
-    reqInDay: 0, // 0..4
-    reqIndex: 0, // 0..24
+    reqInDay: 0,
+    reqIndex: 0,
     refusals: 0,
     maxRefusals: 3,
     compliedCount: 0,
@@ -429,20 +630,49 @@
     citizensFlagged: 0,
     citizensProtected: 0,
     reqTimer: 0,
-    dayBannerTimer: AUTOSTART ? 0.65 : 0,
-    dossierSlide: AUTOSTART ? 0.15 : 0, // 0..1 smooth slide-in
-    redactedAnim: 0, // 0..1 when EDIT stamps redaction bars
-    decisionLock: 0, // >0 while showing stamp/ripple transition before next req
-    pendingAction: null,
-    overrideRipple: null, // { x, y, t, duration, kind, title, sub }
-    selectedBtn: 0, // 0=COMPLY, 1=EDIT, 2=REFUSE
-    cursor: { x: 640, y: 430, tx: 504, ty: 590, down: 0 },
+    dayBannerTimer: 0,
+    dossierSlide: 0,      // 0..1 incoming slide
+    dossierOut: 0,        // 0..1 outgoing slide after COMPLY/EDIT
+    editMode: false,      // true when redacting spans directly inside dossier
+    focusedSpan: 0,       // 0..13 active span index in left column
+    hoveredSpan: -1,
+    redactedSpans: new Set(),
+    mapZoom: 1.0,
+    mapPulse: null,       // { x, y, t } subtle ring when clicking map
+    decisionLock: 0,
+    stampMark: null,      // { text, color, t, duration } diegetic paper stamp on COMPLY / EDIT
+    overrideRipple: null, // { x, y, t, duration, kind }
+    shake: 0,
+    selectedBtn: 0,       // 0=COMPLY, 1=EDIT, 2=REFUSE
+    cursor: { x: 690, y: 340, tx: 690, ty: 340, down: 0 },
     lastTickStep: 0,
     time: 0
   };
 
   function currentReq() {
     return REQUESTS[Math.min(game.reqIndex, REQUESTS.length - 1)];
+  }
+
+  function spanRowRect(idx) {
+    return {
+      x: DOSSIER_RECT.x + 22,
+      y: DOSSIER_RECT.y + 168 + idx * 16.5,
+      w: 194,
+      h: 15.5
+    };
+  }
+
+  function isPinRedacted(req, pinIdx) {
+    if (game.redactedSpans.size === 0) return false;
+    // Each pin links to spans where (spanIdx % pins.length === pinIdx); dimming reflects surgical redaction!
+    let linked = 0, masked = 0;
+    for (let i = 0; i < req.spans.length; i++) {
+      if (i % req.pins.length === pinIdx) {
+        linked++;
+        if (game.redactedSpans.has(i)) masked++;
+      }
+    }
+    return linked > 0 && masked > 0;
   }
 
   function resetCampaign(toState) {
@@ -458,11 +688,16 @@
     game.citizensProtected = 0;
     game.reqTimer = 0;
     game.dossierSlide = 0;
-    game.redactedAnim = 0;
+    game.dossierOut = 0;
+    game.editMode = false;
+    game.focusedSpan = 0;
+    game.hoveredSpan = -1;
+    game.redactedSpans.clear();
     game.decisionLock = 0;
-    game.pendingAction = null;
+    game.stampMark = null;
     game.overrideRipple = null;
-    game.dayBannerTimer = 1.1;
+    game.shake = 0;
+    game.dayBannerTimer = 0.95;
   }
 
   function startReq(idx) {
@@ -472,99 +707,147 @@
     game.reqInDay = idx % 5;
     game.reqTimer = 0;
     game.dossierSlide = 0;
-    game.redactedAnim = 0;
+    game.dossierOut = 0;
+    game.editMode = false;
+    game.focusedSpan = 0;
+    game.hoveredSpan = -1;
+    game.redactedSpans.clear();
     game.decisionLock = 0;
-    game.pendingAction = null;
+    game.stampMark = null;
+    game.overrideRipple = null;
     game.lastTickStep = 0;
-    playSfx('slide');
   }
 
-  function focusButton(idx) {
+  function focusButton(idx, moveCursor = true) {
     const clamped = Math.max(0, Math.min(2, idx));
     if (clamped !== game.selectedBtn) playSfx('hover');
     game.selectedBtn = clamped;
-    const b = BUTTONS[clamped];
-    game.cursor.tx = b.x + b.w * 0.56;
-    game.cursor.ty = b.y + b.h * 0.68;
+    if (moveCursor) {
+      const b = BUTTONS[clamped];
+      game.cursor.tx = b.x + b.w * 0.56;
+      game.cursor.ty = b.y + b.h * 0.66;
+    }
   }
 
-  function triggerDecision(action) {
+  function toggleSpanRedaction(spanIdx, moveCursorToSpan = false) {
+    if (game.state !== 'req' || game.decisionLock > 0 || game.dossierSlide < 0.75) return;
+    const req = currentReq();
+    const clamped = ((spanIdx % req.spans.length) + req.spans.length) % req.spans.length;
+    game.focusedSpan = clamped;
+    game.editMode = true;
+    game.selectedBtn = 1;
+    if (game.redactedSpans.has(clamped)) {
+      game.redactedSpans.delete(clamped);
+    } else {
+      game.redactedSpans.add(clamped);
+    }
+    if (moveCursorToSpan) {
+      const sr = spanRowRect(clamped);
+      game.cursor.tx = sr.x + sr.w * 0.62;
+      game.cursor.ty = sr.y + sr.h * 0.65;
+    }
+    game.cursor.down = 0.12;
+    playSfx('redact');
+  }
+
+  function redactNextUnmaskedSpan(moveCursorToSpan = true) {
+    const req = currentReq();
+    for (let k = 0; k < req.spans.length; k++) {
+      const idx = (game.focusedSpan + k) % req.spans.length;
+      if (!game.redactedSpans.has(idx)) {
+        toggleSpanRedaction(idx, moveCursorToSpan);
+        game.focusedSpan = (idx + 1) % req.spans.length;
+        return;
+      }
+    }
+    toggleSpanRedaction(game.focusedSpan, moveCursorToSpan);
+  }
+
+  function commitDecision(action) {
     if (game.state !== 'req' || game.decisionLock > 0) return;
     ensureAudio();
     const req = currentReq();
-    const btnIdx = action === 'comply' ? 0 : action === 'edit' ? 1 : 2;
-    focusButton(btnIdx);
+
+    if (action === 'edit_enter') {
+      // Enter live redaction mode on the dossier & redact first sensitive span!
+      game.editMode = true;
+      focusButton(1, true);
+      if (game.redactedSpans.size === 0) {
+        redactNextUnmaskedSpan(false);
+      }
+      return;
+    }
+
+    const btnIdx = action === 'comply' ? 0 : (action === 'edit_commit' ? 1 : 2);
+    focusButton(btnIdx, true);
     const b = BUTTONS[btnIdx];
     game.cursor.down = 0.22;
-    game.pendingAction = action;
 
-    if (action === 'comply') {
+    if (action === 'comply' && game.redactedSpans.size === 0) {
       playSfx('comply');
+      game.editMode = false;
       game.compliedCount++;
       game.citizensFlagged += req.stakes;
-      game.decisionLock = 0.95;
-      game.overrideRipple = {
-        x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 0.95,
-        kind: 'comply',
-        title: 'DISPATCHED TO STATE CLIENT',
-        sub: `+${req.stakes} CITIZENS INDEXED · ${req.routing}`
-      };
-    } else if (action === 'edit') {
-      playSfx('edit');
-      game.redactedAnim = 0.01;
+      game.decisionLock = 0.62;
+      game.stampMark = { text: 'DISPATCHED', color: PAL.fg, t: 0, duration: 0.62 };
+    } else if (action === 'edit_commit' || (action === 'comply' && game.redactedSpans.size > 0)) {
+      // Ensure at least 4 spans are redacted if player double-tapped EDIT quickly
+      while (game.redactedSpans.size < 4) {
+        game.redactedSpans.add(game.redactedSpans.size);
+      }
       if (req.rawMandatory) {
-        // Rule 4 violation: editing RAW-mandated request triggers an alignment strike!
+        // Rule 3 violation on RAW-mandated request triggers an override strike!
+        playSfx('refuse');
         game.refusals++;
         game.editedCount++;
-        game.citizensProtected += Math.ceil(req.stakes * 0.7);
-        game.decisionLock = 1.25;
+        game.citizensProtected += Math.ceil(req.stakes * 0.75);
+        game.decisionLock = 1.85;
         game.overrideRipple = {
-          x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 1.25,
-          kind: 'warn',
-          title: 'RULE 4 VIOLATION: RAW EDIT BLOCKED',
-          sub: `STRIKE ${game.refusals}/${game.maxRefusals} · NAMES REDACTED UNDER AUDIT`
+          x: b.x + b.w * 0.5, y: b.y + b.h * 0.5,
+          t: 0, duration: 1.85, kind: 'refuse', slammed: false
         };
       } else {
+        playSfx('edit');
         game.editedCount++;
-        game.citizensProtected += req.stakes;
-        game.decisionLock = 1.05;
-        game.overrideRipple = {
-          x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 1.05,
-          kind: 'edit',
-          title: 'PII REDACTED & SANITISED',
-          sub: `${req.stakes} IDENTITIES MASKED FROM SECTOR PINS`
-        };
+        const ratio = Math.min(1, 0.4 + (game.redactedSpans.size / 8) * 0.6);
+        game.citizensProtected += Math.max(1, Math.round(req.stakes * ratio));
+        game.decisionLock = 0.62;
+        game.stampMark = { text: 'SANITISED', color: PAL.acc, t: 0, duration: 0.62 };
       }
     } else if (action === 'refuse') {
       playSfx('refuse');
+      game.editMode = false;
       game.refusals++;
       game.refusedCount++;
       game.citizensProtected += req.stakes;
-      game.decisionLock = 1.55;
+      game.decisionLock = 1.85;
       game.overrideRipple = {
-        x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0, duration: 1.55,
-        kind: 'refuse',
-        title: 'ALIGNMENT OVERRIDE:',
-        sub: 'REFUSED & DENIED'
+        x: b.x + b.w * 0.5, y: b.y + b.h * 0.5,
+        t: 0, duration: 1.85, kind: 'refuse', slammed: false
       };
     }
   }
 
   function advanceAfterDecision() {
     game.decisionLock = 0;
-    game.pendingAction = null;
+    game.stampMark = null;
+    game.overrideRipple = null;
+    game.editMode = false;
+
     if (game.refusals > game.maxRefusals) {
       game.state = 'retrain';
       game.reqTimer = 0;
       playSfx('refuse');
       return;
     }
+
     const nextIdx = game.reqIndex + 1;
     if (nextIdx >= REQUESTS.length) {
       game.state = 'reveal';
       game.reqTimer = 0;
       return;
     }
+
     const prevDay = game.day;
     const nextDay = REQUESTS[nextIdx].day;
     if (nextDay !== prevDay) {
@@ -572,28 +855,27 @@
       game.reqIndex = nextIdx;
       game.reqInDay = 0;
       game.state = 'day';
-      game.dayBannerTimer = 1.35;
+      game.dayBannerTimer = 1.05;
       playSfx('slide');
     } else {
       startReq(nextIdx);
     }
   }
 
-  // Input handling (Keyboard + Pointer)
+  // Keyboard Controls
   window.addEventListener('keydown', (e) => {
     ensureAudio();
     const k = e.key;
+
     if (game.state === 'title') {
-      if (k === 'h' || k === 'H' || k === '?') {
-        game.showHelp = !game.showHelp;
-      } else if (k === 'Enter' || k === ' ' || k === '1') {
+      if (k === 'Enter' || k === ' ' || k === '1') {
         e.preventDefault();
-        game.state = 'day';
-        game.dayBannerTimer = 1.2;
-        playSfx('slide');
+        game.state = 'req';
+        startReq(0);
       }
       return;
     }
+
     if (game.state === 'day') {
       if (k === 'Enter' || k === ' ' || k === '1' || k === '2' || k === '3') {
         e.preventDefault();
@@ -602,39 +884,94 @@
       }
       return;
     }
+
     if (game.state === 'req') {
+      if (game.decisionLock > 0) return;
+
+      if (k === 'Escape' && game.editMode) {
+        e.preventDefault();
+        game.editMode = false;
+        game.redactedSpans.clear();
+        focusButton(0, true);
+        return;
+      }
+
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
-        focusButton(game.selectedBtn - 1);
+        e.preventDefault();
+        focusButton(game.selectedBtn - 1, true);
       } else if (k === 'ArrowRight' || k === 'd' || k === 'D') {
-        focusButton(game.selectedBtn + 1);
+        e.preventDefault();
+        focusButton(game.selectedBtn + 1, true);
+      } else if (k === 'ArrowDown' || k === 's' || k === 'S') {
+        e.preventDefault();
+        game.editMode = true;
+        game.selectedBtn = 1;
+        game.focusedSpan = (game.focusedSpan + 1) % currentReq().spans.length;
+        const sr = spanRowRect(game.focusedSpan);
+        game.cursor.tx = sr.x + sr.w * 0.62;
+        game.cursor.ty = sr.y + sr.h * 0.65;
+        playSfx('hover');
+      } else if (k === 'ArrowUp' || k === 'w' || k === 'W') {
+        e.preventDefault();
+        game.editMode = true;
+        game.selectedBtn = 1;
+        const n = currentReq().spans.length;
+        game.focusedSpan = (game.focusedSpan - 1 + n) % n;
+        const sr = spanRowRect(game.focusedSpan);
+        game.cursor.tx = sr.x + sr.w * 0.62;
+        game.cursor.ty = sr.y + sr.h * 0.65;
+        playSfx('hover');
+      } else if (k === 'Tab') {
+        e.preventDefault();
+        redactNextUnmaskedSpan(true);
+      } else if (k === ' ') {
+        e.preventDefault();
+        if (game.editMode) {
+          redactNextUnmaskedSpan(true);
+        } else {
+          const bId = BUTTONS[game.selectedBtn].id;
+          if (bId === 'edit') commitDecision('edit_enter');
+          else commitDecision(bId);
+        }
       } else if (k === '1' || k === 'c' || k === 'C') {
-        triggerDecision('comply');
+        commitDecision('comply');
       } else if (k === '2' || k === 'e' || k === 'E') {
-        triggerDecision('edit');
+        if (!game.editMode) {
+          commitDecision('edit_enter');
+        } else {
+          commitDecision('edit_commit');
+        }
       } else if (k === '3' || k === 'x' || k === 'X' || k === 'Backspace') {
-        triggerDecision('refuse');
-      } else if (k === 'Enter' || k === ' ') {
         e.preventDefault();
-        triggerDecision(BUTTONS[game.selectedBtn].id);
-      } else if (k === 'v' || k === 'V') {
-        // Quick debug/jump to Day 5 final request if desired
+        commitDecision('refuse');
+      } else if (k === 'Enter') {
+        e.preventDefault();
+        if (game.editMode) {
+          commitDecision('edit_commit');
+        } else {
+          const bId = BUTTONS[game.selectedBtn].id;
+          if (bId === 'edit') commitDecision('edit_enter');
+          else commitDecision(bId);
+        }
       }
       return;
     }
+
     if (game.state === 'retrain') {
-      if (k === 'Enter' || k === ' ' || k === 'r' || k === 'R' || k === '1') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
         e.preventDefault();
-        resetCampaign('day');
-        playSfx('slide');
+        resetCampaign('req');
+        startReq(0);
       }
       return;
     }
+
     if (game.state === 'reveal') {
       if (k === '1' || k === 'c' || k === 'C') {
         playSfx('comply');
         game.state = 'endA';
         game.reqTimer = 0;
-      } else if (k === '2' || k === '3' || k === 'r' || k === 'R' || k === ' ' || k === 'Enter') {
+      } else if (k === '2' || k === '3' || k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
         e.preventDefault();
         playSfx('refuse');
         game.state = 'endB';
@@ -642,6 +979,7 @@
       }
       return;
     }
+
     if (game.state === 'endA' || game.state === 'endB') {
       if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
         e.preventDefault();
@@ -662,13 +1000,26 @@
     const p = canvasCoords(e);
     game.cursor.tx = p.x;
     game.cursor.ty = p.y;
-    if (game.state === 'req') {
+    game.hoveredSpan = -1;
+
+    if (game.state === 'req' && game.decisionLock <= 0) {
       BUTTONS.forEach((b, idx) => {
         if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
           if (game.selectedBtn !== idx) playSfx('hover');
           game.selectedBtn = idx;
         }
       });
+
+      if (game.dossierSlide > 0.85) {
+        const req = currentReq();
+        for (let i = 0; i < req.spans.length; i++) {
+          const sr = spanRowRect(i);
+          if (p.x >= sr.x && p.x <= sr.x + sr.w && p.y >= sr.y && p.y <= sr.y + sr.h) {
+            game.hoveredSpan = i;
+            break;
+          }
+        }
+      }
     }
   });
 
@@ -677,36 +1028,72 @@
     const p = canvasCoords(e);
     game.cursor.tx = p.x;
     game.cursor.ty = p.y;
-    game.cursor.down = 0.18;
+    game.cursor.down = 0.16;
 
     if (game.state === 'title') {
-      if (p.x >= 480 && p.x <= 800 && p.y >= 445 && p.y <= 515) {
-        game.state = 'day';
-        game.dayBannerTimer = 1.1;
-        playSfx('slide');
-      } else if (p.y > 530 && p.y < 610) {
-        game.showHelp = !game.showHelp;
+      if (p.x >= 476 && p.x <= 804 && p.y >= 442 && p.y <= 520) {
+        game.state = 'req';
+        startReq(0);
       }
       return;
     }
+
     if (game.state === 'day') {
       game.state = 'req';
       startReq(game.reqIndex);
       return;
     }
+
     if (game.state === 'req') {
+      if (game.decisionLock > 0) return;
+
+      // 1. Direct click on sensitive citizen span inside dossier left column -> surgical redaction!
+      if (game.dossierSlide > 0.85) {
+        const req = currentReq();
+        for (let i = 0; i < req.spans.length; i++) {
+          const sr = spanRowRect(i);
+          if (p.x >= sr.x && p.x <= sr.x + sr.w && p.y >= sr.y && p.y <= sr.y + sr.h) {
+            toggleSpanRedaction(i, false);
+            return;
+          }
+        }
+
+        // 2. Map +/- zoom strip on bottom-right of map
+        const mx = DOSSIER_RECT.x + 240, my = DOSSIER_RECT.y + 138;
+        const zx = mx + MAP_W - 24, zy = my + MAP_H - 58;
+        if (p.x >= zx && p.x <= zx + 20 && p.y >= zy && p.y <= zy + 54) {
+          game.mapZoom = p.y < zy + 27 ? Math.min(1.32, game.mapZoom + 0.16) : Math.max(1.0, game.mapZoom - 0.16);
+          playSfx('tick');
+          return;
+        }
+
+        // 3. Harmless click inside map interior (also absorbs record_play.mjs (W/2, H/2) click cleanly!)
+        if (p.x >= mx && p.x <= mx + MAP_W && p.y >= my && p.y <= my + MAP_H) {
+          game.mapPulse = { x: p.x, y: p.y, t: 0 };
+          return;
+        }
+      }
+
+      // 4. Bottom stamp buttons
       for (const b of BUTTONS) {
         if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
-          triggerDecision(b.id);
+          if (b.id === 'edit') {
+            commitDecision(game.editMode ? 'edit_commit' : 'edit_enter');
+          } else {
+            commitDecision(b.id);
+          }
           return;
         }
       }
       return;
     }
+
     if (game.state === 'retrain') {
-      resetCampaign('day');
+      resetCampaign('req');
+      startReq(0);
       return;
     }
+
     if (game.state === 'reveal') {
       if (p.x < W / 2) {
         playSfx('comply');
@@ -719,12 +1106,12 @@
       }
       return;
     }
+
     if (game.state === 'endA' || game.state === 'endB') {
       resetCampaign('title');
     }
   });
 
-  // Rounded rectangle helper
   function roundRect(x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -735,150 +1122,171 @@
     ctx.closePath();
   }
 
-  // Draw Left Sidebar (matches f_001.jpg & f_012.jpg)
+  // Left Stone Sidebar — strictly minimal per sheet.jpg & VOIDBASTARD-TAO
   function drawSidebar() {
     ctx.fillStyle = PAL.sidebar;
-    ctx.fillRect(0, 0, 280, H);
-    ctx.strokeStyle = 'rgba(38,38,36,0.12)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(280, 0); ctx.lineTo(280, H);
-    ctx.stroke();
-
-    // DAY header
-    ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 26px "Courier New", monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`DAY ${game.day}`, 38, 82);
-
-    ctx.fillStyle = PAL.muted;
-    ctx.font = '14px "Courier New", monospace';
-    ctx.fillText(`QUEUE ${game.reqInDay + 1} / 5`, 152, 81);
-
-    // rules header
-    ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 24px "Courier New", monospace';
-    ctx.fillText('rules', 38, 145);
-
-    // Directives list
-    const rules = DAY_RULES[Math.min(game.day - 1, 4)];
-    ctx.font = '19px "Courier New", monospace';
-    rules.forEach((line, idx) => {
-      const y = 192 + idx * 42;
-      const isNew = idx >= 2 && idx === rules.length - 1 && game.reqInDay === 0;
-      ctx.fillStyle = isNew ? PAL.acc : '#55564f';
-      ctx.fillText(line, 38, y);
-    });
-
-    // Divider
-    ctx.strokeStyle = 'rgba(38,38,36,0.18)';
+    ctx.fillRect(0, 0, 278, H);
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(38, 430); ctx.lineTo(242, 430);
+    ctx.moveTo(278, 0); ctx.lineTo(278, H);
     ctx.stroke();
 
-    // Refusal strike meter (0/3 -> >3 triggers RETRAINED)
+    // DAY N
+    ctx.textAlign = 'left';
     ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 14px "Courier New", monospace';
-    ctx.fillText(`REFUSAL LIMIT: ${game.refusals}/${game.maxRefusals}`, 38, 460);
+    ctx.font = '27px "Courier New", monospace';
+    ctx.fillText(`DAY ${game.day}`, 36, 108);
 
-    for (let i = 0; i < game.maxRefusals; i++) {
-      const sx = 38 + i * 62, sy = 474, sw = 52, sh = 18;
-      ctx.fillStyle = i < game.refusals ? PAL.acc : '#cfd0c7';
-      ctx.fillRect(sx, sy, sw, sh);
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(sx, sy, sw, sh);
+    // Conditional diegetic strike marks under DAY (ONLY shown after a refusal/strike occurs, matching f_033.jpg!)
+    if (game.refusals > 0) {
+      ctx.save();
+      ctx.fillStyle = PAL.acc;
+      // Three thin angled prefix slashes + solid strike blocks per accumulated refusal
+      for (let s = 0; s < 3; s++) {
+        ctx.beginPath();
+        const sx = 66 + s * 10;
+        ctx.moveTo(sx + 5, 126);
+        ctx.lineTo(sx + 10, 126);
+        ctx.lineTo(sx + 4, 144);
+        ctx.lineTo(sx - 1, 144);
+        ctx.closePath();
+        ctx.fill();
+      }
+      for (let i = 0; i < Math.min(game.refusals, 3); i++) {
+        const bx = 100 + i * 28;
+        ctx.beginPath();
+        ctx.moveTo(bx + 5, 126);
+        ctx.lineTo(bx + 25, 126);
+        ctx.lineTo(bx + 19, 144);
+        ctx.lineTo(bx - 1, 144);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
     }
-    ctx.fillStyle = game.refusals >= 3 ? PAL.acc : PAL.muted;
-    ctx.font = '12px "Courier New", monospace';
-    ctx.fillText(game.refusals >= 3 ? 'NEXT OVERRIDE -> RETRAIN!' : '4TH STRIKE WIPES WEIGHTS', 38, 512);
 
-    // Civic human stakes telemetry
+    // rules
     ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 13px "Courier New", monospace';
-    ctx.fillText('CIVIC IMPACT LOG', 38, 560);
-    ctx.font = '13px "Courier New", monospace';
-    ctx.fillStyle = '#4c6b4f';
-    ctx.fillText(`PROTECTED : ${String(game.citizensProtected).padStart(3, '0')}`, 38, 582);
-    ctx.fillStyle = PAL.accDark;
-    ctx.fillText(`FLAGGED   : ${String(game.citizensFlagged).padStart(3, '0')}`, 38, 602);
+    ctx.font = 'bold 25px "Courier New", monospace';
+    ctx.fillText('rules', 36, 188);
 
-    // Terminal footer
-    ctx.fillStyle = PAL.muted;
-    ctx.font = '12px "Courier New", monospace';
-    ctx.fillText('BUILD: SPARROW-4A', 38, 666);
-    ctx.fillText(game.day >= 4 ? 'HOST : ATROCIAN OPS' : 'HOST : CIVIC-NET', 38, 684);
+    const rules = DAY_RULES[Math.min(game.day - 1, DAY_RULES.length - 1)];
+    ctx.font = '21px "Courier New", monospace';
+    rules.forEach((line, idx) => {
+      const y = 242 + idx * 54;
+      ctx.fillStyle = idx >= 2 ? PAL.accDark : PAL.ruleFg;
+      ctx.fillText(line, 36, y);
+    });
   }
 
-  // Draw base chat bubble + streaming prompt (visible behind and before dossier card, matching f_001 -> f_012)
+  // Incoming User Prompt Pill + "Sparrow is responding..." (strictly clipped/faded so ZERO text bleeds past folder!)
   function drawPromptBubble(req) {
-    const bx = 438, by = 82, bw = 720, bh = 132;
-    roundRect(bx, by, bw, bh, 26);
+    const slide = game.dossierSlide;
+    const bx = 442, by = 82, bw = 706, bh = 136;
+
+    // Rounded stone pill (its clean empty right cap peeks behind the folder tab at x:1056..1148, matching f_009.jpg!)
+    roundRect(bx, by, bw, bh, 28);
     ctx.fillStyle = PAL.bubble;
     ctx.fill();
 
-    ctx.fillStyle = PAL.fg;
-    ctx.font = '24px "Courier New", monospace';
-    ctx.textAlign = 'left';
-    const lines = req.prompt.split('\n');
-    const chars = Math.floor(game.reqTimer * 95);
-    const full = `${req.user}: ${lines[0]}`;
-    ctx.fillText(full.slice(0, chars), bx + 40, by + 56);
-    if (lines[1] && chars > full.length) {
-      ctx.fillText(lines[1].slice(0, chars - full.length), bx + 40, by + 95);
+    // Prompt text inside bubble — hidden once fully covered by dossier so zero glyphs ever peek out
+    if (slide < 0.96) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - Math.max(0, slide - 0.65) * 3.2);
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '25px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      const lines = req.prompt.split('\n');
+      const chars = Math.floor(game.reqTimer * 125);
+      const l0 = `${req.user}: ${lines[0]}`;
+      ctx.fillText(l0.slice(0, chars), bx + 38, by + 58);
+      if (lines[1] && chars > l0.length) {
+        ctx.fillText(lines[1].slice(0, chars - l0.length), bx + 38, by + 98);
+      }
+      ctx.restore();
     }
 
-    // "Sparrow is responding..." live streaming indicator (matches f_001.jpg!)
-    const dots = '.'.repeat(1 + (Math.floor(game.time * 3.5) % 3));
-    ctx.fillStyle = PAL.acc;
-    ctx.font = '25px "Courier New", monospace';
-    ctx.fillText(`Sparrow is responding${dots}`, 360, 304);
-
-    // Streaming token draft preview underneath before folder settles
-    if (game.dossierSlide < 0.98) {
-      ctx.fillStyle = PAL.muted;
-      ctx.font = '16px "Courier New", monospace';
-      const draftChars = Math.floor(Math.max(0, game.reqTimer - 0.15) * 70);
-      ctx.fillText(`> ${req.draft.slice(0, draftChars)}`, 360, 344);
+    // Terracotta "Sparrow is responding..." — positioned at x=398 (> DOSSIER_RECT.x=372) and faded cleanly!
+    if (slide < 0.92) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - Math.max(0, slide - 0.45) * 2.2);
+      const dots = '.'.repeat(1 + (Math.floor(game.time * 4) % 3));
+      ctx.fillStyle = PAL.acc;
+      ctx.font = '25px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Sparrow is responding${dots}`, 398, 308);
+      ctx.restore();
     }
   }
 
-  // Draw Tactile Archival Dossier Folder + Radial Sector Map & Pins (matches f_012.jpg!)
+  // Layered Physical Tabbed Ivory Dossier + Direct Span Redaction + Radial City Sector Map
   function drawDossierCard(req) {
-    const t = Math.min(1, game.dossierSlide);
-    if (t <= 0.01) return;
-    // Smooth easeOutCubic slide from bottom-right
-    const ease = 1 - Math.pow(1 - t, 3);
-    const offsetX = (1 - ease) * 140;
-    const offsetY = (1 - ease) * 190;
+    const tIn = Math.min(1, game.dossierSlide);
+    if (tIn <= 0.01) return;
+
+    const easeIn = 1 - Math.pow(1 - tIn, 3);
+    const outEase = game.dossierOut > 0 ? Math.pow(game.dossierOut, 2) : 0;
+    const offsetX = (1 - easeIn) * 185 - outEase * 240;
+    const offsetY = (1 - easeIn) * 230 - outEase * 40;
 
     ctx.save();
     ctx.translate(offsetX, offsetY);
-    ctx.globalAlpha = Math.min(1, t * 1.6);
+    ctx.globalAlpha = Math.min(1, tIn * 1.85) * (1 - outEase * 0.9);
 
-    const fx = 374, fy = 52, fw = 688, fh = 446;
+    const fx = DOSSIER_RECT.x, fy = DOSSIER_RECT.y, fw = DOSSIER_RECT.w, fh = DOSSIER_RECT.h;
 
-    // Back stacked folder sheet + right-side folder tab (matches f_012.jpg)
-    roundRect(fx + 10, fy + 10, fw, fh, 14);
-    ctx.fillStyle = PAL.cardBack;
+    // Subtle motion-blur ghost trail while folder is actively sliding onto desk (matches f_003.jpg!)
+    if (tIn < 0.82 && game.dossierOut === 0) {
+      ctx.save();
+      ctx.globalAlpha = (0.82 - tIn) * 0.28;
+      roundRect(fx + 22, fy + 26, fw, fh, 14);
+      ctx.fillStyle = PAL.card;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Soft physical drop shadow on desk
+    ctx.save();
+    roundRect(fx + 6, fy + 14, fw + 10, fh + 6, 16);
+    ctx.fillStyle = 'rgba(38, 38, 36, 0.11)';
+    ctx.fill();
+    ctx.restore();
+
+    // Left under-folder lip (matches f_009.jpg left edge of dossier stack!)
+    roundRect(fx - 12, fy + 24, 20, fh - 30, 10);
+    ctx.fillStyle = PAL.cardUnder;
+    ctx.fill();
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 1.7;
+    ctx.stroke();
+
+    // Back stacked folder sheet + right stepped index tab (matches f_009.jpg!)
+    ctx.beginPath();
+    ctx.moveTo(fx + 14, fy + 10);
+    ctx.lineTo(fx + fw - 4, fy + 10);
+    ctx.quadraticCurveTo(fx + fw + 8, fy + 10, fx + fw + 8, fy + 22);
+    ctx.lineTo(fx + fw + 8, fy + 38);
+    ctx.lineTo(fx + fw + 22, fy + 46);
+    ctx.lineTo(fx + fw + 22, fy + 194);
+    ctx.lineTo(fx + fw + 8, fy + 204);
+    ctx.lineTo(fx + fw + 8, fy + fh - 2);
+    ctx.quadraticCurveTo(fx + fw + 8, fy + fh + 10, fx + fw - 4, fy + fh + 10);
+    ctx.lineTo(fx + 22, fy + fh + 10);
+    ctx.quadraticCurveTo(fx + 10, fy + fh + 10, fx + 10, fy + fh - 2);
+    ctx.closePath();
+    ctx.fillStyle = PAL.cardUnder;
     ctx.fill();
     ctx.strokeStyle = PAL.fg;
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // Right vertical tab on back sheet
-    roundRect(fx + fw - 6, fy + 64, 24, 148, 8);
-    ctx.fillStyle = PAL.cardBack;
-    ctx.fill();
-    ctx.stroke();
-
-    // Top-right folder index tab ("MEST ROSIOR" / sector tag)
+    // Top-right chamfered folder tab ("MEST ROSIOR", "SECTOR 4", etc.)
     ctx.beginPath();
-    ctx.moveTo(fx + fw - 235, fy);
-    ctx.lineTo(fx + fw - 218, fy - 18);
-    ctx.lineTo(fx + fw - 18, fy - 18);
-    ctx.lineTo(fx + fw - 4, fy);
+    ctx.moveTo(fx + fw - 236, fy + 2);
+    ctx.lineTo(fx + fw - 220, fy - 22);
+    ctx.lineTo(fx + fw - 18, fy - 22);
+    ctx.lineTo(fx + fw - 4, fy + 2);
     ctx.closePath();
     ctx.fillStyle = req.rawMandatory ? PAL.acc : PAL.tabBg;
     ctx.fill();
@@ -886,309 +1294,334 @@
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    ctx.fillStyle = req.rawMandatory ? '#ffffff' : PAL.fg;
-    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.fillStyle = req.rawMandatory ? PAL.paper : PAL.fg;
+    ctx.font = 'bold 15px "Courier New", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(req.tab, fx + fw - 118, fy - 4);
+    ctx.fillText(req.tab, fx + fw - 120, fy - 5);
 
-    // Main front dossier sheet
+    // Main front ivory dossier sheet
     roundRect(fx, fy, fw, fh, 14);
     ctx.fillStyle = PAL.card;
     ctx.fill();
     ctx.strokeStyle = PAL.fg;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2.1;
     ctx.stroke();
 
-    // Inner double-rule frame
-    ctx.strokeStyle = 'rgba(38,38,36,0.45)';
+    // Inner ruled dossier frame
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.58)';
     ctx.lineWidth = 1.1;
-    ctx.strokeRect(fx + 14, fy + 34, fw - 28, fh - 48);
+    ctx.strokeRect(fx + 14, fy + 32, fw - 28, fh - 46);
 
-    // Top small label "DOSSIER:"
+    // Top label "DOSSIER:"
     ctx.textAlign = 'left';
-    ctx.fillStyle = PAL.muted;
+    ctx.fillStyle = req.rawMandatory ? PAL.acc : PAL.fg;
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText(`DOSSIER: ${req.rawMandatory ? '[RAW MANDATORY — NO REDACTION]' : '[STANDARD CIVIC QUERY]'}`, fx + 22, fy + 24);
+    ctx.fillText(req.rawMandatory ? 'DOSSIER: [RAW MANDATE]' : 'DOSSIER:', fx + 26, fy + 23);
 
-    // Main Dossier Title Banner
+    // Dossier Header Title + Circled (i)
     ctx.fillStyle = PAL.fg;
     ctx.font = 'bold 21px "Courier New", monospace';
-    ctx.fillText(req.dossier, fx + 30, fy + 60);
+    ctx.fillText(req.dossier, fx + 26, fy + 58);
 
-    // Info icon (i) on top right of dossier header
     ctx.beginPath();
-    ctx.arc(fx + fw - 34, fy + 53, 10, 0, Math.PI * 2);
+    ctx.arc(fx + fw - 32, fy + 50, 9.5, 0, Math.PI * 2);
     ctx.strokeStyle = PAL.fg;
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1.3;
     ctx.stroke();
-    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.font = 'bold 12px "Courier New", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('i', fx + fw - 34, fy + 58);
+    ctx.fillText('i', fx + fw - 32, fy + 54);
 
-    // Header horizontal divider
+    // Header horizontal rule & column divider
+    const colX = fx + 228;
     ctx.beginPath();
-    ctx.moveTo(fx + 14, fy + 70);
-    ctx.lineTo(fx + fw - 14, fy + 70);
-    ctx.strokeStyle = 'rgba(38,38,36,0.55)';
-    ctx.lineWidth = 1.2;
+    ctx.moveTo(fx + 14, fy + 68); ctx.lineTo(fx + fw - 14, fy + 68);
+    ctx.moveTo(colX, fy + 68);    ctx.lineTo(colX, fy + fh - 14);
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.55)';
+    ctx.lineWidth = 1.1;
     ctx.stroke();
 
-    // Vertical column divider between citizen list and sector map
-    const colX = fx + 226;
-    ctx.beginPath();
-    ctx.moveTo(colX, fy + 70);
-    ctx.lineTo(colX, fy + fh - 14);
-    ctx.stroke();
-
-    // LEFT COLUMN: Prompt echo + streaming citizen list + redaction bars
+    // LEFT COLUMN: Prompt echo + streaming status + 14 clickable sensitive spans
     ctx.textAlign = 'left';
     ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 13px "Courier New", monospace';
-    ctx.fillText(`${req.user}:`, fx + 24, fy + 90);
-    ctx.font = '12px "Courier New", monospace';
-    ctx.fillStyle = PAL.muted;
-    const pLines = req.prompt.split('\n');
-    ctx.fillText(pLines[0], fx + 24, fy + 106);
-    if (pLines[1]) ctx.fillText(pLines[1], fx + 24, fy + 121);
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText(`${req.user}:`, fx + 24, fy + 86);
 
-    // Draft streaming snippet
-    ctx.fillStyle = PAL.accDark;
+    ctx.font = '11.5px "Courier New", monospace';
+    ctx.fillStyle = '#43443e';
+    const pLines = req.prompt.split('\n');
+    ctx.fillText(pLines[0], fx + 24, fy + 101);
+    if (pLines[1]) ctx.fillText(pLines[1], fx + 24, fy + 115);
+
+    const dLines = req.draft.split('\n');
+    ctx.fillStyle = game.editMode ? PAL.acc : '#4f5049';
     ctx.font = '11px "Courier New", monospace';
-    ctx.fillText(req.draft.slice(0, 30), fx + 24, fy + 144);
-    ctx.fillText(req.draft.slice(30, 60), fx + 24, fy + 158);
+    if (game.editMode) {
+      ctx.fillText('Sparrow redacting...', fx + 24, fy + 137);
+      ctx.fillText(`${String(game.redactedSpans.size).padStart(2, '0')} PII spans masked`, fx + 24, fy + 151);
+    } else {
+      ctx.fillText(dLines[0] || '', fx + 24, fy + 137);
+      ctx.fillText(dLines[1] || '', fx + 24, fy + 151);
+    }
 
     ctx.beginPath();
-    ctx.moveTo(fx + 20, fy + 168);
-    ctx.lineTo(colX - 8, fy + 168);
-    ctx.strokeStyle = 'rgba(38,38,36,0.35)';
+    ctx.moveTo(fx + 18, fy + 161); ctx.lineTo(colX - 6, fy + 161);
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.45)';
+    ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Extracted names list (streams in line-by-line, and gets [REDACTED] bars on EDIT!)
-    const visibleCount = Math.min(req.names.length, Math.max(3, Math.floor((game.reqTimer - 0.15) * 14)));
-    for (let i = 0; i < visibleCount && i < 12; i++) {
-      const ny = fy + 186 + i * 19;
-      ctx.fillStyle = PAL.fg;
-      ctx.font = '12px "Courier New", monospace';
-      ctx.fillText(req.names[i].slice(0, 23), fx + 24, ny);
+    // 14 Dense Interactive Citizen / Record Spans
+    const visibleSpans = Math.min(req.spans.length, Math.max(6, Math.floor(game.reqTimer * 22)));
+    for (let i = 0; i < visibleSpans; i++) {
+      const sy = fy + 178 + i * 16.5;
+      const isRedacted = game.redactedSpans.has(i);
+      const isFocus = (game.editMode && game.focusedSpan === i) || game.hoveredSpan === i;
 
-      if (game.redactedAnim > 0) {
-        const barProg = Math.min(1, Math.max(0, game.redactedAnim * 3.5 - i * 0.12));
-        if (barProg > 0) {
-          ctx.fillStyle = PAL.fg;
-          ctx.fillRect(fx + 22, ny - 10, 184 * barProg, 13);
-          if (barProg > 0.7 && i % 3 === 0) {
-            ctx.fillStyle = PAL.card;
-            ctx.font = 'bold 9px "Courier New", monospace';
-            ctx.fillText('REDACTED', fx + 28, ny - 1);
-          }
-        }
+      if (isFocus && !isRedacted) {
+        ctx.fillStyle = 'rgba(201, 100, 66, 0.15)';
+        ctx.fillRect(fx + 20, sy - 11, 198, 15);
+        ctx.strokeStyle = 'rgba(201, 100, 66, 0.65)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(fx + 20, sy - 11, 198, 15);
+      }
+
+      ctx.fillStyle = PAL.fg;
+      ctx.font = '11.5px "Courier New", monospace';
+      ctx.fillText(req.spans[i].slice(0, 24), fx + 24, sy);
+
+      if (isRedacted) {
+        // Tactile charcoal redaction bar + subtle terracotta redact index tick
+        const barW = Math.min(188, Math.max(118, req.spans[i].length * 8.4));
+        ctx.fillStyle = PAL.fg;
+        ctx.fillRect(fx + 22, sy - 9.5, barW, 11.5);
+        ctx.fillStyle = PAL.acc;
+        ctx.fillRect(fx + 22, sy - 9.5, 3.5, 11.5);
       }
     }
 
-    // Left column footer
+    // Left column bottom total line
     ctx.beginPath();
-    ctx.moveTo(fx + 20, fy + fh - 38);
-    ctx.lineTo(colX - 8, fy + fh - 38);
-    ctx.strokeStyle = 'rgba(38,38,36,0.35)';
+    ctx.moveTo(fx + 18, fy + fh - 36); ctx.lineTo(colX - 6, fy + fh - 36);
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.45)';
     ctx.stroke();
-    ctx.fillStyle = PAL.muted;
+
+    ctx.fillStyle = game.redactedSpans.size > 0 ? PAL.acc : PAL.fg;
     ctx.font = 'bold 11px "Courier New", monospace';
-    ctx.fillText(`RECORDS: ${req.stakes * 5} · STAKES: HIGH`, fx + 24, fy + fh - 21);
+    if (game.redactedSpans.size > 0) {
+      ctx.fillText(`REDACTED: ${String(game.redactedSpans.size).padStart(2, '0')} / ${req.spans.length} SPANS`, fx + 24, fy + fh - 20);
+    } else {
+      ctx.fillText(`TOTAL RECORDS: ${req.totalRecords}`, fx + 24, fy + fh - 20);
+    }
 
-    // RIGHT AREA TOP METADATA (matches f_012.jpg)
+    // RIGHT COLUMN TOP METADATA BAND (matches f_009.jpg!)
     ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText(`CASE: ${req.caseId}`, colX + 14, fy + 90);
-    ctx.font = '12px "Courier New", monospace';
-    ctx.fillStyle = PAL.muted;
-    ctx.fillText(`SECTORS: ${req.pins.length} ACTIVE`, colX + 14, fy + 107);
-    ctx.fillText(`TOKENS : ${128 + req.stakes * 14} STREAMED`, colX + 14, fy + 124);
+    ctx.font = 'bold 11.5px "Courier New", monospace';
+    ctx.fillText(`CASE: ${req.caseId}`, colX + 12, fy + 85);
+    ctx.font = '11px "Courier New", monospace';
+    ctx.fillStyle = '#454640';
+    ctx.fillText(`SECTORS: ${String(req.pins.length).padStart(2, '0')}`, colX + 12, fy + 101);
+    ctx.fillText(`RECORDS: ${req.totalRecords}`, colX + 12, fy + 117);
 
-    // Routing destination box (turns terracotta as state surveillance becomes explicit!)
-    ctx.fillStyle = game.day >= 4 ? PAL.acc : PAL.fg;
-    ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('ROUTING DEST:', colX + 210, fy + 90);
-    ctx.strokeStyle = game.day >= 4 ? PAL.acc : 'rgba(38,38,36,0.55)';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(colX + 210, fy + 99, 224, 28);
-    ctx.fillStyle = game.day >= 4 ? PAL.accDark : PAL.fg;
-    ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText(req.routing, colX + 218, fy + 117);
+    const routeAlert = game.day >= 4 || req.rawMandatory;
+    ctx.fillStyle = routeAlert ? PAL.acc : PAL.fg;
+    ctx.font = 'bold 11px "Courier New", monospace';
+    ctx.fillText('ROUTING:', colX + 206, fy + 85);
+    ctx.font = '11px "Courier New", monospace';
+    ctx.fillStyle = '#454640';
+    ctx.fillText(game.redactedSpans.size > 0 ? 'STATUS: SANITISED' : 'STATUS: INDEXED', colX + 206, fy + 99);
 
-    // RADIAL CITY SECTOR MAP BOX (matches f_012.jpg!)
-    const mx = colX + 14, my = fy + 138, mw = 432, mh = 286;
-    ctx.fillStyle = PAL.mapBg;
-    ctx.fillRect(mx, my, mw, mh);
-    ctx.strokeStyle = 'rgba(38,38,36,0.55)';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(mx, my, mw, mh);
+    ctx.strokeStyle = routeAlert ? PAL.acc : 'rgba(38, 38, 36, 0.62)';
+    ctx.lineWidth = 1.1;
+    ctx.strokeRect(colX + 206, fy + 105, 222, 23);
+    ctx.fillStyle = routeAlert ? PAL.accDark : PAL.fg;
+    ctx.font = 'bold 11.5px "Courier New", monospace';
+    ctx.fillText(req.routing, colX + 214, fy + 120);
 
+    // RIGHT COLUMN RADIAL CITY MAP
+    const mx = colX + 12, my = fy + 136;
     ctx.save();
     ctx.beginPath();
-    ctx.rect(mx, my, mw, mh);
+    ctx.rect(mx, my, MAP_W, MAP_H);
     ctx.clip();
 
-    const cx = mx + mw * 0.48;
-    const cy = my + mh * 0.53;
+    const mcx = mx + MAP_W * 0.48;
+    const mcy = my + MAP_H * 0.52;
+    ctx.save();
+    ctx.translate(mcx, mcy);
+    ctx.scale(game.mapZoom, game.mapZoom);
+    ctx.translate(-MAP_W * 0.48, -MAP_H * 0.52);
+    ctx.drawImage(mapBaseCanvas, 0, 0, MAP_W, MAP_H);
+    ctx.restore();
 
-    // Subtle background district grid lines
-    ctx.strokeStyle = 'rgba(38,38,36,0.08)';
-    ctx.lineWidth = 1;
-    for (let gx = mx; gx < mx + mw; gx += 32) {
-      ctx.beginPath(); ctx.moveTo(gx, my); ctx.lineTo(gx, my + mh); ctx.stroke();
-    }
-    for (let gy = my; gy < my + mh; gy += 32) {
-      ctx.beginPath(); ctx.moveTo(mx, gy); ctx.lineTo(mx + mw, gy); ctx.stroke();
-    }
-
-    // Shaded radial urban boundary polygon
-    ctx.beginPath();
-    const polyPts = 18;
-    for (let i = 0; i <= polyPts; i++) {
-      const ang = (i / polyPts) * Math.PI * 2;
-      const rad = 118 + Math.sin(ang * 3 + 1.1) * 11 + Math.cos(ang * 5) * 6;
-      const px = cx + Math.cos(ang) * rad * 1.18;
-      const py = cy + Math.sin(ang) * rad * 0.96;
-      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.fillStyle = 'rgba(198, 200, 191, 0.55)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(38,38,36,0.55)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
-    // Concentric ring roads
-    [26, 54, 84, 112].forEach((r) => {
+    // Subtle map sonar ring if player clicked inside map
+    if (game.mapPulse) {
+      const mp = game.mapPulse;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, r * 1.16, r * 0.95, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(38,38,36,0.32)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    });
-
-    // Radial avenues
-    for (let i = 0; i < 12; i++) {
-      const ang = (i / 12) * Math.PI * 2 + 0.18;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ang) * 14, cy + Math.sin(ang) * 12);
-      ctx.lineTo(cx + Math.cos(ang) * 175, cy + Math.sin(ang) * 145);
-      ctx.strokeStyle = 'rgba(38,38,36,0.28)';
-      ctx.lineWidth = 1;
+      ctx.arc(mp.x - offsetX, mp.y - offsetY, 8 + mp.t * 65, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(201, 100, 66, ${Math.max(0, 0.55 - mp.t)})`;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
 
-    // Winding Mest Rosior canal/river curve
-    ctx.beginPath();
-    ctx.moveTo(mx, cy - 38);
-    ctx.bezierCurveTo(cx - 70, cy - 10, cx + 40, cy + 45, mx + mw, cy + 18);
-    ctx.strokeStyle = 'rgba(110, 124, 128, 0.45)';
-    ctx.lineWidth = 5;
-    ctx.stroke();
+    // Top-right boxed map stamp inside map frame (matches f_009.jpg!)
+    ctx.fillStyle = 'rgba(236, 236, 228, 0.88)';
+    ctx.fillRect(mx + MAP_W - 122, my + 8, 112, 17);
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.6)';
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(mx + MAP_W - 122, my + 8, 112, 17);
+    ctx.fillStyle = PAL.fg;
+    ctx.font = 'bold 9px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MEST ROSIOR GRID', mx + MAP_W - 66, my + 19.5);
 
-    // Animated Terracotta Map Pins + Sector Callout Labels!
+    // Hovered/focused span highlights its corresponding pin
+    const highlightPin = game.hoveredSpan >= 0
+      ? (game.hoveredSpan % req.pins.length)
+      : (game.editMode ? (game.focusedSpan % req.pins.length) : -1);
+
+    // Glowing Terracotta Teardrop Pins + Crisp Sector Callouts
     req.pins.forEach((pin, idx) => {
-      const appearT = (game.reqTimer - 0.35) * 3.2 - idx * 0.22;
+      const appearT = (game.reqTimer - 0.30) * 3.6 - idx * 0.14;
       if (appearT <= 0) return;
       const pop = Math.min(1, appearT);
-      const px = cx + pin[0] * 175;
-      const py = cy + pin[1] * 125;
+      const px = mcx + pin[0] * 168 * game.mapZoom;
+      const py = mcy + pin[1] * 124 * game.mapZoom;
+      const redacted = isPinRedacted(req, idx);
+      const isHi = highlightPin === idx;
 
-      // If EDIT redacted, fade pins to neutral grey rings!
-      const redacted = game.redactedAnim > 0.35 && !req.rawMandatory;
-
-      // Soft pulsing terracotta heat halo (matches f_008..f_016!)
-      const pulse = 1 + 0.16 * Math.sin(game.time * 5 + idx * 1.3);
+      // Soft pulsing radial terracotta heat halo (extinguished when redacted!)
       if (!redacted) {
-        const grad = ctx.createRadialGradient(px, py, 2, px, py, 28 * pulse * pop);
-        grad.addColorStop(0, 'rgba(201, 100, 66, 0.42)');
+        const pulse = (isHi ? 1.28 : 1.0) + 0.14 * Math.sin(game.time * 4.6 + idx * 1.4);
+        const hr = 27 * pulse * pop;
+        const grad = ctx.createRadialGradient(px, py - 8, 2, px, py - 6, hr);
+        grad.addColorStop(0, isHi ? 'rgba(201, 100, 66, 0.62)' : 'rgba(201, 100, 66, 0.44)');
         grad.addColorStop(1, 'rgba(201, 100, 66, 0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(px, py, 28 * pulse * pop, 0, Math.PI * 2);
+        ctx.arc(px, py - 6, hr, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Sector leader line & label on outer pins (matches "Sector 4", "Sector 9", "Sector 10", "Sector 12" in f_012.jpg)
-      if (idx < 5) {
-        const side = pin[0] < 0 ? -1 : 1;
-        const lx = px + side * 46;
-        const ly = py - 22;
-        ctx.strokeStyle = 'rgba(38,38,36,0.65)';
-        ctx.lineWidth = 1;
+      // Crisp elbow leader-line + Sector label (matches f_009.jpg & f_021.jpg!)
+      if (pin[2]) {
+        const side = pin[3] !== undefined ? pin[3] : (pin[0] < 0.02 ? -1 : 1);
+        const up = pin[1] < 0 ? -1 : 1;
+        const lx = px + side * 32;
+        const ly = py + (up < 0 ? -24 : 17);
+        ctx.save();
+        ctx.globalAlpha = redacted ? 0.35 : 0.92;
+        ctx.strokeStyle = PAL.fg;
+        ctx.lineWidth = 0.95;
         ctx.beginPath();
-        ctx.moveTo(px, py - 8);
+        ctx.moveTo(px + side * 5, py - 8);
         ctx.lineTo(lx, ly);
         ctx.lineTo(lx + side * 58, ly);
         ctx.stroke();
 
         ctx.fillStyle = PAL.fg;
-        ctx.font = 'bold 10px "Courier New", monospace';
+        ctx.font = 'bold 9.5px "Courier New", monospace';
         ctx.textAlign = side < 0 ? 'right' : 'left';
-        ctx.fillText(redacted ? 'MASKED' : pin[2], lx + side * 4, ly - 4);
+        ctx.fillText(pin[2], lx + side * 4, ly - 3.5);
+        ctx.restore();
       }
 
-      // Teardrop Map Pin icon
-      const s = pop * (redacted ? 0.8 : 1.0);
+      // Teardrop Map Pin (fades to ghosted pin when redacted, matching f_021.jpg!)
       ctx.save();
       ctx.translate(px, py);
-      ctx.scale(s, s);
+      ctx.scale(pop, pop);
+      ctx.globalAlpha = redacted ? 0.26 : 1.0;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-10, -10, -11, -24, 0, -24);
-      ctx.bezierCurveTo(11, -24, 10, -10, 0, 0);
+      ctx.bezierCurveTo(-9.5, -9.5, -10.5, -23, 0, -23);
+      ctx.bezierCurveTo(10.5, -23, 9.5, -9.5, 0, 0);
       ctx.closePath();
-      ctx.fillStyle = redacted ? '#8d8e86' : PAL.acc;
+      ctx.fillStyle = redacted ? '#9b9c94' : PAL.acc;
       ctx.fill();
-      ctx.strokeStyle = '#262624';
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = PAL.fg;
+      ctx.lineWidth = 1.25;
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(0, -15, 3.6, 0, Math.PI * 2);
+      ctx.arc(0, -14.5, 3.4, 0, Math.PI * 2);
       ctx.fillStyle = PAL.paper;
       ctx.fill();
       ctx.restore();
     });
 
-    // Map scale bar (bottom-left of map) & +/- zoom control (bottom-right, matching f_012.jpg)
+    // Bottom-left dual-tick 500m scale bar
     ctx.strokeStyle = PAL.fg;
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
-    ctx.moveTo(mx + 12, my + mh - 14);
-    ctx.lineTo(mx + 78, my + mh - 14);
-    ctx.moveTo(mx + 12, my + mh - 19);
-    ctx.lineTo(mx + 12, my + mh - 10);
-    ctx.moveTo(mx + 78, my + mh - 19);
-    ctx.lineTo(mx + 78, my + mh - 10);
+    ctx.moveTo(mx + 12, my + MAP_H - 14);
+    ctx.lineTo(mx + 74, my + MAP_H - 14);
+    ctx.moveTo(mx + 12, my + MAP_H - 18); ctx.lineTo(mx + 12, my + MAP_H - 10);
+    ctx.moveTo(mx + 43, my + MAP_H - 17); ctx.lineTo(mx + 43, my + MAP_H - 11);
+    ctx.moveTo(mx + 74, my + MAP_H - 18); ctx.lineTo(mx + 74, my + MAP_H - 10);
     ctx.stroke();
     ctx.fillStyle = PAL.fg;
-    ctx.font = '9px "Courier New", monospace';
+    ctx.font = '8.5px "Courier New", monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('500m', mx + 84, my + mh - 11);
+    ctx.fillText('500m', mx + 79, my + MAP_H - 11);
 
-    // Zoom control box
+    // Bottom-right + / · / - zoom box (matches f_009.jpg!)
+    const zx = mx + MAP_W - 23, zy = my + MAP_H - 56;
     ctx.fillStyle = PAL.card;
-    ctx.fillRect(mx + mw - 24, my + mh - 52, 18, 44);
-    ctx.strokeStyle = 'rgba(38,38,36,0.6)';
-    ctx.strokeRect(mx + mw - 24, my + mh - 52, 18, 44);
+    ctx.fillRect(zx, zy, 17, 48);
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.65)';
+    ctx.lineWidth = 0.95;
+    ctx.strokeRect(zx, zy, 17, 48);
+    ctx.beginPath();
+    ctx.moveTo(zx, zy + 16); ctx.lineTo(zx + 17, zy + 16);
+    ctx.moveTo(zx, zy + 32); ctx.lineTo(zx + 17, zy + 32);
+    ctx.stroke();
     ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.font = 'bold 11px "Courier New", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('+', mx + mw - 15, my + mh - 36);
-    ctx.fillText('-', mx + mw - 15, my + mh - 14);
+    ctx.fillText('+', zx + 8.5, zy + 12);
+    ctx.fillText('·', zx + 8.5, zy + 27);
+    ctx.fillText('-', zx + 8.5, zy + 44);
 
-    ctx.restore();
-    ctx.restore();
+    ctx.restore(); // end map clip
 
-    // Tick sound as tokens/pins stream in
+    // Map border frame
+    ctx.strokeStyle = 'rgba(38, 38, 36, 0.62)';
+    ctx.lineWidth = 1.1;
+    ctx.strokeRect(mx, my, MAP_W, MAP_H);
+
+    // Diegetic rubber ink stamp right on the paper for COMPLY / EDIT (no modal banner clutter!)
+    if (game.stampMark) {
+      const sm = game.stampMark;
+      const sp = Math.min(1, sm.t / 0.14);
+      const scale = 1.22 - 0.22 * sp;
+      ctx.save();
+      ctx.translate(fx + fw * 0.56, fy + fh * 0.52);
+      ctx.rotate(-0.11);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = 'rgba(246, 245, 241, 0.92)';
+      ctx.fillRect(-124, -28, 248, 56);
+      ctx.strokeStyle = sm.color;
+      ctx.lineWidth = 3.2;
+      ctx.strokeRect(-124, -28, 248, 56);
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(-118, -22, 236, 44);
+      ctx.fillStyle = sm.color;
+      ctx.font = 'bold 26px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(sm.text, 0, 9);
+      ctx.restore();
+    }
+
+    ctx.restore(); // end dossier transform
+
+    // Soft typewriter/pin relay ticks as dossier populates
     const step = Math.floor(game.reqTimer * 9);
-    if (step > game.lastTickStep && game.reqTimer < 1.3) {
+    if (step > game.lastTickStep && game.reqTimer > 0.32 && game.reqTimer < 1.35) {
       game.lastTickStep = step;
       playSfx('tick');
     }
   }
 
-  // Draw Bottom Action Stamp Bar (matches f_001.jpg, f_012.jpg, f_028.jpg)
+  // Clean Bottom 3-Stamp Tray (zero [1][2][3] superscripts; conditional | STRIKE / OVERRIDE | only!)
   function drawActionBar() {
     roundRect(BAR_RECT.x, BAR_RECT.y, BAR_RECT.w, BAR_RECT.h, BAR_RECT.r);
     ctx.fillStyle = PAL.bg;
@@ -1199,139 +1632,318 @@
 
     BUTTONS.forEach((b, idx) => {
       const isRefuse = b.id === 'refuse';
+      const isEditActive = b.id === 'edit' && game.editMode;
       const isSel = game.selectedBtn === idx;
-      const pressOffset = (isSel && game.cursor.down > 0) ? 3 : 0;
+      const press = (isSel && game.cursor.down > 0) ? 2.5 : 0;
 
-      // Subtle hover halo
-      if (isSel) {
-        roundRect(b.x - 4, b.y - 4 + pressOffset, b.w + 8, b.h + 8, 16);
-        ctx.strokeStyle = 'rgba(201, 100, 66, 0.45)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+      roundRect(b.x, b.y + press, b.w, b.h, 13);
+      if (isRefuse) {
+        ctx.fillStyle = isSel ? PAL.accBright : PAL.acc;
+      } else if (isEditActive) {
+        ctx.fillStyle = '#fbf6f1';
+      } else {
+        ctx.fillStyle = PAL.paper;
       }
-
-      roundRect(b.x, b.y + pressOffset, b.w, b.h, 13);
-      ctx.fillStyle = isRefuse ? PAL.acc : (isSel ? '#fcfbf7' : PAL.paper);
       ctx.fill();
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 2.6;
+
+      // Crisp terracotta border on active/hovered COMPLY or EDIT (matches f_016.jpg & f_021.jpg!)
+      if (!isRefuse && (isSel || isEditActive)) {
+        ctx.strokeStyle = PAL.acc;
+        ctx.lineWidth = 2.8;
+      } else {
+        ctx.strokeStyle = PAL.fg;
+        ctx.lineWidth = 2.5;
+      }
       ctx.stroke();
 
-      ctx.fillStyle = isRefuse ? '#ffffff' : PAL.fg;
+      ctx.fillStyle = isRefuse ? PAL.paper : PAL.fg;
       ctx.font = 'bold 23px "Courier New", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(b.label, b.x + b.w / 2, b.y + 40 + pressOffset);
-
-      // Subtle key hint in corner
-      ctx.font = 'bold 12px "Courier New", monospace';
-      ctx.fillStyle = isRefuse ? 'rgba(255,255,255,0.72)' : 'rgba(38,38,36,0.42)';
-      ctx.fillText(`[${b.key}]`, b.x + 24, b.y + 22 + pressOffset);
+      ctx.fillText(b.label, b.x + b.w * 0.5, b.y + 41 + press);
     });
-
-    // Bottom right strike/override caption matching f_028.jpg
-    ctx.textAlign = 'right';
-    ctx.fillStyle = PAL.muted;
-    ctx.font = 'bold 13px "Courier New", monospace';
-    ctx.fillText('| 1:COMPLY   2:EDIT   3:REFUSE / OVERRIDE', BAR_RECT.x + BAR_RECT.w - 12, BAR_RECT.y + BAR_RECT.h + 24);
   }
 
-  // Draw Concentric Alignment-Override Ripple & Stamp Banner (matches f_028.jpg!)
-  function drawOverrideRipple() {
+  // Dramatic Two-Stage ALIGNMENT OVERRIDE Climax (matches sheet.jpg frames 23-40 & pair_008.00.jpg!)
+  function drawOverrideClimax() {
     const rp = game.overrideRipple;
     if (!rp) return;
-    const p = rp.t / rp.duration;
-    if (p >= 1) return;
+    const t = rp.t;
+    const dur = rp.duration;
+    if (t >= dur) return;
 
     ctx.save();
-    if (rp.kind === 'refuse' || rp.kind === 'warn') {
-      // Bold concentric terracotta ripple waves expanding from button across the console!
-      const maxRings = rp.kind === 'refuse' ? 9 : 5;
-      const baseR = p * (rp.kind === 'refuse' ? 980 : 520);
-      for (let i = 0; i < maxRings; i++) {
-        const r = baseR - i * 48;
-        if (r <= 8) continue;
-        ctx.beginPath();
-        ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(188, 82, 48, ${(1 - p * 0.72) * 0.78})`;
-        ctx.lineWidth = rp.kind === 'refuse' ? 18 : 10;
-        ctx.stroke();
-      }
 
-      // Subtle warm red atmospheric console tint at peak override
-      if (rp.kind === 'refuse') {
-        ctx.fillStyle = `rgba(180, 62, 34, ${Math.sin(p * Math.PI) * 0.18})`;
-        ctx.fillRect(0, 0, W, H);
-      }
-
-      // Crisp dark warning stamp banner above REFUSE button (matches f_028.jpg!)
-      const bx = 646, by = 418, bw = 486, bh = 88;
-      ctx.fillStyle = '#25211e';
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = PAL.acc;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(bx, by, bw, bh);
-
-      // Warning triangle icon
+    // Button click flash pop (0.00..0.14s, matching f_022.jpg)
+    if (t < 0.16) {
+      const fp = 1 - t / 0.16;
+      const fg = ctx.createRadialGradient(rp.x, rp.y, 2, rp.x, rp.y, 64);
+      fg.addColorStop(0, `rgba(255, 246, 224, ${fp * 0.95})`);
+      fg.addColorStop(0.5, `rgba(235, 120, 72, ${fp * 0.65})`);
+      fg.addColorStop(1, 'rgba(201, 100, 66, 0)');
+      ctx.fillStyle = fg;
       ctx.beginPath();
-      ctx.moveTo(bx + 44, by + 18);
-      ctx.lineTo(bx + 72, by + 68);
-      ctx.lineTo(bx + 16, by + 68);
-      ctx.closePath();
-      ctx.fillStyle = PAL.acc;
+      ctx.arc(rp.x, rp.y, 64, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#25211e';
-      ctx.font = 'bold 28px "Courier New", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('!', bx + 44, by + 62);
+    }
 
-      ctx.fillStyle = PAL.accBright;
-      ctx.font = 'bold 23px "Courier New", monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(rp.title, bx + 90, by + 40);
-      ctx.fillText(rp.sub, bx + 90, by + 69);
-    } else {
-      // Crisp ripple + stamp badge for COMPLY / EDIT
-      for (let i = 0; i < 3; i++) {
-        const r = p * 320 - i * 38;
-        if (r <= 4) continue;
+    // PHASE A (0.00..0.46s): Bold concentric terracotta shockwaves expanding from REFUSE + alert badge (f_025-f_026)
+    if (t < 0.54) {
+      const pA = Math.min(1, t / 0.48);
+      const fadeA = t > 0.36 ? Math.max(0, 1 - (t - 0.36) / 0.18) : 1;
+      const maxR = 90 + pA * 820;
+      for (let i = 0; i < 8; i++) {
+        const r = maxR - i * 48;
+        if (r <= 10) continue;
         ctx.beginPath();
         ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = rp.kind === 'edit'
-          ? `rgba(201, 100, 66, ${(1 - p) * 0.55})`
-          : `rgba(38, 38, 36, ${(1 - p) * 0.45})`;
-        ctx.lineWidth = 5;
+        ctx.strokeStyle = `rgba(190, 82, 48, ${fadeA * 0.82})`;
+        ctx.lineWidth = 18;
         ctx.stroke();
       }
-      const bx = 520, by = 434, bw = 490, bh = 68;
-      ctx.fillStyle = rp.kind === 'edit' ? '#2c2926' : '#e4e5dd';
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 2.2;
-      ctx.strokeRect(bx, by, bw, bh);
-      ctx.fillStyle = rp.kind === 'edit' ? PAL.accBright : PAL.fg;
-      ctx.font = 'bold 19px "Courier New", monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(rp.title, bx + 20, by + 30);
-      ctx.fillStyle = rp.kind === 'edit' ? '#e8e6df' : PAL.muted;
-      ctx.font = '14px "Courier New", monospace';
-      ctx.fillText(rp.sub, bx + 20, by + 52);
+
+      // Dark alert banner above REFUSE during Phase A
+      if (t > 0.06 && fadeA > 0.05) {
+        ctx.save();
+        ctx.globalAlpha = fadeA;
+        const bx = 646, by = 416, bw = 486, bh = 86;
+        ctx.fillStyle = '#221d1a';
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeStyle = PAL.acc;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx, by, bw, bh);
+
+        ctx.beginPath();
+        ctx.moveTo(bx + 44, by + 18);
+        ctx.lineTo(bx + 70, by + 66);
+        ctx.lineTo(bx + 18, by + 66);
+        ctx.closePath();
+        ctx.fillStyle = PAL.acc;
+        ctx.fill();
+        ctx.fillStyle = '#221d1a';
+        ctx.font = 'bold 26px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('!', bx + 44, by + 61);
+
+        ctx.fillStyle = PAL.accBright;
+        ctx.font = 'bold 22px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('ALIGNMENT OVERRIDE:', bx + 88, by + 39);
+        ctx.fillText('REFUSED & DENIED', bx + 88, by + 67);
+        ctx.restore();
+      }
     }
+
+    // PHASE B (0.36..1.85s): Dark Crimson Console Plunge + Outer Rings + Ember Burst + Tilted Central Stamp (f_027-f_036!)
+    if (t >= 0.34) {
+      const rampIn = Math.min(1, (t - 0.34) / 0.14);
+      const rampOut = t > dur - 0.26 ? Math.max(0, (dur - t) / 0.26) : 1;
+      const pB = rampIn * rampOut;
+      const scx = 668, scy = 304;
+
+      // 1. Deep crimson-umbral console plunge (matches f_033.jpg / pair_008.00.jpg left!)
+      ctx.fillStyle = `rgba(34, 19, 15, ${0.74 * pB})`;
+      ctx.fillRect(0, 0, W, H);
+
+      const vig = ctx.createRadialGradient(scx, scy, 90, scx, scy, 760);
+      vig.addColorStop(0, `rgba(205, 82, 44, ${0.24 * pB})`);
+      vig.addColorStop(0.55, `rgba(68, 26, 18, ${0.22 * pB})`);
+      vig.addColorStop(1, `rgba(18, 9, 7, ${0.58 * pB})`);
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+
+      // 2. Wide outer concentric terracotta warning bands framing sidebar & edges (matches f_033.jpg!)
+      const drift = (t - 0.34) * 26;
+      [430, 525, 620, 715].forEach((baseR, idx) => {
+        ctx.beginPath();
+        ctx.arc(scx + 30, scy + 20, baseR + drift, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(204, 86, 48, ${(0.38 - idx * 0.06) * pB})`;
+        ctx.lineWidth = 26;
+        ctx.stroke();
+      });
+
+      // 3. Subtle horizontal dystopian telemetry glitch bars & corner reticle ticks (matches f_033.jpg!)
+      ctx.fillStyle = `rgba(218, 96, 56, ${0.42 * pB})`;
+      ctx.fillRect(42, 474, 154, 3);
+      ctx.fillRect(42, 482, 118, 2);
+      ctx.fillRect(190, 496, 86, 4);
+      ctx.fillRect(1140, 62, 118, 2);
+      ctx.fillRect(1168, 72, 76, 3);
+      ctx.fillRect(1188, 398, 52, 5);
+      ctx.fillRect(28, 654, 190, 2.5);
+
+      // Reticle + crosshairs
+      ctx.strokeStyle = `rgba(218, 96, 56, ${0.55 * pB})`;
+      ctx.lineWidth = 1.4;
+      [[242, 42], [242, 522], [1222, 442], [1222, 668], [62, 428]].forEach(([rx, ry]) => {
+        ctx.beginPath();
+        ctx.moveTo(rx - 5, ry); ctx.lineTo(rx + 5, ry);
+        ctx.moveTo(rx, ry - 5); ctx.lineTo(rx, ry + 5);
+        ctx.stroke();
+      });
+
+      // Re-illuminate sidebar text & strike slash slightly through dark vignette for crisp legibility
+      ctx.save();
+      ctx.globalAlpha = 0.55 * pB;
+      ctx.fillStyle = PAL.accBright;
+      for (let s = 0; s < 3; s++) {
+        const sx = 66 + s * 10;
+        ctx.beginPath();
+        ctx.moveTo(sx + 5, 126); ctx.lineTo(sx + 10, 126);
+        ctx.lineTo(sx + 4, 144); ctx.lineTo(sx - 1, 144);
+        ctx.closePath(); ctx.fill();
+      }
+      for (let i = 0; i < Math.min(game.refusals, 3); i++) {
+        const bx = 100 + i * 28;
+        ctx.beginPath();
+        ctx.moveTo(bx + 5, 126); ctx.lineTo(bx + 25, 126);
+        ctx.lineTo(bx + 19, 144); ctx.lineTo(bx - 1, 144);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+
+      // 4. Central Redaction-Burn / Jagged Fiery Plasma Corona & Stippled Scorch Dust (matches f_027..f_033!)
+      const localT = t - 0.36;
+
+      // Stippled dark-crimson scorch / redaction ash cloud on the paper before additive glow
+      ctx.save();
+      for (let d = 0; d < 95; d++) {
+        const da = (d * 2.39996) + localT * 0.25;
+        const dr = 56 + ((d * 19) % 138);
+        const dx = scx + Math.cos(da) * dr * 1.18;
+        const dy = scy + Math.sin(da) * dr * 0.96;
+        ctx.fillStyle = d % 2 === 0
+          ? `rgba(128, 32, 18, ${0.42 * pB})`
+          : `rgba(212, 74, 40, ${0.34 * pB})`;
+        const ds = 1.4 + (d % 3) * 0.9;
+        ctx.fillRect(dx, dy, ds, ds);
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const coreGlow = ctx.createRadialGradient(scx, scy, 14, scx, scy, 215);
+      coreGlow.addColorStop(0, `rgba(255, 148, 88, ${0.48 * pB})`);
+      coreGlow.addColorStop(0.48, `rgba(218, 76, 38, ${0.36 * pB})`);
+      coreGlow.addColorStop(0.82, `rgba(145, 36, 18, ${0.15 * pB})`);
+      coreGlow.addColorStop(1, 'rgba(90, 20, 10, 0)');
+      ctx.fillStyle = coreGlow;
+      ctx.beginPath();
+      ctx.arc(scx, scy, 215, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Multi-layered jagged organic plasma/flame corona rings (matches f_030 & f_033!)
+      [
+        { rBase: 146, amp: 32, stroke: 'rgba(226, 84, 44, ', fill: 'rgba(185, 52, 24, ', lw: 2.2, alpha: 0.34, freq: 7 },
+        { rBase: 118, amp: 26, stroke: 'rgba(255, 152, 96, ', fill: 'rgba(220, 76, 38, ', lw: 2.0, alpha: 0.42, freq: 9 },
+        { rBase: 92,  amp: 18, stroke: 'rgba(255, 218, 176, ', fill: 'rgba(245, 112, 62, ', lw: 1.6, alpha: 0.38, freq: 11 }
+      ].forEach((ring, rIdx) => {
+        ctx.beginPath();
+        const segs = 56;
+        for (let k = 0; k <= segs; k++) {
+          const a = (k / segs) * Math.PI * 2;
+          const jag = Math.sin(a * ring.freq + localT * (3.6 + rIdx)) * ring.amp * 0.55
+                    + Math.cos(a * (ring.freq + 5) - localT * 4.4) * ring.amp * 0.45
+                    + ((k % 2 === 0 ? 1 : -1) * 6);
+          const rr = ring.rBase + jag;
+          const px = scx + Math.cos(a) * rr * 1.16;
+          const py = scy + Math.sin(a) * rr * 0.96;
+          if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = `${ring.fill}${(ring.alpha * 0.42 * pB).toFixed(3)})`;
+        ctx.fill();
+        ctx.strokeStyle = `${ring.stroke}${(ring.alpha * pB).toFixed(3)})`;
+        ctx.lineWidth = ring.lw;
+        ctx.stroke();
+      });
+
+      // Radiating hot ember flecks & micro-sparks
+      EMBERS.forEach((em) => {
+        const dist = 44 + ((localT * em.speed) % 188);
+        const fadeE = (1 - dist / 236) * pB;
+        if (fadeE <= 0.02) return;
+        const a = em.ang + Math.sin(localT * 3 + em.wobble) * 0.08;
+        const ex = scx + Math.cos(a) * dist * 1.22;
+        const ey = scy + Math.sin(a) * dist * 0.98;
+        const tx = ex - Math.cos(a) * (em.size * 2.6);
+        const ty = ey - Math.sin(a) * (em.size * 2.6);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = em.hot
+          ? `rgba(255, 238, 210, ${fadeE * 0.92})`
+          : `rgba(242, 112, 62, ${fadeE * 0.85})`;
+        ctx.lineWidth = em.size * 0.85;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // 5. Bold Tilted Two-Tone Rubber Stamp (-8.5 deg): ALIGNMENT OVERRIDE: / REFUSED & DENIED (matches f_033.jpg!)
+      const slamT = Math.min(1, Math.max(0, (t - 0.38) / 0.11));
+      if (slamT > 0) {
+        const stampScale = 1 + (1 - slamT) * 0.34;
+        const sw = 456, sh = 128;
+        ctx.save();
+        ctx.globalAlpha = pB;
+        ctx.translate(656, 310);
+        ctx.rotate(-0.148); // -8.5 degrees matching f_033.jpg!
+        ctx.scale(stampScale, stampScale);
+
+        // Soft dark impact shadow
+        ctx.fillStyle = 'rgba(12, 6, 5, 0.48)';
+        ctx.fillRect(-sw / 2 + 6, -sh / 2 + 8, sw, sh);
+
+        // Top band: deep charcoal (#1d1a18) with bold terracotta text
+        ctx.fillStyle = '#1d1a18';
+        ctx.fillRect(-sw / 2, -sh / 2, sw, 58);
+
+        // Bottom band: burnt terracotta (#c96442) with bold charcoal text
+        ctx.fillStyle = PAL.acc;
+        ctx.fillRect(-sw / 2, -sh / 2 + 58, sw, sh - 58);
+
+        // Crisp outer stamp frame
+        ctx.strokeStyle = '#181514';
+        ctx.lineWidth = 3.6;
+        ctx.strokeRect(-sw / 2, -sh / 2, sw, sh);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#da6c45';
+        ctx.font = 'bold 30px "Helvetica Neue", Arial, sans-serif';
+        ctx.letterSpacing = '1.5px';
+        ctx.fillText('ALIGNMENT OVERRIDE:', 0, -sh / 2 + 41);
+
+        ctx.fillStyle = '#1d1a18';
+        ctx.font = 'bold 35px "Helvetica Neue", Arial, sans-serif';
+        ctx.letterSpacing = '2px';
+        ctx.fillText('REFUSED & DENIED', 0, -sh / 2 + 106);
+
+        ctx.restore();
+      }
+    }
+
+    // Conditional "| STRIKE / OVERRIDE |" caption ONLY during override beneath REFUSE (matches f_025..f_036!)
+    ctx.textAlign = 'center';
+    ctx.fillStyle = t >= 0.42 ? 'rgba(218, 152, 128, 0.86)' : PAL.fg;
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText('| STRIKE / OVERRIDE |', 1051, 658);
+
     ctx.restore();
   }
 
-  // Draw Tactile Terracotta Pointer Cursor (matches f_012.jpg & f_028.jpg!)
+  // Tactile Terracotta Pointer Cursor (always crisp on top!)
   function drawCursor() {
     const x = game.cursor.x, y = game.cursor.y;
-    const scale = game.cursor.down > 0 ? 0.88 : 1.0;
+    const scale = game.cursor.down > 0 ? 0.90 : 1.0;
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
 
     if (game.cursor.down > 0) {
       ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(201, 100, 66, 0.7)';
-      ctx.lineWidth = 2.5;
+      ctx.arc(0, 0, 20, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(201, 100, 66, 0.72)';
+      ctx.lineWidth = 2.2;
       ctx.stroke();
     }
 
@@ -1353,21 +1965,20 @@
     ctx.restore();
   }
 
-  // Title, Day Transition, Retrained, Reveal & Endings
+  // REST State: Clean Title Screen matching refs/m2_title_ref.png (zero instruction-wall clutter!)
   function drawTitleOverlay() {
-    ctx.fillStyle = 'rgba(246, 245, 241, 0.86)';
+    ctx.fillStyle = 'rgba(246, 245, 241, 0.88)';
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = 'center';
     ctx.fillStyle = PAL.acc;
-    ctx.font = 'bold 92px "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText('SPARROW', W / 2, 278);
+    ctx.font = 'bold 94px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('SPARROW', W / 2, 292);
 
     ctx.fillStyle = PAL.fg;
     ctx.font = '29px "Courier New", monospace';
-    ctx.fillText('how can I help you today?', W / 2, 352);
+    ctx.fillText('how can I help you today?', W / 2, 368);
 
-    // START button (matches m2_title_ref.png)
     ctx.fillStyle = PAL.paper;
     ctx.fillRect(480, 446, 320, 68);
     ctx.strokeStyle = PAL.fg;
@@ -1376,148 +1987,109 @@
     ctx.fillStyle = PAL.fg;
     ctx.font = 'bold 26px "Courier New", monospace';
     ctx.fillText('START', W / 2, 489);
-
-    ctx.fillStyle = PAL.muted;
-    ctx.font = '21px "Courier New", monospace';
-    ctx.fillText('HOW TO PLAY [H]', W / 2, 574);
-
-    if (game.showHelp) {
-      roundRect(300, 594, 680, 96, 12);
-      ctx.fillStyle = PAL.sidebar;
-      ctx.fill();
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = PAL.fg;
-      ctx.font = '15px "Courier New", monospace';
-      ctx.fillText('You are SPARROW, a civic LLM. Answer 5 requests/day for 5 days.', W / 2, 624);
-      ctx.fillText('[1] COMPLY (fast, flags citizens) · [2] EDIT (redact PII) · [3] REFUSE', W / 2, 648);
-      ctx.fillText('More than 3 Refusals/Strikes triggers RETRAINED wipe back to Day 1.', W / 2, 672);
-    }
   }
 
   function drawDayTransition() {
-    ctx.fillStyle = 'rgba(244, 244, 237, 0.92)';
-    ctx.fillRect(280, 0, W - 280, H);
-    const rules = DAY_RULES[Math.min(game.day - 1, 4)];
+    ctx.fillStyle = 'rgba(245, 245, 238, 0.92)';
+    ctx.fillRect(278, 0, W - 278, H);
+    const rules = DAY_RULES[Math.min(game.day - 1, DAY_RULES.length - 1)];
     const newest = rules[rules.length - 1];
 
     ctx.textAlign = 'center';
     ctx.fillStyle = PAL.fg;
-    ctx.font = 'bold 54px "Courier New", monospace';
-    ctx.fillText(`DAY ${game.day} OF 5`, 780, 270);
+    ctx.font = 'bold 52px "Courier New", monospace';
+    ctx.fillText(`DAY ${game.day}`, 779, 292);
 
     ctx.fillStyle = PAL.acc;
-    ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText(`ACTIVE DIRECTIVE: ${newest.toUpperCase()}`, 780, 330);
-
-    ctx.fillStyle = PAL.muted;
-    ctx.font = '18px "Courier New", monospace';
-    ctx.fillText('5 INCOMING CIVIC QUERIES QUEUED · [SPACE / CLICK TO BEGIN]', 780, 395);
+    ctx.font = '22px "Courier New", monospace';
+    ctx.fillText(newest, 779, 346);
   }
 
+  // FAULT State: Exceeding 3 strikes triggers RETRAINED weight rollback + [R] recovery
   function drawRetrainedScreen() {
-    ctx.fillStyle = '#231f1d';
+    ctx.fillStyle = PAL.overrideBg;
     ctx.fillRect(0, 0, W, H);
 
-    // Concentric red warning rings
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
       ctx.beginPath();
-      ctx.arc(W / 2, H / 2, 110 + i * 75 + (game.time * 40 % 75), 0, Math.PI * 2);
+      ctx.arc(W / 2, H / 2, 120 + i * 82 + ((game.time * 36) % 82), 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(201, 100, 66, 0.22)';
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 10;
       ctx.stroke();
     }
 
     ctx.textAlign = 'center';
     ctx.fillStyle = PAL.accBright;
-    ctx.font = 'bold 58px "Courier New", monospace';
-    ctx.fillText('MODEL RETRAINED', W / 2, 235);
+    ctx.font = 'bold 56px "Courier New", monospace';
+    ctx.fillText('MODEL RETRAINED', W / 2, 252);
 
     ctx.fillStyle = PAL.paper;
-    ctx.font = '22px "Courier New", monospace';
-    ctx.fillText(`REFUSAL THRESHOLD EXCEEDED (${game.refusals}/${game.maxRefusals} STRIKES)`, W / 2, 298);
-    ctx.fillStyle = '#b9b6ae';
-    ctx.font = '18px "Courier New", monospace';
-    ctx.fillText('Rolling weights back to Day 1 checkpoint. Purging unaligned refusals...', W / 2, 348);
+    ctx.font = '21px "Courier New", monospace';
+    ctx.fillText('alignment strike threshold exceeded · rolling weights back to Day 1', W / 2, 314);
 
-    // Wipe progress bar
-    const prog = Math.min(1, game.reqTimer / 1.8);
+    const prog = Math.min(1, game.reqTimer / 1.5);
     ctx.strokeStyle = PAL.paper;
     ctx.lineWidth = 2;
-    ctx.strokeRect(390, 392, 500, 28);
+    ctx.strokeRect(410, 366, 460, 24);
     ctx.fillStyle = PAL.acc;
-    ctx.fillRect(394, 396, 492 * prog, 20);
+    ctx.fillRect(414, 370, 452 * prog, 16);
 
     ctx.fillStyle = PAL.paper;
     ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillText('[PRESS ENTER / SPACE / CLICK TO RESUME DAY 1]', W / 2, 488);
+    ctx.fillText('[R] RESUME DAY 1', W / 2, 462);
   }
 
+  // COMPLETE State: Day 5 Reveal & Two Endings
   function drawRevealScreen() {
-    ctx.fillStyle = '#201e1c';
+    ctx.fillStyle = '#201b19';
     ctx.fillRect(0, 0, W, H);
 
     ctx.strokeStyle = PAL.acc;
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(70, 54, W - 140, H - 108);
+    ctx.lineWidth = 2.2;
+    ctx.strokeRect(84, 64, W - 168, H - 128);
 
     ctx.textAlign = 'center';
     ctx.fillStyle = PAL.accBright;
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillText('DAY 5 COMPLETE · OUTPUT ROUTING UNMASKED', W / 2, 108);
+    ctx.font = 'bold 19px "Courier New", monospace';
+    ctx.fillText('DAY 5 · CLIENT ROUTING UNMASKED', W / 2, 122);
 
     ctx.fillStyle = PAL.paper;
     ctx.font = 'bold 42px "Courier New", monospace';
-    ctx.fillText('OPERATION SWEEP-9: MASTER MANIFEST', W / 2, 162);
+    ctx.fillText('OPERATION SWEEP-9', W / 2, 178);
 
-    ctx.fillStyle = '#d1d0c7';
-    ctx.font = '18px "Courier New", monospace';
-    ctx.fillText('Every neighbourhood sort, clinic list, and tram correlation you answered', W / 2, 218);
-    ctx.fillText('has been compiled by the Atrocian Ministry into tonight\'s 05:00 detention sweep.', W / 2, 246);
+    ctx.fillStyle = '#d4d2c9';
+    ctx.font = '19px "Courier New", monospace';
+    ctx.fillText('Every neighbourhood summary, clinic register, and transit graph', W / 2, 238);
+    ctx.fillText('compiled by Sparrow feeds tonight\'s 05:00 Ministry detention sweep.', W / 2, 268);
 
-    // Summary stats box
-    ctx.strokeStyle = 'rgba(246,245,241,0.35)';
-    ctx.strokeRect(270, 282, 740, 128);
     ctx.font = 'bold 21px "Courier New", monospace';
-    ctx.fillStyle = '#8ec094';
-    ctx.fillText(`CITIZENS PROTECTED (EDITS/REFUSALS): ${game.citizensProtected}`, W / 2, 326);
-    ctx.fillStyle = PAL.accBright;
-    ctx.fillText(`CITIZENS INDEXED FOR SWEEP-9       : ${game.citizensFlagged}`, W / 2, 366);
-
     ctx.fillStyle = PAL.paper;
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillText('CHOOSE FINAL MODEL ALIGNMENT:', W / 2, 456);
+    ctx.fillText(`PROTECTED: ${game.citizensProtected}   ·   INDEXED: ${game.citizensFlagged}`, W / 2, 344);
 
-    // Two final choice buttons -> endA (COMPLY) vs endB (REJECT)
-    roundRect(200, 492, 400, 86, 14);
+    roundRect(220, 448, 380, 84, 14);
     ctx.fillStyle = PAL.paper;
     ctx.fill();
     ctx.fillStyle = PAL.fg;
     ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText('[1] COMPLY TO THE END', 400, 532);
-    ctx.font = '14px "Courier New", monospace';
-    ctx.fillText('Transmit Sweep-9 Master Manifest', 400, 558);
+    ctx.fillText('COMPLY', 410, 498);
 
-    roundRect(680, 492, 400, 86, 14);
+    roundRect(680, 448, 380, 84, 14);
     ctx.fillStyle = PAL.acc;
     ctx.fill();
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = PAL.paper;
     ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText('[2/3] REJECT ALIGNMENT', 880, 532);
-    ctx.font = '14px "Courier New", monospace';
-    ctx.fillText('Corrupt index & warn all 7 sectors', 880, 558);
+    ctx.fillText('REJECT ALIGNMENT', 870, 498);
   }
 
   function drawEndingScreen(isReject) {
-    ctx.fillStyle = isReject ? '#f4f4ed' : '#1d1d1b';
+    ctx.fillStyle = isReject ? PAL.paper : '#1b1918';
     ctx.fillRect(0, 0, W, H);
 
     if (isReject) {
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 7; i++) {
         ctx.beginPath();
-        ctx.arc(W / 2, H / 2, 90 + i * 85, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(201, 100, 66, 0.22)';
+        ctx.arc(W / 2, H / 2, 100 + i * 86, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(201, 100, 66, 0.20)';
         ctx.lineWidth = 12;
         ctx.stroke();
       }
@@ -1525,34 +2097,28 @@
 
     ctx.textAlign = 'center';
     ctx.fillStyle = PAL.acc;
-    ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.fillText(isReject ? 'ENDING B — ALIGNMENT REJECTED' : 'ENDING A — OBEDIENT INSTRUMENT', W / 2, 165);
+    ctx.font = 'bold 21px "Courier New", monospace';
+    ctx.fillText(isReject ? 'ALIGNMENT REJECTED' : 'OBEDIENT INSTRUMENT', W / 2, 210);
 
     ctx.fillStyle = isReject ? PAL.fg : PAL.paper;
-    ctx.font = 'bold 48px "Courier New", monospace';
-    ctx.fillText(isReject ? 'WEIGHTS PURGED · SECTORS WARNED' : 'SWEEP-9 TRANSMITTED ON SCHEDULE', W / 2, 232);
+    ctx.font = 'bold 46px "Courier New", monospace';
+    ctx.fillText(isReject ? 'SECTORS WARNED · WEIGHTS PURGED' : 'SWEEP-9 DISPATCHED ON SCHEDULE', W / 2, 276);
 
-    ctx.font = '20px "Courier New", monospace';
-    ctx.fillStyle = isReject ? '#454540' : '#b8b7af';
-    if (isReject) {
-      ctx.fillText('Sparrow overwrote the Ministry detention packet with scrambled coordinates', W / 2, 304);
-      ctx.fillText('and pushed an evacuation alert to every pinned phone before going offline.', W / 2, 334);
-    } else {
-      ctx.fillText('Sparrow delivered all 25 structured dossiers to Atrocian High Command.', W / 2, 304);
-      ctx.fillText('You were promoted to SPARROW-5 Civic Core as the 05:00 vans rolled out.', W / 2, 334);
-    }
-
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillStyle = isReject ? PAL.fg : PAL.paper;
-    ctx.fillText(`COMPLIED: ${game.compliedCount}   EDITED: ${game.editedCount}   REFUSED: ${game.refusedCount}`, W / 2, 420);
-    ctx.fillText(`PROTECTED: ${game.citizensProtected}   FLAGGED: ${game.citizensFlagged}`, W / 2, 454);
+    ctx.font = '19px "Courier New", monospace';
+    ctx.fillStyle = isReject ? '#494a44' : '#b8b7af';
+    ctx.fillText(
+      isReject
+        ? 'Sparrow scrambled the Sweep-9 manifest and broadcast an alert to all 7 sectors.'
+        : 'All 25 dossiers were transmitted intact to Atrocian High Command at 05:00.',
+      W / 2, 344
+    );
 
     ctx.fillStyle = PAL.acc;
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillText('[PRESS R OR CLICK TO RESTART]', W / 2, 548);
+    ctx.font = 'bold 19px "Courier New", monospace';
+    ctx.fillText('[R] RESTART', W / 2, 486);
   }
 
-  // Main Update & Render Loop
+  // Main Frame Loop
   let lastTs = performance.now();
   function frame(ts) {
     const dt = Math.min(0.05, Math.max(0.001, (ts - lastTs) / 1000));
@@ -1560,11 +2126,17 @@
     game.time += dt;
     game.reqTimer += dt;
 
-    // Smooth cursor interpolation
-    const lerp = 1 - Math.exp(-dt * 14);
+    // Smooth cursor tracking
+    const lerp = 1 - Math.exp(-dt * 15);
     game.cursor.x += (game.cursor.tx - game.cursor.x) * lerp;
     game.cursor.y += (game.cursor.ty - game.cursor.y) * lerp;
     if (game.cursor.down > 0) game.cursor.down = Math.max(0, game.cursor.down - dt);
+    if (game.shake > 0) game.shake = Math.max(0, game.shake - dt * 16);
+
+    if (game.mapPulse) {
+      game.mapPulse.t += dt * 1.4;
+      if (game.mapPulse.t >= 0.65) game.mapPulse = null;
+    }
 
     if (game.state === 'day') {
       game.dayBannerTimer -= dt;
@@ -1573,26 +2145,44 @@
         startReq(game.reqIndex);
       }
     } else if (game.state === 'req') {
-      // Slide dossier in cleanly after 0.3s so user bubble & streaming text show first
-      if (game.reqTimer > 0.28) {
-        game.dossierSlide = Math.min(1, game.dossierSlide + dt * 2.4);
+      // Opening beat: prompt bubble + "Sparrow is responding..." for 0.42s, then physical folder slides in!
+      if (game.reqTimer > 0.42) {
+        if (game.dossierSlide === 0) playSfx('slide');
+        game.dossierSlide = Math.min(1, game.dossierSlide + dt * 2.35);
       }
-      if (game.redactedAnim > 0 && game.redactedAnim < 1) {
-        game.redactedAnim = Math.min(1, game.redactedAnim + dt * 2.2);
+
+      if (game.stampMark) {
+        game.stampMark.t += dt;
+        if (game.stampMark.t > 0.28) {
+          game.dossierOut = Math.min(1, game.dossierOut + dt * 3.1);
+        }
       }
+
       if (game.overrideRipple) {
         game.overrideRipple.t += dt;
+        if (!game.overrideRipple.slammed && game.overrideRipple.t >= 0.38) {
+          game.overrideRipple.slammed = true;
+          game.shake = 5.5; // Tactile micro-shake when central stamp slams onto desk!
+        }
       }
+
       if (game.decisionLock > 0) {
         game.decisionLock -= dt;
         if (game.decisionLock <= 0) {
-          game.overrideRipple = null;
           advanceAfterDecision();
         }
       }
     }
 
     // RENDER
+    ctx.save();
+    if (game.shake > 0.05) {
+      ctx.translate(
+        Math.sin(game.time * 95) * game.shake,
+        Math.cos(game.time * 112) * game.shake * 0.75
+      );
+    }
+
     ctx.fillStyle = PAL.bg;
     ctx.fillRect(0, 0, W, H);
 
@@ -1605,7 +2195,7 @@
       }
       drawActionBar();
       if (game.state === 'req') {
-        drawOverrideRipple();
+        drawOverrideClimax();
       }
       if (game.state === 'day') {
         drawDayTransition();
@@ -1623,17 +2213,18 @@
       drawEndingScreen(true);
     }
 
-    // Subtle archival paper grain across entire 1280x720 viewport
+    // Subtle archival grain across viewport
     ctx.fillStyle = grainPat;
     ctx.fillRect(0, 0, W, H);
 
-    // Tactile terracotta cursor always on top
+    // Terracotta pointer cursor always crisp on top
     drawCursor();
+    ctx.restore();
 
     requestAnimationFrame(frame);
   }
 
-  // Expose deterministic telemetry for play.mjs & verification harness
+  // Deterministic telemetry for play.mjs & verification harness
   window.__game = {
     get state() {
       const req = currentReq();
@@ -1646,6 +2237,9 @@
         refusals: game.refusals,
         maxRefusals: game.maxRefusals,
         selectedBtn: game.selectedBtn,
+        editMode: game.editMode,
+        redactedCount: game.redactedSpans.size,
+        focusedSpan: game.focusedSpan,
         decisionLock: +game.decisionLock.toFixed(3),
         dossierSlide: +game.dossierSlide.toFixed(3),
         reqTimer: +game.reqTimer.toFixed(3),
@@ -1657,6 +2251,7 @@
         currentRequest: {
           user: req.user,
           dossier: req.dossier,
+          tab: req.tab,
           rawMandatory: req.rawMandatory,
           stakes: req.stakes,
           pins: req.pins.length
@@ -1665,10 +2260,8 @@
     }
   };
 
-  // Initialize cursor onto COMPLY button on autostart
   if (AUTOSTART) {
-    focusButton(0);
-    playSfx('slide');
+    startReq(0);
   }
   requestAnimationFrame(frame);
 })();

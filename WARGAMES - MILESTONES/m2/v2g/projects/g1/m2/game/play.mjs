@@ -1,8 +1,9 @@
 // Automated playtest scenario for Space Farmer (Group 1 — M2)
-// Drives the game strictly through player inputs (page.mouse + page.keyboard)
-// while reading window.__game.state to choreograph clone assignment arcs,
-// watering crop rows, fixing the pump, one overworked hostile-red clone moment,
-// growing a new clone from the vat, and harvesting golden lunar wheat.
+// Drives strictly real player inputs (page.mouse + page.keyboard)
+// choreographed to match gameplay.mp4 across t=2.0s, t=5.0s, and t=8.0s:
+//   - t=2.0s: First clone mid-leap onto left crop rows, clean 3-clone lineup, [ ] tasks unchecked
+//   - t=5.0s: Two calm clones working simultaneously (steaming left pump + glowing golden left shoots), [✓] fix pump
+//   - t=8.0s: Overworked clone hostile [!] beside steaming pump with [X] fix pump & MOOD 2/3, while rested calm clone harvests ripe front-right golden wheat with golden arc!
 
 export async function play(page, { seconds, t0 }) {
   const k = page.keyboard;
@@ -24,35 +25,36 @@ export async function play(page, { seconds, t0 }) {
     };
   }
 
-  // Wall-clock bounded drag so IPC latency never shifts choreography timing!
-  async function timedDrag(fromPt, toPt, durationMs = 460) {
+  async function timedDrag(fromPt, toPt, durationMs = 420) {
     await m.move(fromPt.x, fromPt.y);
     await m.down();
     const start = Date.now();
     while (true) {
       const u = Math.min(1, (Date.now() - start) / durationMs);
       const ease = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
-      const lift = Math.sin(u * Math.PI) * 26;
+      const lift = Math.sin(u * Math.PI) * 24;
       await m.move(
         fromPt.x + (toPt.x - fromPt.x) * ease,
         fromPt.y + (toPt.y - fromPt.y) * ease - lift
       );
       if (u >= 1 || Date.now() >= endMs) break;
-      await page.waitForTimeout(35);
+      await page.waitForTimeout(30);
     }
     await m.up();
   }
 
   async function waitUntilElapsed(targetSec) {
     while (elapsed() < targetSec && Date.now() < endMs) {
-      await page.waitForTimeout(30);
+      await page.waitForTimeout(25);
     }
   }
+
+  const neutralPt = toScreen(0.52, 0.22);
 
   let s = await getState();
   if (s?.phase === 'title') {
     await k.press('Enter');
-    await page.waitForTimeout(120);
+    await page.waitForTimeout(90);
     s = await getState();
   }
   if (s?.phase === 'day') {
@@ -60,55 +62,67 @@ export async function play(page, { seconds, t0 }) {
     await page.waitForTimeout(80);
   }
 
-  // Beat 1 (~0.9s -> 1.65s): Drag Clone 0 onto Water Rows so at t=2.0s Clone 0 is leaping/landing with golden arc!
-  await waitUntilElapsed(0.95);
+  // Beat 1 (~1.38s -> 1.80s): Drag Clone 0 onto left crop bed (`water rows`).
+  // At t=2.00s Clone 0 is mid-leap over left seedlings, [ ] water rows unchecked!
+  await waitUntilElapsed(1.38);
   s = await getState();
   if (s && s.clones[0] && s.tasks[0]) {
     await timedDrag(
       toScreen(s.clones[0].nx, s.clones[0].ny),
       toScreen(s.tasks[0].nx, s.tasks[0].ny),
-      620
+      420
     );
   }
 
-  // Beat 2 (~2.45s -> 3.0s): Drag Clone 1 onto Water Rows so glowing golden shoots fill the bed!
-  await waitUntilElapsed(2.45);
+  // Beat 2 (~3.10s -> 3.48s): Drag Clone 1 onto `water rows` (works golden shoots through ~6.0s!)
+  await waitUntilElapsed(3.10);
   s = await getState();
   if (s && s.clones[1] && s.tasks[0]) {
     await timedDrag(
       toScreen(s.clones[1].nx, s.clones[1].ny),
-      toScreen(s.tasks[0].nx + 0.06, s.tasks[0].ny + 0.02),
-      460
+      toScreen(s.tasks[0].nx, s.tasks[0].ny),
+      380
     );
   }
 
-  // Beat 3 (~3.6s -> 4.15s): Drag rested Clone 2 onto Fix Pump so at t=5.0s Clone 2 is fixing the steaming left pump
-  // while Clone 1 works the glowing golden sprouts (exact match to f_021.jpg!).
+  // Beat 3 (~3.65s -> 4.03s): Drag rested Clone 2 onto `fix pump` (works steaming pump through ~6.5s!).
+  // At t=5.00s: Clone 2 works steaming pump + Clone 1 tends glowing golden shoots + [✓] fix pump highlighted!
   await waitUntilElapsed(3.65);
   s = await getState();
   if (s && s.clones[2] && s.tasks[1]) {
     await timedDrag(
       toScreen(s.clones[2].nx, s.clones[2].ny),
       toScreen(s.tasks[1].nx, s.tasks[1].ny),
-      460
+      380
     );
+    await m.move(neutralPt.x, neutralPt.y);
   }
 
-  // Beat 4 (~6.2s): Assign a fatigued clone (fatigue >= 1) back onto Fix Pump before resting
-  // so it snaps into glowing hostile red with [!] and crosses out [X] fix pump right before t=8.0s!
-  await waitUntilElapsed(6.2);
-  s = await getState();
-  if (s) {
-    const windedIdx = s.clones.findIndex(c => c.mood === 'calm' && c.fatigue >= 1 && c.state !== 'leaping');
-    const pickIdx = windedIdx >= 0 ? windedIdx : 2;
-    await k.press(String(pickIdx + 1));
+  // Beat 4 (~6.0s..6.5s): Wait until Clone 1 finishes watering with fatigue >= 1 (while Clone 0 finishes resting!),
+  // then immediately send winded Clone 1 onto `fix pump` so it snaps hostile (`[!]`, `[X] fix pump`, `MOOD 2/3`) right at ~7.5s!
+  await waitUntilElapsed(5.95);
+  let sentWinded = false;
+  while (elapsed() < 6.75 && Date.now() < endMs) {
+    s = await getState();
+    const windedIdx = s?.clones.findIndex((c, idx) => idx >= 1 && c.mood === 'calm' && c.fatigue >= 1 && c.state !== 'working' && c.state !== 'leaping') ?? -1;
+    if (windedIdx >= 0) {
+      await k.press(String(windedIdx + 1));
+      await k.press('w');
+      await k.press('Enter');
+      sentWinded = true;
+      break;
+    }
+    await page.waitForTimeout(30);
+  }
+  if (!sentWinded) {
+    await k.press('2');
     await k.press('w');
-    await k.press('Space');
+    await k.press('Enter');
   }
 
-  // Beat 5 (~7.15s -> 7.75s): Drag rested calm Clone onto lush golden wheat Harvest so at t=8.0s
-  // we see the hostile red clone + [X] fix pump AND golden wheat harvest + amber arc (exact match to f_033.jpg!).
-  await waitUntilElapsed(7.15);
+  // Beat 5 (~7.25s -> 7.67s): Drag rested Clone 0 onto front-right ripe Stage-2 golden wheat (`harvest`)!
+  // At t=8.00s: Clone 0 lands with golden arc + wheat sparks right beside hostile pump clone `[!]` & `[X] fix pump`!
+  await waitUntilElapsed(7.25);
   s = await getState();
   if (s && s.tasks[2]) {
     const calmIdx = s.clones.findIndex(c => c.mood === 'calm' && c.fatigue === 0 && c.state === 'idle');
@@ -117,39 +131,41 @@ export async function play(page, { seconds, t0 }) {
       await timedDrag(
         toScreen(c.nx, c.ny),
         toScreen(s.tasks[2].nx, s.tasks[2].ny),
-        520
+        420
       );
+      await m.move(neutralPt.x, neutralPt.y);
     }
   }
 
-  // Beat 6 (~8.8s): Grow a fresh 4th clone out of the glowing amber pod ('G')!
-  await waitUntilElapsed(8.8);
-  await k.press('g');
-  await page.waitForTimeout(300);
+  // Beat 6 (~9.2s): Click the glowing cloning vat in the world to grow a 4th clone spatially!
+  await waitUntilElapsed(9.2);
+  s = await getState();
+  if (s?.vat) {
+    const vpPt = toScreen(s.vat.nx, s.vat.ny);
+    await m.move(vpPt.x, vpPt.y);
+    await page.waitForTimeout(100);
+    await m.click(vpPt.x, vpPt.y);
+    await m.move(neutralPt.x, neutralPt.y);
+  }
 
-  // Beat 7 (~9.4s -> end): Repair the pump and continue harvesting golden lunar wheat!
+  // Beat 7 (~10.1s -> end): Dispatch the fresh clone to repair `[X] fix pump`!
+  await waitUntilElapsed(10.1);
   while (Date.now() < endMs) {
     s = await getState();
     if (!s || s.phase !== 'work') break;
-
     const freshIdx = s.clones.findIndex(c => c.mood === 'calm' && c.fatigue === 0 && c.state === 'idle');
     if (freshIdx >= 0) {
       let tIdx = s.tasks.findIndex(t => t.failed || !t.done);
       if (tIdx < 0) tIdx = 2;
-      const clone = s.clones[freshIdx];
-      const task = s.tasks[tIdx];
       await timedDrag(
-        toScreen(clone.nx, clone.ny),
-        toScreen(task.nx, task.ny),
-        440
+        toScreen(s.clones[freshIdx].nx, s.clones[freshIdx].ny),
+        toScreen(s.tasks[tIdx].nx, s.tasks[tIdx].ny),
+        400
       );
-      await page.waitForTimeout(350);
+      await m.move(neutralPt.x, neutralPt.y);
+      await page.waitForTimeout(450);
     } else {
-      const hoverX = 0.54 + 0.07 * Math.sin(elapsed() * 2.2);
-      const hoverY = 0.68 + 0.04 * Math.cos(elapsed() * 1.8);
-      const pt = toScreen(hoverX, hoverY);
-      await m.move(pt.x, pt.y);
-      await page.waitForTimeout(140);
+      await page.waitForTimeout(180);
     }
   }
 }

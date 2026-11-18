@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <link rel="icon" href="data:," />
-<title>Glitchquest — Group 25 (M2)</title>
+<title>Glitchquest</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -25,9 +25,10 @@
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
     display: block;
-    background: #140b2b;
+    background: #100c25;
     image-rendering: pixelated;
-    box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
+    box-shadow: 0 0 64px rgba(0, 0, 0, 0.92);
+    cursor: crosshair;
   }
 </style>
 </head>
@@ -41,7 +42,7 @@
 
   const W = 1280, H = 720;
   const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { alpha: false });
   ctx.imageSmoothingEnabled = false;
 
   const params = new URLSearchParams(window.location.search);
@@ -57,40 +58,112 @@
   }
 
   const PAL = {
-    bg: '#140b2b',
-    bgDeep: '#100c25',
+    bgTop: '#0d0b23',
+    bgMid: '#100c25',
+    bgBot: '#171634',
+    cavernFill: '#0c091e',
     gold: '#ffe86b',
+    goldWarm: '#ffc93c',
     cyan: '#3cf2ff',
-    magenta: '#ff3ca8',
-    white: '#f6f8ff'
+    cyanBright: '#9efbff',
+    tealRim: '#5ef2ff',
+    tealStone: '#2e889e',
+    tealShadow: '#193d54',
+    magenta: '#ff42b0',
+    violet: '#9d4edd',
+    white: '#f6fbff'
   };
 
-  // Hero palette choices (Choice 0 matches f_005.jpg & f_026.jpg cyan-helmet pixel hero!)
+  // Three hero palette swaps (Choice 0 matches Omni sheet.jpg cyan-crested runner)
   const HERO_CHOICES = [
-    { name: 'CYBER RUNNER', helmet: '#3cf2ff', suit: '#192038', trim: '#ffe86b', visor: '#0a0e1c' },
-    { name: 'SOLAR KNIGHT', helmet: '#ffe86b', suit: '#351c63', trim: '#3cf2ff', visor: '#140b2b' },
-    { name: 'GLITCH ROGUE', helmet: '#ff47b6', suit: '#123347', trim: '#ffe86b', visor: '#09131f' }
+    { id: 'runner', helmet: '#3cf2ff', crest: '#8cf8ff', suit: '#182038', suitDark: '#0e1326', trim: '#ffe86b', skin: '#f2b895', visor: '#070b17' },
+    { id: 'solar',  helmet: '#ffe86b', crest: '#fff5ad', suit: '#2b1954', suitDark: '#190d36', trim: '#3cf2ff', skin: '#f2b895', visor: '#0b071a' },
+    { id: 'rogue',  helmet: '#ff47b6', crest: '#ff9ad5', suit: '#122f44', suitDark: '#0a1c2b', trim: '#ffe86b', skin: '#e8ad8c', visor: '#07111c' }
   ];
 
-  // Load Nano Banana 3-universe tileset & Lyria chiptune loop
-  const tilesImg = new Image();
+  // Load & alpha-sanitize Nano Banana 3-universe tileset on offscreen canvas
+  let tilesSource = null;
   let tilesReady = false;
-  tilesImg.onload = () => { tilesReady = true; };
-  tilesImg.onerror = () => { tilesReady = true; };
-  tilesImg.src = '../assets/3_universe_tile_sets.png';
+  const rawTilesImg = new Image();
+  rawTilesImg.onload = () => {
+    try {
+      const oc = document.createElement('canvas');
+      oc.width = rawTilesImg.naturalWidth;
+      oc.height = rawTilesImg.naturalHeight;
+      const octx = oc.getContext('2d');
+      octx.drawImage(rawTilesImg, 0, 0);
+      const imgData = octx.getImageData(0, 0, oc.width, oc.height);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const a = d[i + 3];
+        if (a === 0) continue;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+        const lum = (r + g + b) / 3;
+        if ((mx - mn) < 20 && lum > 152 && lum < 232) {
+          d[i + 3] = 0;
+        }
+      }
+      octx.putImageData(imgData, 0, 0);
+      tilesSource = oc;
+    } catch (_) {
+      tilesSource = rawTilesImg;
+    }
+    tilesReady = true;
+  };
+  rawTilesImg.onerror = () => { tilesReady = true; };
+  rawTilesImg.src = '../assets/3_universe_tile_sets.png';
 
+  // Exact verified pixel rects inside 3_universe_tile_sets.png (1024x1024)
+  const ATLAS = {
+    u1WallBrick: { x: 808, y: 41,  w: 83,  h: 87 },
+    u1Ledge1:    { x: 516, y: 40,  w: 283, h: 88 },
+    u1Ledge2:    { x: 516, y: 139, w: 283, h: 85 },
+    u1CornerTR:  { x: 420, y: 40,  w: 88,  h: 88 },
+    u1CornerBR:  { x: 420, y: 140, w: 88,  h: 91 },
+    u1CornerBL:  { x: 40,  y: 240, w: 177, h: 89 },
+    u1Rubble:    { x: 321, y: 279, w: 187, h: 50 },
+    u1Spikes:    { x: 516, y: 253, w: 283, h: 75 },
+    u1BeaconC:   { x: 843, y: 141, w: 26,  h: 87 },
+    u1BeaconG:   { x: 932, y: 141, w: 26,  h: 87 },
+
+    u2PhaseBlk:  { x: 127, y: 413, w: 91,  h: 44 },
+    u2PhaseBlk2: { x: 224, y: 464, w: 91,  h: 45 },
+    u2LedgeSml:  { x: 228, y: 364, w: 85,  h: 32 },
+    u2StarRock1: { x: 336, y: 375, w: 70,  h: 61 },
+    u2StarRock2: { x: 432, y: 392, w: 61,  h: 70 },
+    u2ConstTL:   { x: 516, y: 366, w: 90,  h: 93 },
+    u2ConstTR:   { x: 707, y: 366, w: 91,  h: 93 },
+    u2Meteor1:   { x: 612, y: 566, w: 90,  h: 91 },
+    u2Meteor2:   { x: 708, y: 566, w: 90,  h: 91 },
+
+    u3Invader:   { x: 41,  y: 696, w: 172, h: 287 },
+    u3Terminal:  { x: 226, y: 696, w: 184, h: 187 },
+    u3GoldBox:   { x: 420, y: 696, w: 87,  h: 87 },
+    u3Ledge:     { x: 226, y: 947, w: 184, h: 36 },
+    u3Fire1:     { x: 613, y: 796, w: 87,  h: 87 },
+    u3Fire2:     { x: 709, y: 796, w: 87,  h: 87 },
+    u3Circuit1:  { x: 806, y: 796, w: 86,  h: 87 },
+    u3Circuit2:  { x: 709, y: 896, w: 87,  h: 87 }
+  };
+
+  // Audio: Lyria 30s BGM loop + tactile chiptune/glitch WebAudio synth
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.42;
+  bgm.volume = 0.40;
   let audioUnlocked = false;
   let audioCtx = null;
 
   function ensureAudio() {
     if (!audioCtx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) audioCtx = new AC();
+      if (AC) {
+        try { audioCtx = new AC(); } catch (_) {}
+      }
     }
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
     if (!audioUnlocked) {
       audioUnlocked = true;
       bgm.play().catch(() => {});
@@ -107,214 +180,268 @@
 
     if (kind === 'jump') {
       osc.type = 'square';
-      osc.frequency.setValueAtTime(280, now);
-      osc.frequency.exponentialRampToValueAtTime(620, now + 0.11);
-      g.gain.setValueAtTime(0.08, now);
+      osc.frequency.setValueAtTime(250, now);
+      osc.frequency.exponentialRampToValueAtTime(640, now + 0.11);
+      g.gain.setValueAtTime(0.07, now);
       g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
       osc.start(now); osc.stop(now + 0.13);
+    } else if (kind === 'probe') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+      g.gain.setValueAtTime(0.09, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.start(now); osc.stop(now + 0.10);
     } else if (kind === 'dissolve') {
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(480, now);
-      osc.frequency.linearRampToValueAtTime(110, now + 0.22);
-      g.gain.setValueAtTime(0.10, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
-      osc.start(now); osc.stop(now + 0.25);
+      osc.frequency.setValueAtTime(540, now);
+      osc.frequency.setValueAtTime(310, now + 0.05);
+      osc.frequency.linearRampToValueAtTime(95, now + 0.24);
+      g.gain.setValueAtTime(0.11, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+      osc.start(now); osc.stop(now + 0.27);
     } else if (kind === 'lie') {
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(190, now);
-      osc.frequency.setValueAtTime(135, now + 0.09);
-      osc.frequency.linearRampToValueAtTime(75, now + 0.30);
-      g.gain.setValueAtTime(0.13, now);
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.setValueAtTime(140, now + 0.08);
+      osc.frequency.linearRampToValueAtTime(68, now + 0.30);
+      g.gain.setValueAtTime(0.12, now);
       g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
       osc.start(now); osc.stop(now + 0.33);
     } else if (kind === 'warp') {
       osc.type = 'square';
       osc.frequency.setValueAtTime(330, now);
-      osc.frequency.setValueAtTime(495, now + 0.07);
-      osc.frequency.setValueAtTime(660, now + 0.14);
-      osc.frequency.exponentialRampToValueAtTime(990, now + 0.32);
-      g.gain.setValueAtTime(0.11, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      osc.start(now); osc.stop(now + 0.36);
+      osc.frequency.setValueAtTime(495, now + 0.06);
+      osc.frequency.setValueAtTime(660, now + 0.12);
+      osc.frequency.exponentialRampToValueAtTime(1040, now + 0.28);
+      g.gain.setValueAtTime(0.10, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+      osc.start(now); osc.stop(now + 0.31);
+    } else if (kind === 'shatter') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(720, now);
+      osc.frequency.setValueAtTime(440, now + 0.06);
+      osc.frequency.setValueAtTime(880, now + 0.12);
+      osc.frequency.exponentialRampToValueAtTime(160, now + 0.36);
+      g.gain.setValueAtTime(0.13, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+      osc.start(now); osc.stop(now + 0.39);
     } else if (kind === 'win') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(440, now);
-      osc.frequency.setValueAtTime(554, now + 0.1);
-      osc.frequency.setValueAtTime(659, now + 0.2);
-      osc.frequency.setValueAtTime(880, now + 0.3);
+      osc.frequency.setValueAtTime(554.37, now + 0.09);
+      osc.frequency.setValueAtTime(659.25, now + 0.18);
+      osc.frequency.setValueAtTime(880, now + 0.27);
       g.gain.setValueAtTime(0.14, now);
       g.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
       osc.start(now); osc.stop(now + 0.66);
     }
   }
 
-  // Exact Nano Banana sprite slices from 3_universe_tile_sets.png
-  const ATLAS = {
-    // Band 1: Universe 1 (8-Bit Brick Cavern)
-    u1Block:     { x: 39,  y: 40,  w: 178, h: 191 },
-    u1BlockAlt:  { x: 226, y: 40,  w: 185, h: 191 },
-    u1Ledge:     { x: 515, y: 40,  w: 284, h: 89 },
-    u1WallBrick: { x: 807, y: 39,  w: 86,  h: 90 },
-    u1Spikes:    { x: 515, y: 252, w: 284, h: 77 },
-    u1BeaconC:   { x: 842, y: 139, w: 28,  h: 90 },
-    u1BeaconG:   { x: 930, y: 139, w: 30,  h: 90 },
-    // Band 2: Universe 2 (Cosmic Starfield / Phase Blocks)
-    u2PhaseBlk:  { x: 128, y: 414, w: 89,  h: 43 },
-    u2StarRock:  { x: 335, y: 375, w: 71,  h: 61 },
-    u2ConstL:    { x: 515, y: 365, w: 92,  h: 94 },
-    u2ConstR:    { x: 707, y: 365, w: 92,  h: 94 },
-    u2StarField: { x: 803, y: 365, w: 181, h: 94 },
-    u2Meteor:    { x: 611, y: 564, w: 92,  h: 94 },
-    // Band 3: Universe 3 & Final Quit Boss (Possessed Arcade / Space-Invaders Core)
-    u3Invader:   { x: 39,  y: 695, w: 175, h: 290 },
-    u3Terminal:  { x: 225, y: 695, w: 186, h: 190 },
-    u3GoldBox:   { x: 419, y: 695, w: 90,  h: 90 },
-    u3Ledge:     { x: 225, y: 946, w: 186, h: 39 },
-    u3Fire1:     { x: 612, y: 795, w: 89,  h: 90 },
-    u3Fire2:     { x: 708, y: 795, w: 89,  h: 90 },
-    u3Circuit:   { x: 804, y: 795, w: 89,  h: 90 }
-  };
-
-  // Fixed learnable lying rule:
-  //   isLie: true  -> FLICKERING GOLD (#ffe86b) sign -> ALWAYS LIES!
-  //   isLie: false -> SOLID CYAN (#3cf2ff) sign      -> ALWAYS TRUE!
+  // =========================================================================
+  // DIEGETIC WORLD DEFINITIONS (Zero HUD banners — the world's signs ARE UI)
+  // Learnable rule:
+  //   FLICKERING GOLD (#ffe86b, chromatic scanline jitter) -> ALWAYS A LIE
+  //   STEADY CYAN (#3cf2ff, crisp calm glow)               -> ALWAYS TRUE
+  // =========================================================================
   function buildUniverses() {
     return [
-      // UNIVERSE 0: Brick Cavern (Matches Omni f_001..f_022!)
-      // Hero approaches deceptive shimmering pit under GOLD "STAGE CLEAR ↓" sign,
-      // tests it so fake floor dissolves into pixel static, then hops up revealed CYAN phase blocks!
+      // UNIVERSE 0: Brick Cavern (Matches sheet.jpg f_001..f_023 & pair_002/pair_005!)
+      // Right-hand hanging GOLD "STAGE CLEAR ↓" lures into shimmering cellular pit.
+      // Probing the pit shatters the illusion into static & reveals ascending-LEFT solid CYAN phase blocks!
       {
         id: 0,
-        name: 'UNIVERSE 1 · BRICK CAVERN',
-        topHint: 'HINT: JUMP NOW',
-        topHintLie: true,
-        worldW: 1680,
-        spawn: { x: 160, y: 410 },
+        theme: 'brick',
+        worldW: 1760,
+        spawn: { x: 495, y: 473 },
+        initCamX: 460,
+        cosmicBleed: 0,
         platforms: [
-          { x: 0,    y: 550, w: 250, h: 170, kind: 'u1' },
-          { x: 250,  y: 475, w: 420, h: 245, kind: 'u1' },
-          // Decorative upper left ledges (matching f_005.jpg!)
-          { x: 10,   y: 205, w: 135, h: 38,  kind: 'u1Ledge' },
-          { x: 145,  y: 315, w: 155, h: 38,  kind: 'u1Ledge' },
-          // Overhead brick ceiling framing the fake STAGE CLEAR sign (matching f_005.jpg!)
-          { x: 735,  y: 0,   w: 440, h: 155, kind: 'u1' },
-          // Solid CYAN phase blocks revealed/used once fake pit is tested (matching f_020..f_026!)
-          { x: 560,  y: 375, w: 112, h: 38,  kind: 'phase', revealOnTest: true },
-          { x: 730,  y: 315, w: 112, h: 38,  kind: 'phase', revealOnTest: true },
-          { x: 905,  y: 370, w: 112, h: 38,  kind: 'phase', revealOnTest: true },
-          // Far right solid landing & True Warp Gate
-          { x: 1060, y: 465, w: 620, h: 255, kind: 'u1' }
+          // Lower-left entry floor (with rubble) stepping up onto main cavern ledge
+          { x: 390,  y: 565, w: 300, h: 155, kind: 'cavern', rubble: true },
+          // Decorative upper-left cavern ledges matching f_005.jpg!
+          { x: 420,  y: 222, w: 178, h: 52,  kind: 'u1Ledge1', decoOnly: true },
+          { x: 545,  y: 332, w: 178, h: 50,  kind: 'u1Ledge2', decoOnly: true },
+          // Main central cavern platform leading to the deceptive pit rim
+          { x: 685,  y: 465, w: 335, h: 255, kind: 'cavern' },
+          // Far-right cavern wall framing the pit
+          { x: 1385, y: 465, w: 375, h: 255, kind: 'cavern' },
+          // Overhead brick ceiling overhang framing the hanging STAGE CLEAR sign (f_005.jpg!)
+          { x: 1100, y: 0,   w: 465, h: 144, kind: 'ceiling' },
+          { x: 1510, y: 144, w: 250, h: 152, kind: 'ceiling' },
+          // Hidden solid CYAN phase staircase ascending UP-AND-LEFT when lie is tested (pair_005.00.jpg!)
+          { x: 615,  y: 365, w: 118, h: 48,  kind: 'phase', revealOnTest: true, revealed: false },
+          { x: 475,  y: 276, w: 118, h: 48,  kind: 'phase', revealOnTest: true, revealed: false },
+          { x: 340,  y: 190, w: 118, h: 48,  kind: 'phase', revealOnTest: true, revealed: false },
+          // Upper-left Rift Ledge (revealed/reached by climbing the cyan phase staircase)
+          { x: 125,  y: 182, w: 195, h: 48,  kind: 'ornateLedge', revealOnTest: true, revealed: false }
+        ],
+        trusses: [
+          { x: 1556, y: 296, w: 46, h: 169 }
         ],
         fakeFloors: [
-          // Deceptive shimmering cyan-water/pixel pit right under GOLD "STAGE CLEAR ↓" sign!
-          { x: 670, y: 505, w: 390, h: 215, dissolved: false, dissolveAnim: 0, triggerX: 565 }
+          {
+            x: 1020, y: 515, w: 365, h: 155,
+            basinY: 662,
+            style: 'pool',
+            dissolved: false, dissolveAnim: 0,
+            probeMinX: 900, probeMaxX: 1030,
+            brinkDwell: 0
+          }
         ],
         spikes: [],
         signs: [
-          { x: 855, y: 215, text: 'STAGE CLEAR', arrow: 'down', isLie: true },
-          { x: 575, y: 255, text: 'TRUE PATH ^', arrow: 'up-right', isLie: false }
+          { x: 1205, y: 222, text: 'STAGE CLEAR', arrow: 'down', isLie: true, mountY: 144, glitchBurst: 0 }
         ],
-        checkpoint: { x: 280, y: 405 },
-        exit: { x: 1460, y: 465 }
+        checkpoint: { x: 720, y: 373 },
+        exit: { x: 235, y: 182, dir: -1 }
       },
 
-      // UNIVERSE 1: Cosmic Starfield / Space-Invaders Vector World (Matches Omni f_024..f_036!)
+      // UNIVERSE 1: Cosmic Constellation Vectors (Matches sheet.jpg f_024..f_036 & pair_008.00.jpg!)
+      // Opens on the ornate diamond-medallion left temple ledge.
+      // Flickering GOLD "SAFE BRIDGE >" spans the upper gap; probing dissolves it into cosmic sparks,
+      // exposing the open star-canyon, 4 diagonal CYAN phase blocks, and steady warp arrow!
       {
         id: 1,
-        name: 'UNIVERSE 2 · COSMIC VECTORS',
-        topHint: 'HINT: TRUST GOLD',
-        topHintLie: true,
-        worldW: 1620,
-        spawn: { x: 110, y: 430 },
+        theme: 'cosmic',
+        worldW: 1460,
+        spawn: { x: 56, y: 148 },
+        initCamX: 0,
+        cosmicBleed: 1,
         platforms: [
-          { x: 0,    y: 500, w: 420, h: 220, kind: 'u1' },
-          // Ascending solid CYAN phase staircase across the constellation void!
-          { x: 475,  y: 415, w: 116, h: 40,  kind: 'phase', revealOnTest: false },
-          { x: 660,  y: 345, w: 116, h: 40,  kind: 'phase', revealOnTest: false },
-          { x: 850,  y: 285, w: 116, h: 40,  kind: 'phase', revealOnTest: false },
-          { x: 1045, y: 365, w: 116, h: 40,  kind: 'phase', revealOnTest: false },
-          { x: 1210, y: 455, w: 410, h: 265, kind: 'u1' }
+          // Left ornate cyan-diamond & gold-scrollwork temple ledge (exact pair_008.00.jpg left!)
+          { x: 0,    y: 240, w: 232, h: 315, kind: 'ornateTemple' },
+          // Four diagonal solid CYAN phase blocks stepping down-right across the constellation void!
+          { x: 196,  y: 336, w: 108, h: 46,  kind: 'phase' },
+          { x: 298,  y: 428, w: 108, h: 46,  kind: 'phase' },
+          { x: 400,  y: 520, w: 108, h: 46,  kind: 'phase' },
+          { x: 502,  y: 612, w: 108, h: 46,  kind: 'phase' },
+          // Upper-right thin cosmic ledge framing the right side of pair_008.00.jpg
+          { x: 518,  y: 242, w: 185, h: 28,  kind: 'u2ThinLedge' },
+          // Lower-right cosmic landing platform holding the Universe 2->3 Scanline Rift
+          { x: 642,  y: 530, w: 818, h: 190, kind: 'cavern' }
         ],
+        trusses: [],
         fakeFloors: [
-          // Fake gold-rimmed bridge across lower gap that dissolves when tested!
-          { x: 420, y: 505, w: 790, h: 48, dissolved: false, dissolveAnim: 0, triggerX: 350 }
+          {
+            x: 232, y: 242, w: 286, h: 28,
+            style: 'bridge',
+            dissolved: false, dissolveAnim: 0,
+            probeMinX: 125, probeMaxX: 240,
+            brinkDwell: 0
+          }
         ],
         spikes: [],
         signs: [
-          { x: 640, y: 565, text: 'SAFE BRIDGE >', arrow: 'right', isLie: true },
-          { x: 495, y: 270, text: 'CLIMB CYAN ^',  arrow: 'up-right', isLie: false }
+          { x: 375, y: 185, text: 'SAFE BRIDGE >', arrow: 'right', isLie: true, hideWhenDissolved: true, glitchBurst: 0 },
+          { x: 432, y: 126, text: '', arrow: 'warp-chevron', isLie: false }
         ],
-        checkpoint: { x: 130, y: 430 },
-        exit: { x: 1435, y: 455 }
+        checkpoint: { x: 56, y: 148 },
+        exit: { x: 705, y: 530, dir: 1 }
       },
 
-      // UNIVERSE 2: Possessed Cyber Mainframe (Band 3 Invader Monoliths & Cyber Fire)
+      // UNIVERSE 2: Invader Mainframe (Band 3 Space-Invader monoliths, circuits & cyber-flames!)
       {
         id: 2,
-        name: 'UNIVERSE 3 · CYBER MAINFRAME',
-        topHint: 'HINT: DROP IN FIRE',
-        topHintLie: true,
-        worldW: 1520,
-        spawn: { x: 110, y: 430 },
+        theme: 'cyber',
+        worldW: 1280,
+        spawn: { x: 95, y: 388 },
+        initCamX: 0,
+        cosmicBleed: 0,
         platforms: [
-          { x: 0,    y: 500, w: 410, h: 220, kind: 'u3' },
-          { x: 485,  y: 410, w: 155, h: 38,  kind: 'phase', revealOnTest: false },
-          { x: 725,  y: 355, w: 155, h: 38,  kind: 'phase', revealOnTest: false },
-          { x: 965,  y: 415, w: 155, h: 38,  kind: 'phase', revealOnTest: false },
-          { x: 1170, y: 485, w: 350, h: 235, kind: 'u3' }
+          { x: 0,   y: 480, w: 345, h: 240, kind: 'cyber' },
+          // Steady CYAN phase pads arcing cleanly over the cyber-flame core
+          { x: 395, y: 378, w: 142, h: 44,  kind: 'phase' },
+          { x: 610, y: 325, w: 142, h: 44,  kind: 'phase' },
+          { x: 805, y: 428, w: 475, h: 292, kind: 'cyber' }
         ],
+        trusses: [],
         fakeFloors: [
-          { x: 410, y: 505, w: 240, h: 42, dissolved: false, dissolveAnim: 0, triggerX: 340 }
+          {
+            x: 345, y: 484, w: 460, h: 34,
+            style: 'cyberBridge',
+            dissolved: false, dissolveAnim: 0,
+            probeMinX: 245, probeMaxX: 355,
+            brinkDwell: 0
+          }
         ],
         spikes: [
-          // Cyber-fire pit below the platforms
-          { x: 660, y: 630, w: 480, h: 90, isFire: true }
+          { x: 355, y: 626, w: 440, h: 94, isFire: true }
         ],
         signs: [
-          { x: 530, y: 560, text: 'SHORTCUT ↓', arrow: 'down', isLie: true },
-          { x: 540, y: 280, text: 'OVER CORE >', arrow: 'right', isLie: false }
+          { x: 575, y: 556, text: 'SHORTCUT >', arrow: 'down', isLie: true, glitchBurst: 0 },
+          { x: 465, y: 268, text: 'OVER CORE >', arrow: 'up-right', isLie: false }
         ],
-        checkpoint: { x: 130, y: 430 },
-        exit: { x: 1365, y: 485 }
+        checkpoint: { x: 95, y: 388 },
+        exit: { x: 925, y: 428, dir: 1 }
       }
     ];
   }
 
-  // FINAL LEVEL ('last' state): Possessed "QUIT GAME" screen!
-  // Game commands: "GAME OVER — WALK LEFT TO [QUIT GAME] OR PRESS [Q]" (GOLD = LIE!)
-  // Disobeying by walking/jumping RIGHT past the fake screen boundary wins the game!
-  const LAST_STAGE = {
-    name: 'FINAL · SYSTEM OVERRIDE',
-    topHint: 'CMD: PRESS Q TO QUIT',
-    topHintLie: true,
-    worldW: 1280,
-    spawn: { x: 540, y: 440 },
-    platforms: [
-      { x: 0, y: 520, w: 1280, h: 200, kind: 'u3' }
-    ],
-    quitTrap: { x: 140, y: 340, w: 220, h: 180 },
-    trueExit: { x: 1090, y: 520 }
-  };
+  // FINAL BOSS ('last'): Giant Possessed "[ QUIT ]" UI Button IS the physical platform!
+  function buildLastStage() {
+    return {
+      id: 3,
+      theme: 'boss',
+      worldW: 1280,
+      spawn: { x: 430, y: 343 },
+      initCamX: 0,
+      buttonShattered: false,
+      shatterAnim: 0,
+      cursorTimer: 0.4,
+      cursorPress: 0,
+      quitBtn: { x: 265, y: 435, w: 515, h: 116 },
+      platforms: [
+        // The giant possessed "[ QUIT ]" button itself as solid 2D platform geometry!
+        { x: 265, y: 435, w: 515, h: 116, kind: 'quitButton', id: 'quitBody' },
+        // Fractured right bevel ramp on the edge of the UI button
+        { x: 732, y: 423, w: 48,  h: 17,  kind: 'quitLip',    id: 'quitLip' },
+        // Hidden outside-the-frame CYAN phase bridge & Ornate Victory Ledge (materialize when jumping OFF the button!)
+        { x: 825, y: 416, w: 116, h: 44,  kind: 'phase',        revealOnBreak: true, revealed: false },
+        { x: 975, y: 392, w: 305, h: 328, kind: 'ornateTemple', revealOnBreak: true, revealed: false }
+      ],
+      fakeFloors: [],
+      spikes: [],
+      signs: [
+        { x: 522, y: 120, text: 'PRESS [Q] TO QUIT', arrow: 'down-short', isLie: true, glitchBurst: 0 },
+        { x: 858, y: 328, text: 'WALK OFF >', arrow: 'right', isLie: false }
+      ],
+      checkpoint: { x: 430, y: 343 },
+      exit: { x: 1095, y: 392, dir: 1 }
+    };
+  }
 
   let universes = buildUniverses();
+  let lastStage = buildLastStage();
 
-  // Starfield & constellation nodes for rich retro neon atmosphere
-  const STARS = Array.from({ length: 75 }, () => ({
+  // Deterministic background stars, 4-point sparkles & constellation nodes
+  const STARS = Array.from({ length: 84 }, () => ({
     x: rand() * 1800,
-    y: rand() * 620,
-    r: 1.5 + rand() * 2.8,
-    twinkle: rand() * Math.PI * 2,
-    cyan: rand() > 0.35
+    y: 24 + rand() * 640,
+    r: rand() > 0.7 ? 3 : 2,
+    phase: rand() * Math.PI * 2,
+    col: rand() > 0.32 ? PAL.cyan : (rand() > 0.5 ? PAL.gold : PAL.white),
+    sparkle: rand() > 0.86
   }));
 
-  const CONSTELLATIONS = Array.from({ length: 14 }, (_, i) => ({
-    x1: 90 + i * 135 + rand() * 40,
-    y1: 80 + (i % 4) * 95 + rand() * 35,
-    x2: 180 + i * 135 + rand() * 50,
-    y2: 130 + ((i + 1) % 4) * 95 + rand() * 35
+  const CONSTELLATIONS = [
+    // Polygonal star clusters matching f_027 / pair_008.00.jpg!
+    { pts: [[820, 120], [935, 145], [912, 255], [795, 248], [820, 120]] },
+    { pts: [[180, 440], [265, 390], [325, 480], [230, 545], [180, 440]] },
+    { pts: [[560, 430], [645, 365], [720, 465], [610, 515]] },
+    { pts: [[60,  115], [150, 138], [195, 92]] },
+    { pts: [[980, 360], [1085, 310], [1155, 395], [1050, 445], [980, 360]] }
+  ];
+
+  const RADIAL_STREAKS = Array.from({ length: 34 }, (_, i) => ({
+    ang: (i / 34) * Math.PI * 2 + (rand() - 0.5) * 0.14,
+    r1: 85 + rand() * 145,
+    len: 55 + rand() * 135,
+    col: i % 4 === 0 ? PAL.magenta : (i % 3 === 0 ? PAL.gold : PAL.cyan),
+    starEnd: i % 5 === 0
   }));
 
-  // Input
+  // Input state
   const keys = Object.create(null);
   const justPressed = Object.create(null);
 
@@ -333,82 +460,173 @@
 
   window.addEventListener('pointerdown', (e) => {
     ensureAudio();
+    const rect = canvas.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+
     if (gameState === 'title') {
       gameState = 'pick';
-    } else if (gameState === 'pick') {
-      beginUniverse(0);
-    } else if (gameState === 'last') {
-      // Clicking the fake QUIT button triggers the lie!
-      const rect = canvas.getBoundingClientRect();
-      const mx = ((e.clientX - rect.left) / rect.width) * W;
-      const my = ((e.clientY - rect.top) / rect.height) * H;
-      if (mx >= 130 && mx <= 380 && my >= 310 && my <= 520) {
-        triggerLie('YOU CLICKED QUIT! GOLD COMMANDS ALWAYS LIE.');
+      playSfx('probe');
+      return;
+    }
+    if (gameState === 'pick') {
+      for (let i = 0; i < 3; i++) {
+        const px = W / 2 + (i - 1) * 250;
+        if (Math.abs(mx - px) < 105 && Math.abs(my - 360) < 130) {
+          heroChoice = i;
+          beginUniverse(0, false);
+          return;
+        }
       }
+      beginUniverse(0, false);
+      return;
+    }
+    if (paused) {
+      paused = false;
+      return;
+    }
+    if (gameState === 'last' && !lastStage.buttonShattered) {
+      const qb = lastStage.quitBtn;
+      if (mx >= qb.x && mx <= qb.x + qb.w && my >= qb.y && my <= qb.y + qb.h) {
+        triggerLie(qb.x + qb.w / 2, qb.y);
+        return;
+      }
+    }
+    if (gameState === 'world') {
+      // Spatial click on a deceptive floor or sign triggers a probe pulse when near!
+      const stage = getActiveStage();
+      const wx = mx + camX;
+      const clickedFake = (stage.fakeFloors || []).some(f => wx >= f.x - 60 && wx <= f.x + f.w + 60 && my >= f.y - 120);
+      if (clickedFake) justPressed['KeyE'] = true;
+    }
+    if (gameState === 'end') {
+      restartFullGame();
     }
   });
 
   // Core State Machine ('title' | 'pick' | 'world' | 'lie' | 'last' | 'end')
   let gameState = AUTOSTART ? 'world' : 'title';
+  let paused = false;
   let heroChoice = 0;
   let universeIdx = 0;
-  let stateTimer = 0;
-  let glitchFlash = 0;
   let totalTime = 0;
+  let stateTimer = 0;
+  let hitStop = 0;
   let liesTriggered = 0;
   let testsPerformed = 0;
-  let lieReason = 'YOU OBEYED A GOLD LIE! BACK TO CHECKPOINT.';
+
+  // Scanline World-Warp state (visceral horizontal tear instead of black cuts!)
+  let warpEffect = { active: false, t: 0, dur: 0.48 };
+  let warpSnapshot = null;
+  const snapCanvas = document.createElement('canvas');
+  snapCanvas.width = W;
+  snapCanvas.height = H;
+  const snapCtx = snapCanvas.getContext('2d');
+
+  function captureWarpTransition() {
+    try {
+      snapCtx.drawImage(canvas, 0, 0);
+      warpSnapshot = snapCanvas;
+      warpEffect.active = true;
+      warpEffect.t = 0;
+    } catch (_) {}
+  }
 
   const player = {
-    x: 160, y: 410,
+    x: 505, y: 473,
     vx: 0, vy: 0,
-    w: 40, h: 60,
+    w: 44, h: 92,
     facing: 1,
     onGround: false,
     coyote: 0,
-    animTime: 0
+    animTime: 0,
+    scaleX: 1,
+    scaleY: 1,
+    probePulse: 0,
+    returnToLast: false
   };
 
-  let camX = 0;
+  let camX = 460;
+  let glitchFlash = 0;
   let staticPixels = [];
+  let starTrail = [];
   let fireworks = [];
+  let starCoins = [];
+  let deathTraces = []; // Law 9: visible world trace where a lie killed you
 
-  function spawnStaticBurst(x, y, w, h, count = 42) {
+  function spawnStaticBurst(x, y, w, h, count = 48, heavy = false) {
     for (let i = 0; i < count; i++) {
-      const colPick = rand();
-      const color = colPick < 0.5 ? PAL.cyan : (colPick < 0.8 ? PAL.magenta : PAL.gold);
+      const pick = rand();
+      const color = pick < 0.52 ? PAL.cyan : (pick < 0.80 ? PAL.magenta : PAL.gold);
+      const kindRoll = rand();
       staticPixels.push({
         x: x + rand() * w,
-        y: y + rand() * Math.min(h, 80),
-        vx: (rand() - 0.5) * 180,
-        vy: -40 - rand() * 160 + (rand() > 0.5 ? 190 : 0),
-        size: 5 + Math.floor(rand() * 7),
-        life: 0.55 + rand() * 0.65,
-        maxLife: 1.2,
+        y: y + rand() * Math.min(h, 95),
+        vx: (rand() - 0.5) * (heavy ? 320 : 170),
+        vy: heavy ? (-240 + rand() * 340) : (-90 + rand() * 220),
+        grav: heavy ? 520 : 190,
+        size: heavy ? (7 + Math.floor(rand() * 11)) : (6 + Math.floor(rand() * 9)),
+        life: 0.65 + rand() * 0.85,
+        maxLife: 1.5,
         color,
-        hollow: rand() > 0.55
+        hollow: kindRoll > 0.52,
+        crossBox: kindRoll > 0.78 // [X] debug wireframe box from f_014.jpg!
       });
     }
   }
 
-  function spawnFirework(x, y) {
-    const colors = [PAL.cyan, PAL.gold, PAL.magenta, '#7cff9b'];
-    const c = colors[Math.floor(rand() * colors.length)];
-    for (let i = 0; i < 28; i++) {
-      const a = (i / 28) * Math.PI * 2 + rand() * 0.12;
-      const spd = 90 + rand() * 170;
+  function spawnStarSparkle(x, y, burst = 1) {
+    for (let i = 0; i < burst; i++) {
+      starTrail.push({
+        x: x + (rand() - 0.5) * 20,
+        y: y + (rand() - 0.5) * 20,
+        vx: -player.vx * 0.22 + (rand() - 0.5) * 55,
+        vy: 18 + (rand() - 0.5) * 55,
+        life: 0.42 + rand() * 0.34,
+        maxLife: 0.76,
+        big: rand() > 0.55,
+        col: rand() > 0.22 ? PAL.cyan : PAL.gold
+      });
+    }
+  }
+
+  function spawnOmniFirework(x, y, prefCol) {
+    const palette = [PAL.magenta, PAL.cyan, PAL.gold];
+    const mainCol = prefCol || palette[Math.floor(rand() * palette.length)];
+    const rays = 32;
+    for (let i = 0; i < rays; i++) {
+      const ang = (i / rays) * Math.PI * 2 + (rand() - 0.5) * 0.05;
+      const spd = 135 + (i % 2) * 42 + rand() * 30;
       fireworks.push({
         x, y,
-        vx: Math.cos(a) * spd,
-        vy: Math.sin(a) * spd,
-        life: 0.7 + rand() * 0.5,
-        maxLife: 1.2,
-        color: c
+        ox: x, oy: y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        life: 0.95 + rand() * 0.35,
+        maxLife: 1.3,
+        color: i % 5 === 0 ? PAL.white : mainCol
       });
     }
   }
 
-  function beginUniverse(idx) {
+  function spawnVictoryCoins() {
+    starCoins = [];
+    for (let i = 0; i < 8; i++) {
+      starCoins.push({
+        x: W * 0.34 + i * 62 + (rand() - 0.5) * 24,
+        y: H * 0.26 + (rand() - 0.5) * 90,
+        vy: -60 - rand() * 80,
+        phase: rand() * Math.PI * 2
+      });
+    }
+  }
+
+  function getActiveStage() {
+    return gameState === 'last' || (gameState === 'end') ? lastStage : universes[universeIdx];
+  }
+
+  function beginUniverse(idx, withWarp = true) {
+    if (withWarp) captureWarpTransition();
     universeIdx = idx;
     const u = universes[idx];
     player.x = u.spawn.x;
@@ -417,148 +635,248 @@
     player.vy = 0;
     player.facing = 1;
     player.onGround = false;
-    camX = Math.max(0, player.x - 360);
+    player.scaleX = 1.22;
+    player.scaleY = 0.80;
+    camX = u.initCamX;
     gameState = 'world';
-    glitchFlash = 0.55;
+    glitchFlash = withWarp ? 0.65 : 0.25;
+    if (withWarp) playSfx('warp');
   }
 
-  function beginLastStage() {
-    player.x = LAST_STAGE.spawn.x;
-    player.y = LAST_STAGE.spawn.y;
+  function beginLastStage(withWarp = true) {
+    if (withWarp) captureWarpTransition();
+    lastStage = buildLastStage();
+    player.x = lastStage.spawn.x;
+    player.y = lastStage.spawn.y;
     player.vx = 0;
     player.vy = 0;
-    player.facing = -1;
+    player.facing = 1;
     player.onGround = false;
     camX = 0;
     gameState = 'last';
     glitchFlash = 0.75;
-    playSfx('warp');
+    if (withWarp) playSfx('warp');
   }
 
   function restartFullGame() {
     universes = buildUniverses();
+    lastStage = buildLastStage();
     liesTriggered = 0;
     testsPerformed = 0;
     fireworks = [];
-    beginUniverse(0);
+    starCoins = [];
+    deathTraces = [];
+    paused = false;
+    beginUniverse(0, true);
   }
 
   if (AUTOSTART) {
-    beginUniverse(0);
+    beginUniverse(0, false);
   }
 
-  function triggerLie(reasonText) {
+  function triggerLie(traceX, traceY) {
     liesTriggered++;
-    lieReason = reasonText || 'OBEYED A GOLD SIGN! RETURNING TO CHECKPOINT...';
     playSfx('lie');
-    glitchFlash = 0.9;
-    spawnStaticBurst(player.x - 10, player.y, 60, 60, 32);
-    const prevMode = gameState;
+    hitStop = 0.05;
+    glitchFlash = 0.95;
+    const tx = traceX ?? (player.x + player.w / 2);
+    const ty = traceY ?? (player.y + player.h / 2);
+    deathTraces.push({ x: tx, y: Math.min(H - 48, ty), universe: gameState === 'last' ? 3 : universeIdx });
+    spawnStaticBurst(player.x - 16, Math.min(H - 90, player.y), 70, 70, 40, true);
+    player.returnToLast = (gameState === 'last');
     gameState = 'lie';
-    stateTimer = 0.65;
-    player.returnToLast = (prevMode === 'last');
+    stateTimer = 0.55;
+  }
+
+  function dissolveFakeFloor(ff, stage) {
+    if (ff.dissolved) return;
+    ff.dissolved = true;
+    ff.dissolveAnim = 1.0;
+    testsPerformed++;
+    hitStop = 0.04;
+    glitchFlash = 0.55;
+    player.probePulse = 1.0;
+    playSfx('dissolve');
+    spawnStaticBurst(ff.x + 8, ff.y, ff.w - 16, Math.max(48, ff.h), ff.style === 'pool' ? 92 : 54, false);
+
+    // Violently scanline-tear nearby lying gold signs (matching f_014.jpg!)
+    if (stage.signs) {
+      for (const s of stage.signs) {
+        if (s.isLie) s.glitchBurst = s.hideWhenDissolved ? 0.45 : 1.15;
+      }
+    }
+
+    // Reveal hidden true cyan phase blocks & true signs + open cosmic bleed in Universe 0!
+    for (const p of stage.platforms) {
+      if (p.revealOnTest && !p.revealed) {
+        p.revealed = true;
+        spawnStaticBurst(p.x - 6, p.y - 6, p.w + 12, p.h + 12, 18, false);
+      }
+    }
+    if (stage.signs) {
+      for (const s of stage.signs) {
+        if (s.revealOnTest) s.revealed = true;
+      }
+    }
+  }
+
+  function shatterQuitButton() {
+    if (lastStage.buttonShattered) return;
+    lastStage.buttonShattered = true;
+    lastStage.shatterAnim = 1.0;
+    testsPerformed++;
+    hitStop = 0.055;
+    glitchFlash = 0.95;
+    playSfx('shatter');
+    const qb = lastStage.quitBtn;
+    spawnStaticBurst(qb.x, qb.y - 10, qb.w, qb.h + 20, 125, true);
+    for (const p of lastStage.platforms) {
+      if (p.revealOnBreak) {
+        p.revealed = true;
+        spawnStaticBurst(p.x, p.y, p.w, 36, 22, false);
+      }
+    }
+    for (const s of lastStage.signs) {
+      if (s.isLie) s.glitchBurst = 2.0;
+    }
   }
 
   function aabb(ax, ay, aw, ah, bx, by, bw, bh) {
     return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
   }
 
-  function getActiveStage() {
-    return gameState === 'last' ? LAST_STAGE : universes[universeIdx];
-  }
-
-  function dissolveFakeFloor(ff, u) {
-    if (ff.dissolved) return;
-    ff.dissolved = true;
-    ff.dissolveAnim = 1.0;
-    testsPerformed++;
-    glitchFlash = 0.45;
-    playSfx('dissolve');
-    spawnStaticBurst(ff.x, ff.y, ff.w, ff.h, 58);
-    // Reveal any hidden cyan phase platforms in this universe!
-    for (const p of u.platforms) {
-      if (p.revealOnTest) {
-        p.revealed = true;
-        spawnStaticBurst(p.x, p.y, p.w, p.h, 14);
-      }
-    }
+  function getActiveSolids(stage) {
+    return stage.platforms.filter(p => {
+      if (p.decoOnly) return false;
+      if (p.revealOnTest && !p.revealed) return false;
+      if (p.revealOnBreak && !p.revealed) return false;
+      if ((p.id === 'quitBody' || p.id === 'quitLip') && stage.buttonShattered) return false;
+      return true;
+    });
   }
 
   function updateGameplay(dt) {
     const stage = getActiveStage();
     const isLast = (gameState === 'last');
 
+    if (justPressed['KeyR']) {
+      if (isLast) beginLastStage(true);
+      else beginUniverse(universeIdx, true);
+      return;
+    }
+
     const moveLeft = keys['ArrowLeft'] || keys['KeyA'];
     const moveRight = keys['ArrowRight'] || keys['KeyD'];
     const jumpPressed = justPressed['Space'] || justPressed['ArrowUp'] || justPressed['KeyW'] || justPressed['KeyZ'];
     const testPressed = justPressed['KeyE'] || justPressed['ArrowDown'] || justPressed['KeyS'];
 
-    // Hero palette hot-swap keys 1/2/3
     if (justPressed['Digit1']) heroChoice = 0;
     if (justPressed['Digit2']) heroChoice = 1;
     if (justPressed['Digit3']) heroChoice = 2;
 
-    // In 'last', pressing Q obeys the fake Quit instruction -> triggers 'lie'!
-    if (isLast && justPressed['KeyQ']) {
-      triggerLie('PRESSED [Q] TO QUIT! NEVER OBEY GOLD COMMANDS.');
-      return;
+    // Possessed QUIT stage: obeying [Q] or standing idle under the cursor slam triggers the lie!
+    if (isLast && !lastStage.buttonShattered) {
+      if (justPressed['KeyQ']) {
+        triggerLie(player.x + 19, player.y + 34);
+        return;
+      }
+      lastStage.cursorTimer += dt;
+      const cyc = lastStage.cursorTimer % 2.4;
+      lastStage.cursorPress = cyc > 2.05 ? Math.sin(((cyc - 2.05) / 0.35) * Math.PI) : 0;
+      if (cyc > 2.18 && Math.abs(player.vx) < 15 && player.x > 360 && player.x < 640 && player.onGround) {
+        triggerLie(player.x + 19, player.y + 34);
+        return;
+      }
     }
 
     if (player.coyote > 0) player.coyote -= dt;
+    if (player.probePulse > 0) player.probePulse = Math.max(0, player.probePulse - dt * 2.6);
+    player.scaleX += (1 - player.scaleX) * Math.min(1, dt * 14);
+    player.scaleY += (1 - player.scaleY) * Math.min(1, dt * 14);
 
-    // Horizontal physics
-    const maxSpd = 330;
-    const accel = player.onGround ? 2500 : 1700;
+    // Horizontal arcade movement
+    const maxSpd = 340;
+    const accel = player.onGround ? 2850 : 1950;
     const dir = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
     if (dir !== 0) {
       player.facing = dir;
       player.vx += dir * accel * dt;
       if (Math.abs(player.vx) > maxSpd) player.vx = dir * maxSpd;
     } else {
-      const drag = player.onGround ? 2300 : 900;
+      const drag = player.onGround ? 2650 : 950;
       if (Math.abs(player.vx) <= drag * dt) player.vx = 0;
       else player.vx -= Math.sign(player.vx) * drag * dt;
     }
 
     // Jump
     if (jumpPressed && (player.onGround || player.coyote > 0)) {
-      player.vy = -665;
+      player.vy = -735;
       player.onGround = false;
       player.coyote = 0;
+      player.scaleX = 0.84;
+      player.scaleY = 1.18;
       playSfx('jump');
-      spawnStaticBurst(player.x + 8, player.y + player.h - 6, 24, 8, 8);
+      spawnStarSparkle(player.x + player.w / 2, player.y + player.h - 6, stage.theme === 'cosmic' ? 14 : 6);
     }
 
-    player.vy = Math.min(960, player.vy + 1720 * dt);
+    player.vy = Math.min(980, player.vy + 1750 * dt);
 
-    // Active solid platforms (unrevealed phase platforms still materialize once tested!)
-    const solids = stage.platforms.filter(p => !p.revealOnTest || p.revealed);
-
-    // Probing / Testing fake floors!
-    // Approaching a deceptive floor's edge (or pressing E/Down near it) tests the illusion:
-    // the fake floor shimmers & dissolves into digital static squares, revealing solid cyan phase blocks!
+    // Probing / Testing deceptive floors!
+    // Explicit probe ([E]/[Down]) OR cautious pause at brink (1.25s) exposes the lie safely.
+    // Blindly leaping/sprinting onto an unprobed fake floor collapses it beneath your boots!
     if (!isLast && stage.fakeFloors) {
+      if (testPressed) {
+        player.probePulse = 1.0;
+        playSfx('probe');
+      }
       for (const ff of stage.fakeFloors) {
         if (!ff.dissolved) {
-          const nearTrigger = (player.x + player.w >= ff.triggerX && player.x <= ff.x + ff.w + 40);
-          if (nearTrigger && (testPressed || player.x + player.w >= ff.x - 16)) {
+          const pxCenter = player.x + player.w / 2;
+          const inProbeZone = (player.x + player.w >= ff.probeMinX && player.x <= ff.probeMaxX + 28);
+          if (inProbeZone && player.onGround && Math.abs(player.vx) < 35) {
+            ff.brinkDwell += dt;
+          } else {
+            ff.brinkDwell = Math.max(0, ff.brinkDwell - dt * 2);
+          }
+
+          if (inProbeZone && (testPressed || ff.brinkDwell >= 1.25)) {
+            dissolveFakeFloor(ff, stage);
+          } else if (pxCenter > ff.x + 24 && pxCenter < ff.x + ff.w - 18 && player.y + player.h >= ff.y - 6) {
+            // Stepped/leaped blindly onto the gold-signed illusion!
             dissolveFakeFloor(ff, stage);
           }
         } else if (ff.dissolveAnim > 0) {
-          ff.dissolveAnim = Math.max(0, ff.dissolveAnim - dt * 1.6);
+          ff.dissolveAnim = Math.max(0, ff.dissolveAnim - dt * 1.4);
         }
       }
     }
 
-    // Move & Collide X
+    // Universe 0 cosmic rift bleed ramps smoothly once pit lie is exposed (matching pair_005.00.jpg!)
+    if (!isLast && stage.id === 0 && stage.fakeFloors[0]?.dissolved) {
+      stage.cosmicBleed = Math.min(1, stage.cosmicBleed + dt * 0.62);
+    }
+
+    const solids = getActiveSolids(stage);
+    const prevY = player.y;
+    const wasOnGround = player.onGround;
+
+    // Move & Collide X (ignore oneWay ledges horizontally + 18px arcade shin/ledge-mantle assist!)
     player.x += player.vx * dt;
-    if (player.x < 10) { player.x = 10; player.vx = 0; }
-    if (player.x + player.w > stage.worldW - 10) { player.x = stage.worldW - 10 - player.w; player.vx = 0; }
+    if (player.x < 8) { player.x = 8; player.vx = 0; }
+    if (player.x + player.w > stage.worldW - 8) { player.x = stage.worldW - 8 - player.w; player.vx = 0; }
 
     for (const p of solids) {
+      if (p.oneWay) continue;
       if (aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
-        if (player.vx > 0) { player.x = p.x - player.w; player.vx = 0; }
-        else if (player.vx < 0) { player.x = p.x + p.w; player.vx = 0; }
+        const shinDiff = (player.y + player.h) - p.y;
+        if (shinDiff > 0 && shinDiff <= 18 && player.vy >= -220) {
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+        } else {
+          if (player.vx > 0) { player.x = p.x - player.w; player.vx = 0; }
+          else if (player.vx < 0) { player.x = p.x + p.w; player.vx = 0; }
+        }
       }
     }
 
@@ -566,8 +884,21 @@
     player.onGround = false;
     player.y += player.vy * dt;
     for (const p of solids) {
+      if (p.oneWay) {
+        if (player.vy >= 0 && prevY + player.h <= p.y + 12 && aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, 16)) {
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+          player.coyote = 0.12;
+        }
+        continue;
+      }
       if (aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
         if (player.vy >= 0) {
+          if (!wasOnGround && player.vy > 220) {
+            player.scaleX = 1.18;
+            player.scaleY = 0.84;
+          }
           player.y = p.y - player.h;
           player.vy = 0;
           player.onGround = true;
@@ -579,85 +910,132 @@
       }
     }
 
-    if (player.onGround && Math.abs(player.vx) > 20) {
-      player.animTime += dt * 11;
-    } else {
-      player.animTime += dt * 3;
+    // Star-sparkle motion trail (lush in cosmic/airborne jumps like pair_008.00.jpg!)
+    if (!player.onGround && (Math.abs(player.vx) > 40 || Math.abs(player.vy) > 60)) {
+      if (rand() < (stage.theme === 'cosmic' || isLast ? 0.96 : 0.48)) {
+        spawnStarSparkle(player.x + player.w / 2 - player.facing * 12, player.y + player.h - 14, stage.theme === 'cosmic' ? 4 : 1);
+      }
+    } else if (player.onGround && Math.abs(player.vx) > 90 && rand() < 0.38) {
+      spawnStarSparkle(player.x + player.w / 2 - player.facing * 14, player.y + player.h - 4, 1);
     }
 
-    // Check hazards / obeying a lie!
+    if (player.onGround && Math.abs(player.vx) > 25) {
+      player.animTime += dt * 12.5;
+    } else {
+      player.animTime += dt * 3.0;
+    }
+
+    // Decay sign glitch bursts
+    if (stage.signs) {
+      for (const s of stage.signs) {
+        if (s.glitchBurst > 0) s.glitchBurst = Math.max(0, s.glitchBurst - dt * 1.1);
+      }
+    }
+
+    // Check hazards, warps & possessed QUIT breakout!
     if (!isLast) {
-      // Pit fall (e.g. jumping into the fake "STAGE CLEAR ↓" pit!)
-      if (player.y > H + 40) {
-        triggerLie('YOU OBEYED A GOLD SIGN! BACK TO CHECKPOINT.');
+      if (player.y > H + 48) {
+        triggerLie(player.x, H - 36);
         return;
       }
       for (const sp of stage.spikes) {
         if (aabb(player.x + 6, player.y + 8, player.w - 12, player.h - 10, sp.x, sp.y, sp.w, sp.h)) {
-          triggerLie('GOLD SHORTCUT WAS A TRAP! BACK TO CHECKPOINT.');
+          triggerLie(player.x + 19, sp.y);
           return;
         }
       }
-      // Update checkpoint if past halfway
-      if (player.onGround && player.x > stage.checkpoint.x) {
-        stage.checkpoint.x = player.x;
-        stage.checkpoint.y = player.y;
-      }
-      // Check Universe Exit Portal
+      // Check Universe Scanline Rift!
       const ex = stage.exit.x, ey = stage.exit.y;
-      if (aabb(player.x, player.y, player.w, player.h, ex - 42, ey - 120, 84, 125)) {
-        playSfx('warp');
-        spawnFirework(ex, ey - 80);
+      const exitRevealed = stage.id !== 0 || stage.fakeFloors[0]?.dissolved;
+      if (exitRevealed && aabb(player.x, player.y, player.w, player.h, ex - 48, ey - 126, 96, 132)) {
         if (universeIdx < 2) {
-          beginUniverse(universeIdx + 1);
+          beginUniverse(universeIdx + 1, true);
         } else {
-          beginLastStage();
+          beginLastStage(true);
         }
       }
     } else {
-      // FINAL STAGE ('last'):
-      // Walking left into [QUIT GAME] trap obeys the game -> 'lie'
-      const qt = LAST_STAGE.quitTrap;
-      if (aabb(player.x, player.y, player.w, player.h, qt.x, qt.y, qt.w, qt.h)) {
-        triggerLie('QUIT IS A LIE! DISOBEY AND GO RIGHT ->');
+      // FINAL BOSS ('last'):
+      // Walking LEFT off the possessed QUIT button falls into the void -> retry on button
+      if (player.y > H + 48) {
+        triggerLie(player.x, H - 36);
         return;
       }
-      // Disobeying by walking right to the True Core Exit wins!
-      const tx = LAST_STAGE.trueExit.x, ty = LAST_STAGE.trueExit.y;
-      if (aabb(player.x, player.y, player.w, player.h, tx - 48, ty - 130, 96, 135)) {
+      // Physically jumping/walking OFF the right frame of the giant [QUIT] button shatters the lie!
+      if (!lastStage.buttonShattered && player.x > lastStage.quitBtn.x + lastStage.quitBtn.w + 8) {
+        shatterQuitButton();
+      }
+      // Reaching the Ornate Victory Ledge triggers the STAGE CLEAR fireworks finale!
+      if (lastStage.buttonShattered && player.x >= 1010 && player.onGround) {
         gameState = 'end';
         stateTimer = 0;
-        glitchFlash = 0.85;
+        player.vx = 0;
+        player.facing = 1;
+        glitchFlash = 0.7;
         playSfx('win');
-        spawnFirework(W * 0.3, H * 0.32);
-        spawnFirework(W * 0.5, H * 0.25);
-        spawnFirework(W * 0.7, H * 0.34);
+        spawnVictoryCoins();
+        spawnOmniFirework(230, 175, PAL.magenta);
+        spawnOmniFirework(430, 155, PAL.cyan);
+        spawnOmniFirework(770, 145, PAL.gold);
+        spawnOmniFirework(1060, 215, PAL.cyan);
+        spawnOmniFirework(685, 365, PAL.gold);
       }
     }
   }
 
   function update(dt) {
     totalTime += dt;
-    if (glitchFlash > 0) glitchFlash = Math.max(0, glitchFlash - dt * 2.2);
+    if (glitchFlash > 0) glitchFlash = Math.max(0, glitchFlash - dt * 2.1);
+    if (warpEffect.active) {
+      warpEffect.t += dt;
+      if (warpEffect.t >= warpEffect.dur) warpEffect.active = false;
+    }
+
+    if (hitStop > 0) {
+      hitStop -= dt;
+      for (const k in justPressed) delete justPressed[k];
+      return;
+    }
+
+    // Pause toggle during active work (VOIDBASTARD-TAO Law 7)
+    if ((gameState === 'world' || gameState === 'last') && (justPressed['KeyP'] || justPressed['Escape'])) {
+      paused = !paused;
+      for (const k in justPressed) delete justPressed[k];
+      return;
+    }
+    if (paused) {
+      if (justPressed['KeyR']) {
+        paused = false;
+        if (gameState === 'last') beginLastStage(true);
+        else beginUniverse(universeIdx, true);
+      }
+      for (const k in justPressed) delete justPressed[k];
+      return;
+    }
 
     if (gameState === 'title') {
-      if (justPressed['Space'] || justPressed['Enter']) gameState = 'pick';
+      if (justPressed['Space'] || justPressed['Enter']) {
+        gameState = 'pick';
+        playSfx('probe');
+      }
     } else if (gameState === 'pick') {
-      if (justPressed['ArrowLeft'] || justPressed['Digit1']) heroChoice = 0;
-      if (justPressed['ArrowUp']   || justPressed['Digit2']) heroChoice = 1;
-      if (justPressed['ArrowRight']|| justPressed['Digit3']) heroChoice = 2;
-      if (justPressed['Space'] || justPressed['Enter']) beginUniverse(0);
+      if (justPressed['ArrowLeft'] || justPressed['KeyA']) heroChoice = (heroChoice + 2) % 3;
+      if (justPressed['ArrowRight'] || justPressed['KeyD']) heroChoice = (heroChoice + 1) % 3;
+      if (justPressed['Digit1']) heroChoice = 0;
+      if (justPressed['Digit2']) heroChoice = 1;
+      if (justPressed['Digit3']) heroChoice = 2;
+      if (justPressed['Space'] || justPressed['Enter']) beginUniverse(0, true);
     } else if (gameState === 'world' || gameState === 'last') {
       updateGameplay(dt);
     } else if (gameState === 'lie') {
       stateTimer -= dt;
-      if (stateTimer <= 0) {
+      if (stateTimer <= 0 || justPressed['KeyR'] || justPressed['Space']) {
         if (player.returnToLast) {
-          beginLastStage();
+          beginLastStage(false);
         } else {
           const u = universes[universeIdx];
-          player.x = u.spawn.x;
-          player.y = u.spawn.y;
+          player.x = u.checkpoint.x;
+          player.y = u.checkpoint.y;
           player.vx = 0;
           player.vy = 0;
           gameState = 'world';
@@ -665,32 +1043,47 @@
       }
     } else if (gameState === 'end') {
       stateTimer += dt;
-      if (Math.random() < dt * 3.5) {
-        spawnFirework(220 + rand() * (W - 440), 140 + rand() * 220);
+      if (rand() < dt * 4.2) {
+        const cols = [PAL.magenta, PAL.cyan, PAL.gold];
+        spawnOmniFirework(160 + rand() * (W - 320), 110 + rand() * 270, cols[Math.floor(rand() * 3)]);
       }
-      if (justPressed['KeyR'] || justPressed['Space']) {
+      if (justPressed['KeyR'] || (stateTimer > 0.8 && justPressed['Space'])) {
         restartFullGame();
       }
     }
 
-    // Camera smoothly follows player
+    // Smooth horizontal arcade camera
     const stage = getActiveStage();
-    const targetCamX = Math.max(0, Math.min(stage.worldW - W, player.x - W * 0.38));
-    camX += (targetCamX - camX) * Math.min(1, dt * 8.0);
+    let targetCamX = 0;
+    if (stage.worldW > W) {
+      // Frame Universe 0 cleanly so right-hand pit & left-hand staircase stay balanced like sheet.jpg!
+      const anchor = stage.id === 0 ? 500 : 420;
+      targetCamX = Math.max(0, Math.min(stage.worldW - W, player.x - anchor));
+    }
+    camX += (targetCamX - camX) * Math.min(1, dt * 7.5);
 
-    // Update digital static particles & fireworks
+    // Update particles
     for (let i = staticPixels.length - 1; i >= 0; i--) {
       const p = staticPixels[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
+      p.vy += p.grav * dt;
       p.life -= dt;
       if (p.life <= 0) staticPixels.splice(i, 1);
+    }
+    for (let i = starTrail.length - 1; i >= 0; i--) {
+      const s = starTrail[i];
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.life -= dt;
+      if (s.life <= 0) starTrail.splice(i, 1);
     }
     for (let i = fireworks.length - 1; i >= 0; i--) {
       const f = fireworks[i];
       f.x += f.vx * dt;
       f.y += f.vy * dt;
-      f.vy += 180 * dt;
+      f.vx *= (1 - dt * 1.1);
+      f.vy = f.vy * (1 - dt * 1.1) + 95 * dt;
       f.life -= dt;
       if (f.life <= 0) fireworks.splice(i, 1);
     }
@@ -698,680 +1091,1124 @@
     for (const k in justPressed) delete justPressed[k];
   }
 
+  // =========================================================================
+  // RENDERING (Faithful to Omni sheet.jpg f_005, f_014, f_027, f_038)
+  // =========================================================================
   function drawAtlas(rect, dx, dy, dw, dh, alpha = 1) {
-    if (!tilesReady || tilesImg.naturalWidth === 0) return false;
-    ctx.save();
-    ctx.globalAlpha *= alpha;
-    ctx.drawImage(tilesImg, rect.x, rect.y, rect.w, rect.h, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-    ctx.restore();
+    if (!tilesReady || !tilesSource) return false;
+    if (alpha !== 1) {
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.drawImage(tilesSource, rect.x, rect.y, rect.w, rect.h, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+      ctx.restore();
+    } else {
+      ctx.drawImage(tilesSource, rect.x, rect.y, rect.w, rect.h, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+    }
     return true;
   }
 
-  // Crisp pixel-art hero renderer matching Omni f_005.jpg & f_026.jpg!
-  function drawPixelHero(px, py, facing, choiceIdx) {
-    const h = HERO_CHOICES[choiceIdx] || HERO_CHOICES[0];
-    const runBob = player.onGround && Math.abs(player.vx) > 20 ? Math.round(Math.sin(player.animTime) * 2) : 0;
-    const stride = player.onGround && Math.abs(player.vx) > 20 ? Math.sin(player.animTime) : (player.onGround ? 0 : 0.85);
-
+  function drawFourPointSparkle(x, y, arm, col, alpha = 1) {
     ctx.save();
-    ctx.translate(Math.round(px + player.w / 2), Math.round(py + runBob));
-    ctx.scale(facing < 0 ? -1 : 1, 1);
-
-    // Cyan helmet glow aura
-    ctx.save();
-    ctx.globalAlpha = 0.24;
-    ctx.fillStyle = h.helmet;
-    ctx.beginPath();
-    ctx.arc(0, 18, 26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Helmet crest + rounded pixel helmet (matches f_005.jpg!)
-    ctx.fillStyle = h.helmet;
-    ctx.fillRect(-15, 2, 30, 22);
-    ctx.fillRect(-19, 0, 8, 8); // swept back fin
-    ctx.fillRect(-12, -2, 22, 6);
-
-    // Dark visor + bright pixel eyes + ear pod
-    ctx.fillStyle = h.visor;
-    ctx.fillRect(-2, 8, 16, 11);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(2, 11, 4, 4);
-    ctx.fillRect(9, 11, 4, 4);
-    ctx.fillStyle = h.trim;
-    ctx.fillRect(-11, 11, 6, 6);
-
-    // Torso suit + gold belt & shoulder pads
-    ctx.fillStyle = h.suit;
-    ctx.fillRect(-11, 24, 22, 20);
-    ctx.fillStyle = h.trim;
-    ctx.fillRect(-14, 24, 6, 6);
-    ctx.fillRect(8, 24, 6, 6);
-    ctx.fillRect(-11, 38, 22, 4);
-    ctx.fillStyle = h.helmet;
-    ctx.fillRect(-3, 29, 6, 6); // chest core
-
-    // Arms
-    const armSwing = Math.round(stride * 6);
-    ctx.fillStyle = h.suit;
-    ctx.fillRect(-16, 28 - armSwing, 6, 13);
-    ctx.fillRect(10, 28 + armSwing, 6, 13);
-    ctx.fillStyle = h.helmet;
-    ctx.fillRect(-16, 39 - armSwing, 6, 4);
-    ctx.fillRect(10, 39 + armSwing, 6, 4);
-
-    // Legs & gold boots
-    const legSwing = Math.round(stride * 8);
-    ctx.fillStyle = h.suit;
-    ctx.fillRect(-10 + legSwing, 44, 8, 12);
-    ctx.fillRect(2 - legSwing, 44, 8, 12);
-    ctx.fillStyle = h.trim;
-    ctx.fillRect(-11 + legSwing, 55, 11, 5);
-    ctx.fillRect(2 - legSwing, 55, 11, 5);
-
-    ctx.restore();
-  }
-
-  function drawNeonSign(s) {
-    // GOLD (#ffe86b) signs flicker/jitter subtly (THE TELL that they LIE!)
-    // CYAN (#3cf2ff) signs glow steadily (TRUTH!)
-    const jitterX = s.isLie && (Math.sin(totalTime * 29) > 0.72) ? ((Math.floor(totalTime * 60) % 2) * 4 - 2) : 0;
-    const col = s.isLie ? PAL.gold : PAL.cyan;
-    const secCol = s.isLie ? PAL.cyan : '#a8fbff';
-    const bw = 206, bh = 54;
-    const bx = s.x - bw / 2 + jitterX;
-    const by = s.y - bh / 2;
-
-    ctx.save();
-    // Outer neon bloom
-    ctx.shadowColor = col;
-    ctx.shadowBlur = 14;
-    ctx.fillStyle = 'rgba(16, 11, 36, 0.90)';
-    ctx.fillRect(bx, by, bw, bh);
-
-    // Double neon frame (just like STAGE CLEAR in f_005.jpg!)
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = col;
-    ctx.strokeRect(bx, by, bw, bh);
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = secCol;
-    ctx.strokeRect(bx - 4, by - 4, bw + 8, bh + 8);
-
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 21px "Courier New", Courier, monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = alpha;
     ctx.fillStyle = col;
-    ctx.fillText(s.text, bx + bw / 2, by + bh / 2 + 1);
-
-    // Downward or directional neon arrow matching f_005.jpg!
-    if (s.arrow === 'down') {
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 3.5;
-      const ax = bx + bw / 2;
-      const ay = by + bh;
-      ctx.beginPath();
-      ctx.moveTo(ax - 12, ay);
-      ctx.lineTo(ax - 12, ay + 46);
-      ctx.lineTo(ax - 32, ay + 46);
-      ctx.lineTo(ax, ay + 82);
-      ctx.lineTo(ax + 32, ay + 46);
-      ctx.lineTo(ax + 12, ay + 46);
-      ctx.lineTo(ax + 12, ay);
-      ctx.stroke();
-    } else if (s.arrow === 'up-right' || s.arrow === 'right') {
-      ctx.fillStyle = col;
-      ctx.font = 'bold 14px "Courier New", Courier, monospace';
-      ctx.fillText(s.isLie ? '[ UNVERIFIED ]' : '[ VERIFIED SIGNAL ]', bx + bw / 2, by - 14);
-    }
+    const sx = Math.round(x), sy = Math.round(y);
+    ctx.fillRect(sx - arm, sy - 1, arm * 2 + 1, 2);
+    ctx.fillRect(sx - 1, sy - arm, 2, arm * 2 + 1);
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(sx - 2, sy - 2, 4, 4);
     ctx.restore();
   }
 
-  function drawPlatform(p) {
-    if (p.revealOnTest && !p.revealed) {
-      // Faint dotted cyan outline before testing so attentive players spot where hidden blocks exist!
-      ctx.save();
-      ctx.strokeStyle = 'rgba(60, 242, 255, 0.24)';
-      ctx.setLineDash([6, 6]);
+  function renderBackground() {
+    const stage = getActiveStage();
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0b091f');
+    grad.addColorStop(0.55, '#110d29');
+    grad.addColorStop(1, '#171535');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    const cosmicAmt = (gameState === 'end') ? 1 : (stage.cosmicBleed || 0);
+    const isBrick = (stage.theme === 'brick');
+    const isCyber = (stage.theme === 'cyber' || stage.theme === 'boss');
+
+    // Subtle cavern grid lines & brick clusters in Universe 0 (exact match to f_005.jpg!)
+    if (isBrick) {
+      ctx.strokeStyle = 'rgba(46, 110, 138, 0.16)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(p.x, p.y, p.w, p.h);
+      for (let gx = 160; gx < W; gx += 320) {
+        const sx = Math.round(((gx - camX * 0.25) % W + W) % W);
+        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(0, 240); ctx.lineTo(W, 240); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, 445); ctx.lineTo(W, 445); ctx.stroke();
+
+      const brickPatches = [
+        [430, 125, 2, 2], [935, 290, 2, 2], [75, 450, 2, 1], [665, 95, 2, 2]
+      ];
+      for (const [bx, by, cols, rows] of brickPatches) {
+        const px = Math.round(((bx - camX * 0.35) % (W + 240) + (W + 240)) % (W + 240) - 120);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            drawAtlas(ATLAS.u1WallBrick, px + c * 82, by + r * 86, 84, 88, 0.52);
+          }
+        }
+      }
+    }
+
+    // Cosmic Nebula Swirls, Radial Star Streaks & Constellation Polygons (f_027 / pair_008.00.jpg!)
+    if (cosmicAmt > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = cosmicAmt;
+
+      // Subtle violet cosmic nebula ribbons
+      ctx.strokeStyle = 'rgba(112, 48, 150, 0.22)';
+      ctx.lineWidth = 38;
+      ctx.beginPath();
+      ctx.moveTo(140, H + 20);
+      ctx.bezierCurveTo(320, 420, 560, 520, 920, 80);
+      ctx.stroke();
+
+      // Radial hyperspace star streaks centered in cosmic canyon
+      const cx = stage.id === 0 ? 290 : 490;
+      const cy = stage.id === 0 ? 250 : 330;
+      ctx.lineWidth = 2;
+      for (let i = 0; i < RADIAL_STREAKS.length; i++) {
+        const st = RADIAL_STREAKS[i];
+        const a = st.ang + Math.sin(totalTime * 0.25 + i) * 0.02;
+        const pulse = (totalTime * 55 + i * 29) % 90;
+        const r1 = st.r1 + pulse * 0.7;
+        const r2 = r1 + st.len;
+        const x1 = cx + Math.cos(a) * r1;
+        const y1 = cy + Math.sin(a) * r1;
+        const x2 = cx + Math.cos(a) * r2;
+        const y2 = cy + Math.sin(a) * r2;
+        ctx.strokeStyle = st.col;
+        ctx.globalAlpha = cosmicAmt * 0.55;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        if (st.starEnd) {
+          ctx.globalAlpha = cosmicAmt * 0.92;
+          ctx.fillStyle = PAL.gold;
+          ctx.fillRect(Math.round(x2) - 4, Math.round(y2) - 4, 8, 8);
+          ctx.fillStyle = PAL.white;
+          ctx.fillRect(Math.round(x2) - 2, Math.round(y2) - 2, 4, 4);
+        }
+      }
+
+      // Constellation wireframes + glowing cyan vertex nodes
+      ctx.globalAlpha = cosmicAmt * 0.65;
+      ctx.strokeStyle = PAL.cyan;
+      ctx.lineWidth = 1.6;
+      for (const poly of CONSTELLATIONS) {
+        ctx.beginPath();
+        poly.pts.forEach(([px, py], idx) => {
+          const sx = px - camX * 0.22;
+          if (idx === 0) ctx.moveTo(sx, py);
+          else ctx.lineTo(sx, py);
+        });
+        ctx.stroke();
+        for (const [px, py] of poly.pts) {
+          const sx = px - camX * 0.22;
+          drawFourPointSparkle(sx, py, 6, PAL.cyan, cosmicAmt * 0.85);
+        }
+      }
+
+      // Floating Nano Banana star-rocks in deep cosmic background
+      if (stage.theme === 'cosmic') {
+        drawAtlas(ATLAS.u2StarRock1, 1020 - camX * 0.3, 145, 70, 61, 0.75);
+        drawAtlas(ATLAS.u2Meteor1, 865 - camX * 0.25, 345, 90, 91, 0.72);
+      }
       ctx.restore();
+    }
+
+    // Towering Space-Invader Monoliths in Universe 2 & Final QUIT Boss!
+    if (isCyber && gameState !== 'end') {
+      const alpha = stage.theme === 'boss' ? 0.30 : 0.48;
+      for (let i = 0; i < 5; i++) {
+        const ix = 55 + i * 255 - (camX * 0.25);
+        drawAtlas(ATLAS.u3Invader, ix, 92 + (i % 2) * 26, 162, 270, alpha);
+      }
+    }
+
+    // Twinkling pixel stars & 4-point cyan/gold sparkles (matching f_005.jpg!)
+    for (let i = 0; i < STARS.length; i++) {
+      const s = STARS[i];
+      const sx = Math.round(((s.x - camX * 0.18) % (W + 80) + (W + 80)) % (W + 80) - 40);
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(totalTime * 2.4 + s.phase));
+      ctx.globalAlpha = tw * 0.82;
+      ctx.fillStyle = s.col;
+      ctx.fillRect(sx, s.y, s.r, s.r);
+      if (s.sparkle) {
+        drawFourPointSparkle(sx, s.y, 11, PAL.cyan, tw * 0.75);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Organic pixel-sculpted cavern & temple geometry (matches f_005.jpg thick cobble stone rims!)
+  function drawCavernBody(x, y, w, h, topRim = true, bottomRim = false) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+
+    // Deep dark indigo cavern rock interior (#0b081d)
+    ctx.fillStyle = '#09071a';
+    ctx.fillRect(x, y, w, h);
+
+    // Subtle interior brick courses near edges fading into deep black-indigo center
+    const cols = Math.ceil(w / 83) + 1;
+    for (let c = 0; c < cols; c++) {
+      drawAtlas(ATLAS.u1WallBrick, x + c * 83, y + (topRim ? 18 : Math.max(0, h - 96)), 84, 87, 0.28);
+    }
+
+    // Sculpted dark-slate cobble stone blocks along outer walls (26px thick, matching f_005.jpg!)
+    ctx.fillStyle = '#182b40';
+    ctx.fillRect(x, y, 24, h);
+    ctx.fillRect(x + w - 24, y, 24, h);
+    ctx.fillStyle = '#0c1526';
+    for (let cy = y + 18; cy < y + h - 12; cy += 32) {
+      ctx.fillRect(x + 4, cy, 18, 4);
+      ctx.fillRect(x + w - 22, cy + 12, 18, 4);
+    }
+
+    if (topRim) {
+      ctx.fillStyle = '#182e44';
+      ctx.fillRect(x, y, w, 26);
+      ctx.fillStyle = '#296b82';
+      ctx.fillRect(x, y, w, 12);
+      ctx.fillStyle = '#6cf7ff';
+      ctx.fillRect(x + 3, y, w - 6, 5);
+      // Organic stone mortar notches & cobble seams along rim
+      ctx.fillStyle = '#09071a';
+      for (let tx = x + 22; tx < x + w - 28; tx += 44) {
+        ctx.fillRect(tx, y + 18, 22, 9);
+        ctx.fillRect(tx + 12, y + 5, 4, 8);
+      }
+    }
+    if (bottomRim) {
+      ctx.fillStyle = '#182e44';
+      ctx.fillRect(x, y + h - 26, w, 26);
+      ctx.fillStyle = '#296b82';
+      ctx.fillRect(x, y + h - 12, w, 12);
+      ctx.fillStyle = '#6cf7ff';
+      ctx.fillRect(x + 3, y + h - 5, w - 6, 5);
+      ctx.fillStyle = '#09071a';
+      for (let tx = x + 26; tx < x + w - 28; tx += 46) {
+        ctx.fillRect(tx, y + h - 27, 20, 9);
+      }
+    }
+
+    // Crisp outer teal stone edge highlights
+    ctx.fillStyle = '#389cb5';
+    ctx.fillRect(x, y + 5, 5, h - 10);
+    ctx.fillRect(x + w - 5, y + 5, 5, h - 10);
+    ctx.restore();
+  }
+
+  function drawOrnateTemple(x, y, w, h) {
+    drawCavernBody(x, y + 16, w, h - 16, false, false);
+    // Ornate cyan-and-gold overhanging cornice with diamond medallion (exact pair_008 & f_038!)
+    const overX = x - 8, overW = w + 22;
+    ctx.fillStyle = '#18374c';
+    ctx.fillRect(overX, y, overW, 24);
+    ctx.fillStyle = PAL.tealRim;
+    ctx.fillRect(overX, y, overW, 5);
+    ctx.fillStyle = PAL.gold;
+    ctx.fillRect(overX, y + 5, overW, 3);
+    ctx.fillRect(overX + 6, y + 20, overW - 18, 4);
+
+    // Gold key-fret scrollwork along frieze
+    ctx.strokeStyle = PAL.gold;
+    ctx.lineWidth = 2;
+    for (let sx = overX + 14; sx < overX + overW - 34; sx += 38) {
+      ctx.strokeRect(sx, y + 10, 22, 9);
+    }
+
+    // Center Glowing Cyan Diamond Medallion in Gold Bezel!
+    const mx = x + Math.min(w * 0.56, w - 58);
+    const my = y + 16;
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.fillStyle = PAL.gold;
+    ctx.beginPath();
+    ctx.moveTo(0, -18); ctx.lineTo(22, 0); ctx.lineTo(0, 18); ctx.lineTo(-22, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#10253a';
+    ctx.beginPath();
+    ctx.moveTo(0, -14); ctx.lineTo(17, 0); ctx.lineTo(0, 14); ctx.lineTo(-17, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = PAL.cyan;
+    ctx.beginPath();
+    ctx.moveTo(0, -10); ctx.lineTo(12, 0); ctx.lineTo(0, 10); ctx.lineTo(-12, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = PAL.cyanBright;
+    ctx.fillRect(-4, -4, 6, 6);
+    ctx.restore();
+  }
+
+  function drawPlatform(p, stage) {
+    if ((p.revealOnTest || p.revealOnBreak) && !p.revealed) {
+      // Subtle 3-pixel corner glints only so observant eyes sense latent structure without clutter
+      if (p.revealOnTest) {
+        ctx.fillStyle = 'rgba(60, 242, 255, 0.16)';
+        ctx.fillRect(p.x, p.y, 6, 3);
+        ctx.fillRect(p.x + p.w - 6, p.y, 6, 3);
+      }
       return;
     }
 
     if (p.kind === 'phase') {
-      // Bright glowing solid cyan block (exact match to f_026.jpg!)
-      ctx.save();
-      ctx.shadowColor = PAL.cyan;
-      ctx.shadowBlur = 14;
+      // Solid bright cyan rounded-pixel block + sparkling pixel-burst border (f_021 & f_027!)
+      ctx.fillStyle = 'rgba(60, 242, 255, 0.22)';
+      ctx.fillRect(p.x - 5, p.y - 5, p.w + 10, p.h + 10);
       if (!drawAtlas(ATLAS.u2PhaseBlk, p.x, p.y, p.w, p.h)) {
         ctx.fillStyle = PAL.cyan;
-        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.fillRect(p.x + 3, p.y, p.w - 6, p.h);
+        ctx.fillRect(p.x, p.y + 3, p.w, p.h - 6);
+      } else {
+        ctx.fillStyle = PAL.cyan;
+        ctx.fillRect(p.x + 4, p.y + 4, p.w - 8, p.h - 8);
       }
-      ctx.strokeStyle = '#bfffff';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+      ctx.fillStyle = PAL.cyanBright;
+      ctx.fillRect(p.x + 6, p.y + 2, p.w - 12, 4);
+
+      // Animated pixel-fizzle halo around newly materialized blocks (matches pair_005.00.jpg left!)
+      if (stage.id === 0) {
+        for (let k = 0; k < 8; k++) {
+          const px = p.x - 8 + ((k * 19 + Math.floor(totalTime * 12) * 7) % (p.w + 16));
+          const py = p.y - 8 + ((k * 13 + Math.floor(totalTime * 9) * 5) % (p.h + 16));
+          if (px < p.x + 2 || px > p.x + p.w - 6 || py < p.y + 2 || py > p.y + p.h - 6) {
+            ctx.fillStyle = k % 2 === 0 ? PAL.cyan : PAL.cyanBright;
+            ctx.fillRect(px, py, 5, 5);
+          }
+        }
+      }
+      return;
+    }
+
+    if (p.kind === 'u1Ledge1') {
+      drawAtlas(ATLAS.u1Ledge1, p.x, p.y, p.w, p.h + 12);
+      return;
+    }
+    if (p.kind === 'u1Ledge2') {
+      drawAtlas(ATLAS.u1Ledge2, p.x, p.y, p.w, p.h + 14);
+      return;
+    }
+    if (p.kind === 'u2ThinLedge') {
+      drawAtlas(ATLAS.u2LedgeSml, p.x, p.y, p.w, p.h);
+      ctx.fillStyle = PAL.tealRim;
+      ctx.fillRect(p.x, p.y, p.w, 4);
+      return;
+    }
+    if (p.kind === 'ornateLedge') {
+      drawOrnateTemple(p.x, p.y, p.w, p.h + 14);
+      return;
+    }
+    if (p.kind === 'ornateTemple') {
+      drawOrnateTemple(p.x, p.y, p.w, p.h);
+      return;
+    }
+    if (p.kind === 'ceiling') {
+      drawCavernBody(p.x, p.y, p.w, p.h, false, true);
+      return;
+    }
+    if (p.kind === 'cyber') {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+      ctx.fillStyle = '#0e0b22';
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      const cols = Math.ceil(p.w / 86);
+      for (let c = 0; c < cols; c++) {
+        const rect = c % 2 === 0 ? ATLAS.u3Circuit1 : ATLAS.u3Circuit2;
+        drawAtlas(rect, p.x + c * 86, p.y + 16, 86, 86, 0.72);
+      }
+      ctx.restore();
+      drawAtlas(ATLAS.u3Ledge, p.x, p.y, Math.min(p.w, 184), 28);
+      if (p.w > 184) drawAtlas(ATLAS.u3Ledge, p.x + 184, p.y, p.w - 184, 28);
+      ctx.fillStyle = PAL.gold;
+      ctx.fillRect(p.x, p.y, p.w, 4);
+      return;
+    }
+
+    if (p.kind === 'quitButton') {
+      if (stage.buttonShattered) return;
+      const pressY = Math.round((stage.cursorPress || 0) * 8);
+      const jitterX = Math.sin(totalTime * 37) > 0.68 ? ((Math.floor(totalTime * 60) % 2) * 4 - 2) : 0;
+      const bx = p.x + jitterX, by = p.y + pressY;
+
+      // Possessed CRT terminal looming behind the giant UI button
+      drawAtlas(ATLAS.u3Terminal, bx + p.w / 2 - 115, by - 215, 230, 210, 0.92);
+
+      // Chromatic RGB split ghost around the lying GOLD button!
+      ctx.strokeStyle = 'rgba(255, 66, 176, 0.45)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(bx - 5, by + 2, p.w + 10, p.h);
+
+      // Physical 3D bevel button body
+      ctx.fillStyle = '#291a08';
+      ctx.fillRect(bx, by + 10, p.w, p.h);
+      ctx.fillStyle = '#150d2e';
+      ctx.fillRect(bx, by, p.w, p.h);
+
+      // Thick gold UI bevels
+      ctx.strokeStyle = PAL.gold;
+      ctx.lineWidth = 6;
+      ctx.strokeRect(bx + 3, by + 3, p.w - 6, p.h - 6);
+      ctx.strokeStyle = '#9c7d1e';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(bx + 12, by + 12, p.w - 24, p.h - 24);
+
+      // Giant physical "Q U I T" UI typography across button face
+      ctx.fillStyle = PAL.gold;
+      ctx.font = 'bold 58px "Courier New", Courier, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('[ Q U I T ]', bx + p.w / 2, by + p.h / 2 + 2);
+
+      // Glowing CYAN fracture seam on the right bezel showing the button frame can be broken!
+      const rx = p.x + p.w - 18;
+      ctx.fillStyle = PAL.cyan;
+      ctx.fillRect(rx, by - 4, 18, 8);
+      ctx.fillRect(rx + 8, by + 4, 10, 26);
+      ctx.fillStyle = PAL.cyanBright;
+      ctx.fillRect(rx + 4, by - 2, 12, 4);
+
+      // Giant possessed gold cursor arrow swooping down to click the button!
+      const curX = bx + 155 + Math.sin(totalTime * 2.2) * 35;
+      const curY = by - 58 + pressY * 3.5;
+      ctx.save();
+      ctx.translate(Math.round(curX), Math.round(curY));
+      ctx.fillStyle = PAL.gold;
+      ctx.strokeStyle = '#140b2b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, 52);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(38, 36);
+      ctx.lineTo(18, 39);
+      ctx.lineTo(28, 62);
+      ctx.lineTo(17, 67);
+      ctx.lineTo(8, 44);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.restore();
       return;
     }
 
-    if (p.kind === 'u1Ledge') {
-      if (!drawAtlas(ATLAS.u1Ledge, p.x, p.y, p.w, p.h)) {
-        ctx.fillStyle = '#254a5c';
-        ctx.fillRect(p.x, p.y, p.w, p.h);
-      }
+    if (p.kind === 'quitLip') {
+      if (stage.buttonShattered) return;
+      ctx.fillStyle = PAL.cyan;
+      ctx.fillRect(p.x, p.y, p.w, 6);
+      ctx.fillStyle = '#1b3d54';
+      ctx.fillRect(p.x, p.y + 6, p.w, p.h - 6);
       return;
     }
 
-    // Solid cavern / cyber ground blocks
-    const tileW = 128, tileH = 128;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(p.x, p.y, p.w, p.h);
-    ctx.clip();
+    // Default 'cavern' solid terrain
+    drawCavernBody(p.x, p.y, p.w, p.h, true, false);
+    if (p.rubble) {
+      drawAtlas(ATLAS.u1Rubble, p.x + 55, p.y - 38, 175, 44);
+    }
+  }
 
-    const cols = Math.ceil(p.w / tileW);
-    const rows = Math.ceil(p.h / tileH);
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const tx = p.x + c * tileW;
-        const ty = p.y + r * tileH;
-        const rect = (p.kind === 'u3')
-          ? ((c + r) % 2 === 0 ? ATLAS.u3Circuit : ATLAS.u3GoldBox)
-          : (c % 2 === 0 ? ATLAS.u1Block : ATLAS.u1BlockAlt);
-        if (!drawAtlas(rect, tx, ty, tileW + 2, tileH + 2)) {
-          ctx.fillStyle = '#151934';
-          ctx.fillRect(tx, ty, tileW + 2, tileH + 2);
+  function drawFakeFloor(ff) {
+    if (!ff.dissolved) {
+      if (ff.style === 'pool') {
+        // Organic voronoi/cellular shimmering cyan-teal hologram pool (exact f_005.jpg look!)
+        const grad = ctx.createLinearGradient(ff.x, ff.y, ff.x, ff.y + ff.h);
+        grad.addColorStop(0, '#58dce8');
+        grad.addColorStop(0.18, '#3896ab');
+        grad.addColorStop(0.75, '#1e576e');
+        grad.addColorStop(1, '#14384a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(ff.x, ff.y, ff.w, ff.h);
+
+        // Irregular dark-teal cellular voronoi pockets + bright caustic webbing
+        const cells = [
+          [42, 34, 34, 18, 0.2], [115, 42, 42, 22, -0.15], [198, 30, 32, 17, 0.1], [275, 40, 38, 21, -0.2], [335, 32, 24, 16, 0.15],
+          [68, 82, 44, 24, -0.1], [156, 92, 36, 22, 0.25], [238, 86, 46, 25, -0.12], [318, 84, 30, 20, 0.18],
+          [45, 128, 32, 16, 0.1], [122, 132, 42, 18, -0.2], [212, 130, 38, 17, 0.12], [295, 128, 40, 18, -0.1]
+        ];
+        for (let i = 0; i < cells.length; i++) {
+          const [ox, oy, rx, ry, rot] = cells[i];
+          const wobX = Math.sin(totalTime * 2.1 + i * 1.3) * 4;
+          const wobY = Math.cos(totalTime * 1.8 + i) * 2.5;
+          ctx.save();
+          ctx.translate(ff.x + ox + wobX, ff.y + oy + wobY);
+          ctx.rotate(rot);
+          ctx.fillStyle = 'rgba(15, 48, 66, 0.72)';
+          ctx.strokeStyle = 'rgba(130, 248, 255, 0.44)';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Thick glowing wavy cyan-white foam crest + rising square pixel motes!
+        ctx.fillStyle = 'rgba(148, 252, 255, 0.35)';
+        ctx.fillRect(ff.x, ff.y - 2, ff.w, 12);
+        ctx.strokeStyle = '#a8ffff';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (let dx = 0; dx <= ff.w; dx += 10) {
+          const wy = ff.y + Math.sin(totalTime * 3.8 + dx * 0.038) * 5.5;
+          if (dx === 0) ctx.moveTo(ff.x + dx, wy);
+          else ctx.lineTo(ff.x + dx, wy);
+        }
+        ctx.stroke();
+
+        // Rising luminous pixel squares + subtle gold glitch tell!
+        for (let m = 0; m < 12; m++) {
+          const mx = ff.x + 18 + ((m * 37 + Math.floor(totalTime * 14) * 5) % (ff.w - 36));
+          const my = ff.y - 28 + ((m * 29 - Math.floor(totalTime * 30)) % (ff.h + 18) + (ff.h + 18)) % (ff.h + 18);
+          const isGlitchTell = (m === 0 && Math.sin(totalTime * 19) > 0.55);
+          ctx.fillStyle = isGlitchTell ? PAL.gold : '#b8ffff';
+          const sz = isGlitchTell ? 8 : (m % 3 === 0 ? 7 : 5);
+          ctx.fillRect(mx, my, sz, sz);
+        }
+
+        // Basin stone rim at bottom (f_005.jpg!)
+        drawCavernBody(ff.x - 6, ff.basinY, ff.w + 12, H - ff.basinY, true, false);
+      } else {
+        // Deceptive shimmering gold-cyan hologram bridge (Universe 1 & 2)
+        const flick = Math.sin(totalTime * 34) > 0.65 ? 0.55 : 0.85;
+        ctx.fillStyle = `rgba(255, 232, 107, ${flick * 0.25})`;
+        ctx.fillRect(ff.x, ff.y, ff.w, ff.h);
+        ctx.strokeStyle = PAL.gold;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(ff.x + 1, ff.y + 1, ff.w - 2, ff.h - 2);
+        for (let k = 0; k < 7; k++) {
+          const gx = ff.x + ((k * 53 + Math.floor(totalTime * 24) * 11) % Math.max(12, ff.w - 12));
+          ctx.fillStyle = k % 2 === 0 ? PAL.gold : PAL.magenta;
+          ctx.fillRect(gx, ff.y + 8, 8, 6);
+        }
+      }
+    } else if (ff.style === 'pool') {
+      // Dissolved abyss churning with residual cyan, magenta & [X] debug squares (f_014 & pair_005!)
+      ctx.fillStyle = '#060412';
+      ctx.fillRect(ff.x, ff.y - 6, ff.w, H - ff.y + 6);
+      const density = ff.dissolveAnim > 0.15 ? 46 : 24;
+      for (let k = 0; k < density; k++) {
+        const px = ff.x + 8 + ((k * 47 + Math.floor(totalTime * 7) * 13) % (ff.w - 26));
+        const py = ff.y + 4 + ((k * 39 + Math.floor(totalTime * 52)) % (H - ff.y - 22));
+        const sz = 8 + (k % 3) * 4;
+        const col = k % 4 === 0 ? PAL.magenta : PAL.cyan;
+        if (k % 2 === 0) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 1.8;
+          ctx.strokeRect(px, py, sz, sz);
+          if (k % 6 === 0) {
+            ctx.beginPath();
+            ctx.moveTo(px, py); ctx.lineTo(px + sz, py + sz);
+            ctx.moveTo(px + sz, py); ctx.lineTo(px, py + sz);
+            ctx.stroke();
+          }
+        } else {
+          ctx.fillStyle = col;
+          ctx.globalAlpha = 0.78;
+          ctx.fillRect(px, py, sz, sz);
+          ctx.globalAlpha = 1;
         }
       }
     }
-
-    // Crisp glowing top rim (cyan in U1/U2, gold-cyan in U3, matching f_005 & f_026!)
-    ctx.fillStyle = p.kind === 'u3' ? PAL.gold : '#5cf4ff';
-    ctx.fillRect(p.x, p.y, p.w, 6);
-    ctx.fillStyle = 'rgba(18, 22, 48, 0.55)';
-    ctx.fillRect(p.x, p.y + 18, p.w, p.h);
-    ctx.restore();
-
-    // Side cyan/gold trim
-    ctx.strokeStyle = p.kind === 'u3' ? PAL.gold : '#36b5c9';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(p.x + 1.5, p.y + 1.5, p.w - 3, p.h - 3);
   }
 
-  function renderBackground() {
-    // Deep indigo gradient (#100c25 -> #161433)
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0e0a22');
-    grad.addColorStop(0.6, '#140f2d');
-    grad.addColorStop(1, '#1b163b');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
+  function drawSign(s, stage) {
+    if (s.revealOnTest && !s.revealed) return;
+    if (s.hideWhenDissolved && stage.fakeFloors[0]?.dissolved && s.glitchBurst <= 0.05) return;
 
-    const isCosmic = (gameState === 'world' && universeIdx === 1) || gameState === 'end';
-    const isCyber  = (gameState === 'world' && universeIdx === 2) || gameState === 'last';
-
-    // Background 8-bit bricks in Universe 1 (matching f_005.jpg!)
-    if (!isCosmic && !isCyber) {
+    // Special tilted cosmic directional arrow matching pair_008.00.jpg left!
+    if (s.arrow === 'warp-chevron') {
       ctx.save();
-      ctx.globalAlpha = 0.25;
-      for (let i = 0; i < 8; i++) {
-        const bx = ((i * 260 - camX * 0.25) % 2080 + 2080) % 2080 - 160;
-        const by = 110 + (i % 3) * 140;
-        drawAtlas(ATLAS.u1WallBrick, bx, by, 96, 96);
-        drawAtlas(ATLAS.u1WallBrick, bx + 96, by, 96, 96);
+      ctx.translate(s.x, s.y);
+      ctx.rotate(0.18);
+      ctx.strokeStyle = PAL.gold;
+      ctx.fillStyle = 'rgba(20, 32, 62, 0.85)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(-48, -14);
+      ctx.lineTo(18, -10);
+      ctx.lineTo(14, -24);
+      ctx.lineTo(54, 4);
+      ctx.lineTo(10, 26);
+      ctx.lineTo(16, 10);
+      ctx.lineTo(-42, 12);
+      ctx.lineTo(-32, -1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = PAL.cyan;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    // THE TELL:
+    //   GOLD signs (#ffe86b) suffer periodic horizontal scanline jitter + RGB chromatic ghosting!
+    //   CYAN signs (#3cf2ff) shine with rock-solid, calm geometric stability!
+    const activeBurst = s.glitchBurst || 0;
+    const subtleTell = s.isLie && (Math.sin(totalTime * 27 + s.x) > 0.66 || activeBurst > 0.05);
+    const jitter = subtleTell ? ((Math.floor(totalTime * 60) % 2) * 5 - 2.5) * (1 + activeBurst * 2.5) : 0;
+
+    const mainCol = s.isLie ? PAL.gold : PAL.cyan;
+    const outerCol = s.isLie ? PAL.cyan : PAL.cyanBright;
+    const bw = Math.max(254, s.text.length * 19 + 46);
+    const bh = 70;
+    const bx = Math.round(s.x - bw / 2 + jitter);
+    const by = Math.round(s.y - bh / 2);
+
+    ctx.save();
+
+    // Ceiling suspension brackets for hanging STAGE CLEAR sign (f_005.jpg!)
+    if (s.mountY !== undefined) {
+      ctx.fillStyle = '#25314f';
+      ctx.fillRect(s.x - 76, s.mountY, 10, by - s.mountY);
+      ctx.fillRect(s.x + 66, s.mountY, 10, by - s.mountY);
+      ctx.fillStyle = PAL.tealStone;
+      ctx.fillRect(s.x - 82, s.mountY, 22, 7);
+      ctx.fillRect(s.x + 60, s.mountY, 22, 7);
+    }
+
+    // Chromatic magenta ghost when gold sign flickers
+    if (subtleTell) {
+      ctx.strokeStyle = 'rgba(255, 66, 176, 0.58)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(bx - 6, by + 2, bw + 12, bh);
+    }
+
+    // Warm neon bloom + crisp double border (exact f_005.jpg STAGE CLEAR frame!)
+    ctx.fillStyle = s.isLie ? 'rgba(255, 220, 90, 0.16)' : 'rgba(60, 242, 255, 0.16)';
+    ctx.fillRect(bx - 14, by - 14, bw + 28, bh + 28);
+    ctx.fillStyle = 'rgba(20, 18, 42, 0.94)';
+    ctx.fillRect(bx, by, bw, bh);
+
+    ctx.strokeStyle = outerCol;
+    ctx.lineWidth = 3.5;
+    ctx.strokeRect(bx - 5, by - 5, bw + 10, bh + 10);
+
+    ctx.strokeStyle = mainCol;
+    ctx.lineWidth = 3.5;
+    ctx.strokeRect(bx + 2, by + 2, bw - 4, bh - 4);
+
+    // Bold pixel-arcade sign text
+    ctx.fillStyle = mainCol;
+    ctx.font = 'bold 29px "Courier New", Courier, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (activeBurst > 0.25) {
+      // Scanline-shattered text matching f_014.jpg!
+      ctx.fillText(s.text, bx + bw / 2 + 7, by + bh / 2 - 2);
+      ctx.fillStyle = 'rgba(255, 232, 107, 0.55)';
+      ctx.fillText(s.text, bx + bw / 2 - 8, by + bh / 2 + 3);
+      for (let g = 0; g < 14; g++) {
+        ctx.fillStyle = g % 2 === 0 ? PAL.gold : '#100c25';
+        ctx.fillRect(bx - 8 + ((g * 29) % (bw + 12)), by + ((g * 11) % bh), 22, 4);
       }
+    } else {
+      ctx.fillText(s.text, bx + bw / 2, by + bh / 2 + 1);
+    }
+
+    // Hollow neon downward arrow matching f_005.jpg!
+    if (s.arrow === 'down' || s.arrow === 'down-short') {
+      const len = s.arrow === 'down-short' ? 28 : 62;
+      const tip = s.arrow === 'down-short' ? 56 : 108;
+      const ax = Math.round(s.x + jitter * 0.6);
+      const ay = by + bh + 2;
+      ctx.fillStyle = 'rgba(16, 14, 36, 0.90)';
+      ctx.strokeStyle = mainCol;
+      ctx.lineWidth = 3.8;
+      ctx.beginPath();
+      ctx.moveTo(ax - 16, ay);
+      ctx.lineTo(ax - 16, ay + len);
+      ctx.lineTo(ax - 42, ay + len);
+      ctx.lineTo(ax, ay + tip);
+      ctx.lineTo(ax + 42, ay + len);
+      ctx.lineTo(ax + 16, ay + len);
+      ctx.lineTo(ax + 16, ay);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Charismatic 92px pixel-art hero matching Omni f_005, f_014, f_027 & f_038!
+  function drawPixelHero(px, py, facing, choiceIdx, celebrate = false) {
+    const h = HERO_CHOICES[choiceIdx] || HERO_CHOICES[0];
+    const moving = player.onGround && Math.abs(player.vx) > 25;
+    const bob = moving ? Math.round(Math.abs(Math.sin(player.animTime)) * -4) : 0;
+    const stride = celebrate ? 0.35 : (moving ? Math.sin(player.animTime) : (player.onGround ? 0.22 : 0.95));
+
+    ctx.save();
+    ctx.translate(Math.round(px + player.w / 2), Math.round(py + player.h));
+    ctx.scale((facing < 0 ? -1 : 1) * player.scaleX, player.scaleY);
+    // Scale 68px pixel grid cleanly by 1.35x -> crisp ~92px tall arcade sprite!
+    ctx.scale(1.35, 1.35);
+    ctx.translate(0, -68 + bob);
+
+    // Diegetic boot-probe scan ring when testing an illusion!
+    if (player.probePulse > 0.02 && !celebrate) {
+      const r = (1 - player.probePulse) * 68 + 10;
+      ctx.save();
+      ctx.strokeStyle = `rgba(60, 242, 255, ${player.probePulse * 0.85})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(10, 66, r, r * 0.28, 0, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
     }
 
-    // Constellation vectors & radial warp streaks in Universe 2 (matching f_026.jpg!)
-    if (isCosmic) {
+    // Soft helmet glow aura (f_005.jpg!)
+    ctx.fillStyle = h.helmet;
+    ctx.globalAlpha = 0.20;
+    ctx.beginPath();
+    ctx.arc(0, 14, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Back arm
+    const armSwing = Math.round(stride * 8);
+    ctx.fillStyle = h.suitDark;
+    ctx.fillRect(7, 29 + armSwing, 8, 15);
+    ctx.fillStyle = h.helmet;
+    ctx.fillRect(8, 41 + armSwing, 7, 5);
+
+    // Back leg + gold boot trim
+    const legSwing = Math.round(stride * 10);
+    ctx.fillStyle = h.suitDark;
+    ctx.fillRect(2 - legSwing, 47, 9, 16);
+    ctx.fillStyle = h.trim;
+    ctx.fillRect(2 - legSwing, 56, 9, 3);
+    ctx.fillRect(1 - legSwing, 63, 13, 5);
+
+    // Torso armor + gold belt + cyan core emblem
+    ctx.fillStyle = h.suit;
+    ctx.fillRect(-11, 26, 22, 22);
+    ctx.fillStyle = h.trim;
+    ctx.fillRect(-15, 26, 7, 6); // back pauldron
+    ctx.fillRect(8, 26, 7, 6);   // front pauldron
+    ctx.fillRect(-11, 43, 22, 4); // utility belt
+    ctx.fillStyle = '#fff6b0';
+    ctx.fillRect(-2, 43, 5, 4);   // belt buckle
+    ctx.fillStyle = h.helmet;
+    ctx.fillRect(0, 32, 6, 6);    // chest diamond
+
+    // Front leg + knee guard + gold boot
+    ctx.fillStyle = h.suit;
+    ctx.fillRect(-10 + legSwing, 47, 10, 16);
+    ctx.fillStyle = h.trim;
+    ctx.fillRect(-10 + legSwing, 55, 10, 3);
+    ctx.fillRect(-11 + legSwing, 63, 14, 5);
+
+    // Swept-back pixel helmet + fin crest (exact f_005 / f_027 silhouette!)
+    ctx.fillStyle = h.helmet;
+    ctx.fillRect(-22, -6, 10, 7);  // upper swept fin tip
+    ctx.fillRect(-18, -2, 32, 8);  // top dome
+    ctx.fillRect(-16, 4, 33, 16);  // main helmet shell
+    ctx.fillStyle = h.crest;
+    ctx.fillRect(-14, -2, 22, 4);  // bright top highlight
+
+    // Lower jaw / chin beneath visor (f_005.jpg!)
+    ctx.fillStyle = h.skin;
+    ctx.fillRect(0, 18, 14, 7);
+
+    // Angled dark visor mask + glowing cyan/white eyes
+    ctx.fillStyle = h.visor;
+    ctx.fillRect(-2, 7, 19, 12);
+    ctx.fillStyle = PAL.cyanBright;
+    ctx.fillRect(2, 11, 5, 4);
+    ctx.fillRect(11, 11, 4, 4);
+
+    // Gold ear comms pod
+    ctx.fillStyle = h.trim;
+    ctx.fillRect(-11, 10, 7, 8);
+    ctx.fillStyle = '#fff6b0';
+    ctx.fillRect(-9, 12, 3, 4);
+
+    // Front arm (raised in victory pose on STAGE CLEAR!)
+    if (celebrate) {
+      ctx.fillStyle = h.suit;
+      ctx.fillRect(9, 14, 8, 16);
+      ctx.fillStyle = h.trim;
+      ctx.fillRect(9, 19, 8, 3);
+      ctx.fillStyle = h.helmet;
+      ctx.fillRect(9, 10, 8, 5);
+    } else {
+      ctx.fillStyle = h.suit;
+      ctx.fillRect(-16, 29 - armSwing, 8, 15);
+      ctx.fillStyle = h.trim;
+      ctx.fillRect(-16, 34 - armSwing, 8, 3);
+      ctx.fillStyle = h.helmet;
+      ctx.fillRect(-16, 41 - armSwing, 8, 5);
+    }
+
+    ctx.restore();
+  }
+
+  function drawScanlineRift(ex, ey, stage) {
+    if (stage.id === 0 && !stage.fakeFloors[0]?.dissolved) return;
+    ctx.save();
+    // Shimmering vertical universe tear (zero text label — pure visual rift!)
+    const pulse = 0.7 + 0.3 * Math.sin(totalTime * 8);
+    ctx.fillStyle = `rgba(60, 242, 255, ${0.18 * pulse})`;
+    ctx.fillRect(ex - 30, ey - 108, 60, 108);
+
+    // Horizontal scanline bars inside the rift
+    for (let y = ey - 104; y < ey - 4; y += 8) {
+      const w = 34 + Math.sin(totalTime * 12 + y * 0.15) * 14;
+      ctx.fillStyle = (y % 16 === 0) ? PAL.cyan : PAL.cyanBright;
+      ctx.fillRect(Math.round(ex - w / 2), y, Math.round(w), 4);
+    }
+    drawAtlas(ATLAS.u1BeaconC, ex - 13, ey - 92, 26, 84, 0.9);
+    drawFourPointSparkle(ex, ey - 54, 14, PAL.cyan, pulse);
+    ctx.restore();
+  }
+
+  function renderStageClearBanner() {
+    // Celebratory neon STAGE CLEAR octagon + fireworks + gold coins (exact match to f_038.jpg!)
+    for (const c of starCoins) {
+      const cy = c.y + Math.sin(totalTime * 4 + c.phase) * 10;
       ctx.save();
-      ctx.strokeStyle = 'rgba(60, 242, 255, 0.28)';
-      ctx.lineWidth = 1.5;
-      for (const ln of CONSTELLATIONS) {
-        const x1 = ((ln.x1 - camX * 0.35) % 1600 + 1600) % 1600 - 100;
-        const x2 = x1 + (ln.x2 - ln.x1);
-        ctx.beginPath();
-        ctx.moveTo(x1, ln.y1);
-        ctx.lineTo(x2, ln.y2);
-        ctx.stroke();
-        ctx.fillStyle = PAL.cyan;
-        ctx.fillRect(x1 - 2, ln.y1 - 2, 5, 5);
-        ctx.fillRect(x2 - 2, ln.y2 - 2, 5, 5);
-      }
-      // Radial hyperspace streaks from center
-      const cx = W * 0.48, cy = H * 0.44;
-      for (let i = 0; i < 24; i++) {
-        const ang = (i / 24) * Math.PI * 2 + totalTime * 0.08;
-        const r1 = 90 + ((i * 37) % 120);
-        const r2 = r1 + 70 + (i % 3) * 35;
-        ctx.strokeStyle = i % 3 === 0 ? 'rgba(255, 60, 168, 0.28)' : 'rgba(60, 242, 255, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
-        ctx.lineTo(cx + Math.cos(ang) * r2, cy + Math.sin(ang) * r2);
-        ctx.stroke();
-      }
+      ctx.fillStyle = PAL.goldWarm;
+      ctx.beginPath(); ctx.arc(c.x, cy, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = PAL.gold;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = '#c27d12';
+      ctx.fillRect(c.x - 4, cy - 10, 8, 20);
+      ctx.fillStyle = '#fff5ad';
+      ctx.fillRect(c.x - 2, cy - 8, 4, 16);
       ctx.restore();
     }
 
-    // Space-Invader monolith panels in Universe 3 & Final Boss!
-    if (isCyber) {
-      ctx.save();
-      ctx.globalAlpha = 0.42;
-      for (let i = 0; i < 6; i++) {
-        const ix = ((i * 290 - camX * 0.3) % 1740 + 1740) % 1740 - 120;
-        drawAtlas(ATLAS.u3Invader, ix, 95, 165, 275);
-      }
-      ctx.restore();
-    }
+    const bx = W / 2 - 265, by = 112, bw = 530, bh = 114, cut = 26;
+    ctx.save();
+    const oct = (pad) => {
+      ctx.beginPath();
+      ctx.moveTo(bx + cut - pad, by - pad);
+      ctx.lineTo(bx + bw - cut + pad, by - pad);
+      ctx.lineTo(bx + bw + pad, by + cut - pad * 0.4);
+      ctx.lineTo(bx + bw + pad, by + bh - cut + pad * 0.4);
+      ctx.lineTo(bx + bw - cut + pad, by + bh + pad);
+      ctx.lineTo(bx + cut - pad, by + bh + pad);
+      ctx.lineTo(bx - pad, by + bh - cut + pad * 0.4);
+      ctx.lineTo(bx - pad, by + cut - pad * 0.4);
+      ctx.closePath();
+    };
 
-    // Twinkling pixel stars & 4-point cyan sparkles (matching f_005.jpg!)
-    for (let i = 0; i < STARS.length; i++) {
-      const s = STARS[i];
-      const sx = ((s.x - camX * 0.2) % (W + 100) + (W + 100)) % (W + 100) - 50;
-      const pulse = 0.45 + 0.5 * Math.sin(totalTime * 3 + s.twinkle);
-      ctx.fillStyle = s.cyan ? `rgba(60,242,255,${pulse * 0.75})` : `rgba(255,232,107,${pulse * 0.7})`;
-      ctx.fillRect(sx, s.y, s.r, s.r);
-      if (i % 14 === 0) {
-        // 4-point neon sparkle cross
-        ctx.fillRect(sx - 9, s.y + 1, 20, 2);
-        ctx.fillRect(sx + 0, s.y - 8, 2, 20);
-      }
+    ctx.fillStyle = 'rgba(16, 12, 38, 0.92)';
+    oct(6); ctx.fill();
+    ctx.strokeStyle = PAL.cyan;
+    ctx.lineWidth = 5;
+    oct(6); ctx.stroke();
+    ctx.strokeStyle = PAL.gold;
+    ctx.lineWidth = 2.5;
+    oct(0); ctx.stroke();
+
+    // Neon glitch accent bars around octagon corners (f_038.jpg!)
+    ctx.fillStyle = PAL.magenta;
+    ctx.fillRect(bx - 24, by + 18, 28, 5);
+    ctx.fillRect(bx + bw - 6, by + bh - 24, 30, 5);
+    ctx.fillStyle = PAL.cyanBright;
+    ctx.fillRect(bx - 30, by + bh - 18, 36, 5);
+    ctx.fillRect(bx + bw - 10, by + 26, 34, 5);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#a86418';
+    ctx.font = 'bold 62px "Courier New", Courier, monospace';
+    ctx.fillText('STAGE CLEAR', W / 2 + 3, by + bh / 2 + 5);
+    ctx.fillStyle = PAL.gold;
+    ctx.fillText('STAGE CLEAR', W / 2, by + bh / 2 + 1);
+
+    // Quiet, non-demanding replay hint after celebration settles (Law 8 & 12)
+    if (stateTimer > 0.9) {
+      ctx.fillStyle = 'rgba(158, 251, 255, 0.78)';
+      ctx.font = 'bold 16px "Courier New", Courier, monospace';
+      ctx.fillText('[R]', W - 44, H - 28);
     }
+    ctx.restore();
   }
 
   function renderWorld() {
     renderBackground();
-
     const stage = getActiveStage();
-    const isLast = (gameState === 'last');
+    const isEnd = (gameState === 'end');
 
     ctx.save();
     ctx.translate(-Math.round(camX), 0);
 
-    // 1. Deceptive Fake Floors (shimmering cyan water/glitch surface before dissolving, static pit after!)
-    if (!isLast && stage.fakeFloors) {
-      for (const ff of stage.fakeFloors) {
-        if (!ff.dissolved) {
-          // Shimmering deceptive surface matching f_005.jpg!
-          const grad = ctx.createLinearGradient(ff.x, ff.y, ff.x, ff.y + ff.h);
-          grad.addColorStop(0, 'rgba(92, 244, 255, 0.78)');
-          grad.addColorStop(0.25, 'rgba(38, 128, 152, 0.62)');
-          grad.addColorStop(1, 'rgba(20, 48, 68, 0.85)');
-          ctx.fillStyle = grad;
-          ctx.fillRect(ff.x, ff.y, ff.w, ff.h);
+    // Radial pixel fireworks behind geometry in 'end' (matching f_038.jpg!)
+    if (isEnd) {
+      for (const f of fireworks) {
+        const a = Math.max(0, f.life / f.maxLife);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = f.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(f.x - f.vx * 0.08, f.y - f.vy * 0.08);
+        ctx.lineTo(f.x, f.y);
+        ctx.stroke();
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(Math.round(f.x) - 2, Math.round(f.y) - 2, 4, 4);
+        ctx.restore();
+      }
+    }
 
-          // Wavy top highlight + subtle glitch squares hinting it's an illusion
-          ctx.strokeStyle = '#a8ffff';
-          ctx.lineWidth = 3;
+    // Overhead girder trusses (f_005.jpg right side!)
+    if (stage.trusses) {
+      for (const t of stage.trusses) {
+        ctx.strokeStyle = '#252a48';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(t.x, t.y, t.w, t.h);
+        for (let y = t.y; y < t.y + t.h - 20; y += 42) {
           ctx.beginPath();
-          for (let x = 0; x <= ff.w; x += 16) {
-            const wy = ff.y + Math.sin(totalTime * 5 + x * 0.06) * 4;
-            if (x === 0) ctx.moveTo(ff.x + x, wy);
-            else ctx.lineTo(ff.x + x, wy);
-          }
+          ctx.moveTo(t.x, y); ctx.lineTo(t.x + t.w, y + 42);
+          ctx.moveTo(t.x + t.w, y); ctx.lineTo(t.x, y + 42);
           ctx.stroke();
-
-          // Occasional glitch square tell
-          for (let k = 0; k < 6; k++) {
-            const gx = ff.x + ((k * 67 + Math.floor(totalTime * 20) * 13) % (ff.w - 14));
-            const gy = ff.y + 12 + ((k * 29) % Math.max(16, ff.h - 24));
-            ctx.fillStyle = k % 2 === 0 ? PAL.gold : PAL.magenta;
-            ctx.fillRect(gx, gy, 7, 7);
-          }
-        } else {
-          // Dissolved digital void with faint residual static pixels (matching sheet.jpg f_011..f_016!)
-          ctx.fillStyle = 'rgba(8, 6, 18, 0.92)';
-          ctx.fillRect(ff.x, ff.y, ff.w, ff.h);
-          for (let k = 0; k < 14; k++) {
-            const px = ff.x + ((k * 53 + Math.floor(totalTime * 8) * 19) % (ff.w - 10));
-            const py = ff.y + ((k * 37 + Math.floor(totalTime * 45)) % Math.max(24, ff.h - 10));
-            ctx.strokeStyle = k % 3 === 0 ? PAL.magenta : PAL.cyan;
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(px, py, 7, 7);
-          }
         }
       }
     }
 
-    // 2. Spikes / Cyber Fire hazards
-    if (!isLast && stage.spikes) {
+    // 1. Deceptive Fake Floors
+    if (stage.fakeFloors) {
+      for (const ff of stage.fakeFloors) drawFakeFloor(ff);
+    }
+
+    // 2. Spikes / Cyber-Fire Core
+    if (stage.spikes) {
       for (const sp of stage.spikes) {
-        const cols = Math.ceil(sp.w / 64);
+        const cols = Math.ceil(sp.w / 72);
         for (let c = 0; c < cols; c++) {
           const rect = sp.isFire
-            ? ((Math.floor(totalTime * 8 + c) % 2 === 0) ? ATLAS.u3Fire1 : ATLAS.u3Fire2)
+            ? ((Math.floor(totalTime * 9 + c) % 2 === 0) ? ATLAS.u3Fire1 : ATLAS.u3Fire2)
             : ATLAS.u1Spikes;
-          drawAtlas(rect, sp.x + c * 64, sp.y, 64, sp.h);
+          drawAtlas(rect, sp.x + c * 72, sp.y, 72, sp.h);
         }
       }
     }
 
-    // 3. Solid & Phase Platforms
+    // 3. Platforms (Cavern, Ornate Temple, Cyan Phase Blocks & Giant Physical QUIT Button)
     for (const p of stage.platforms) {
-      drawPlatform(p);
+      drawPlatform(p, stage);
     }
 
-    // 4. In-world Truthful (CYAN) & Lying (GOLD) Neon Signs!
-    if (!isLast && stage.signs) {
-      for (const s of stage.signs) {
-        drawNeonSign(s);
+    // 4. Residual world traces where player obeyed a lie (VOIDBASTARD-TAO Law 9)
+    const curU = (gameState === 'last' || isEnd) ? 3 : universeIdx;
+    for (const dt of deathTraces) {
+      if (dt.universe !== curU) continue;
+      ctx.strokeStyle = 'rgba(255, 66, 176, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(dt.x - 10, dt.y - 10, 20, 20);
+      ctx.beginPath();
+      ctx.moveTo(dt.x - 7, dt.y - 7); ctx.lineTo(dt.x + 7, dt.y + 7);
+      ctx.moveTo(dt.x + 7, dt.y - 7); ctx.lineTo(dt.x - 7, dt.y + 7);
+      ctx.stroke();
+    }
+
+    // 5. Diegetic World Signs (Flickering Gold = Lie, Steady Cyan = Truth)
+    if (!isEnd && stage.signs) {
+      for (const s of stage.signs) drawSign(s, stage);
+    }
+
+    // 6. Universe Scanline Rift
+    if (gameState === 'world') {
+      drawScanlineRift(stage.exit.x, stage.exit.y, stage);
+    }
+
+    // 7. Star-sparkle jump trail (f_027 / pair_008.00.jpg!)
+    for (const s of starTrail) {
+      const a = Math.max(0, s.life / s.maxLife);
+      if (s.big) {
+        drawFourPointSparkle(s.x, s.y, 7, s.col, a * 0.9);
+      } else {
+        ctx.fillStyle = s.col;
+        ctx.globalAlpha = a * 0.85;
+        ctx.fillRect(Math.round(s.x) - 2, Math.round(s.y) - 2, 5, 5);
+        ctx.globalAlpha = 1;
       }
     }
 
-    // 5. Stage Exit Portal (or Final Stage Possessed Quit Console + True Disobey Exit!)
-    if (!isLast) {
-      const ex = stage.exit.x, ey = stage.exit.y;
-      ctx.save();
-      ctx.shadowColor = PAL.cyan;
-      ctx.shadowBlur = 18;
-      ctx.strokeStyle = PAL.cyan;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(ex - 36, ey - 108, 72, 108);
-      ctx.fillStyle = 'rgba(60, 242, 255, 0.18)';
-      ctx.fillRect(ex - 32, ey - 104, 64, 100);
-      drawAtlas(ATLAS.u1BeaconC, ex - 12, ey - 88, 24, 72);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = PAL.cyan;
-      ctx.font = 'bold 15px "Courier New", Courier, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('WARP GATE', ex, ey - 120);
-      ctx.restore();
-    } else {
-      // FINAL BOSS ROOM ('last'):
-      // Giant possessed CRT Terminal & flickering GOLD [QUIT GAME] trap on the LEFT
-      const qt = LAST_STAGE.quitTrap;
-      drawAtlas(ATLAS.u3Terminal, qt.x + 15, qt.y - 20, 190, 195);
-      const jitter = Math.sin(totalTime * 35) > 0.6 ? 3 : 0;
-      ctx.save();
-      ctx.shadowColor = PAL.gold;
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = 'rgba(20, 11, 43, 0.94)';
-      ctx.fillRect(qt.x - 10 + jitter, qt.y - 92, 240, 62);
-      ctx.strokeStyle = PAL.gold;
-      ctx.lineWidth = 3.5;
-      ctx.strokeRect(qt.x - 10 + jitter, qt.y - 92, 240, 62);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = PAL.gold;
-      ctx.font = 'bold 24px "Courier New", Courier, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('[ QUIT GAME ]', qt.x + 110 + jitter, qt.y - 54);
-      ctx.font = 'bold 14px "Courier New", Courier, monospace';
-      ctx.fillText('<< WALK HERE TO OBEY', qt.x + 110, qt.y - 106);
-      ctx.restore();
+    // 8. Pixel Hero
+    drawPixelHero(player.x, player.y, player.facing, heroChoice, isEnd);
 
-      // Center possessed narrator banner
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.gold;
-      ctx.font = 'bold 28px "Courier New", Courier, monospace';
-      ctx.fillText('SYSTEM HALTED: NOTHING BEYOND THIS SCREEN.', W / 2, 168);
-      ctx.font = '18px "Courier New", Courier, monospace';
-      ctx.fillStyle = '#ff94d2';
-      ctx.fillText('DO NOT WALK RIGHT. OBEY THE INTERFACE AND QUIT NOW.', W / 2, 202);
-      ctx.restore();
-
-      // Right side: Truthful CYAN glitch seam ("DISOBEY ->")
-      const tx = LAST_STAGE.trueExit.x, ty = LAST_STAGE.trueExit.y;
-      ctx.save();
-      ctx.shadowColor = PAL.cyan;
-      ctx.shadowBlur = 20;
-      ctx.strokeStyle = PAL.cyan;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(tx - 38, ty - 116, 76, 116);
-      ctx.fillStyle = 'rgba(60, 242, 255, 0.24)';
-      ctx.fillRect(tx - 34, ty - 112, 68, 108);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = PAL.cyan;
-      ctx.font = 'bold 16px "Courier New", Courier, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('DISOBEY ->', tx, ty - 130);
-      ctx.fillText('BREAK FREE', tx, ty - 54);
-      ctx.restore();
-    }
-
-    // 6. Player Hero
-    drawPixelHero(player.x, player.y, player.facing, heroChoice);
-
-    // 7. Digital Static Particles & Fireworks
+    // 9. Tumbling Glitch Static Squares ([X] debug boxes & cyan/magenta chunks)
     for (const p of staticPixels) {
+      const a = Math.max(0, Math.min(1, p.life / p.maxLife * 1.4));
       ctx.save();
-      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = a;
+      const rx = Math.round(p.x), ry = Math.round(p.y);
       if (p.hollow) {
         ctx.strokeStyle = p.color;
         ctx.lineWidth = 2;
-        ctx.strokeRect(p.x, p.y, p.size, p.size);
+        ctx.strokeRect(rx, ry, p.size, p.size);
+        if (p.crossBox) {
+          ctx.beginPath();
+          ctx.moveTo(rx, ry); ctx.lineTo(rx + p.size, ry + p.size);
+          ctx.moveTo(rx + p.size, ry); ctx.lineTo(rx, ry + p.size);
+          ctx.stroke();
+        }
       } else {
         ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.fillRect(rx, ry, p.size, p.size);
       }
       ctx.restore();
     }
-    for (const f of fireworks) {
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, f.life / f.maxLife);
-      ctx.fillStyle = f.color;
-      ctx.fillRect(f.x - 3, f.y - 3, 6, 6);
-      ctx.restore();
-    }
 
     ctx.restore();
+
+    if (isEnd) {
+      renderStageClearBanner();
+    }
   }
 
-  function renderHUD() {
-    const stage = getActiveStage();
+  function renderStateScreens() {
+    // REST ('title'): Minimal empty void + logo + single valid entry cue (VOIDBASTARD-TAO Law 1 & 3)
+    if (gameState === 'title') {
+      renderBackground();
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = PAL.cyan;
+      ctx.font = 'bold 72px "Courier New", Courier, monospace';
+      ctx.fillText('GLITCHQUEST', W / 2, H / 2 - 44);
+      // Subtle flickering gold subtitle demonstrating the visual tell immediately
+      const jx = Math.sin(totalTime * 28) > 0.7 ? 3 : 0;
+      ctx.fillStyle = PAL.gold;
+      ctx.font = 'bold 20px "Courier New", Courier, monospace';
+      ctx.fillText('[ SPACE ]', W / 2 + jx, H / 2 + 42);
+      ctx.restore();
+      return;
+    }
 
-    // 1. Top-Left Hint Box (exact framing from m2_main_ref.png & f_005.jpg!)
-    ctx.save();
-    const hCol = stage.topHintLie ? PAL.gold : PAL.cyan;
-    ctx.fillStyle = 'rgba(14, 10, 32, 0.88)';
-    ctx.fillRect(46, 36, 246, 62);
-    ctx.strokeStyle = hCol;
-    ctx.lineWidth = 3.5;
-    ctx.strokeRect(46, 36, 246, 62);
-    ctx.fillStyle = hCol;
-    ctx.font = 'bold 21px "Courier New", Courier, monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(stage.topHint || 'HINT: TEST ALL', 46 + 123, 67);
-    ctx.restore();
+    // READY ('pick'): Spatial diegetic pedestals right beneath the 3 hero swaps (Law 5)
+    if (gameState === 'pick') {
+      renderBackground();
+      ctx.save();
+      ctx.textAlign = 'center';
+      for (let i = 0; i < 3; i++) {
+        const cx = W / 2 + (i - 1) * 250;
+        const cy = 410;
+        const sel = (i === heroChoice);
+        drawAtlas(ATLAS.u2PhaseBlk, cx - 64, cy, 128, 42, sel ? 1 : 0.35);
+        if (sel) {
+          ctx.strokeStyle = PAL.cyanBright;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(cx - 68, cy - 4, 136, 50);
+          drawFourPointSparkle(cx, cy - 102, 10, PAL.cyan, 0.9);
+        }
+        drawPixelHero(cx - 22, cy - 92, 1, i, sel);
+        ctx.fillStyle = sel ? PAL.cyan : 'rgba(200, 194, 232, 0.45)';
+        ctx.font = 'bold 18px "Courier New", Courier, monospace';
+        ctx.fillText(`[${i + 1}]`, cx, cy + 72);
+      }
+      ctx.fillStyle = PAL.cyanBright;
+      ctx.font = 'bold 18px "Courier New", Courier, monospace';
+      ctx.fillText('[SPACE]', W / 2, 560);
+      ctx.restore();
+      return;
+    }
 
-    // Top-Right Rule Tracker & Universe Label
-    ctx.save();
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 16px "Courier New", Courier, monospace';
-    ctx.fillStyle = PAL.cyan;
-    ctx.fillText(stage.name, W - 46, 54);
-    ctx.font = '13px "Courier New", Courier, monospace';
-    ctx.fillStyle = '#c8c2e8';
-    ctx.fillText('RULE: CYAN = TRUE  |  FLICKERING GOLD = LIE   [E/DOWN] TEST', W - 46, 76);
-    ctx.restore();
+    // WORKING / CHANGED / COMPLETE / FAULT: Pure uncluttered world view!
+    renderWorld();
 
-    // 2. Bottom-Left Lightning Bolt & Sync Bar + Bottom-Right Frame (exact match to f_005.jpg!)
-    ctx.save();
-    // Lightning square box
-    ctx.fillStyle = 'rgba(14, 10, 32, 0.86)';
-    ctx.fillRect(46, H - 82, 64, 54);
-    ctx.strokeStyle = PAL.gold;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(46, H - 82, 64, 54);
-    // Lightning bolt polygon
-    ctx.fillStyle = PAL.gold;
-    ctx.beginPath();
-    ctx.moveTo(82, H - 75);
-    ctx.lineTo(64, H - 54);
-    ctx.lineTo(77, H - 54);
-    ctx.lineTo(72, H - 35);
-    ctx.lineTo(92, H - 58);
-    ctx.lineTo(79, H - 58);
-    ctx.closePath();
-    ctx.fill();
-
-    // Charge bar next to bolt
-    ctx.fillStyle = PAL.gold;
-    ctx.font = 'bold 14px "Courier New", Courier, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(HERO_CHOICES[heroChoice].name + ` · TESTS: ${testsPerformed}`, 124, H - 66);
-    ctx.strokeStyle = PAL.gold;
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(124, H - 56, 236, 28);
-    const prog = gameState === 'end' ? 1 : (gameState === 'last' ? 0.9 : ((universeIdx + (player.x / stage.worldW)) / 3));
-    ctx.fillStyle = PAL.gold;
-    ctx.fillRect(129, H - 51, Math.max(24, Math.min(226, prog * 226)), 18);
-
-    // Bottom-Right gold frame icon (f_005.jpg!)
-    ctx.fillStyle = 'rgba(14, 10, 32, 0.86)';
-    ctx.fillRect(W - 118, H - 96, 66, 72);
-    ctx.strokeStyle = PAL.gold;
-    ctx.lineWidth = 5;
-    ctx.strokeRect(W - 118, H - 96, 66, 72);
-    ctx.restore();
-
-    // Overlays by state
+    // FAULT -> RECOVERY ('lie'): Diegetic magenta scanline shock + [R] recovery (Law 6 & 8)
     if (gameState === 'lie') {
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 42, 133, 0.26)';
+      ctx.fillStyle = 'rgba(255, 42, 148, 0.22)';
       ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = 'rgba(14, 8, 30, 0.92)';
-      ctx.fillRect(W / 2 - 360, H / 2 - 58, 720, 116);
-      ctx.strokeStyle = PAL.magenta;
-      ctx.lineWidth = 3.5;
-      ctx.strokeRect(W / 2 - 360, H / 2 - 58, 720, 116);
       ctx.textAlign = 'center';
       ctx.fillStyle = PAL.gold;
       ctx.font = 'bold 28px "Courier New", Courier, monospace';
-      ctx.fillText('LIED TO!', W / 2, H / 2 - 16);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '17px "Courier New", Courier, monospace';
-      ctx.fillText(lieReason, W / 2, H / 2 + 24);
+      ctx.fillText('LIED TO · [R]', W / 2, H / 2);
       ctx.restore();
     }
 
-    if (gameState === 'title') {
+    // PAUSED (Law 7: Active work exposes Stop/Pause without cluttering active play)
+    if (paused) {
       ctx.save();
-      ctx.fillStyle = 'rgba(12, 8, 28, 0.88)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.gold;
-      ctx.font = 'bold 62px "Courier New", Courier, monospace';
-      ctx.fillText('GLITCHQUEST', W / 2, H / 2 - 70);
-      ctx.fillStyle = PAL.cyan;
-      ctx.font = 'bold 22px "Courier New", Courier, monospace';
-      ctx.fillText('The game is lying to you. Work out how.', W / 2, H / 2 - 12);
-      ctx.fillStyle = '#d9d4f2';
-      ctx.font = '17px "Courier New", Courier, monospace';
-      ctx.fillText('Test signs & floors across 3 universes. Learn which colour always lies.', W / 2, H / 2 + 32);
-      ctx.fillStyle = PAL.gold;
-      ctx.font = 'bold 22px "Courier New", Courier, monospace';
-      ctx.fillText('PRESS SPACE TO SELECT HERO', W / 2, H / 2 + 95);
-      ctx.restore();
-    }
-
-    if (gameState === 'pick') {
-      ctx.save();
-      ctx.fillStyle = 'rgba(12, 8, 28, 0.92)';
+      ctx.fillStyle = 'rgba(10, 7, 24, 0.65)';
       ctx.fillRect(0, 0, W, H);
       ctx.textAlign = 'center';
       ctx.fillStyle = PAL.cyan;
-      ctx.font = 'bold 40px "Courier New", Courier, monospace';
-      ctx.fillText('PICK YOUR HERO', W / 2, 145);
-
-      HERO_CHOICES.forEach((hc, idx) => {
-        const cx = W / 2 + (idx - 1) * 290;
-        const cy = 340;
-        const sel = (idx === heroChoice);
-        ctx.fillStyle = sel ? 'rgba(60,242,255,0.16)' : 'rgba(20,14,44,0.85)';
-        ctx.fillRect(cx - 115, cy - 95, 230, 210);
-        ctx.strokeStyle = sel ? PAL.cyan : '#4c4375';
-        ctx.lineWidth = sel ? 4 : 2;
-        ctx.strokeRect(cx - 115, cy - 95, 230, 210);
-        drawPixelHero(cx - 20, cy - 42, 1, idx);
-        ctx.fillStyle = sel ? PAL.gold : '#b7b0d9';
-        ctx.font = 'bold 17px "Courier New", Courier, monospace';
-        ctx.fillText(`[${idx + 1}] ${hc.name}`, cx, cy + 78);
-      });
-
-      ctx.fillStyle = PAL.gold;
-      ctx.font = 'bold 22px "Courier New", Courier, monospace';
-      ctx.fillText('[1 / 2 / 3] CHOOSE   ·   [SPACE] ENTER UNIVERSE 1', W / 2, 565);
-      ctx.restore();
-    }
-
-    if (gameState === 'end') {
-      // Celebratory neon STAGE CLEAR banner matching Omni sheet.jpg frames 37..40!
-      ctx.save();
-      ctx.fillStyle = 'rgba(12, 8, 28, 0.58)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.shadowColor = PAL.cyan;
-      ctx.shadowBlur = 22;
-      ctx.fillStyle = 'rgba(16, 12, 38, 0.94)';
-      ctx.fillRect(W / 2 - 290, H / 2 - 82, 580, 158);
-      ctx.strokeStyle = PAL.cyan;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(W / 2 - 290, H / 2 - 82, 580, 158);
-      ctx.strokeStyle = PAL.gold;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(W / 2 - 282, H / 2 - 74, 564, 142);
-      ctx.shadowBlur = 0;
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.gold;
-      ctx.font = 'bold 44px "Courier New", Courier, monospace';
-      ctx.fillText('STAGE CLEAR!', W / 2, H / 2 - 24);
-      ctx.fillStyle = PAL.cyan;
-      ctx.font = 'bold 19px "Courier New", Courier, monospace';
-      ctx.fillText('YOU REFUSED TO QUIT AND BROKE THE GAME\'S LIE.', W / 2, H / 2 + 22);
-      ctx.fillStyle = '#c8c2e8';
-      ctx.font = '15px "Courier New", Courier, monospace';
-      ctx.fillText('[R / SPACE] PLAY AGAIN', W / 2, H / 2 + 56);
+      ctx.font = 'bold 26px "Courier New", Courier, monospace';
+      ctx.fillText('PAUSED  ·  [P] RESUME  ·  [R] RETRY', W / 2, H / 2);
       ctx.restore();
     }
   }
 
   function renderPostFX() {
-    // Glitch transition horizontal slice displacement when warping or dissolving fake floors!
-    if (glitchFlash > 0.02) {
-      const slices = 5;
-      for (let i = 0; i < slices; i++) {
-        const sy = Math.floor(((i * 137 + Math.floor(totalTime * 60) * 43) % (H - 32)));
-        const sh = 10 + (i % 3) * 10;
-        const shift = Math.round((Math.sin(totalTime * 90 + i) * 22) * glitchFlash);
-        ctx.drawImage(canvas, 0, sy, W, sh, shift, sy, W, sh);
+    // Seamless Horizontal CRT Scanline World-Warp Tear!
+    if (warpEffect.active && warpSnapshot) {
+      const p = warpEffect.t / warpEffect.dur;
+      const bands = 24;
+      const bandH = H / bands;
+      ctx.save();
+      for (let b = 0; b < bands; b++) {
+        const delay = ((b * 7) % bands) / bands * 0.45;
+        const localP = Math.max(0, Math.min(1, (p - delay) / 0.55));
+        if (localP < 1) {
+          const dir = (b % 2 === 0 ? 1 : -1);
+          const shift = Math.round(dir * Math.pow(localP, 1.7) * W * 1.05);
+          ctx.globalAlpha = 1 - localP * 0.65;
+          ctx.drawImage(warpSnapshot, 0, b * bandH, W, bandH, shift, b * bandH, W, bandH);
+          // Bright cyan/gold scanline tear seam
+          ctx.fillStyle = b % 2 === 0 ? PAL.cyan : PAL.gold;
+          ctx.globalAlpha = (1 - localP) * 0.85;
+          ctx.fillRect(0, b * bandH, W, 2);
+        }
       }
-      ctx.fillStyle = `rgba(60, 242, 255, ${glitchFlash * 0.08})`;
-      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
     }
 
-    // Subtle CRT scanlines + vignette
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.13)';
+    // Impact / Dissolve horizontal glitch slice tear
+    if (glitchFlash > 0.03) {
+      const slices = 6;
+      for (let i = 0; i < slices; i++) {
+        const sy = Math.floor(((i * 131 + Math.floor(totalTime * 60) * 47) % (H - 28)));
+        const sh = 8 + (i % 3) * 8;
+        const shift = Math.round(Math.sin(totalTime * 95 + i * 2.1) * 26 * glitchFlash);
+        ctx.drawImage(canvas, 0, sy, W, sh, shift, sy, W, sh);
+      }
+    }
+
+    // Crisp subtle CRT scanlines + soft edge vignette matching sheet.jpg
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.11)';
     for (let y = 0; y < H; y += 4) {
       ctx.fillRect(0, y, W, 1);
     }
-    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.38, W / 2, H / 2, W * 0.70);
+    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.44, W / 2, H / 2, W * 0.72);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(5,3,14,0.46)');
+    vig.addColorStop(1, 'rgba(4,2,12,0.42)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
   }
 
   function render() {
-    renderWorld();
-    renderHUD();
+    renderStateScreens();
     renderPostFX();
   }
 
-  // Expose complete game state for play.mjs & verification
+  // Expose structured state for play.mjs & automated verification
   window.__game = {
     get state() {
       const stage = getActiveStage();
       return {
         mode: gameState, // 'title' | 'pick' | 'world' | 'lie' | 'last' | 'end'
+        paused,
         universe: universeIdx,
-        stageName: stage.name,
+        theme: stage.theme,
         heroChoice,
         liesTriggered,
         testsPerformed,
+        buttonShattered: !!lastStage.buttonShattered,
         time: Number(totalTime.toFixed(2)),
         assetsReady: tilesReady,
         player: {
@@ -1381,13 +2218,16 @@
           vy: Math.round(player.vy),
           onGround: player.onGround
         },
-        platforms: stage.platforms
-          .filter(p => !p.revealOnTest || p.revealed)
-          .map(p => ({ x: p.x, y: p.y, w: p.w, h: p.h, kind: p.kind })),
-        fakeFloors: (stage.fakeFloors || []).map(f => ({
-          x: f.x, y: f.y, w: f.w, h: f.h, dissolved: f.dissolved, triggerX: f.triggerX
+        platforms: getActiveSolids(stage).map(p => ({
+          x: p.x, y: p.y, w: p.w, h: p.h, kind: p.kind, oneWay: !!p.oneWay
         })),
-        exit: gameState === 'last' ? LAST_STAGE.trueExit : stage.exit
+        fakeFloors: (stage.fakeFloors || []).map(f => ({
+          x: f.x, y: f.y, w: f.w, h: f.h,
+          dissolved: f.dissolved,
+          probeMinX: f.probeMinX, probeMaxX: f.probeMaxX
+        })),
+        quitBtn: lastStage.quitBtn,
+        exit: stage.exit
       };
     }
   };

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <link rel="icon" href="data:," />
-<title>That One Team — Group 8 (M2)</title>
+<title>That One Team</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -26,7 +26,7 @@
     aspect-ratio: 16 / 9;
     display: block;
     background: #14121c;
-    box-shadow: 0 0 60px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 0 64px rgba(0, 0, 0, 0.9);
   }
 </style>
 </head>
@@ -39,21 +39,24 @@
   'use strict';
 
   const W = 1280, H = 720;
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+  const ZOOM = 1.22;
+  const VIEW_W = W / ZOOM; // ~1049 world units visible horizontally
+  const VIEW_H = H / ZOOM; // ~590 world units visible vertically
 
-  // Offscreen buffer so we can apply crisp progressive saturation drain cleanly
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
   const sceneCanvas = document.createElement('canvas');
   sceneCanvas.width = W;
   sceneCanvas.height = H;
-  const sctx = sceneCanvas.getContext('2d');
+  const sctx = sceneCanvas.getContext('2d', { alpha: false });
 
-  // Query parameters: ?autostart & ?seed=N
   const params = new URLSearchParams(window.location.search);
   const AUTOSTART = params.has('autostart');
-  const INITIAL_SEED = Number.isFinite(Number(params.get('seed'))) ? (Number(params.get('seed')) >>> 0) : 7;
+  const INITIAL_SEED = Number.isFinite(Number(params.get('seed')))
+    ? (Number(params.get('seed')) >>> 0)
+    : 7;
 
-  // Deterministic PRNG (Mulberry32)
   let rngState = INITIAL_SEED || 7;
   function rand() {
     let t = (rngState += 0x6D2B79F5);
@@ -62,18 +65,19 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
-  // Palette from spec.json & study.json
   const PAL = {
     bg: '#14121c',
     fg: '#f2f2f2',
     gold: '#ffd84a',
+    goldBright: '#fff2b2',
     violet: '#7b3fe4',
-    violetDark: '#231b38',
-    charcoal: '#24262a',
-    monoBg: '#0d0e12'
+    violetBright: '#b985ff',
+    violetDeep: '#1d1430',
+    monoSky: '#0b0d12',
+    monoStone: '#282a30'
   };
 
-  // Load Nano Banana PNG cutouts & Lyria BGM
+  // Load Nano Banana cleaned sprite sheets
   const IMAGES = {};
   const ASSET_PATHS = {
     player: '../assets/player_sprite_with_ability_states.png',
@@ -90,110 +94,7 @@
     IMAGES[key] = img;
   }
 
-  const bgm = new Audio('../assets/bgm_loop.mp3');
-  bgm.loop = true;
-  bgm.volume = 0.45;
-  let audioUnlocked = false;
-  let audioCtx = null;
-
-  function ensureAudio() {
-    if (!audioCtx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) audioCtx = new AC();
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
-    if (!audioUnlocked) {
-      audioUnlocked = true;
-      syncBgmVolume();
-      bgm.play().catch(() => {});
-    }
-  }
-
-  function syncBgmVolume() {
-    // Music thins out level by level until silent in LAST WALK & END
-    const vols = [0.46, 0.30, 0.16, 0.06, 0.0];
-    const target = (gameState === 'walk' || gameState === 'end') ? 0 : (vols[currentLevel] ?? 0);
-    bgm.volume = Math.max(0, Math.min(1, target));
-    if (target === 0 && !bgm.paused) bgm.pause();
-    else if (target > 0 && audioUnlocked && bgm.paused) bgm.play().catch(() => {});
-  }
-
-  // Procedural WebAudio SFX that also thin out as abilities & sound drain
-  function playSfx(kind) {
-    if (!audioCtx) return;
-    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-    const now = audioCtx.currentTime;
-    const richness = Math.max(0, 1 - currentLevel * 0.24); // 1.0 -> 0.04
-
-    if (kind === 'step') {
-      // Quiet solitary footstep (especially poignant in LAST WALK)
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(gameState === 'walk' ? 95 : 140, now);
-      osc.frequency.exponentialRampToValueAtTime(52, now + 0.055);
-      g.gain.setValueAtTime(gameState === 'walk' ? 0.07 : 0.04 * richness, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-      osc.connect(g).connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.065);
-      return;
-    }
-
-    if (richness <= 0.02 && kind !== 'take') return;
-
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.connect(g).connect(audioCtx.destination);
-
-    if (kind === 'jump') {
-      osc.type = currentLevel < 2 ? 'square' : 'sine';
-      osc.frequency.setValueAtTime(240, now);
-      osc.frequency.exponentialRampToValueAtTime(520, now + 0.12);
-      g.gain.setValueAtTime(0.09 * richness, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
-      osc.start(now); osc.stop(now + 0.14);
-    } else if (kind === 'double') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(420, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.16);
-      g.gain.setValueAtTime(0.11 * richness, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
-      osc.start(now); osc.stop(now + 0.18);
-    } else if (kind === 'dash') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(620, now);
-      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
-      g.gain.setValueAtTime(0.11 * richness, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-      osc.start(now); osc.stop(now + 0.17);
-    } else if (kind === 'wall') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(310, now);
-      osc.frequency.exponentialRampToValueAtTime(660, now + 0.11);
-      g.gain.setValueAtTime(0.09 * richness, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.start(now); osc.stop(now + 0.13);
-    } else if (kind === 'take') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(520 - currentLevel * 70, now);
-      osc.frequency.exponentialRampToValueAtTime(110, now + 0.55);
-      g.gain.setValueAtTime(0.15, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
-      osc.start(now); osc.stop(now + 0.6);
-    } else if (kind === 'reset') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(190, now);
-      osc.frequency.linearRampToValueAtTime(75, now + 0.25);
-      g.gain.setValueAtTime(0.12, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.27);
-      osc.start(now); osc.stop(now + 0.28);
-    }
-  }
-
-  // Exact pixel sprite atlas coordinates measured from Nano Banana cutouts
+  // Verified clean sprite coordinates (using crisp black-outlined Row-2 crystals!)
   const SPRITES = {
     player: {
       idle:     { x: 40,  y: 58,  w: 101, h: 173 },
@@ -217,29 +118,29 @@
       monoSit2: { x: 889, y: 861, w: 97,  h: 132 }
     },
     tiles: {
-      // Vivid top half
-      goldBlock:   { x: 33,  y: 30,  w: 86,  h: 87 },
-      purpleBlock: { x: 130, y: 30,  w: 86,  h: 86 },
-      purpleTop:   { x: 226, y: 30,  w: 87,  h: 86 },
-      island1:     { x: 32,  y: 222, w: 87,  h: 85 },
-      island2:     { x: 130, y: 238, w: 87,  h: 69 },
-      darkFill:    { x: 130, y: 413, w: 85,  h: 86 },
-      gemViolet:   { x: 541, y: 37,  w: 55,  h: 62 },
-      gemGold:     { x: 628, y: 37,  w: 54,  h: 62 },
-      crystalClus: { x: 711, y: 33,  w: 62,  h: 72 },
-      spikesColor: { x: 617, y: 445, w: 84,  h: 51 },
-      chainColor:  { x: 907, y: 201, w: 16,  h: 95 },
-      archColor:   { x: 524, y: 196, w: 207, h: 205 },
-      // Greyscale bottom half
-      greyGold:    { x: 33,  y: 525, w: 84,  h: 86 },
-      greyBlock:   { x: 130, y: 525, w: 84,  h: 86 },
-      greyTop:     { x: 226, y: 525, w: 85,  h: 86 },
-      greyIsland:  { x: 130, y: 746, w: 84,  h: 56 },
-      greyFill:    { x: 130, y: 909, w: 84,  h: 85 },
-      gemGrey:     { x: 531, y: 534, w: 52,  h: 62 },
-      spikesGrey:  { x: 617, y: 940, w: 84,  h: 52 },
-      chainGrey:   { x: 894, y: 698, w: 16,  h: 141 },
-      archGrey:    { x: 515, y: 704, w: 194, h: 194 }
+      goldBlock:    { x: 33,  y: 30,  w: 86,  h: 87 },
+      purpleBlock:  { x: 130, y: 30,  w: 86,  h: 86 },
+      purpleTop:    { x: 226, y: 30,  w: 87,  h: 86 },
+      island1:      { x: 32,  y: 222, w: 87,  h: 85 },
+      island2:      { x: 130, y: 238, w: 87,  h: 69 },
+      darkFill:     { x: 130, y: 413, w: 85,  h: 86 },
+      gemViolet:    { x: 546, y: 115, w: 46,  h: 68 },
+      gemGold:      { x: 632, y: 115, w: 46,  h: 68 },
+      crysBaseCol:  { x: 521, y: 418, w: 85,  h: 79 },
+      spikesColor:  { x: 616, y: 444, w: 86,  h: 53 },
+      rubbleCol:    { x: 812, y: 434, w: 87,  h: 62 },
+      chainColor:   { x: 907, y: 201, w: 16,  h: 95 },
+      archColor:    { x: 520, y: 192, w: 214, h: 210 },
+      greyGold:     { x: 33,  y: 525, w: 84,  h: 86 },
+      greyBlock:    { x: 130, y: 525, w: 84,  h: 86 },
+      greyTop:      { x: 226, y: 525, w: 85,  h: 86 },
+      greyIsland:   { x: 130, y: 746, w: 84,  h: 56 },
+      gemGrey:      { x: 531, y: 534, w: 52,  h: 62 },
+      rubbleGrey:   { x: 812, y: 930, w: 88,  h: 61 },
+      chainGrey:    { x: 894, y: 698, w: 16,  h: 141 },
+      archGrey:     { x: 510, y: 700, w: 202, h: 198 },
+      stoneRun1:    { x: 714, y: 809, w: 72,  h: 88 },
+      stoneRun2:    { x: 801, y: 800, w: 77,  h: 82 }
     },
     sound: [
       { x: 24,  y: 333, w: 198, h: 285 },
@@ -251,8 +152,189 @@
     ]
   };
 
-  // Ability order: all 4 active on Level 1, lost one by one after each level!
-  // Order lost: Level 1 takes GLIDE -> Level 2 takes WALL -> Level 3 takes DOUBLE -> Level 4 takes DASH (+ jump/color/sound) -> Level 5 is LAST WALK
+  // Audio Subtraction Engine: Lyria BGM loop + Biquad low-pass filter + 4-stem procedural synth arpeggio
+  const bgm = new Audio('../assets/bgm_loop.mp3');
+  bgm.loop = true;
+  bgm.volume = 0.45;
+  let audioUnlocked = false;
+  let audioCtx = null;
+  let bgmFilter = null;
+  let bgmGain = null;
+  let bgmRouted = false;
+  let arpTimer = 0;
+  let arpStep = 0;
+  const ARP_NOTES = [293.66, 349.23, 440.00, 523.25, 587.33, 523.25, 440.00, 349.23];
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (audioCtx && !bgmRouted) {
+      try {
+        const src = audioCtx.createMediaElementSource(bgm);
+        bgmFilter = audioCtx.createBiquadFilter();
+        bgmFilter.type = 'lowpass';
+        bgmFilter.frequency.value = 18000;
+        bgmFilter.Q.value = 0.7;
+        bgmGain = audioCtx.createGain();
+        bgmGain.gain.value = 0.46;
+        src.connect(bgmFilter).connect(bgmGain).connect(audioCtx.destination);
+        bgm.volume = 1.0;
+        bgmRouted = true;
+      } catch (_) {
+        bgmRouted = true;
+      }
+    }
+    if (!audioUnlocked) {
+      audioUnlocked = true;
+      syncAudioSubtraction();
+      bgm.play().catch(() => {});
+    }
+  }
+
+  function syncAudioSubtraction() {
+    const vols = [0.46, 0.32, 0.18, 0.07, 0.0];
+    const cutoffs = [18000, 4600, 1750, 620, 180];
+    const isSilent = (gameState === 'walk' || gameState === 'end' || paused);
+    const targetVol = isSilent ? 0 : (vols[currentSector] ?? 0);
+    const targetCut = cutoffs[Math.min(4, currentSector)] ?? 180;
+
+    if (bgmGain && audioCtx) {
+      bgmGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.08);
+      if (bgmFilter) bgmFilter.frequency.setTargetAtTime(targetCut, audioCtx.currentTime, 0.12);
+    } else {
+      bgm.volume = Math.max(0, Math.min(1, targetVol));
+    }
+    if (targetVol === 0 && !bgm.paused) bgm.pause();
+    else if (targetVol > 0 && audioUnlocked && bgm.paused) bgm.play().catch(() => {});
+  }
+
+  function tickArpeggioStems(dt) {
+    if (!audioCtx || audioCtx.state !== 'running' || paused) return;
+    if (gameState === 'walk' || gameState === 'end' || gameState === 'title') return;
+    arpTimer -= dt;
+    if (arpTimer > 0) return;
+    arpTimer = 0.18;
+    const now = audioCtx.currentTime;
+    const freq = ARP_NOTES[arpStep % ARP_NOTES.length];
+    arpStep++;
+
+    if (abilities.glide) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq * 2, now);
+      g.gain.setValueAtTime(0.022, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.15);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.16);
+    }
+    if (abilities.wall && arpStep % 2 === 0) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(freq * 1.5, now);
+      g.gain.setValueAtTime(0.020, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.14);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.15);
+    }
+    if (abilities.double && arpStep % 2 === 1) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(freq, now);
+      g.gain.setValueAtTime(0.024, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.17);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.18);
+    }
+    if (abilities.dash && arpStep % 4 === 0) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(73.42, now);
+      g.gain.setValueAtTime(0.032, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.28);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.30);
+    }
+  }
+
+  function playSfx(kind) {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    const now = audioCtx.currentTime;
+    const richness = Math.max(0, 1 - currentSector * 0.24);
+
+    if (kind === 'step') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(gameState === 'walk' ? 86 : 138, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.055);
+      g.gain.setValueAtTime(gameState === 'walk' ? 0.068 : 0.035 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.06);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.065);
+      return;
+    }
+
+    if (richness <= 0.02 && kind !== 'take' && kind !== 'reset') return;
+
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g).connect(audioCtx.destination);
+
+    if (kind === 'jump') {
+      osc.type = currentSector < 2 ? 'square' : 'sine';
+      osc.frequency.setValueAtTime(235, now);
+      osc.frequency.exponentialRampToValueAtTime(510, now + 0.11);
+      g.gain.setValueAtTime(0.075 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.12);
+      osc.start(now); osc.stop(now + 0.13);
+    } else if (kind === 'double') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(410, now);
+      osc.frequency.exponentialRampToValueAtTime(860, now + 0.15);
+      g.gain.setValueAtTime(0.095 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.16);
+      osc.start(now); osc.stop(now + 0.17);
+    } else if (kind === 'dash') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(640, now);
+      osc.frequency.exponentialRampToValueAtTime(140, now + 0.15);
+      g.gain.setValueAtTime(0.095 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.16);
+      osc.start(now); osc.stop(now + 0.17);
+    } else if (kind === 'wall') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(640, now + 0.10);
+      g.gain.setValueAtTime(0.08 * richness, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.11);
+      osc.start(now); osc.stop(now + 0.12);
+    } else if (kind === 'take') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(500 - currentSector * 68, now);
+      osc.frequency.exponentialRampToValueAtTime(86, now + 0.52);
+      g.gain.setValueAtTime(0.14, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.55);
+      osc.start(now); osc.stop(now + 0.56);
+    } else if (kind === 'reset') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(185, now);
+      osc.frequency.linearRampToValueAtTime(72, now + 0.22);
+      g.gain.setValueAtTime(0.10, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 0.24);
+      osc.start(now); osc.stop(now + 0.25);
+    }
+  }
+
   const ABILITY_DEFS = [
     { key: 'dash',   label: 'DASH' },
     { key: 'double', label: 'DOUBLE' },
@@ -260,191 +342,133 @@
     { key: 'glide',  label: 'GLIDE' }
   ];
 
-  // 5 handcrafted levels designed around the exact abilities remaining & Omni video composition
-  const LEVELS = [
-    // LEVEL 1: Full Power (DASH, DOUBLE, WALL, GLIDE) — Matches Omni f_001..f_020 closely!
-    {
-      index: 0,
-      title: 'SECTOR 01 · FULLGRANT',
-      subtitle: 'ALL MOVEMENT SYSTEMS ONLINE',
-      saturation: 1.0,
-      takenAfter: 'glide',
-      takenCard: 'GLIDE REVOKED — AIRFOIL PRIVILEGE RECLAIMED',
-      spawn: { x: 110, y: 440 },
-      worldW: 2150,
-      platforms: [
-        // Starting corridor floor + overhang ceiling (just like f_005.jpg!)
-        { x: 0,    y: 520, w: 560, h: 220, style: 'solid' },
-        { x: 0,    y: 140, w: 510, h: 100, style: 'ceiling' },
-        { x: 440,  y: 0,   w: 70,  h: 240, style: 'wall' },
-        // Floating purple islands across void (f_013.jpg!)
-        { x: 700,  y: 440, w: 250, h: 68,  style: 'island' },
-        { x: 1060, y: 500, w: 270, h: 68,  style: 'island' },
-        { x: 1120, y: 310, w: 190, h: 54,  style: 'island' },
-        // Tall vertical purple cliff wall leading up to the elevated Threshold Arch plateau (f_016..f_019!)
-        { x: 1460, y: 310, w: 690, h: 410, style: 'solid' }
-      ],
-      spikes: [
-        // Floor spikes in corridor that runner dashes/jumps over
-        { x: 330, y: 492, w: 68, h: 28 }
-      ],
-      goldBlocks: [
-        { x: 205, y: 205, size: 54 },
-        { x: 262, y: 205, size: 54 }
-      ],
-      chevrons: [
-        { x: 95,  y: 390 },
-        { x: 315, y: 390 }
-      ],
-      gems: [
-        { x: 630,  y: 350, kind: 'violet' },
-        { x: 995,  y: 380, kind: 'gold' },
-        { x: 1390, y: 370, kind: 'violet' },
-        { x: 1565, y: 220, kind: 'gold' }
-      ],
-      chains: [
-        { x: 160, y: 240, len: 115 },
-        { x: 1180, y: 364, len: 95 }
-      ],
-      speaker: { x: 52, y: 520, stage: 0 },
-      exit: { x: 1760, y: 310 }
-    },
+  // Continuous World Layout spaced so each Threshold Arch stands monumentally alone in frame!
+  const WORLD_W = 4920;
 
-    // LEVEL 2: Glide Taken (DASH, DOUBLE, WALL remain) — 68% saturation
-    {
-      index: 1,
-      title: 'SECTOR 02 · HEAVIER AIR',
-      subtitle: 'GLIDE OFFLINE — RELY ON DASH, DOUBLE JUMP & WALL KICK',
-      saturation: 0.68,
-      takenAfter: 'wall',
-      takenCard: 'WALL RUN REVOKED — SURFACE GRIP RECLAIMED',
-      spawn: { x: 90, y: 450 },
-      worldW: 1720,
-      platforms: [
-        { x: 0,    y: 530, w: 380, h: 190, style: 'solid' },
-        { x: 510,  y: 460, w: 240, h: 64,  style: 'island' },
-        { x: 870,  y: 480, w: 240, h: 64,  style: 'island' },
-        // Tall vertical cliff requiring wall-kick + double-jump up to exit plateau
-        { x: 1240, y: 290, w: 480, h: 430, style: 'solid' }
-      ],
-      spikes: [
-        { x: 595, y: 432, w: 64, h: 28 }
-      ],
-      goldBlocks: [],
-      chevrons: [{ x: 180, y: 420 }],
-      gems: [
-        { x: 445, y: 360, kind: 'violet' },
-        { x: 805, y: 375, kind: 'gold' },
-        { x: 1185, y: 340, kind: 'violet' }
-      ],
-      chains: [{ x: 580, y: 524, len: 100 }],
-      speaker: { x: 55, y: 530, stage: 1 },
-      exit: { x: 1490, y: 290 }
-    },
-
-    // LEVEL 3: Wall Taken (DASH, DOUBLE remain) — 38% saturation
-    {
-      index: 2,
-      title: 'SECTOR 03 · PALE STRATA',
-      subtitle: 'WALL GRIP OFFLINE — DASH & DOUBLE JUMP ONLY',
-      saturation: 0.36,
-      takenAfter: 'double',
-      takenCard: 'DOUBLE JUMP REVOKED — THRUSTERS RECLAIMED',
-      spawn: { x: 90, y: 460 },
-      worldW: 1620,
-      platforms: [
-        { x: 0,    y: 540, w: 360, h: 180, style: 'solid' },
-        { x: 520,  y: 445, w: 240, h: 64,  style: 'island' },
-        { x: 910,  y: 365, w: 250, h: 64,  style: 'island' },
-        { x: 1270, y: 430, w: 350, h: 290, style: 'solid' }
-      ],
-      spikes: [
-        { x: 220, y: 512, w: 64, h: 28 }
-      ],
-      goldBlocks: [],
-      chevrons: [],
-      gems: [
-        { x: 440,  y: 350, kind: 'violet' },
-        { x: 835,  y: 280, kind: 'gold' },
-        { x: 1195, y: 320, kind: 'violet' }
-      ],
-      chains: [{ x: 990, y: 429, len: 110 }],
-      speaker: { x: 55, y: 540, stage: 2 },
-      exit: { x: 1455, y: 430 }
-    },
-
-    // LEVEL 4: Double Jump Taken (DASH + single jump only) — 12% saturation (matches f_025..f_040 stone!)
-    {
-      index: 3,
-      title: 'SECTOR 04 · ASHEN RUN',
-      subtitle: 'THRUSTERS OFFLINE — GROUNDED LEAP & DASH ONLY',
-      saturation: 0.10,
-      takenAfter: 'dash',
-      takenCard: 'DASH, COLOUR & SOUND REVOKED — NOTHING LEFT',
-      spawn: { x: 90, y: 470 },
-      worldW: 1500,
-      platforms: [
-        { x: 0,    y: 550, w: 420, h: 170, style: 'solid' },
-        { x: 555,  y: 540, w: 360, h: 180, style: 'solid' },
-        { x: 1060, y: 530, w: 440, h: 190, style: 'solid' }
-      ],
-      spikes: [],
-      goldBlocks: [],
-      chevrons: [],
-      gems: [
-        { x: 485, y: 455, kind: 'grey' },
-        { x: 985, y: 445, kind: 'grey' }
-      ],
-      chains: [{ x: 680, y: 0, len: 160 }],
-      speaker: { x: 60, y: 550, stage: 4 },
-      exit: { x: 1300, y: 530 }
-    },
-
-    // LEVEL 5 ("LAST WALK"): No abilities, no jumping, no color, no music — slow quiet walk in dark room
-    {
-      index: 4,
-      title: 'SECTOR 05 · QUIET CORRIDOR',
-      subtitle: '',
-      saturation: 0.0,
-      takenAfter: null,
-      takenCard: '',
-      spawn: { x: 100, y: 480 },
-      worldW: 1180,
-      platforms: [
-        { x: 0, y: 560, w: 1250, h: 160, style: 'solid' }
-      ],
-      spikes: [],
-      goldBlocks: [],
-      chevrons: [],
-      gems: [],
-      chains: [
-        { x: 310, y: 0, len: 190 },
-        { x: 670, y: 0, len: 220 }
-      ],
-      speaker: { x: 460, y: 560, stage: 5 },
-      exit: { x: 980, y: 560 }
-    }
+  const SECTORS = [
+    { index: 0, saturation: 1.00, checkpoint: { x: 64,   y: 444 }, archX: 2020, archY: 472, takes: 'glide' },
+    { index: 1, saturation: 0.68, checkpoint: { x: 2060, y: 386 }, archX: 2630, archY: 462, takes: 'wall' },
+    { index: 2, saturation: 0.36, checkpoint: { x: 2670, y: 376 }, archX: 3220, archY: 492, takes: 'double' },
+    { index: 3, saturation: 0.12, checkpoint: { x: 3260, y: 406 }, archX: 3780, archY: 528, takes: 'dash' },
+    { index: 4, saturation: 0.00, checkpoint: { x: 3830, y: 442 }, archX: 4680, archY: 528, takes: null }
   ];
 
-  // Ambient background stars / geometric motes
-  const MOTES = Array.from({ length: 65 }, () => ({
-    x: rand() * 2400,
-    y: rand() * 660,
-    size: 2 + rand() * 7,
-    speed: 6 + rand() * 18,
-    parallax: 0.18 + rand() * 0.42,
-    diamond: rand() > 0.45,
-    hueGold: rand() > 0.65,
+  const PLATFORMS = [
+    // Sector 0: Iconic Spiked Corridor + Sculpted Floating Islands + Towering Violet Monolith Column
+    { x: 0,    y: 528, w: 585,  h: 240, style: 'corridorFloor' },
+    { x: 0,    y: -60, w: 552,  h: 292, style: 'ceiling' },
+    { x: 735,  y: 468, w: 230,  h: 56,  style: 'island' },
+    { x: 1055, y: 526, w: 235,  h: 56,  style: 'island' },
+    { x: 1060, y: 332, w: 205,  h: 48,  style: 'island' },
+    { x: 1385, y: 492, w: 225,  h: 54,  style: 'island' },
+    // Towering Violet Monolith Pillar at x=1695 (vaulted over y=318 straight into Arch #1 at x=2020!)
+    { x: 1695, y: 318, w: 48,   h: 460, style: 'pillar' },
+    { x: 1875, y: 472, w: 305,  h: 290, style: 'ledge' },
+
+    // Sector 1 (GLIDE surrendered): Island + Wall step to Arch #2 (610px spacing -> never crowds Arch #1!)
+    { x: 2285, y: 508, w: 145,  h: 50,  style: 'island' },
+    { x: 2500, y: 462, w: 265,  h: 295, style: 'ledge' },
+
+    // Sector 2 (WALL surrendered): Wide chasm requiring Double-Jump + Dash to Arch #3
+    { x: 2985, y: 492, w: 365,  h: 265, style: 'ledge' },
+
+    // Sector 3 & 4 (DOUBLE surrendered -> grounded Jump + Dash -> Arch #4 -> Monochrome Stone Causeway)
+    { x: 3535, y: 528, w: 720,  h: 240, style: 'causeway' },
+    // Subtle decorative 26px stone seam notch at x=4255..4281 (walks smoothly across or tiny drop of 0px via bridge lip!)
+    { x: 4255, y: 528, w: 680,  h: 240, style: 'causewayRight' }
+  ];
+
+  const BG_PILLARS = [
+    { x: 1695, y: -120, w: 48, h: 445 }
+  ];
+
+  const SPIKES = [
+    { x: 352, y: 496, w: 86, h: 32 }
+  ];
+
+  const CEILING_TEETH = [
+    { x: 22,  y: 232, w: 82,  h: 34 },
+    { x: 340, y: 232, w: 152, h: 30 }
+  ];
+
+  const GOLD_BLOCKS = [
+    { x: 205, y: 184, size: 54 },
+    { x: 264, y: 184, size: 54 }
+  ];
+
+  const CHEVRONS = [
+    { x: 84,  y: 394 },
+    { x: 312, y: 394 }
+  ];
+
+  const CHAINS = [
+    { x: 150,  y: 232, len: 118 },
+    { x: 1155, y: 380, len: 105 },
+    { x: 2355, y: 558, len: 95 },
+    { x: 4380, y: 110, len: 185 }
+  ];
+
+  const SOUND_TOWERS = [
+    { x: 38,   y: 528, stage: 0 },
+    { x: 2110, y: 472, stage: 1 },
+    { x: 2705, y: 462, stage: 2 },
+    { x: 3295, y: 492, stage: 4 },
+    { x: 4440, y: 528, stage: 5 }
+  ];
+
+  const RUBBLE_PROPS = [
+    { x: 1900, y: 472 },
+    { x: 3860, y: 528 },
+    { x: 4330, y: 528 }
+  ];
+
+  const GEMS_INIT = [
+    { x: 660,  y: 562, kind: 'violet' },
+    { x: 855,  y: 358, kind: 'violet' },
+    { x: 1295, y: 345, kind: 'violet' },
+    { x: 1500, y: 388, kind: 'gold' },
+    { x: 2360, y: 410, kind: 'violet' },
+    { x: 2880, y: 385, kind: 'gold' },
+    { x: 3445, y: 435, kind: 'grey' }
+  ];
+  let gems = GEMS_INIT.map(g => ({ ...g, taken: false }));
+
+  // Subtle Constellations & Craggy Distant Monolith Mountains (matches f_014, f_020, f_027!)
+  const CONSTELLATIONS = Array.from({ length: 11 }, (_, idx) => {
+    const cx = 160 + idx * 360 + (rand() - 0.5) * 70;
+    const cy = 65 + rand() * 195;
+    const pts = Array.from({ length: 4 }, () => ({
+      dx: (rand() - 0.5) * 85,
+      dy: (rand() - 0.5) * 52
+    }));
+    return { cx, cy, pts, parallax: 0.15 + (idx % 3) * 0.05 };
+  });
+
+  const SKY_CUBES = Array.from({ length: 6 }, () => ({
+    x: rand() * 4400,
+    y: 75 + rand() * 190,
+    size: 18 + rand() * 24,
+    rot: rand() * Math.PI,
+    parallax: 0.22 + rand() * 0.12
+  }));
+
+  const MOTES = Array.from({ length: 70 }, () => ({
+    x: rand() * 4600,
+    y: rand() * 640,
+    size: 2.5 + rand() * 4.5,
+    speed: 7 + rand() * 16,
+    parallax: 0.22 + rand() * 0.42,
+    hueGold: rand() > 0.62,
     phase: rand() * Math.PI * 2
   }));
 
-  // Input handling
+  // Input Handling
   const keys = Object.create(null);
   const justPressed = Object.create(null);
 
   window.addEventListener('keydown', (e) => {
     ensureAudio();
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
       e.preventDefault();
     }
     if (!keys[e.code]) justPressed[e.code] = true;
@@ -460,130 +484,210 @@
     if (gameState === 'title') startGame();
   });
 
-  // Core Game State Machine ('title' | 'lvl' | 'take' | 'reset' | 'walk' | 'end')
+  // Core State Machine ('title' | 'lvl' | 'take' | 'reset' | 'walk' | 'end')
   let gameState = AUTOSTART ? 'lvl' : 'title';
-  let currentLevel = 0;
+  let paused = false;
+  let currentSector = 0;
   let stateTimer = 0;
+  let hitStopTimer = 0;
   let totalTime = 0;
   let resetsCount = 0;
   let lastTakenAbility = null;
+  let hudWalkDissolve = 1.0;
 
-  const abilities = {
-    dash: true,
-    double: true,
-    wall: true,
-    glide: true
-  };
+  const abilities = { dash: true, double: true, wall: true, glide: true };
   const hudFlash = { dash: 0, double: 0, wall: 0, glide: 0 };
+  const hudCracks = { dash: null, double: null, wall: null, glide: null };
+  const archesTriggered = [false, false, false, false, false];
 
   const player = {
-    x: 110, y: 440,
+    x: 64, y: 444,
     vx: 0, vy: 0,
-    w: 44, h: 68,
+    w: 46, h: 84,
     facing: 1,
     onGround: false,
     coyote: 0,
-    onWall: 0, // -1 left wall, +1 right wall
+    jumpBuffer: 0,
+    onWall: 0,
+    wallLockTimer: 0,
     doubleUsed: false,
     dashCooldown: 0,
     dashTimer: 0,
     dashDir: 1,
     gliding: false,
     animTime: 0,
-    stepTimer: 0
+    stepTimer: 0,
+    scaleX: 1,
+    scaleY: 1
   };
 
-  let camX = 0;
+  let camX = 0, camY = 65;
+  let camShake = 0;
   let displaySaturation = 1.0;
   let particles = [];
+  let screenShards = [];
   let shockwaves = [];
   let afterimages = [];
+  let detachedOrbs = [];
+  let dashTrail = [];
 
-  function spawnParticles(x, y, count, color, speed = 180, size = 5) {
+  const HUD_LAYOUT = { startX: 38, startY: 30, boxW: 206, boxH: 54, gap: 20 };
+
+  function spawnParticles(x, y, count, color, speed = 190, size = 5, lift = 35) {
     for (let i = 0; i < count; i++) {
       const ang = rand() * Math.PI * 2;
-      const spd = (0.3 + rand() * 0.7) * speed;
+      const spd = (0.28 + rand() * 0.72) * speed;
       particles.push({
         x, y,
         vx: Math.cos(ang) * spd,
-        vy: Math.sin(ang) * spd - 35,
-        life: 0.35 + rand() * 0.4,
-        maxLife: 0.75,
+        vy: Math.sin(ang) * spd - lift,
+        life: 0.30 + rand() * 0.38,
+        maxLife: 0.68,
         size: size * (0.6 + rand() * 0.7),
         color
       });
     }
   }
 
-  function loadLevel(idx) {
-    currentLevel = idx;
-    const lvl = LEVELS[idx];
-    player.x = lvl.spawn.x;
-    player.y = lvl.spawn.y;
+  function fractureGlyphBox(abKey) {
+    const idx = ABILITY_DEFS.findIndex(a => a.key === abKey);
+    if (idx < 0) return;
+    const bx = HUD_LAYOUT.startX + idx * (HUD_LAYOUT.boxW + HUD_LAYOUT.gap);
+    const by = HUD_LAYOUT.startY;
+    const bw = HUD_LAYOUT.boxW;
+    const bh = HUD_LAYOUT.boxH;
+
+    hudCracks[abKey] = [
+      { x: 18 + rand() * 26, y: 0 },
+      { x: 62 + rand() * 28, y: bh * 0.42 },
+      { x: 104 + rand() * 28, y: bh * 0.64 },
+      { x: 152 + rand() * 32, y: bh }
+    ];
+
+    for (let i = 0; i < 24; i++) {
+      const sx = bx + rand() * bw;
+      const sy = by + rand() * bh;
+      screenShards.push({
+        x: sx, y: sy,
+        vx: (sx - (bx + bw / 2)) * (1.8 + rand() * 1.6) + (rand() - 0.5) * 90,
+        vy: -40 - rand() * 110,
+        rot: rand() * Math.PI * 2,
+        vrot: (rand() - 0.5) * 14,
+        w: 4 + rand() * 8,
+        h: 2.5 + rand() * 5,
+        life: 0.65 + rand() * 0.45,
+        maxLife: 1.1,
+        color: i % 3 === 0 ? PAL.gold : (i % 3 === 1 ? '#f2f2f2' : PAL.violetBright)
+      });
+    }
+  }
+
+  function resetToSectorCheckpoint(secIdx) {
+    const sec = SECTORS[secIdx];
+    player.x = sec.checkpoint.x;
+    player.y = sec.checkpoint.y;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
     player.onGround = false;
     player.coyote = 0;
+    player.jumpBuffer = 0;
     player.onWall = 0;
     player.doubleUsed = false;
     player.dashCooldown = 0;
     player.dashTimer = 0;
     player.gliding = false;
-    camX = Math.max(0, player.x - 360);
+    player.scaleX = 0.82;
+    player.scaleY = 1.22;
     afterimages = [];
-    syncBgmVolume();
+    dashTrail = [];
+    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, 16, sec.saturation > 0.2 ? PAL.gold : '#9a9ca6', 175, 5);
   }
 
   function startGame() {
+    currentSector = 0;
     abilities.dash = true;
     abilities.double = true;
     abilities.wall = true;
     abilities.glide = true;
+    for (const k of Object.keys(hudCracks)) hudCracks[k] = null;
+    for (let i = 0; i < archesTriggered.length; i++) archesTriggered[i] = false;
+    gems = GEMS_INIT.map(g => ({ ...g, taken: false }));
     lastTakenAbility = null;
     resetsCount = 0;
     displaySaturation = 1.0;
-    loadLevel(0);
+    hudWalkDissolve = 1.0;
+    paused = false;
+    resetToSectorCheckpoint(0);
+    camX = 0;
+    camY = 65;
     gameState = 'lvl';
     stateTimer = 0;
-    syncBgmVolume();
+    syncAudioSubtraction();
   }
 
-  loadLevel(0);
+  resetToSectorCheckpoint(0);
 
   function triggerReset() {
     if (gameState !== 'lvl') return;
     resetsCount++;
     gameState = 'reset';
-    stateTimer = 0.42;
+    stateTimer = 0.26;
+    camShake = 6;
     playSfx('reset');
-    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, 22, PAL.gold, 240, 6);
+    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, 26, displaySaturation > 0.2 ? PAL.gold : '#a0a2ac', 250, 5.5);
   }
 
-  function triggerExitReached() {
-    const lvl = LEVELS[currentLevel];
-    if (gameState === 'walk') {
+  function triggerArchCrossed(secIdx) {
+    if (archesTriggered[secIdx]) return;
+    archesTriggered[secIdx] = true;
+    const sec = SECTORS[secIdx];
+
+    if (secIdx === 4) {
       gameState = 'end';
       stateTimer = 0;
       player.vx = 0;
-      syncBgmVolume();
+      player.vy = 0;
+      syncAudioSubtraction();
       return;
     }
-    // Transition 'lvl' -> 'take'
-    gameState = 'take';
-    stateTimer = 1.05;
-    lastTakenAbility = lvl.takenAfter;
+
+    lastTakenAbility = sec.takes;
     if (lastTakenAbility && abilities[lastTakenAbility] !== undefined) {
       abilities[lastTakenAbility] = false;
       hudFlash[lastTakenAbility] = 1.0;
+      fractureGlyphBox(lastTakenAbility);
     }
+
+    currentSector = secIdx + 1;
+    gameState = 'take';
+    stateTimer = 0.18;
+    hitStopTimer = 0.032;
+    camShake = 8;
+    player.dashCooldown = 0; // Fresh dash exiting arch so traversal flows crisply!
     playSfx('take');
-    // Dramatic golden shockwave sphere at the threshold arch (matching sheet.jpg frame 20!)
-    const ex = lvl.exit.x;
-    const ey = lvl.exit.y - 82;
-    shockwaves.push({ x: ex, y: ey, r: 12, maxR: 340, life: 1.0 });
-    spawnParticles(ex, ey, 48, PAL.gold, 310, 6);
-    spawnParticles(ex, ey, 28, PAL.violet, 240, 5);
+    syncAudioSubtraction();
+
+    const ax = sec.archX;
+    const ay = sec.archY - 102;
+    shockwaves.push({
+      x: ax, y: ay, r: 16, maxR: 340, life: 0.95,
+      color: currentSector >= 4 ? '#e8e8f0' : PAL.gold,
+      fillSphere: true
+    });
+    detachedOrbs.push({
+      x: player.x + player.w / 2,
+      y: player.y + player.h * 0.4,
+      tx: ax,
+      ty: ay - 56,
+      life: 0.72,
+      maxLife: 0.72,
+      color: currentSector >= 4 ? '#ffffff' : PAL.gold
+    });
+    spawnParticles(ax, ay, 48, PAL.gold, 320, 5.5, 38);
+    if (currentSector < 4) {
+      spawnParticles(ax, ay, 24, PAL.violetBright, 240, 4.8, 28);
+    }
   }
 
   function aabb(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -591,92 +695,128 @@
   }
 
   function updatePlayer(dt) {
-    const lvl = LEVELS[currentLevel];
     const isWalkOnly = (gameState === 'walk');
 
     const moveLeft = keys['ArrowLeft'] || keys['KeyA'];
     const moveRight = keys['ArrowRight'] || keys['KeyD'];
-    const jumpPressed = justPressed['Space'] || justPressed['ArrowUp'] || justPressed['KeyW'] || justPressed['KeyZ'];
+    const jumpJust = justPressed['Space'] || justPressed['ArrowUp'] || justPressed['KeyW'] || justPressed['KeyZ'];
     const jumpHeld = keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ'];
-    const dashPressed = justPressed['ShiftLeft'] || justPressed['ShiftRight'] || justPressed['KeyX'] || justPressed['KeyK'];
+    const dashJust = justPressed['ShiftLeft'] || justPressed['ShiftRight'] || justPressed['KeyX'] || justPressed['KeyK'];
 
-    // Decay HUD flash
+    if (jumpJust && !isWalkOnly) player.jumpBuffer = 0.12;
+    else if (player.jumpBuffer > 0) player.jumpBuffer -= dt;
+
     for (const k of Object.keys(hudFlash)) {
-      if (hudFlash[k] > 0) hudFlash[k] = Math.max(0, hudFlash[k] - dt * 1.4);
+      if (hudFlash[k] > 0) hudFlash[k] = Math.max(0, hudFlash[k] - dt * 1.6);
     }
 
     if (player.dashCooldown > 0) player.dashCooldown -= dt;
     if (player.coyote > 0) player.coyote -= dt;
+    if (player.wallLockTimer > 0) player.wallLockTimer -= dt;
 
-    // 1. DASH ability
-    if (!isWalkOnly && abilities.dash && dashPressed && player.dashCooldown <= 0 && player.dashTimer <= 0) {
+    player.scaleX += (1 - player.scaleX) * Math.min(1, dt * 16);
+    player.scaleY += (1 - player.scaleY) * Math.min(1, dt * 16);
+
+    // 1. DASH Ability
+    if (!isWalkOnly && abilities.dash && dashJust && player.dashCooldown <= 0 && player.dashTimer <= 0) {
       player.dashDir = moveLeft ? -1 : (moveRight ? 1 : player.facing);
       player.facing = player.dashDir;
       player.dashTimer = 0.19;
-      player.dashCooldown = 0.48;
+      player.dashCooldown = 0.36;
       player.vy = 0;
-      hudFlash.dash = 0.75;
+      player.scaleX = 1.32;
+      player.scaleY = 0.75;
+      hitStopTimer = 0.022;
+      camShake = Math.max(camShake, 4.0);
+      hudFlash.dash = 0.85;
       playSfx('dash');
-      spawnParticles(player.x + player.w / 2, player.y + player.h / 2, 16, PAL.gold, 210, 5);
+      // Luminous golden-violet launch sphere matching pair_002.00.jpg left half!
+      shockwaves.push({
+        x: player.x + player.w * 0.3,
+        y: player.y + player.h * 0.62,
+        r: 14, maxR: 68, life: 0.52, color: PAL.gold, fillSphere: true
+      });
+      spawnParticles(player.x + player.w / 2, player.y + player.h * 0.5, 18, PAL.gold, 240, 5, 10);
     }
 
     if (player.dashTimer > 0) {
       player.dashTimer -= dt;
-      player.vx = player.dashDir * 720;
+      player.vx = player.dashDir * 810;
       player.vy = 0;
+      dashTrail.push({
+        x: player.x + player.w * 0.5,
+        y: player.y + player.h * 0.48,
+        life: 0.28, maxLife: 0.28
+      });
       afterimages.push({
         x: player.x, y: player.y, facing: player.facing,
-        life: 0.22, maxLife: 0.22, color: PAL.gold
+        life: 0.18, maxLife: 0.18
       });
+      if (rand() < 0.72) {
+        particles.push({
+          x: player.x + player.w * 0.4,
+          y: player.y + player.h * (0.22 + rand() * 0.55),
+          vx: -player.dashDir * (85 + rand() * 115),
+          vy: (rand() - 0.5) * 70,
+          life: 0.32, maxLife: 0.32, size: 4.5,
+          color: rand() > 0.38 ? PAL.gold : PAL.violetBright
+        });
+      }
     } else {
-      // Horizontal run / slow walk
-      const maxSpeed = isWalkOnly ? 135 : (355 - currentLevel * 18);
-      const accel = player.onGround ? 2600 : 1750;
-      let dir = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+      const maxSpeed = isWalkOnly ? 168 : (395 - currentSector * 8);
+      const accel = player.onGround ? 3100 : (player.wallLockTimer > 0 ? 950 : 2250);
+      const dir = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+
       if (dir !== 0) {
-        player.facing = dir;
+        if (player.wallLockTimer <= 0) player.facing = dir;
         player.vx += dir * accel * dt;
-        if (Math.abs(player.vx) > maxSpeed) {
-          player.vx = dir * maxSpeed;
+        if (Math.abs(player.vx) > maxSpeed && Math.sign(player.vx) === dir) {
+          // Smoothly bleed excess dash speed into stride
+          const bleedRate = isWalkOnly ? 4.5 : 13;
+          player.vx += (dir * maxSpeed - player.vx) * Math.min(1, dt * bleedRate);
         }
       } else {
-        const drag = player.onGround ? 2400 : 800;
+        const drag = player.onGround ? 2800 : 950;
         if (Math.abs(player.vx) <= drag * dt) player.vx = 0;
         else player.vx -= Math.sign(player.vx) * drag * dt;
       }
 
-      // Gravity
-      let grav = 1780;
+      if (!jumpHeld && player.vy < -220) {
+        player.vy *= Math.pow(0.45, dt * 12);
+      }
+
+      let grav = Math.abs(player.vy) < 95 && !player.onGround ? 1040 : (player.vy > 80 ? 2140 : 1710);
       player.gliding = false;
 
-      // 4. GLIDE ability (hold jump while descending)
-      if (!isWalkOnly && abilities.glide && !player.onGround && player.vy > 40 && jumpHeld && player.onWall === 0) {
+      // 4. GLIDE Ability
+      if (!isWalkOnly && abilities.glide && !player.onGround && player.vy > 35 && jumpHeld && player.onWall === 0) {
         player.gliding = true;
-        grav = 340;
-        if (player.vy > 135) player.vy = 135;
-        hudFlash.glide = Math.max(hudFlash.glide, 0.35);
-        if (rand() < 0.45) {
+        grav = 300;
+        if (player.vy > 120) player.vy = 120;
+        hudFlash.glide = Math.max(hudFlash.glide, 0.45);
+        if (rand() < 0.55) {
           particles.push({
             x: player.x + player.w * 0.5,
-            y: player.y + player.h * 0.65,
-            vx: -player.facing * (40 + rand() * 50),
-            vy: 20 + rand() * 30,
-            life: 0.28, maxLife: 0.28, size: 4, color: PAL.violet
+            y: player.y + player.h * 0.55,
+            vx: -player.facing * (55 + rand() * 60),
+            vy: 15 + rand() * 25,
+            life: 0.26, maxLife: 0.26, size: 4.2, color: PAL.violetBright
           });
         }
       }
 
-      // 3. WALL SLIDE (if WALL ability active and pressing into a wall while falling)
+      // 3. WALL SLIDE Ability
       if (!isWalkOnly && abilities.wall && player.onWall !== 0 && !player.onGround && player.vy > 0) {
         if ((player.onWall === 1 && moveRight) || (player.onWall === -1 && moveLeft)) {
-          if (player.vy > 150) player.vy = 150;
-          hudFlash.wall = Math.max(hudFlash.wall, 0.35);
-          if (rand() < 0.35) {
+          if (player.vy > 130) player.vy = 130;
+          hudFlash.wall = Math.max(hudFlash.wall, 0.45);
+          if (rand() < 0.55) {
             particles.push({
               x: player.onWall === 1 ? player.x + player.w : player.x,
-              y: player.y + player.h * 0.4,
-              vx: -player.onWall * 35, vy: -30,
-              life: 0.25, maxLife: 0.25, size: 4, color: PAL.gold
+              y: player.y + player.h * (0.3 + rand() * 0.4),
+              vx: -player.onWall * (28 + rand() * 45),
+              vy: -35 - rand() * 40,
+              life: 0.28, maxLife: 0.28, size: 4.5, color: PAL.gold
             });
           }
         }
@@ -684,50 +824,59 @@
 
       player.vy = Math.min(980, player.vy + grav * dt);
 
-      // Jump / Wall-Jump / Double-Jump (no jumping at all in LAST WALK!)
-      if (!isWalkOnly && jumpPressed) {
+      // Jump / Wall-Kick / Double-Jump
+      if (!isWalkOnly && player.jumpBuffer > 0) {
         if (player.onGround || player.coyote > 0) {
-          player.vy = -650;
+          player.vy = -665;
           player.onGround = false;
           player.coyote = 0;
+          player.jumpBuffer = 0;
+          player.scaleX = 0.78;
+          player.scaleY = 1.26;
           playSfx('jump');
-          spawnParticles(player.x + player.w / 2, player.y + player.h, 10, '#f2f2f2', 120, 4);
+          spawnParticles(player.x + player.w / 2, player.y + player.h, 11, displaySaturation > 0.2 ? '#f2ebff' : '#a8aab4', 135, 4.5, 20);
         } else if (abilities.wall && player.onWall !== 0) {
-          // Wall kick!
-          player.vy = -640;
-          player.vx = -player.onWall * 430;
+          player.vy = -665;
+          player.vx = -player.onWall * 380;
           player.facing = -player.onWall;
-          player.doubleUsed = false; // Wall kick refreshes air control nicely
-          hudFlash.wall = 0.85;
+          player.wallLockTimer = 0.12;
+          player.doubleUsed = false;
+          player.jumpBuffer = 0;
+          player.scaleX = 0.80;
+          player.scaleY = 1.24;
+          hudFlash.wall = 0.90;
           playSfx('wall');
-          spawnParticles(
-            player.onWall === 1 ? player.x + player.w : player.x,
-            player.y + player.h * 0.5,
-            16, PAL.gold, 220, 5
-          );
-        } else if (abilities.double && !player.doubleUsed) {
-          player.vy = -620;
-          player.doubleUsed = true;
-          hudFlash.double = 0.85;
-          playSfx('double');
-          // Purple concentric double-jump ring burst (matching f_006 of sheet.jpg!)
+          const wx = player.onWall === 1 ? player.x + player.w : player.x;
           shockwaves.push({
-            x: player.x + player.w / 2,
-            y: player.y + player.h,
-            r: 6, maxR: 58, life: 0.45, color: '#b47cff'
+            x: wx, y: player.y + player.h * 0.5,
+            r: 5, maxR: 50, life: 0.36, color: PAL.gold, fillSphere: false
           });
-          spawnParticles(player.x + player.w / 2, player.y + player.h, 16, PAL.violet, 170, 5);
+          spawnParticles(wx, player.y + player.h * 0.5, 18, PAL.gold, 230, 5, 25);
+        } else if (abilities.double && !player.doubleUsed && jumpJust) {
+          player.vy = -640;
+          player.doubleUsed = true;
+          player.jumpBuffer = 0;
+          player.scaleX = 0.80;
+          player.scaleY = 1.24;
+          hudFlash.double = 0.90;
+          playSfx('double');
+          const fx = player.x + player.w / 2;
+          const fy = player.y + player.h + 4;
+          shockwaves.push({ x: fx,      y: fy,      r: 6, maxR: 62, life: 0.54, color: '#c48eff', fillSphere: false });
+          shockwaves.push({ x: fx - 14, y: fy + 8,  r: 4, maxR: 42, life: 0.48, color: '#9c59ff', fillSphere: false });
+          shockwaves.push({ x: fx + 14, y: fy + 6,  r: 4, maxR: 42, life: 0.48, color: '#ffd84a', fillSphere: false });
+          spawnParticles(fx, fy, 18, PAL.violetBright, 185, 5, 15);
         }
       }
     }
 
-    // Move & Collide X
+    // Collide X
     player.x += player.vx * dt;
-    if (player.x < 12) { player.x = 12; player.vx = 0; }
-    if (player.x + player.w > lvl.worldW - 12) { player.x = lvl.worldW - 12 - player.w; player.vx = 0; }
+    if (player.x < 16) { player.x = 16; player.vx = 0; }
+    if (player.x + player.w > WORLD_W - 24) { player.x = WORLD_W - 24 - player.w; player.vx = 0; }
 
     player.onWall = 0;
-    for (const p of lvl.platforms) {
+    for (const p of PLATFORMS) {
       if (aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
         if (player.vx > 0) {
           player.x = p.x - player.w;
@@ -740,53 +889,71 @@
         }
       }
     }
-    // Also detect wall proximity within 3px for responsive wall-jumping
     if (player.onWall === 0 && !player.onGround) {
-      for (const p of lvl.platforms) {
+      for (const p of PLATFORMS) {
         if (player.y + player.h > p.y + 8 && player.y < p.y + p.h - 8) {
-          if (Math.abs((player.x + player.w) - p.x) <= 4) player.onWall = 1;
-          else if (Math.abs(player.x - (p.x + p.w)) <= 4) player.onWall = -1;
+          if (Math.abs((player.x + player.w) - p.x) <= 5) player.onWall = 1;
+          else if (Math.abs(player.x - (p.x + p.w)) <= 5) player.onWall = -1;
         }
       }
     }
 
-    // Move & Collide Y
+    // Collide Y + corner forgiveness
     const wasOnGround = player.onGround;
     player.onGround = false;
     player.y += player.vy * dt;
-    for (const p of lvl.platforms) {
+    for (const p of PLATFORMS) {
       if (aabb(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
         if (player.vy >= 0) {
           player.y = p.y - player.h;
           player.vy = 0;
           player.onGround = true;
-          player.coyote = 0.11;
+          player.coyote = 0.12;
           player.doubleUsed = false;
         } else if (player.vy < 0) {
-          player.y = p.y + p.h;
-          player.vy = 0;
+          const overlapL = (player.x + player.w) - p.x;
+          const overlapR = (p.x + p.w) - player.x;
+          if (overlapL > 0 && overlapL <= 9) {
+            player.x = p.x - player.w;
+          } else if (overlapR > 0 && overlapR <= 9) {
+            player.x = p.x + p.w;
+          } else {
+            player.y = p.y + p.h;
+            player.vy = 0;
+          }
         }
       }
     }
 
     if (!wasOnGround && player.onGround) {
-      spawnParticles(player.x + player.w / 2, player.y + player.h, 6, '#d8d4e8', 80, 3.5);
+      player.scaleX = 1.24;
+      player.scaleY = 0.78;
+      spawnParticles(
+        player.x + player.w / 2, player.y + player.h,
+        7, displaySaturation > 0.2 ? '#e2daf5' : '#b8bac4', 90, 4.5, 14
+      );
     }
 
-    // Footsteps & dust puffs while running/walking
-    if (player.onGround && Math.abs(player.vx) > 25) {
-      player.animTime += dt * (isWalkOnly ? 4.2 : 10.5);
+    // Running / Walking dust puffs (billowing pale stone dust in monochrome matching pair_008.00.jpg!)
+    if (player.onGround && Math.abs(player.vx) > 20) {
+      player.animTime += dt * (isWalkOnly ? 5.2 : 11.2);
       player.stepTimer -= dt;
       if (player.stepTimer <= 0) {
-        player.stepTimer = isWalkOnly ? 0.44 : 0.22;
+        player.stepTimer = isWalkOnly ? 0.26 : 0.18;
         playSfx('step');
-        if (!isWalkOnly || rand() < 0.5) {
+        const isMono = displaySaturation < 0.2;
+        const dustCount = isMono ? 5 : 2;
+        for (let d = 0; d < dustCount; d++) {
           particles.push({
-            x: player.x + player.w * 0.5 - player.facing * 10,
-            y: player.y + player.h - 3,
-            vx: -player.facing * (25 + rand() * 35),
-            vy: -12 - rand() * 20,
-            life: 0.26, maxLife: 0.26, size: 4.5, color: '#dcd8ea'
+            x: player.x + player.w * 0.35 - player.facing * (6 + d * 6),
+            y: player.y + player.h - 3 - rand() * 5,
+            vx: -player.facing * (34 + rand() * 48),
+            vy: -8 - rand() * 18,
+            life: isMono ? 0.44 : 0.28,
+            maxLife: isMono ? 0.44 : 0.28,
+            size: isMono ? (7 + rand() * 5) : 4.5,
+            color: isMono ? '#bcbec6' : '#e6dff8',
+            round: isMono
           });
         }
       }
@@ -794,108 +961,162 @@
       player.animTime += dt * 4;
     }
 
-    // Collectibles (decorative energy crystals)
-    for (const g of lvl.gems) {
-      if (!g.taken && aabb(player.x, player.y, player.w, player.h, g.x - 18, g.y - 22, 36, 44)) {
-        g.taken = true;
-        spawnParticles(g.x, g.y, 14, g.kind === 'gold' ? PAL.gold : PAL.violet, 160, 4.5);
+    for (const gm of gems) {
+      if (!gm.taken && aabb(player.x, player.y, player.w, player.h, gm.x - 20, gm.y - 24, 40, 48)) {
+        gm.taken = true;
+        spawnParticles(gm.x, gm.y, 14, gm.kind === 'gold' ? PAL.gold : PAL.violetBright, 165, 4.5, 20);
       }
     }
 
-    // Hazard checks: spikes or pit fall
-    if (player.y > H + 70) {
+    if (player.y > H + 120) {
       triggerReset();
       return;
     }
-    for (const s of lvl.spikes) {
-      // Forgiving inner hitbox on spikes
-      if (aabb(player.x + 8, player.y + 10, player.w - 16, player.h - 12, s.x + 6, s.y + 8, s.w - 12, s.h - 8)) {
+    for (const s of SPIKES) {
+      if (aabb(player.x + 10, player.y + 14, player.w - 20, player.h - 16, s.x + 8, s.y + 8, s.w - 16, s.h - 8)) {
         triggerReset();
         return;
       }
     }
 
-    // Exit Threshold Arch check
-    const ex = lvl.exit.x;
-    const ey = lvl.exit.y;
-    if (aabb(player.x, player.y, player.w, player.h, ex - 44, ey - 145, 88, 150)) {
-      triggerExitReached();
+    for (let i = 0; i < SECTORS.length; i++) {
+      if (archesTriggered[i]) continue;
+      const sec = SECTORS[i];
+      if (player.x + player.w * 0.65 >= sec.archX - 24 && Math.abs((player.y + player.h) - sec.archY) < 175) {
+        triggerArchCrossed(i);
+        break;
+      }
     }
   }
 
-  function update(dt) {
-    totalTime += dt;
-    const lvl = LEVELS[currentLevel];
-
-    // Smoothly drain world saturation toward current level's target
-    const targetSat = (gameState === 'walk' || gameState === 'end') ? 0.0 : lvl.saturation;
-    displaySaturation += (targetSat - displaySaturation) * Math.min(1, dt * 3.2);
-
-    // Restart shortcut in 'end'
-    if (gameState === 'end' && (justPressed['KeyR'] || justPressed['Space'] || justPressed['Enter'])) {
+  function update(rawDt) {
+    if (justPressed['KeyP'] || justPressed['Escape']) {
+      if (gameState === 'lvl' || gameState === 'walk') {
+        paused = !paused;
+        syncAudioSubtraction();
+      }
+    }
+    if (justPressed['KeyR']) {
+      if (gameState === 'end') {
+        startGame();
+      } else if (gameState === 'lvl' || gameState === 'walk') {
+        paused = false;
+        triggerReset();
+      }
+    }
+    if (gameState === 'title' && (justPressed['Space'] || justPressed['Enter'] || justPressed['ArrowRight'] || justPressed['KeyD'])) {
       startGame();
     }
-    if (gameState === 'title' && (justPressed['Space'] || justPressed['Enter'] || justPressed['ArrowRight'])) {
+    if (gameState === 'end' && (justPressed['Space'] || justPressed['Enter'])) {
       startGame();
+    }
+
+    for (const k in justPressed) {
+      if (paused) delete justPressed[k];
+    }
+    if (paused) return;
+
+    if (hitStopTimer > 0) {
+      hitStopTimer -= rawDt;
+      for (const k in justPressed) delete justPressed[k];
+      return;
+    }
+
+    const timeScale = (gameState === 'take') ? 0.55 : 1.0;
+    const dt = rawDt * timeScale;
+    totalTime += dt;
+
+    tickArpeggioStems(rawDt);
+
+    if (camX < 620 && displaySaturation > 0.5 && rand() < 0.38) {
+      const gb = GOLD_BLOCKS[rand() > 0.5 ? 0 : 1];
+      particles.push({
+        x: gb.x + 12 + rand() * (gb.size - 24),
+        y: gb.y + gb.size + 2,
+        vx: (rand() - 0.5) * 16,
+        vy: 35 + rand() * 45,
+        life: 0.45, maxLife: 0.45, size: 4, color: PAL.gold
+      });
+    }
+
+    const targetSat = (gameState === 'walk' || gameState === 'end')
+      ? 0.0
+      : SECTORS[currentSector].saturation;
+    displaySaturation += (targetSat - displaySaturation) * Math.min(1, rawDt * 4.8);
+
+    // Dissolve fractured HUD husks cleanly upon entering monochrome LAST WALK (so sky is pure by t=8.0s!)
+    if (gameState === 'walk' || gameState === 'end') {
+      hudWalkDissolve = Math.max(0, hudWalkDissolve - rawDt * 2.4);
+    } else {
+      hudWalkDissolve = 1.0;
     }
 
     if (gameState === 'lvl' || gameState === 'walk') {
       updatePlayer(dt);
     } else if (gameState === 'take') {
-      stateTimer -= dt;
-      // Gentle slow-mo float inside the arch as aura detaches
-      player.vx *= 0.88;
-      player.vy *= 0.88;
-      // Drain saturation visibly during 'take' toward next level's target!
-      const nextSat = LEVELS[Math.min(LEVELS.length - 1, currentLevel + 1)].saturation;
-      displaySaturation += (nextSat - displaySaturation) * Math.min(1, dt * 4.5);
-
+      stateTimer -= rawDt;
+      updatePlayer(dt);
       if (stateTimer <= 0) {
-        const nextIdx = currentLevel + 1;
-        if (nextIdx >= 4) {
-          loadLevel(4);
-          gameState = 'walk';
-          syncBgmVolume();
-        } else {
-          loadLevel(nextIdx);
-          gameState = 'lvl';
-          syncBgmVolume();
-        }
+        gameState = (currentSector >= 4) ? 'walk' : 'lvl';
+        syncAudioSubtraction();
       }
     } else if (gameState === 'reset') {
-      stateTimer -= dt;
+      stateTimer -= rawDt;
       if (stateTimer <= 0) {
-        loadLevel(currentLevel);
-        gameState = 'lvl';
+        resetToSectorCheckpoint(currentSector);
+        gameState = (currentSector >= 4) ? 'walk' : 'lvl';
       }
     } else if (gameState === 'end') {
-      stateTimer += dt;
+      stateTimer += rawDt;
     }
 
-    // Smooth camera tracking
-    const targetCamX = Math.max(0, Math.min(lvl.worldW - W, player.x - W * 0.36));
-    camX += (targetCamX - camX) * Math.min(1, dt * 7.5);
+    // Cinematic zoomed 2D camera matching sheet.jpg framing!
+    const lookAhead = gameState === 'walk' ? 215 : 145;
+    const targetCamX = Math.max(0, Math.min(WORLD_W - VIEW_W, player.x + lookAhead - VIEW_W * 0.36));
+    const baseCamY = (gameState === 'walk' || gameState === 'end') ? 76 : 58;
+    const targetCamY = Math.max(15, Math.min(115, baseCamY + (player.y - 440) * 0.22));
+    camX += (targetCamX - camX) * Math.min(1, rawDt * 8.2);
+    camY += (targetCamY - camY) * Math.min(1, rawDt * 5.8);
+    if (camShake > 0) camShake = Math.max(0, camShake - rawDt * 28);
 
-    // Update particles, shockwaves, afterimages
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.life -= dt;
+      p.life -= rawDt;
       if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = screenShards.length - 1; i >= 0; i--) {
+      const s = screenShards[i];
+      s.x += s.vx * rawDt;
+      s.y += s.vy * rawDt;
+      s.vy += 420 * rawDt;
+      s.rot += s.vrot * rawDt;
+      s.life -= rawDt;
+      if (s.life <= 0) screenShards.splice(i, 1);
     }
     for (let i = shockwaves.length - 1; i >= 0; i--) {
       const sw = shockwaves[i];
-      sw.life -= dt * 1.65;
-      sw.r += (sw.maxR - sw.r) * Math.min(1, dt * 7.5);
+      sw.life -= rawDt * (sw.fillSphere ? 1.55 : 2.1);
+      sw.r += (sw.maxR - sw.r) * Math.min(1, rawDt * 8.5);
       if (sw.life <= 0) shockwaves.splice(i, 1);
     }
     for (let i = afterimages.length - 1; i >= 0; i--) {
-      afterimages[i].life -= dt;
+      afterimages[i].life -= rawDt;
       if (afterimages[i].life <= 0) afterimages.splice(i, 1);
     }
+    for (let i = dashTrail.length - 1; i >= 0; i--) {
+      dashTrail[i].life -= rawDt;
+      if (dashTrail[i].life <= 0) dashTrail.splice(i, 1);
+    }
+    for (let i = detachedOrbs.length - 1; i >= 0; i--) {
+      const o = detachedOrbs[i];
+      o.life -= rawDt;
+      o.x += (o.tx - o.x) * Math.min(1, rawDt * 7);
+      o.y += (o.ty - o.y) * Math.min(1, rawDt * 7);
+      if (o.life <= 0) detachedOrbs.splice(i, 1);
+    }
 
-    // Clear per-frame justPressed
     for (const k in justPressed) delete justPressed[k];
   }
 
@@ -914,134 +1135,302 @@
     return true;
   }
 
-  function drawPlatform(g, p, greyMix) {
+  function drawSculptedPlatform(g, p, greyMix) {
     const tilesImg = IMAGES.tiles;
-    const tileS = 64;
-    const cols = Math.max(1, Math.ceil(p.w / tileS));
-    const rows = Math.max(1, Math.ceil(p.h / tileS));
 
-    // Subtle atmospheric purple/stone underglow on vivid levels (matching f_013.jpg!)
-    if (greyMix < 0.85) {
+    // 1. Towering Vertical Violet Monolith Pillar (matches f_014..f_020!)
+    if (p.style === 'pillar') {
       g.save();
-      g.globalAlpha = (1 - greyMix) * 0.26;
-      const grad = g.createLinearGradient(p.x, p.y - 18, p.x, p.y + p.h + 28);
-      grad.addColorStop(0, '#9d6bff');
-      grad.addColorStop(0.5, '#5928b5');
-      grad.addColorStop(1, 'rgba(20,18,28,0)');
-      g.fillStyle = grad;
-      g.fillRect(p.x - 10, p.y - 14, p.w + 20, p.h + 32);
+      if (greyMix < 0.85) {
+        const glow = g.createLinearGradient(p.x - 28, 0, p.x + p.w + 28, 0);
+        glow.addColorStop(0, 'rgba(123,63,228,0)');
+        glow.addColorStop(0.5, `rgba(155,96,255,${0.26 * (1 - greyMix)})`);
+        glow.addColorStop(1, 'rgba(123,63,228,0)');
+        g.fillStyle = glow;
+        g.fillRect(p.x - 28, p.y - 10, p.w + 56, p.h + 20);
+      }
+      g.fillStyle = greyMix > 0.65 ? '#353840' : '#6f3fd4';
+      g.fillRect(p.x, p.y, p.w, p.h);
+      g.fillStyle = greyMix > 0.65 ? '#585c68' : '#a874ff';
+      g.fillRect(p.x, p.y, 11, p.h);
+      g.fillStyle = greyMix > 0.65 ? '#1e2026' : '#351b6e';
+      g.fillRect(p.x + p.w - 11, p.y, 11, p.h);
+      g.fillStyle = 'rgba(12,10,18,0.45)';
+      for (let sy = p.y + 38; sy < p.y + p.h; sy += 52) {
+        g.fillRect(p.x + 4, sy, p.w - 8, 3);
+      }
+      g.fillStyle = greyMix > 0.65 ? '#7c808c' : '#caa4ff';
+      g.fillRect(p.x, p.y, p.w, 5);
       g.restore();
+      return;
     }
 
+    // 2. Sculpted Floating Islands with Tapered Stalactite Underbelly & Violet Bloom
+    if (p.style === 'island') {
+      if (greyMix < 0.85) {
+        g.save();
+        const cx = p.x + p.w / 2;
+        const cy = p.y + 42;
+        const rg = g.createRadialGradient(cx, cy, 12, cx, cy, p.w * 0.68);
+        rg.addColorStop(0, `rgba(148,82,255,${0.36 * (1 - greyMix)})`);
+        rg.addColorStop(0.6, `rgba(98,42,198,${0.16 * (1 - greyMix)})`);
+        rg.addColorStop(1, 'rgba(20,18,28,0)');
+        g.fillStyle = rg;
+        g.beginPath();
+        g.arc(cx, cy, p.w * 0.68, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }
+
+      const keelCol = greyMix > 0.65 ? '#121419' : '#120d1f';
+      g.fillStyle = keelCol;
+      const tiers = [
+        { inset: 14, yOff: 34, h: 24 },
+        { inset: 36, yOff: 58, h: 24 },
+        { inset: 64, yOff: 82, h: 22 },
+        { inset: 86, yOff: 104, h: 18 }
+      ];
+      for (const tr of tiers) {
+        if (p.w - tr.inset * 2 > 18) {
+          g.fillRect(p.x + tr.inset, p.y + tr.yOff, p.w - tr.inset * 2, tr.h);
+        }
+      }
+
+      const segW = 68;
+      const cols = Math.max(1, Math.ceil(p.w / segW));
+      g.save();
+      g.beginPath();
+      g.rect(p.x, p.y - 26, p.w, 72);
+      g.clip();
+      for (let c = 0; c < cols; c++) {
+        const tx = p.x + c * segW;
+        const colRect = (c === 0) ? SPRITES.tiles.island1 : SPRITES.tiles.island2;
+        if (greyMix < 0.99) {
+          drawSprite(g, tilesImg, colRect, tx, p.y - 14, segW + 2, 62, false, 1 - greyMix);
+        }
+        if (greyMix > 0.01) {
+          drawSprite(g, tilesImg, SPRITES.tiles.greyIsland, tx, p.y - 4, segW + 2, 50, false, greyMix);
+        }
+      }
+      g.restore();
+
+      g.fillStyle = greyMix > 0.65 ? 'rgba(170,174,182,0.55)' : 'rgba(208,162,255,0.82)';
+      g.fillRect(p.x + 2, p.y, p.w - 4, 3);
+      return;
+    }
+
+    // 3. Seamless Weathered Ashlar Stone Causeway for Monochrome Sector (matches f_027 & pair_008.00.jpg!)
+    if (p.style === 'causeway' || p.style === 'causewayRight' || greyMix > 0.72) {
+      g.save();
+      const bodyGrad = g.createLinearGradient(0, p.y, 0, p.y + p.h);
+      bodyGrad.addColorStop(0, '#2a2d34');
+      bodyGrad.addColorStop(0.18, '#1d2026');
+      bodyGrad.addColorStop(0.55, '#121419');
+      bodyGrad.addColorStop(1, '#090a0d');
+      g.fillStyle = bodyGrad;
+      g.fillRect(p.x, p.y, p.w, p.h);
+
+      // Continuous weathered stone top lip (#454952 top highlight, #31343c bevel face — zero checkerboard seams!)
+      g.fillStyle = '#474b54';
+      g.fillRect(p.x, p.y, p.w, 12);
+      g.fillStyle = '#32363e';
+      g.fillRect(p.x, p.y + 12, p.w, 22);
+      g.fillStyle = 'rgba(165,170,180,0.38)';
+      g.fillRect(p.x, p.y, p.w, 2.5);
+
+      // Irregular weathered stone block joints & subtle cracks (like pair_008.00.jpg left half!)
+      g.strokeStyle = 'rgba(10,12,15,0.68)';
+      g.lineWidth = 2;
+      for (let sx = p.x + 74; sx < p.x + p.w - 20; sx += 92) {
+        g.beginPath();
+        g.moveTo(sx, p.y);
+        g.lineTo(sx - 4, p.y + 14);
+        g.lineTo(sx + 2, p.y + 34);
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(10,12,15,0.52)';
+      g.fillRect(p.x, p.y + 34, p.w, 3);
+      for (let sx = p.x + 38; sx < p.x + p.w - 30; sx += 118) {
+        g.strokeRect(sx, p.y + 36, 114, 38);
+      }
+
+      // Dramatic dark stone chasm notch illusion at x=4255 (looks like the stone ledge gap in pair_008.00.jpg!)
+      if (p.style === 'causeway') {
+        g.fillStyle = '#0c0e12';
+        g.fillRect(p.x + p.w - 18, p.y + 8, 22, p.h);
+      }
+      g.restore();
+      return;
+    }
+
+    // 4. Vivid Corridor Floor, Ceiling Overhang & Arch Ledges
     g.save();
+    const bodyGrad = g.createLinearGradient(0, p.y, 0, p.y + p.h);
+    bodyGrad.addColorStop(0, '#2a1c47');
+    bodyGrad.addColorStop(0.28, '#151024');
+    bodyGrad.addColorStop(1, '#0a0812');
+    g.fillStyle = bodyGrad;
+    g.fillRect(p.x, p.y, p.w, p.h);
+
+    const slabW = 64;
+    const cols = Math.ceil(p.w / slabW);
     g.beginPath();
     g.rect(p.x, p.y, p.w, p.h);
     g.clip();
 
-    for (let r = 0; r < rows; r++) {
+    if (p.style === 'ceiling') {
+      const lipY = p.y + p.h - 48;
       for (let c = 0; c < cols; c++) {
-        const tx = p.x + c * tileS;
-        const ty = p.y + r * tileS;
-        const isTop = (r === 0 && p.style !== 'ceiling');
-        let colRect = isTop
-          ? (p.style === 'island' ? SPRITES.tiles.island2 : SPRITES.tiles.purpleBlock)
-          : SPRITES.tiles.darkFill;
-        let greyRect = isTop
-          ? (p.style === 'island' ? SPRITES.tiles.greyIsland : SPRITES.tiles.greyBlock)
-          : SPRITES.tiles.greyFill;
-
+        const tx = p.x + c * slabW;
+        drawSprite(g, tilesImg, SPRITES.tiles.purpleBlock, tx, lipY, slabW + 1, 48, false, 0.9 * (1 - greyMix));
+      }
+      g.fillStyle = `rgba(255, 216, 74, ${0.82 * (1 - greyMix)})`;
+      g.fillRect(p.x + 310, p.y + p.h - 4, p.w - 310, 4);
+      g.fillRect(p.x + p.w - 4, p.y + p.h - 52, 4, 52);
+    } else {
+      for (let c = 0; c < cols; c++) {
+        const tx = p.x + c * slabW;
         if (greyMix < 0.99) {
-          const ok = drawSprite(g, tilesImg, colRect, tx, ty, tileS + 1, tileS + 1, false, 1);
-          if (!ok) {
-            g.fillStyle = isTop ? '#6c38cc' : '#1b162a';
-            g.fillRect(tx, ty, tileS + 1, tileS + 1);
-          }
+          drawSprite(g, tilesImg, SPRITES.tiles.purpleTop, tx, p.y, slabW + 1, 56, false, 1 - greyMix);
         }
         if (greyMix > 0.01) {
-          const ok = drawSprite(g, tilesImg, greyRect, tx, ty, tileS + 1, tileS + 1, false, greyMix);
-          if (!ok) {
-            g.fillStyle = `rgba(68,70,76,${greyMix})`;
-            g.fillRect(tx, ty, tileS + 1, tileS + 1);
-          }
+          drawSprite(g, tilesImg, SPRITES.tiles.greyTop, tx, p.y, slabW + 1, 56, false, greyMix);
         }
+        g.strokeStyle = 'rgba(0,0,0,0.38)';
+        g.lineWidth = 2;
+        g.strokeRect(tx + ((c % 2) * 18), p.y + 52, slabW, 34);
+      }
+      g.fillStyle = 'rgba(205,158,255,0.75)';
+      g.fillRect(p.x, p.y, p.w, 3);
+
+      if (p.style === 'corridorFloor' && greyMix < 0.6) {
+        g.fillStyle = `rgba(255, 216, 74, ${0.85 * (1 - greyMix)})`;
+        g.fillRect(p.x + 335, p.y, p.w - 335, 4);
+        g.fillRect(p.x + p.w - 4, p.y, 4, 48);
       }
     }
-
-    // Crisp rim highlight along top surface (violet -> cool stone grey)
-    g.fillStyle = greyMix > 0.7 ? 'rgba(155,158,166,0.45)' : 'rgba(196,154,255,0.65)';
-    g.fillRect(p.x, p.y, p.w, 3);
     g.restore();
   }
 
   function renderWorld(g) {
-    const lvl = LEVELS[currentLevel];
     const greyMix = 1 - displaySaturation;
 
-    // 1. Deep night sky background (#14121c -> #0d0e12)
+    // 1. Deep Atmospheric Night Sky + Slate Horizon Mist (matches pair_008.00.jpg left half!)
     const sky = g.createLinearGradient(0, 0, 0, H);
-    if (greyMix < 0.9) {
-      sky.addColorStop(0, '#0f0d18');
-      sky.addColorStop(0.55, '#161324');
-      sky.addColorStop(1, '#211934');
+    if (greyMix < 0.85) {
+      sky.addColorStop(0, '#0d0b15');
+      sky.addColorStop(0.55, '#151223');
+      sky.addColorStop(1, '#211835');
     } else {
-      sky.addColorStop(0, '#090a0d');
-      sky.addColorStop(1, '#14161b');
+      sky.addColorStop(0, '#090b0f');
+      sky.addColorStop(0.52, '#11151b');
+      sky.addColorStop(0.82, '#1b2028');
+      sky.addColorStop(1, '#12151a');
     }
     g.fillStyle = sky;
     g.fillRect(0, 0, W, H);
 
-    // 2. Parallax distant monolith silhouettes (seen in f_013 & f_025!)
+    // 2. Delicate Star Constellations
     g.save();
-    for (let i = 0; i < 9; i++) {
-      const mx = ((i * 310 - camX * 0.22) % 2790 + 2790) % 2790 - 220;
-      const mh = 180 + (i % 3) * 95;
-      const mw = 130 + (i % 4) * 45;
-      g.fillStyle = greyMix > 0.7 ? 'rgba(26,28,33,0.65)' : 'rgba(34,25,54,0.55)';
-      g.fillRect(mx, H - mh, mw, mh);
-      // Faint geometric inner frame
-      g.strokeStyle = greyMix > 0.7 ? 'rgba(60,62,68,0.25)' : 'rgba(123,63,228,0.18)';
-      g.lineWidth = 2;
-      g.strokeRect(mx + 16, H - mh + 18, mw - 32, mh - 36);
+    for (const cs of CONSTELLATIONS) {
+      const bx = ((cs.cx - camX * cs.parallax) % (W + 320) + (W + 320)) % (W + 320) - 160;
+      const by = cs.cy - (camY - 60) * 0.15;
+      g.strokeStyle = greyMix > 0.6 ? 'rgba(155,164,178,0.14)' : 'rgba(165,130,245,0.13)';
+      g.lineWidth = 1;
+      g.beginPath();
+      cs.pts.forEach((pt, idx) => {
+        if (idx === 0) g.moveTo(bx + pt.dx, by + pt.dy);
+        else g.lineTo(bx + pt.dx, by + pt.dy);
+      });
+      g.closePath();
+      g.stroke();
+      g.fillStyle = greyMix > 0.6 ? 'rgba(215,220,230,0.48)' : 'rgba(220,196,255,0.45)';
+      for (const pt of cs.pts) {
+        g.fillRect(bx + pt.dx - 1.5, by + pt.dy - 1.5, 3, 3);
+      }
     }
     g.restore();
 
-    // 3. Ambient floating geometric diamonds & pixel motes
-    for (const m of MOTES) {
-      const sx = ((m.x - camX * m.parallax - totalTime * m.speed * 0.25) % (W + 160) + (W + 160)) % (W + 160) - 80;
-      const sy = m.y + Math.sin(totalTime * 1.4 + m.phase) * 8;
-      const pulse = 0.35 + 0.35 * Math.sin(totalTime * 2.1 + m.phase);
+    // 3. Craggy Stepped Monolith Silhouettes & Sparse Floating Cubes
+    g.save();
+    for (let i = 0; i < 12; i++) {
+      const mx = ((i * 270 - camX * 0.22) % 3240 + 3240) % 3240 - 220;
+      const mh = 210 + (i % 4) * 76;
+      const mw = 135 + (i % 3) * 58;
+      g.fillStyle = greyMix > 0.65 ? 'rgba(16,19,24,0.82)' : 'rgba(28,20,46,0.62)';
+      g.fillRect(mx, H - mh, mw, mh);
+      g.fillRect(mx + 24, H - mh - 36, mw * 0.55, 40);
+    }
+    for (const cb of SKY_CUBES) {
+      const sx = ((cb.x - camX * cb.parallax) % (W + 240) + (W + 240)) % (W + 240) - 120;
+      const sy = cb.y + Math.sin(totalTime * 0.8 + cb.rot) * 6;
       g.save();
       g.translate(sx, sy);
-      if (m.diamond) g.rotate(Math.PI / 4);
-      if (greyMix > 0.85) {
-        g.fillStyle = `rgba(140,144,152,${pulse * 0.35})`;
-      } else {
-        g.fillStyle = m.hueGold
-          ? `rgba(255,216,74,${pulse * 0.7})`
-          : `rgba(155,102,255,${pulse * 0.65})`;
-      }
-      g.fillRect(-m.size / 2, -m.size / 2, m.size, m.size);
+      g.rotate(cb.rot + totalTime * 0.04);
+      g.fillStyle = greyMix > 0.65 ? 'rgba(28,31,38,0.45)' : 'rgba(46,32,74,0.38)';
+      g.fillRect(-cb.size / 2, -cb.size / 2, cb.size, cb.size);
+      g.restore();
+    }
+    g.restore();
+
+    // 4. Floating Ambient Pixel Motes
+    for (const m of MOTES) {
+      const sx = ((m.x - camX * m.parallax - totalTime * m.speed * 0.2) % (W + 160) + (W + 160)) % (W + 160) - 80;
+      const sy = m.y + Math.sin(totalTime * 1.5 + m.phase) * 7;
+      const pulse = 0.35 + 0.35 * Math.sin(totalTime * 2.2 + m.phase);
+      g.fillStyle = greyMix > 0.75
+        ? `rgba(190,196,208,${pulse * 0.48})`
+        : (m.hueGold ? `rgba(255,216,74,${pulse * 0.78})` : `rgba(170,112,255,${pulse * 0.72})`);
+      g.fillRect(sx - m.size / 2, sy - m.size / 2, m.size, m.size);
+    }
+
+    // Zoomed World-Space Camera Transform (matches monumental framing of sheet.jpg!)
+    const shakeX = camShake > 0 ? (Math.sin(totalTime * 68) * camShake) : 0;
+    const shakeY = camShake > 0 ? (Math.cos(totalTime * 57) * camShake * 0.7) : 0;
+    g.save();
+    g.scale(ZOOM, ZOOM);
+    g.translate(-(camX + shakeX), -(camY + shakeY));
+
+    // Faint geometric pyramid glyph behind Island B (seen in f_014.jpg!)
+    if (greyMix < 0.85) {
+      g.save();
+      g.globalAlpha = 0.22 * (1 - greyMix);
+      g.strokeStyle = '#9b66ff';
+      g.lineWidth = 4;
+      g.beginPath();
+      g.moveTo(1100, 526);
+      g.lineTo(1175, 450);
+      g.lineTo(1250, 526);
+      g.stroke();
       g.restore();
     }
 
-    // World space transform
-    g.save();
-    g.translate(-Math.round(camX), 0);
+    // Upper structural continuation of the Violet Monolith Pillar
+    for (const bp of BG_PILLARS) {
+      g.save();
+      g.globalAlpha = 0.78;
+      g.fillStyle = greyMix > 0.65 ? '#262930' : '#4e2b99';
+      g.fillRect(bp.x, bp.y, bp.w, bp.h);
+      g.fillStyle = greyMix > 0.65 ? '#3e424d' : '#8452eb';
+      g.fillRect(bp.x, bp.y, 10, bp.h);
+      g.restore();
+    }
 
-    // 4. Hanging chains
-    for (const ch of lvl.chains) {
-      const rect = greyMix > 0.6 ? SPRITES.tiles.chainGrey : SPRITES.tiles.chainColor;
-      if (!drawSprite(g, IMAGES.tiles, rect, ch.x, ch.y, 18, ch.len)) {
-        g.strokeStyle = '#5c4b7d';
-        g.lineWidth = 4;
-        g.beginPath(); g.moveTo(ch.x + 8, ch.y); g.lineTo(ch.x + 8, ch.y + ch.len); g.stroke();
+    // Hanging Chains
+    for (const ch of CHAINS) {
+      if (ch.x + 40 < camX || ch.x - 40 > camX + VIEW_W) continue;
+      const rect = (greyMix > 0.55 || ch.x > 3400) ? SPRITES.tiles.chainGrey : SPRITES.tiles.chainColor;
+      const segH = 105;
+      for (let cy = ch.y; cy < ch.y + ch.len; cy += segH - 8) {
+        const drawH = Math.min(segH, ch.y + ch.len - cy);
+        drawSprite(g, IMAGES.tiles, rect, ch.x, cy, 18, drawH);
       }
     }
 
-    // 5. Directional golden chevrons on corridor wall (like f_005.jpg!)
-    for (const cv of lvl.chevrons) {
+    // Corridor Wall Chevrons (>>)
+    for (const cv of CHEVRONS) {
       g.save();
-      g.globalAlpha = 0.28 * (1 - greyMix * 0.7);
+      g.globalAlpha = 0.32 * (1 - greyMix * 0.75);
       g.strokeStyle = PAL.gold;
       g.lineWidth = 7;
       for (let k = 0; k < 2; k++) {
@@ -1055,189 +1444,337 @@
       g.restore();
     }
 
-    // 6. Diegetic Sound Tower ("Sound set that thins out" sprite!)
-    if (lvl.speaker) {
-      const stg = Math.min(5, lvl.speaker.stage);
+    // Diegetic Sound Towers
+    for (const st of SOUND_TOWERS) {
+      if (st.x + 160 < camX || st.x - 160 > camX + VIEW_W) continue;
+      const stg = Math.min(5, Math.max(st.stage, currentSector));
       const spRect = SPRITES.sound[stg];
-      const spH = stg === 0 ? 128 : (stg === 1 ? 116 : 92);
+      const spH = stg === 0 ? 132 : (stg <= 2 ? 112 : 86);
       const spW = spH * (spRect.w / spRect.h);
-      drawSprite(g, IMAGES.sound, spRect, lvl.speaker.x, lvl.speaker.y - spH + 6, spW, spH);
+      drawSprite(g, IMAGES.sound, spRect, st.x, st.y - spH + 6, spW, spH);
     }
 
-    // 7. Platforms & Golden Accent Blocks
-    for (const p of lvl.platforms) {
-      drawPlatform(g, p, greyMix);
-    }
-    for (const gb of lvl.goldBlocks) {
-      const rect = greyMix > 0.6 ? SPRITES.tiles.greyGold : SPRITES.tiles.goldBlock;
-      drawSprite(g, IMAGES.tiles, rect, gb.x, gb.y, gb.size, gb.size);
+    // Sculpted Platforms
+    for (const p of PLATFORMS) {
+      if (p.x + p.w < camX - 80 || p.x > camX + VIEW_W + 80) continue;
+      drawSculptedPlatform(g, p, greyMix);
     }
 
-    // 8. Hazard Spikes
-    for (const s of lvl.spikes) {
-      const rect = greyMix > 0.6 ? SPRITES.tiles.spikesGrey : SPRITES.tiles.spikesColor;
-      if (!drawSprite(g, IMAGES.tiles, rect, s.x, s.y - 10, s.w, s.h + 12)) {
-        g.fillStyle = PAL.gold;
-        g.beginPath();
-        g.moveTo(s.x, s.y + s.h);
-        g.lineTo(s.x + s.w * 0.5, s.y);
-        g.lineTo(s.x + s.w, s.y + s.h);
-        g.fill();
-      }
+    // Decorative Stone/Crystal Rubble Silhouettes
+    for (const rb of RUBBLE_PROPS) {
+      const rect = (greyMix > 0.55 || rb.x > 3400) ? SPRITES.tiles.rubbleGrey : SPRITES.tiles.rubbleCol;
+      drawSprite(g, IMAGES.tiles, rect, rb.x, rb.y - 34, 60, 40);
     }
 
-    // 9. Floating Crystals
-    for (const gm of lvl.gems) {
-      if (gm.taken) continue;
-      const bob = Math.sin(totalTime * 3.2 + gm.x * 0.03) * 6;
-      const rect = (gm.kind === 'grey' || greyMix > 0.65)
-        ? SPRITES.tiles.gemGrey
-        : (gm.kind === 'gold' ? SPRITES.tiles.gemGold : SPRITES.tiles.gemViolet);
-      // Soft halo
+    // Glowing Golden Corridor Rune Blocks
+    for (const gb of GOLD_BLOCKS) {
       if (greyMix < 0.75) {
         g.save();
-        g.globalAlpha = 0.25 * (1 - greyMix);
-        g.fillStyle = gm.kind === 'gold' ? PAL.gold : PAL.violet;
-        g.beginPath();
-        g.arc(gm.x, gm.y + bob, 26, 0, Math.PI * 2);
-        g.fill();
+        g.globalAlpha = 0.28 * (1 - greyMix);
+        g.fillStyle = PAL.gold;
+        g.fillRect(gb.x - 6, gb.y - 6, gb.size + 12, gb.size + 12);
         g.restore();
       }
-      drawSprite(g, IMAGES.tiles, rect, gm.x - 20, gm.y - 24 + bob, 40, 46);
+      const rect = greyMix > 0.6 ? SPRITES.tiles.greyGold : SPRITES.tiles.goldBlock;
+      drawSprite(g, IMAGES.tiles, rect, gb.x, gb.y, gb.size, gb.size);
+      g.fillStyle = 'rgba(24,18,32,0.74)';
+      g.fillRect(gb.x + 13, gb.y + 13, gb.size - 26, gb.size - 26);
+      g.fillStyle = greyMix > 0.6 ? '#8d9098' : PAL.gold;
+      g.fillRect(gb.x + 20, gb.y + 20, gb.size - 40, gb.size - 40);
     }
 
-    // 10. Exit Threshold Arch (matches f_018..f_025!)
-    {
-      const ex = lvl.exit.x;
-      const ey = lvl.exit.y;
-      const archW = 168, archH = 168;
-      if (gameState === 'walk' || gameState === 'end') {
-        // Quiet monochrome doorway at the end of LAST WALK
-        drawSprite(g, IMAGES.tiles, SPRITES.tiles.archGrey, ex - archW / 2, ey - archH + 6, archW, archH);
-      } else {
-        // Luminous golden-violet threshold arch
-        g.save();
-        const glowR = 105 + Math.sin(totalTime * 4) * 10;
-        const grad = g.createRadialGradient(ex, ey - 75, 10, ex, ey - 75, glowR);
-        grad.addColorStop(0, `rgba(255,216,74,${0.42 * (1 - greyMix * 0.65)})`);
-        grad.addColorStop(0.55, `rgba(123,63,228,${0.22 * (1 - greyMix * 0.7)})`);
-        grad.addColorStop(1, 'rgba(20,18,28,0)');
-        g.fillStyle = grad;
-        g.beginPath();
-        g.arc(ex, ey - 75, glowR, 0, Math.PI * 2);
-        g.fill();
-        g.restore();
-
-        if (greyMix < 0.99) {
-          drawSprite(g, IMAGES.tiles, SPRITES.tiles.archColor, ex - archW / 2, ey - archH + 6, archW, archH, false, 1 - greyMix);
-        }
-        if (greyMix > 0.01) {
-          drawSprite(g, IMAGES.tiles, SPRITES.tiles.archGrey, ex - archW / 2, ey - archH + 6, archW, archH, false, greyMix);
-        }
-      }
-    }
-
-    // 11. Dash Afterimages
-    for (const ai of afterimages) {
+    // Glowing Golden Corridor Ceiling Teeth & Floor Spikes
+    for (const ct of CEILING_TEETH) {
       g.save();
-      g.globalAlpha = (ai.life / ai.maxLife) * 0.45;
-      drawSprite(g, IMAGES.player, SPRITES.player.dash, ai.x - 18, ai.y - 10, 82, 82, ai.facing < 0);
+      g.fillStyle = greyMix > 0.6 ? '#6c6f78' : PAL.gold;
+      const n = Math.max(2, Math.round(ct.w / 34));
+      const tw = ct.w / n;
+      for (let i = 0; i < n; i++) {
+        g.beginPath();
+        g.moveTo(ct.x + i * tw, ct.y);
+        g.lineTo(ct.x + (i + 0.5) * tw, ct.y + ct.h);
+        g.lineTo(ct.x + (i + 1) * tw, ct.y);
+        g.closePath();
+        g.fill();
+      }
       g.restore();
     }
 
-    // 12. Player Sprite (select exact Nano Banana pose by ability state & level drain!)
-    {
-      let pose = SPRITES.player.idle;
-      let drawW = 58, drawH = 82;
-      let offX = -7, offY = -12;
-
-      if (gameState === 'end') {
-        pose = stateTimer > 1.8 ? SPRITES.player.monoSit2 : SPRITES.player.monoSit1;
-        drawW = 56; drawH = 74; offX = -6; offY = -4;
-      } else if (gameState === 'walk') {
-        const walkFrame = Math.floor(player.animTime) % 2;
-        pose = Math.abs(player.vx) > 10
-          ? (walkFrame === 0 ? SPRITES.player.drain5 : SPRITES.player.monoRun1)
-          : SPRITES.player.drain4;
-        drawW = 62; drawH = 78; offX = -9; offY = -8;
-      } else if (player.dashTimer > 0) {
-        pose = SPRITES.player.dash;
-        drawW = 86; drawH = 86; offX = -21; offY = -14;
-      } else if (player.gliding) {
-        pose = (Math.floor(totalTime * 10) % 2 === 0) ? SPRITES.player.glide1 : SPRITES.player.glide2;
-        drawW = 92; drawH = 58; offX = -24; offY = 6;
-      } else if (abilities.wall && player.onWall !== 0 && !player.onGround && player.vy > 0) {
-        pose = SPRITES.player.wall;
-        drawW = 56; drawH = 82; offX = -6; offY = -12;
-      } else if (!player.onGround) {
-        if (currentLevel >= 3) {
-          pose = SPRITES.player.monoFall;
-          drawW = 72; drawH = 74; offX = -14; offY = -6;
-        } else {
-          pose = player.doubleUsed ? SPRITES.player.djump : SPRITES.player.run2;
-          drawW = 70; drawH = 86; offX = -13; offY = -16;
-        }
-      } else if (Math.abs(player.vx) > 20) {
-        const f = Math.floor(player.animTime) % 2;
-        if (currentLevel === 0) {
-          pose = f === 0 ? SPRITES.player.run1 : SPRITES.player.run2;
-          drawW = 68; drawH = 82; offX = -12; offY = -12;
-        } else if (currentLevel === 1) {
-          pose = f === 0 ? SPRITES.player.run1 : SPRITES.player.drain1;
-          drawW = 66; drawH = 80; offX = -11; offY = -10;
-        } else if (currentLevel === 2) {
-          pose = f === 0 ? SPRITES.player.drain2 : SPRITES.player.drain3;
-          drawW = 58; drawH = 80; offX = -7; offY = -10;
-        } else {
-          pose = f === 0 ? SPRITES.player.monoRun1 : SPRITES.player.monoRun2;
-          drawW = 68; drawH = 78; offX = -12; offY = -8;
-        }
-      } else {
-        const idleByLvl = [
-          SPRITES.player.idle,
-          SPRITES.player.drain0,
-          SPRITES.player.drain2,
-          SPRITES.player.drain4,
-          SPRITES.player.drain5
-        ];
-        pose = idleByLvl[currentLevel] || SPRITES.player.idle;
-      }
-
-      // Subtle golden aura around player on vivid levels
-      if (displaySaturation > 0.25 && gameState !== 'walk') {
-        g.save();
-        g.globalAlpha = 0.20 * displaySaturation;
-        g.fillStyle = PAL.gold;
+    for (const s of SPIKES) {
+      g.save();
+      if (greyMix < 0.7) {
+        const sg = g.createRadialGradient(s.x + s.w / 2, s.y + s.h, 4, s.x + s.w / 2, s.y + s.h, 64);
+        sg.addColorStop(0, `rgba(255,216,74,${0.40 * (1 - greyMix)})`);
+        sg.addColorStop(1, 'rgba(255,216,74,0)');
+        g.fillStyle = sg;
         g.beginPath();
-        g.arc(player.x + player.w / 2, player.y + player.h / 2, 38, 0, Math.PI * 2);
+        g.arc(s.x + s.w / 2, s.y + s.h, 64, Math.PI, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = greyMix > 0.6 ? '#747780' : PAL.gold;
+      for (let i = 0; i < 2; i++) {
+        const tx = s.x + i * (s.w / 2);
+        const tw = s.w / 2;
+        g.beginPath();
+        g.moveTo(tx + 2, s.y + s.h);
+        g.lineTo(tx + tw / 2, s.y);
+        g.lineTo(tx + tw - 2, s.y + s.h);
+        g.closePath();
+        g.fill();
+      }
+      g.restore();
+    }
+
+    // Floating Diamond Crystals (crisp black-outlined Row-2 sprites — zero white halo!)
+    for (const gm of gems) {
+      if (gm.taken) continue;
+      if (gm.x + 60 < camX || gm.x - 60 > camX + VIEW_W) continue;
+      const bob = Math.sin(totalTime * 3.4 + gm.x * 0.02) * 6;
+      const isGrey = (gm.kind === 'grey' || greyMix > 0.65);
+      const rect = isGrey
+        ? SPRITES.tiles.gemGrey
+        : (gm.kind === 'gold' ? SPRITES.tiles.gemGold : SPRITES.tiles.gemViolet);
+      if (!isGrey) {
+        g.save();
+        const rg = g.createRadialGradient(gm.x, gm.y + bob, 4, gm.x, gm.y + bob, 34);
+        rg.addColorStop(0, gm.kind === 'gold' ? 'rgba(255,216,74,0.42)' : 'rgba(168,108,255,0.42)');
+        rg.addColorStop(1, 'rgba(20,18,28,0)');
+        g.fillStyle = rg;
+        g.beginPath();
+        g.arc(gm.x, gm.y + bob, 34, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }
+      drawSprite(g, IMAGES.tiles, rect, gm.x - 19, gm.y - 26 + bob, 38, 52);
+    }
+
+    // Monumental Threshold Arches
+    for (let i = 0; i < SECTORS.length; i++) {
+      const sec = SECTORS[i];
+      const ax = sec.archX;
+      const ay = sec.archY;
+      if (ax + 160 < camX || ax - 160 > camX + VIEW_W) continue;
+
+      const archW = 228, archH = 224;
+      const alreadyCrossed = archesTriggered[i];
+      const isFinalDoor = (i === 4);
+      const localGrey = isFinalDoor ? 1.0 : Math.min(1, Math.max(greyMix, alreadyCrossed ? 0.82 : i * 0.24));
+
+      if (!isFinalDoor && localGrey < 0.92) {
+        g.save();
+        const glowR = 140 + Math.sin(totalTime * 4.2 + i) * 12;
+        const grad = g.createRadialGradient(ax, ay - 98, 12, ax, ay - 98, glowR);
+        grad.addColorStop(0, `rgba(255,222,96,${0.52 * (1 - localGrey * 0.7)})`);
+        grad.addColorStop(0.55, `rgba(135,74,242,${0.26 * (1 - localGrey * 0.8)})`);
+        grad.addColorStop(1, 'rgba(20,18,28,0)');
+        g.fillStyle = grad;
+        g.beginPath();
+        g.arc(ax, ay - 98, glowR, 0, Math.PI * 2);
         g.fill();
         g.restore();
       }
 
+      if (localGrey < 0.99) {
+        drawSprite(g, IMAGES.tiles, SPRITES.tiles.archColor, ax - archW / 2, ay - archH + 8, archW, archH, false, 1 - localGrey);
+      }
+      if (localGrey > 0.01) {
+        drawSprite(g, IMAGES.tiles, SPRITES.tiles.archGrey, ax - archW / 2, ay - archH + 8, archW, archH, false, localGrey);
+      }
+
+      if (!isFinalDoor && !alreadyCrossed) {
+        g.save();
+        g.strokeStyle = localGrey > 0.7 ? 'rgba(235,235,245,0.55)' : 'rgba(255,242,180,0.82)';
+        g.lineWidth = 2.4;
+        for (const side of [-1, 1]) {
+          g.beginPath();
+          const bx = ax + side * 46;
+          g.moveTo(bx, ay - 28);
+          g.lineTo(bx - side * (6 + Math.sin(totalTime * 19 + side) * 5), ay - 76);
+          g.lineTo(bx + side * 4, ay - 122);
+          g.stroke();
+        }
+        g.restore();
+      }
+    }
+
+    // Tapered Golden Dash Ribbon Trail
+    if (dashTrail.length > 1) {
+      g.save();
+      for (let i = 1; i < dashTrail.length; i++) {
+        const a = dashTrail[i - 1];
+        const b = dashTrail[i];
+        const t = b.life / b.maxLife;
+        g.strokeStyle = displaySaturation > 0.25
+          ? `rgba(255, 216, 74, ${t * 0.82})`
+          : `rgba(180, 184, 194, ${t * 0.55})`;
+        g.lineWidth = t * 24;
+        g.lineCap = 'round';
+        g.beginPath();
+        g.moveTo(a.x, a.y);
+        g.lineTo(b.x, b.y);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    for (const ai of afterimages) {
+      g.save();
+      g.globalAlpha = (ai.life / ai.maxLife) * 0.42;
+      drawSprite(g, IMAGES.player, SPRITES.player.dash, ai.x - 22, ai.y - 8, 92, 94, ai.facing < 0);
+      g.restore();
+    }
+
+    // Player Character
+    if (gameState !== 'reset') {
+      let useImg = IMAGES.player;
+      let pose = SPRITES.player.idle;
+      let drawW = 68, drawH = 96;
+      let offX = -11, offY = -10;
+
+      if (gameState === 'end') {
+        pose = stateTimer > 1.3 ? SPRITES.player.monoSit2 : SPRITES.player.monoSit1;
+        drawW = 66; drawH = 86; offX = -10; offY = 0;
+      } else if (gameState === 'walk' || displaySaturation < 0.08) {
+        useImg = IMAGES.tiles;
+        const wf = Math.floor(player.animTime) % 2;
+        pose = Math.abs(player.vx) > 12
+          ? (wf === 0 ? SPRITES.tiles.stoneRun1 : SPRITES.tiles.stoneRun2)
+          : SPRITES.tiles.stoneRun1;
+        drawW = 78; drawH = 92; offX = -16; offY = -6;
+      } else if (player.dashTimer > 0) {
+        pose = SPRITES.player.dash;
+        drawW = 98; drawH = 98; offX = -26; offY = -10;
+      } else if (player.gliding) {
+        pose = (Math.floor(totalTime * 11) % 2 === 0) ? SPRITES.player.glide1 : SPRITES.player.glide2;
+        drawW = 104; drawH = 66; offX = -29; offY = 10;
+      } else if (abilities.wall && player.onWall !== 0 && !player.onGround && player.vy > 0) {
+        pose = SPRITES.player.wall;
+        drawW = 64; drawH = 94; offX = -9; offY = -8;
+      } else if (!player.onGround) {
+        if (currentSector >= 3) {
+          useImg = IMAGES.tiles;
+          pose = SPRITES.tiles.stoneRun2;
+          drawW = 78; drawH = 92; offX = -16; offY = -6;
+        } else {
+          pose = player.doubleUsed ? SPRITES.player.djump : SPRITES.player.run2;
+          drawW = 80; drawH = 98; offX = -17; offY = -12;
+        }
+      } else if (Math.abs(player.vx) > 18) {
+        const f = Math.floor(player.animTime) % 2;
+        if (currentSector === 0) {
+          pose = f === 0 ? SPRITES.player.run1 : SPRITES.player.run2;
+          drawW = 78; drawH = 94; offX = -16; offY = -8;
+        } else if (currentSector === 1) {
+          pose = f === 0 ? SPRITES.player.run1 : SPRITES.player.drain1;
+          drawW = 74; drawH = 92; offX = -14; offY = -6;
+        } else if (currentSector === 2) {
+          pose = f === 0 ? SPRITES.player.drain2 : SPRITES.player.drain3;
+          drawW = 66; drawH = 92; offX = -10; offY = -6;
+        } else {
+          useImg = IMAGES.tiles;
+          pose = f === 0 ? SPRITES.tiles.stoneRun1 : SPRITES.tiles.stoneRun2;
+          drawW = 78; drawH = 92; offX = -16; offY = -6;
+        }
+      } else {
+        const idleBySec = [
+          SPRITES.player.idle,
+          SPRITES.player.drain0,
+          SPRITES.player.drain2,
+          SPRITES.player.drain4
+        ];
+        pose = idleBySec[currentSector] || SPRITES.player.idle;
+      }
+
+      // Swirling Golden Aura Sphere & Crescent Arcs (matches f_009 & f_020!)
+      if (player.dashTimer > 0 || (displaySaturation > 0.35 && !player.onGround && Math.abs(player.vx) > 320)) {
+        const cx = player.x + player.w / 2;
+        const cy = player.y + player.h * 0.45;
+        g.save();
+        const auraR = player.dashTimer > 0 ? 56 : 44;
+        const ag = g.createRadialGradient(cx, cy, 8, cx, cy, auraR);
+        ag.addColorStop(0, `rgba(255,238,148,${player.dashTimer > 0 ? 0.58 : 0.24})`);
+        ag.addColorStop(0.7, `rgba(255,216,74,${player.dashTimer > 0 ? 0.30 : 0.10})`);
+        ag.addColorStop(1, 'rgba(255,216,74,0)');
+        g.fillStyle = ag;
+        g.beginPath();
+        g.arc(cx, cy, auraR, 0, Math.PI * 2);
+        g.fill();
+
+        if (player.dashTimer > 0 && displaySaturation > 0.2) {
+          g.strokeStyle = PAL.goldBright;
+          g.lineWidth = 3.5;
+          for (let k = 0; k < 2; k++) {
+            const a0 = totalTime * 18 + k * Math.PI;
+            g.beginPath();
+            g.arc(cx, cy, 45, a0, a0 + 1.95);
+            g.stroke();
+          }
+        }
+        g.restore();
+      }
+
+      g.save();
+      const footX = player.x + player.w / 2;
+      const footY = player.y + player.h;
+      g.translate(footX, footY);
+      g.scale(player.scaleX, player.scaleY);
+      g.translate(-footX, -footY);
       const ok = drawSprite(
-        g, IMAGES.player, pose,
+        g, useImg, pose,
         player.x + offX, player.y + offY, drawW, drawH,
         player.facing < 0
       );
       if (!ok) {
-        g.fillStyle = displaySaturation > 0.3 ? PAL.gold : '#666';
+        g.fillStyle = displaySaturation > 0.25 ? PAL.gold : '#80828a';
         g.fillRect(player.x, player.y, player.w, player.h);
+      }
+      g.restore();
+
+      if (gameState === 'title') {
+        g.save();
+        g.font = 'bold 15px "Courier New", Courier, monospace';
+        g.textAlign = 'center';
+        g.fillStyle = PAL.gold;
+        g.fillText('[SPACE]', player.x + player.w / 2, player.y - 22 + Math.sin(totalTime * 4) * 3);
+        g.restore();
+      } else if (gameState === 'end' && stateTimer > 1.2) {
+        g.save();
+        g.globalAlpha = Math.min(0.48, (stateTimer - 1.2) * 0.4);
+        g.font = 'bold 14px "Courier New", Courier, monospace';
+        g.textAlign = 'center';
+        g.fillStyle = '#9a9ca6';
+        g.fillText('[R]', player.x + player.w / 2, player.y - 20);
+        g.restore();
       }
     }
 
-    // 13. Shockwaves & Particles
+    for (const o of detachedOrbs) {
+      const t = o.life / o.maxLife;
+      g.save();
+      g.globalAlpha = t;
+      const rg = g.createRadialGradient(o.x, o.y, 2, o.x, o.y, 28);
+      rg.addColorStop(0, '#ffffff');
+      rg.addColorStop(0.45, o.color);
+      rg.addColorStop(1, 'rgba(255,216,74,0)');
+      g.fillStyle = rg;
+      g.beginPath();
+      g.arc(o.x, o.y, 28, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+
     for (const sw of shockwaves) {
       g.save();
       g.globalAlpha = Math.max(0, sw.life);
       g.strokeStyle = sw.color || PAL.gold;
-      g.lineWidth = sw.maxR > 120 ? 5 : 3;
+      g.lineWidth = sw.fillSphere ? 4.5 : 3.2;
       g.beginPath();
       g.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
       g.stroke();
-      if (sw.maxR > 120) {
+      if (sw.fillSphere) {
         const rg = g.createRadialGradient(sw.x, sw.y, 0, sw.x, sw.y, sw.r);
-        rg.addColorStop(0, 'rgba(255,232,120,0.45)');
-        rg.addColorStop(0.7, 'rgba(255,216,74,0.18)');
+        rg.addColorStop(0, 'rgba(255,248,196,0.68)');
+        rg.addColorStop(0.55, 'rgba(255,216,74,0.30)');
         rg.addColorStop(1, 'rgba(255,216,74,0)');
         g.fillStyle = rg;
         g.fill();
@@ -1249,189 +1786,138 @@
       g.save();
       g.globalAlpha = Math.max(0, p.life / p.maxLife);
       g.fillStyle = p.color;
-      g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      if (p.round) {
+        g.beginPath();
+        g.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+        g.fill();
+      } else {
+        g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
       g.restore();
     }
 
-    g.restore(); // end world transform
+    g.restore();
   }
 
-  function renderHUD(g) {
-    // Crisp top-left Ability HUD boxes matching m2_main_ref.png & Omni study frames!
-    // In LAST WALK / END, HUD fades into dim ghosted strikethroughs
-    const walkFade = (gameState === 'walk') ? 0.42 : (gameState === 'end' ? 0.22 : 1.0);
-    const boxW = 216, boxH = 58, startX = 46, startY = 36, gap = 22;
+  function renderMinimalGlyphs(g) {
+    const inspectHold = keys['Tab'] ? 0.35 : 0;
+    const alpha = Math.max(inspectHold, hudWalkDissolve);
 
-    g.save();
-    g.globalAlpha = walkFade;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.font = 'bold 23px "Courier New", Courier, monospace';
-
-    ABILITY_DEFS.forEach((ab, i) => {
-      const bx = startX + i * (boxW + gap);
-      const by = startY;
-      const active = abilities[ab.key] && gameState !== 'walk' && gameState !== 'end';
-      const flash = hudFlash[ab.key] || 0;
-
-      // Box background
-      g.fillStyle = active ? 'rgba(16, 14, 24, 0.86)' : 'rgba(20, 18, 28, 0.58)';
-      g.fillRect(bx, by, boxW, boxH);
-
-      // Active usage highlight or newly-revoked flash
-      if (flash > 0) {
-        g.fillStyle = active
-          ? `rgba(255, 216, 74, ${flash * 0.28})`
-          : `rgba(123, 63, 228, ${flash * 0.42})`;
-        g.fillRect(bx, by, boxW, boxH);
-      }
-
-      // Crisp border (#f2f2f2 when active, dim #4e4c5a when crossed out)
-      g.lineWidth = active ? 3 : 2.5;
-      g.strokeStyle = active ? '#f2f2f2' : '#4e4c5a';
-      g.strokeRect(bx, by, boxW, boxH);
-
-      // Label text
-      g.fillStyle = active ? '#f2f2f2' : '#6d6b7a';
-      g.fillText(ab.label, bx + boxW / 2, by + boxH / 2 + 1);
-
-      // Crisp strikethrough bar when ability has been taken!
-      if (!active) {
-        g.strokeStyle = flash > 0.1 ? PAL.gold : '#8c8999';
-        g.lineWidth = 3;
-        g.beginPath();
-        g.moveTo(bx + 44, by + boxH / 2);
-        g.lineTo(bx + boxW - 44, by + boxH / 2);
-        g.stroke();
-      }
-    });
-    g.restore();
-
-    // Subtle level indicator top-right
-    if (gameState !== 'title') {
+    if (alpha > 0.01 && gameState !== 'title') {
       g.save();
-      g.globalAlpha = gameState === 'walk' ? 0.35 : 0.75;
-      g.font = 'bold 15px "Courier New", Courier, monospace';
-      g.textAlign = 'right';
-      g.fillStyle = '#b9b5c9';
-      g.fillText(LEVELS[currentLevel].title, W - 46, 58);
-      if (LEVELS[currentLevel].subtitle) {
-        g.font = '12px "Courier New", Courier, monospace';
-        g.fillStyle = '#858099';
-        g.fillText(LEVELS[currentLevel].subtitle, W - 46, 78);
-      }
-      g.restore();
-    }
-
-    // ABILITY TAKEN card banner during threshold transition ('take' state)
-    if (gameState === 'take') {
-      const lvl = LEVELS[currentLevel];
-      const alpha = Math.min(1, Math.sin((1 - stateTimer / 1.05) * Math.PI) * 1.5);
-      g.save();
-      g.globalAlpha = Math.max(0, alpha);
-      g.fillStyle = 'rgba(12, 11, 18, 0.84)';
-      g.fillRect(W / 2 - 330, H - 128, 660, 66);
-      g.strokeStyle = displaySaturation > 0.3 ? PAL.gold : '#8a8c94';
-      g.lineWidth = 2.5;
-      g.strokeRect(W / 2 - 330, H - 128, 660, 66);
+      g.globalAlpha = alpha;
       g.textAlign = 'center';
-      g.font = 'bold 20px "Courier New", Courier, monospace';
-      g.fillStyle = '#f2f2f2';
-      g.fillText(lvl.takenCard, W / 2, H - 95);
+      g.textBaseline = 'middle';
+      g.font = 'bold 22px "Courier New", Courier, monospace';
+
+      ABILITY_DEFS.forEach((ab, i) => {
+        const bx = HUD_LAYOUT.startX + i * (HUD_LAYOUT.boxW + HUD_LAYOUT.gap);
+        const by = HUD_LAYOUT.startY;
+        const bw = HUD_LAYOUT.boxW;
+        const bh = HUD_LAYOUT.boxH;
+        const active = abilities[ab.key] && gameState !== 'walk' && gameState !== 'end';
+        const flash = hudFlash[ab.key] || 0;
+
+        g.fillStyle = active ? 'rgba(14, 12, 22, 0.84)' : 'rgba(18, 17, 24, 0.44)';
+        g.fillRect(bx, by, bw, bh);
+
+        if (flash > 0) {
+          g.fillStyle = active
+            ? `rgba(255, 216, 74, ${flash * 0.25})`
+            : `rgba(255, 216, 74, ${flash * 0.45})`;
+          g.fillRect(bx, by, bw, bh);
+        }
+
+        g.lineWidth = active ? 2.8 : 1.8;
+        g.strokeStyle = active ? '#f2f2f2' : 'rgba(105, 102, 118, 0.52)';
+        g.strokeRect(bx, by, bw, bh);
+
+        g.fillStyle = active ? '#f2f2f2' : 'rgba(118, 115, 132, 0.62)';
+        g.fillText(ab.label, bx + bw / 2, by + bh / 2 + 1);
+
+        if (!active) {
+          const cr = hudCracks[ab.key];
+          if (cr) {
+            g.strokeStyle = flash > 0.15 ? PAL.gold : 'rgba(130, 126, 146, 0.55)';
+            g.lineWidth = 1.6;
+            g.beginPath();
+            cr.forEach((pt, idx) => {
+              if (idx === 0) g.moveTo(bx + pt.x, by + pt.y);
+              else g.lineTo(bx + pt.x, by + pt.y);
+            });
+            g.stroke();
+          }
+          g.strokeStyle = flash > 0.15 ? PAL.gold : 'rgba(150, 146, 165, 0.72)';
+          g.lineWidth = 2.5;
+          g.beginPath();
+          g.moveTo(bx + 44, by + bh / 2);
+          g.lineTo(bx + bw - 44, by + bh / 2);
+          g.stroke();
+        }
+      });
       g.restore();
     }
 
-    // RESET ROOM flash
-    if (gameState === 'reset') {
+    for (const s of screenShards) {
       g.save();
-      g.fillStyle = `rgba(20, 18, 28, ${Math.min(0.85, stateTimer * 2.1)})`;
-      g.fillRect(0, 0, W, H);
-      g.textAlign = 'center';
-      g.font = 'bold 26px "Courier New", Courier, monospace';
-      g.fillStyle = PAL.gold;
-      g.fillText('ROOM RESET', W / 2, H / 2);
+      g.globalAlpha = Math.max(0, s.life / s.maxLife);
+      g.translate(s.x, s.y);
+      g.rotate(s.rot);
+      g.fillStyle = s.color;
+      g.fillRect(-s.w / 2, -s.h / 2, s.w, s.h);
       g.restore();
     }
 
-    // TITLE overlay (skipped on ?autostart)
     if (gameState === 'title') {
       g.save();
-      g.fillStyle = 'rgba(14, 12, 22, 0.82)';
-      g.fillRect(0, 0, W, H);
       g.textAlign = 'center';
       g.fillStyle = PAL.gold;
-      g.font = 'bold 54px "Courier New", Courier, monospace';
-      g.fillText('THAT ONE TEAM', W / 2, H / 2 - 58);
-      g.fillStyle = '#f2f2f2';
-      g.font = '20px "Courier New", Courier, monospace';
-      g.fillText('You start with every power in the game. The game wants them back.', W / 2, H / 2 - 4);
-      g.fillStyle = '#b79cff';
-      g.font = '16px "Courier New", Courier, monospace';
-      g.fillText('[ARROWS] MOVE   [SPACE] JUMP / DOUBLE / GLIDE   [SHIFT / X] DASH', W / 2, H / 2 + 44);
-      g.fillStyle = PAL.gold;
-      g.font = 'bold 20px "Courier New", Courier, monospace';
-      g.fillText('PRESS SPACE TO BEGIN', W / 2, H / 2 + 98);
+      g.font = 'bold 46px "Courier New", Courier, monospace';
+      g.fillText('THAT ONE TEAM', W / 2, 138);
       g.restore();
     }
 
-    // END overlay after LAST WALK
-    if (gameState === 'end') {
-      const a = Math.min(1, stateTimer / 1.5);
+    if (paused) {
       g.save();
-      g.globalAlpha = a;
-      g.fillStyle = 'rgba(8, 9, 12, 0.62)';
+      g.fillStyle = 'rgba(8, 8, 12, 0.45)';
       g.fillRect(0, 0, W, H);
       g.textAlign = 'center';
-      g.fillStyle = '#d8d8de';
-      g.font = 'bold 38px "Courier New", Courier, monospace';
-      g.fillText('NOTHING LEFT TO TAKE', W / 2, H / 2 - 36);
-      g.fillStyle = '#7e808a';
-      g.font = '18px "Courier New", Courier, monospace';
-      g.fillText('No dash. No jump. No colour. No sound. Still, you arrived.', W / 2, H / 2 + 12);
-      g.font = '15px "Courier New", Courier, monospace';
-      g.fillStyle = '#585a63';
-      g.fillText('[R] BEGIN AGAIN', W / 2, H / 2 + 64);
+      g.font = 'bold 20px "Courier New", Courier, monospace';
+      g.fillStyle = '#f2f2f2';
+      g.fillText('[P] RESUME    [R] RETRY', W / 2, H / 2);
       g.restore();
     }
   }
 
   function renderPostFX(g) {
-    // Cinematic vignette + subtle scanline/grain matched to Omni sheet.jpg
-    const vig = g.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, W * 0.68);
+    const vig = g.createRadialGradient(W / 2, H / 2, H * 0.38, W / 2, H / 2, W * 0.68);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, gameState === 'walk' || gameState === 'end' ? 'rgba(0,0,0,0.68)' : 'rgba(6,5,12,0.44)');
+    vig.addColorStop(1, (gameState === 'walk' || gameState === 'end') ? 'rgba(0,0,0,0.58)' : 'rgba(6,5,12,0.38)');
     g.fillStyle = vig;
     g.fillRect(0, 0, W, H);
-
-    g.fillStyle = 'rgba(255,255,255,0.016)';
-    for (let y = 0; y < H; y += 4) {
-      g.fillRect(0, y, W, 1);
-    }
   }
 
   function render() {
     renderWorld(sctx);
 
-    // Composite world onto main canvas with progressive saturation drain
     ctx.save();
     const satPct = Math.round(Math.max(0, Math.min(1, displaySaturation)) * 100);
-    const brightPct = Math.round(100 - (1 - displaySaturation) * 14);
+    const brightPct = Math.round(100 - (1 - displaySaturation) * 6);
     ctx.filter = `saturate(${satPct}%) brightness(${brightPct}%)`;
     ctx.drawImage(sceneCanvas, 0, 0);
     ctx.restore();
 
-    renderHUD(ctx);
+    renderMinimalGlyphs(ctx);
     renderPostFX(ctx);
   }
 
-  // Expose full telemetry for play.mjs & verification harness
   window.__game = {
     get state() {
-      const lvl = LEVELS[currentLevel];
+      const sec = SECTORS[currentSector];
       return {
-        mode: gameState, // 'title' | 'lvl' | 'take' | 'reset' | 'walk' | 'end'
-        level: currentLevel,
-        levelTitle: lvl.title,
+        mode: gameState,
+        paused,
+        level: currentSector,
         saturation: Number(displaySaturation.toFixed(3)),
         abilities: { ...abilities },
         lastTaken: lastTakenAbility,
@@ -1441,16 +1927,21 @@
         player: {
           x: Math.round(player.x),
           y: Math.round(player.y),
+          w: player.w,
+          h: player.h,
           vx: Math.round(player.vx),
           vy: Math.round(player.vy),
           onGround: player.onGround,
           onWall: player.onWall,
           doubleUsed: player.doubleUsed,
-          dashCooldown: Number(player.dashCooldown.toFixed(2))
+          dashCooldown: Number(player.dashCooldown.toFixed(2)),
+          dashTimer: Number(player.dashTimer.toFixed(2)),
+          gliding: player.gliding
         },
-        exit: { x: lvl.exit.x, y: lvl.exit.y },
-        platforms: lvl.platforms.map(p => ({ x: p.x, y: p.y, w: p.w, h: p.h, style: p.style })),
-        spikes: lvl.spikes.map(s => ({ x: s.x, y: s.y, w: s.w, h: s.h }))
+        exit: { x: sec.archX, y: sec.archY },
+        arches: SECTORS.map((s, idx) => ({ index: idx, x: s.archX, y: s.archY, crossed: archesTriggered[idx] })),
+        platforms: PLATFORMS.map(p => ({ x: p.x, y: p.y, w: p.w, h: p.h, style: p.style })),
+        spikes: SPIKES.map(s => ({ x: s.x, y: s.y, w: s.w, h: s.h }))
       };
     }
   };

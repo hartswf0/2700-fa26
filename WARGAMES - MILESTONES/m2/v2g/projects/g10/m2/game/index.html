@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lab-Rat-ory — Group 10 (M2)</title>
+<title>Lab-Rat-ory</title>
 <link rel="icon" href="data:,">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: #0c0303;
+    background: #090303;
     display: flex; align-items: center; justify-content: center;
     font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
@@ -18,9 +18,10 @@
     width: min(100vw, calc(100vh * 16 / 9));
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
-    background: #1a0606;
+    background: #140505;
     overflow: hidden;
-    box-shadow: 0 0 60px rgba(0,0,0,0.9);
+    box-shadow: 0 0 70px rgba(0, 0, 0, 0.95);
+    cursor: crosshair;
   }
   canvas {
     display: block;
@@ -42,85 +43,44 @@
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
 
-  // Offscreen pixelation buffer for authentic 8-bit -> 16-bit -> 32-bit -> Full HD escalation
+  // Offscreen pixelation buffers for genuine 256p -> 480p -> 960p -> 1280p escalation & cross-dissolve
   const buf = document.createElement('canvas');
   const bctx = buf.getContext('2d');
+  const prevBuf = document.createElement('canvas');
+  prevBuf.width = W;
+  prevBuf.height = H;
+  const pbctx = prevBuf.getContext('2d');
 
   const Q = new URLSearchParams(location.search);
   const AUTOSTART = Q.has('autostart');
-  let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+  const initSeed = (parseInt(Q.get('seed') || '47', 10) || 47) >>> 0;
+  let seed = initSeed;
   function rand() {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   }
 
   const PAL = {
-    bg: '#1a0606',
-    deepBg: '#120404',
+    bg: '#170704',
     fg: '#ff6a5a',
     acc: '#ffd6cf',
-    steelDark: '#171d1f',
-    steelMid: '#283134'
+    amber: '#ffcf78',
+    slate: '#1d2528'
   };
 
-  // Load Nano Banana generated assets
-  const imgs = {};
-  const assetList = {
-    rats: '../assets/rat_sprite_at_4_resolutions.png',
-    bgs: '../assets/4_level_backgrounds_one_per_member.png',
-    props: '../assets/key_cheese_trap_needles.png',
-    hands: '../assets/human_hand_shadow_hazard.png'
-  };
-  const loaded = {};
-  for (const [k, src] of Object.entries(assetList)) {
-    const im = new Image();
-    im.onload = () => {
-      loaded[k] = true;
-      if (k === 'rats') buildPaleRatSheet(im);
-    };
-    im.src = src;
-    imgs[k] = im;
-  }
-
-  // Build pale white-pink tinted version of the 4 rat sprites matching study/sheet.jpg (#ffd6cf / #ff6a5a)
-  const paleRatCanvas = document.createElement('canvas');
-  paleRatCanvas.width = 1024;
-  paleRatCanvas.height = 1024;
-  let paleRatReady = false;
-  function buildPaleRatSheet(im) {
-    try {
-      const pctx = paleRatCanvas.getContext('2d');
-      pctx.drawImage(im, 0, 0);
-      const id = pctx.getImageData(0, 0, 1024, 1024);
-      const d = id.data;
-      for (let i = 0; i < d.length; i += 4) {
-        if (d[i + 3] < 15) continue;
-        // Lift coral-red body toward warm pale lab-rat white-pink (#ffd6cf) while preserving pixel outlines
-        const lum = 0.35 * d[i] + 0.45 * d[i + 1] + 0.20 * d[i + 2];
-        if (lum > 42) {
-          d[i]     = Math.min(255, (d[i] * 0.48 + 152) | 0);
-          d[i + 1] = Math.min(255, (d[i + 1] * 0.55 + 176) | 0);
-          d[i + 2] = Math.min(255, (d[i + 2] * 0.55 + 174) | 0);
-        }
-      }
-      pctx.putImageData(id, 0, 0);
-      paleRatReady = true;
-    } catch (_) {}
-  }
-
-  // Exact sub-sprite bounding boxes measured from Nano Banana assets
+  // Exact sub-sprite crops from cleaned Nano Banana sheets
   const RAT_RECTS = [
-    { x: 48,  y: 262, w: 202, h: 508 }, // l1: 8-bit chunky pixel rat
-    { x: 298, y: 262, w: 192, h: 508 }, // l2: 16-bit pixel rat
-    { x: 538, y: 262, w: 204, h: 514 }, // l3: crisp illustrated rat
-    { x: 779, y: 261, w: 207, h: 540 }  // l4: high-res detailed fur rat
+    { x: 48,  y: 262, w: 202, h: 508 }, // l1: 256p chunky 8-bit rat
+    { x: 298, y: 262, w: 192, h: 508 }, // l2: 480p 16-bit rat
+    { x: 538, y: 262, w: 204, h: 514 }, // l3: 960p illustrated rat
+    { x: 779, y: 261, w: 207, h: 540 }  // l4: 1280p high-res fur rat
   ];
 
   const BG_QUADS = [
-    { x: 23,  y: 20,  w: 659, h: 357 }, // l1: 8-bit pixel lab
-    { x: 693, y: 20,  w: 659, h: 357 }, // l2: 16-bit pixel lab
-    { x: 23,  y: 390, w: 659, h: 351 }, // l3: crisp workbench
-    { x: 693, y: 390, w: 659, h: 351 }  // l4: photorealistic surgical bench
+    { x: 23,  y: 20,  w: 659, h: 357 }, // l1: 8-bit crimson lab
+    { x: 693, y: 20,  w: 659, h: 357 }, // l2: 16-bit crimson pixel maze
+    { x: 23,  y: 390, w: 659, h: 352 }, // l3: 32-bit surgical bench
+    { x: 693, y: 390, w: 659, h: 352 }  // l4: full-res surgical bench
   ];
 
   const PROP_RECTS = {
@@ -139,10 +99,200 @@
     { x: 818, y: 388, w: 163, h: 245 }
   ];
 
-  // BGM + Procedural WebAudio SFX
+  // Preprocessed offscreen asset sheets (zero per-frame ImageData overhead)
+  const imgs = {};
+  const loaded = {};
+  const gradedBgs = [null, null, null, null];
+  const paleRatCanvas = document.createElement('canvas');
+  paleRatCanvas.width = 1024;
+  paleRatCanvas.height = 1024;
+  let paleRatReady = false;
+
+  const shadowHandCanvas = document.createElement('canvas');
+  shadowHandCanvas.width = 1024;
+  shadowHandCanvas.height = 1024;
+  let shadowHandReady = false;
+
+  const armCompCanvas = document.createElement('canvas');
+  armCompCanvas.width = 520;
+  armCompCanvas.height = 720;
+  const acctx = armCompCanvas.getContext('2d');
+
+  const assetList = {
+    rats: '../assets/rat_sprite_at_4_resolutions.png',
+    bgs: '../assets/4_level_backgrounds_one_per_member.png',
+    props: '../assets/key_cheese_trap_needles.png',
+    hands: '../assets/human_hand_shadow_hazard.png'
+  };
+
+  for (const [k, src] of Object.entries(assetList)) {
+    const im = new Image();
+    im.onload = () => {
+      loaded[k] = true;
+      if (k === 'rats') buildPaleRatSheet(im);
+      if (k === 'bgs') buildGradedBackgrounds(im);
+      if (k === 'hands') buildShadowHandSheet(im);
+    };
+    im.src = src;
+    imgs[k] = im;
+  }
+
+  // Spatially remap coral-red rat sheet into warm ivory-cream fur (#faf3ef) with rosy pink ears, snout, paws & tail (#eba19c)
+  function buildPaleRatSheet(im) {
+    try {
+      const pctx = paleRatCanvas.getContext('2d');
+      pctx.clearRect(0, 0, 1024, 1024);
+      pctx.drawImage(im, 0, 0);
+      const id = pctx.getImageData(0, 0, 1024, 1024);
+      const d = id.data;
+
+      for (let rIdx = 0; rIdx < RAT_RECTS.length; rIdx++) {
+        const rr = RAT_RECTS[rIdx];
+        const softOutline = rIdx >= 2;
+        for (let y = rr.y; y < rr.y + rr.h; y++) {
+          const ny = (y - rr.y) / rr.h; // 0 = snout tip, 0.65..1.0 = tail
+          for (let x = rr.x; x < rr.x + rr.w; x++) {
+            const i = (y * 1024 + x) * 4;
+            const a = d[i + 3];
+            if (a < 8) { d[i + 3] = 0; continue; }
+
+            const r = d[i], g = d[i + 1], b = d[i + 2];
+            const nx = (x - rr.x) / rr.w;
+            const dx = Math.abs(nx - 0.5);
+
+            // Anatomy weight: rosy pink on tail, ears, snout tip, and side paws; ivory-cream on dorsal back
+            let pinkness = 0;
+            if (ny > 0.63) pinkness = Math.min(1, (ny - 0.63) / 0.08);
+            else if (ny < 0.12) pinkness = Math.min(0.85, (0.12 - ny) / 0.10);
+            else if (ny >= 0.11 && ny <= 0.25 && dx > 0.15) pinkness = Math.min(0.9, (dx - 0.15) / 0.14);
+            else if (dx > 0.31) pinkness = Math.min(0.85, (dx - 0.31) / 0.12);
+
+            const lum = (0.38 * r + 0.42 * g + 0.20 * b) / 255;
+
+            // Keep tiny dark eyes crisp near snout
+            const isEye = ny > 0.09 && ny < 0.19 && dx > 0.06 && dx < 0.23 && lum < 0.22;
+            if (isEye) {
+              d[i] = 22; d[i + 1] = 10; d[i + 2] = 12;
+              continue;
+            }
+
+            if (lum < 0.17) {
+              if (softOutline) {
+                // Soft warm shadow-fur contour on high-res levels (never dark grey mud)
+                d[i] = 112; d[i + 1] = 98; d[i + 2] = 100;
+                d[i + 3] = Math.round(a * 0.78);
+              } else {
+                d[i] = 64; d[i + 1] = 22; d[i + 2] = 22;
+              }
+            } else {
+              const t = Math.min(1, (lum - 0.15) / 0.58);
+              // Luminous warm ivory-white lab rat fur (#dfd4d2 -> #fffaf7) matching study/f_014 & f_027!
+              const furR = 222 + t * 33;
+              const furG = 212 + t * 38;
+              const furB = 210 + t * 37;
+              // Rosy lab-rat pink ears, snout, paws & tail (#e9938d -> #ffd9d2)
+              const pnkR = 224 + t * 31;
+              const pnkG = 138 + t * 76;
+              const pnkB = 136 + t * 74;
+
+              d[i]     = Math.min(255, Math.round(furR * (1 - pinkness) + pnkR * pinkness));
+              d[i + 1] = Math.min(255, Math.round(furG * (1 - pinkness) + pnkG * pinkness));
+              d[i + 2] = Math.min(255, Math.round(furB * (1 - pinkness) + pnkB * pinkness));
+            }
+          }
+        }
+      }
+      pctx.putImageData(id, 0, 0);
+      paleRatReady = true;
+    } catch (_) {}
+  }
+
+  // Convert cleaned hand silhouettes into pure dark cast-shadow masks (zero pink/grey rim)
+  function buildShadowHandSheet(im) {
+    try {
+      const sctx = shadowHandCanvas.getContext('2d');
+      sctx.clearRect(0, 0, 1024, 1024);
+      sctx.drawImage(im, 0, 0);
+      const id = sctx.getImageData(0, 0, 1024, 1024);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const a = d[i + 3];
+        if (a < 18) {
+          d[i + 3] = 0;
+        } else {
+          d[i] = 4;
+          d[i + 1] = 6;
+          d[i + 2] = 8;
+          d[i + 3] = Math.min(255, Math.round(a * 0.96));
+        }
+      }
+      sctx.putImageData(id, 0, 0);
+      shadowHandReady = true;
+    } catch (_) {}
+  }
+
+  // Pre-crop all 4 backgrounds full-bleed (1280x720) and grade L3/L4 to match study/f_027.jpg cold surgical slate-steel
+  function buildGradedBackgrounds(im) {
+    for (let idx = 0; idx < 4; idx++) {
+      const q = BG_QUADS[idx];
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = idx >= 2;
+      g.drawImage(im, q.x, q.y, q.w, q.h, 0, 0, W, H);
+
+      try {
+        const id = g.getImageData(0, 0, W, H);
+        const d = id.data;
+        if (idx <= 1) {
+          // Deepen crimson floor contrast to match study/f_001.jpg (#170704 floor + vivid #ff6a5a maze walls)
+          for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], gr = d[i + 1], b = d[i + 2];
+            if (r > 135 && r - gr > 45) {
+              // Boost glowing coral-red maze wall bars
+              d[i]     = Math.min(255, (r * 1.12) | 0);
+              d[i + 1] = Math.min(255, (gr * 0.96 + 8) | 0);
+              d[i + 2] = Math.min(255, (b * 0.92 + 6) | 0);
+            } else {
+              // Rich dark crimson-maroon lab tile tone
+              d[i]     = Math.min(255, (r * 0.82 + 6) | 0);
+              d[i + 1] = (gr * 0.52) | 0;
+              d[i + 2] = (b * 0.48) | 0;
+            }
+          }
+        } else {
+          // Grade copper-lit bench into cold clinical surgical slate-steel (#1c2427..#3d484c) matching study/f_014 & f_027
+          const slateMix = idx === 2 ? 0.88 : 1.0;
+          for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], gr = d[i + 1], b = d[i + 2];
+            const lum = 0.35 * r + 0.45 * gr + 0.20 * b;
+            // Preserve crimson blood/specimen droplets, red scalpel handle, lasers, and green circuit boards
+            const crimson = Math.max(0, Math.min(1, (r - 2.32 * gr - 16) / 42));
+            const greenPcb = Math.max(0, Math.min(1, (gr - 0.78 * r - 2) / 20));
+            const keep = Math.max(crimson * 0.82, greenPcb * 0.92);
+
+            const sl = Math.min(255, lum * 1.24 + 8);
+            const sr = sl * 0.87;
+            const sg = sl * 0.98;
+            const sb = sl * 1.04;
+
+            const m = (1 - keep) * slateMix;
+            d[i]     = Math.min(255, Math.round(r * (1 - m) + sr * m));
+            d[i + 1] = Math.min(255, Math.round(gr * (1 - m) + sg * m));
+            d[i + 2] = Math.min(255, Math.round(b * (1 - m) + sb * m));
+          }
+        }
+        g.putImageData(id, 0, 0);
+      } catch (_) {}
+      gradedBgs[idx] = c;
+    }
+  }
+
+  // Audio: ../assets/bgm_loop.mp3 + responsive procedural WebAudio SFX
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.36;
+  bgm.volume = 0.34;
   let audioCtx = null;
 
   function ensureAudio() {
@@ -158,238 +308,324 @@
     }
   }
 
-  function playTone(freq, freqEnd, dur, vol = 0.04, type = 'triangle') {
+  function playTone(freq, freqEnd, dur, vol = 0.04, type = 'triangle', delay = 0) {
     if (!audioCtx || audioCtx.state !== 'running') return;
     try {
-      const now = audioCtx.currentTime;
+      const t0 = audioCtx.currentTime + delay;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = type;
-      osc.frequency.setValueAtTime(freq, now);
-      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + dur);
-      gain.gain.setValueAtTime(vol, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.frequency.setValueAtTime(Math.max(20, freq), t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), t0 + dur);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.012, dur * 0.25));
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + dur + 0.01);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.015);
     } catch (_) {}
   }
 
-  function sfxSkitter() { playTone(920 + rand() * 280, 420, 0.032, 0.018, 'sine'); }
+  function sfxSkitter(fast) {
+    playTone((fast ? 1180 : 880) + rand() * 260, 410, 0.028, fast ? 0.022 : 0.014, 'sine');
+  }
+  function sfxDash() {
+    playTone(340, 820, 0.085, 0.032, 'triangle');
+    playTone(1240, 620, 0.06, 0.018, 'sine', 0.03);
+  }
   function sfxKey() {
-    playTone(1318.5, 1760, 0.12, 0.055, 'sine');
-    setTimeout(() => playTone(2093, 2637, 0.18, 0.045, 'sine'), 65);
+    playTone(1396.9, 1975.5, 0.11, 0.05, 'sine');
+    playTone(2349.3, 2793.8, 0.16, 0.04, 'sine', 0.055);
+  }
+  function sfxCamClick() {
+    playTone(1680, 1420, 0.045, 0.022, 'square');
+    playTone(2120, 1960, 0.04, 0.018, 'sine', 0.06);
+  }
+  function sfxShadowWhoosh() {
+    playTone(98, 46, 0.26, 0.038, 'sine');
   }
   function sfxUnlock() {
-    playTone(520, 980, 0.14, 0.05, 'sawtooth');
-    setTimeout(() => playTone(1174, 1568, 0.22, 0.05, 'triangle'), 80);
+    playTone(587.3, 1174.7, 0.12, 0.048, 'sawtooth');
+    playTone(1318.5, 1760.0, 0.20, 0.045, 'triangle', 0.07);
   }
   function sfxCaught() {
-    playTone(290, 58, 0.28, 0.08, 'sawtooth');
+    playTone(260, 52, 0.26, 0.075, 'sawtooth');
+    playTone(110, 38, 0.22, 0.06, 'square', 0.02);
   }
-  function sfxHeartbeat() {
-    playTone(68, 42, 0.11, 0.04, 'sine');
+  function sfxCageDrop() {
+    playTone(190, 48, 0.32, 0.07, 'sawtooth');
+    playTone(880, 410, 0.18, 0.035, 'triangle', 0.04);
+  }
+  function sfxHeartbeat(intense) {
+    playTone(66, 40, 0.10, intense ? 0.042 : 0.026, 'sine');
+    playTone(58, 36, 0.11, intense ? 0.032 : 0.018, 'sine', 0.16);
   }
 
-  // Precomputed film grain tile
+  // Precomputed subtle film grain tile
   const grainCanvas = document.createElement('canvas');
   grainCanvas.width = 160;
   grainCanvas.height = 90;
-  const gctx = grainCanvas.getContext('2d');
-  const gData = gctx.createImageData(160, 90);
-  for (let i = 0; i < gData.data.length; i += 4) {
-    const v = (rand() * 255) | 0;
-    gData.data[i] = v;
-    gData.data[i + 1] = (v * 0.7) | 0;
-    gData.data[i + 2] = (v * 0.7) | 0;
-    gData.data[i + 3] = 18;
+  {
+    const gctx = grainCanvas.getContext('2d');
+    const gData = gctx.createImageData(160, 90);
+    for (let i = 0; i < gData.data.length; i += 4) {
+      const v = (rand() * 255) | 0;
+      gData.data[i] = v;
+      gData.data[i + 1] = v;
+      gData.data[i + 2] = v;
+      gData.data[i + 3] = 14;
+    }
+    gctx.putImageData(gData, 0, 0);
   }
-  gctx.putImageData(gData, 0, 0);
 
-  // Outer arena walls shared by all levels
-  const ARENA_WALLS = [
-    { x: 44, y: 46, w: 1192, h: 10 },
-    { x: 44, y: 664, w: 1192, h: 10 },
-    { x: 44, y: 46, w: 10, h: 628 },
-    { x: 1226, y: 46, w: 10, h: 628 }
+  // Screen boundary colliders (full-bleed 1280x720)
+  const SCREEN_BOUNDS = [
+    { x: -20, y: -20, w: W + 40, h: 36 },
+    { x: -20, y: H - 18, w: W + 40, h: 38 },
+    { x: -20, y: -20, w: 36, h: H + 40 },
+    { x: W - 18, y: -20, w: 38, h: H + 40 }
   ];
 
-  // Four escalating levels matching spec.json (l1..l4) and study/sheet.jpg choreography!
+  // Four escalating resolution rooms aligned directly to the baked architecture in 4_level_backgrounds_one_per_member.png
   const LEVELS = [
     {
       id: 'l1',
-      title: '1 CAGE · 8-BIT',
+      resLabel: '256p',
       resW: 256,
       resH: 144,
       ratIdx: 0,
       bgIdx: 0,
-      bgAlpha: 0.22,
       redStyle: true,
-      spawn: { x: 132, y: 565, angle: 0 },
-      keyPos: { x: 258, y: 565 },
-      exitRect: { x: 540, y: 515, w: 72, h: 100, label: 'CAGE LATCH' },
-      clue: { x: 375, y: 472, text: 'CLUE 1/4: KEY FILED CLEAN — NOT DROPPED' },
+      ratScale: 1.12,
+      cageRect: { x: 82, y: 508, w: 138, h: 126 },
+      spawn: { x: 146, y: 572, angle: 0 },
+      keyPos: { x: 252, y: 572 },
+      exitRect: { x: 452, y: 522, w: 62, h: 94 },
+      camPos: { x: 615, y: 392 },
+      cluePos: { x: 335, y: 572 },
+      covers: [
+        { x: 284, y: 580, r: 46 }, // 8-bit Petri dish 1
+        { x: 425, y: 580, r: 46 }  // 8-bit Petri dish 2
+      ],
       walls: [
-        // Chunky wire cage walls with right door gap
-        { x: 64, y: 492, w: 170, h: 10 },
-        { x: 64, y: 626, w: 170, h: 10 },
-        { x: 64, y: 492, w: 10, h: 144 },
-        // Simple first corridor guiding right
-        { x: 64, y: 392, w: 560, h: 12 }
+        { x: 0,   y: 52,  w: 382, h: 42 },
+        { x: 372, y: 52,  w: 256, h: 242 },
+        { x: 0,   y: 262, w: 112, h: 175 },
+        { x: 62,  y: 408, w: 432, h: 86 },
+        { x: 622, y: 448, w: 205, h: 82 },
+        { x: 0,   y: 650, w: W,   h: 70 }
       ],
       traps: [
-        { x: 390, y: 260, r: 36, sprung: false }
+        { x: 255, y: 332, r: 32, sprung: false }
       ],
       syringes: [],
       hand: null,
       waypoints: [
-        { x: 262, y: 565 },
-        { x: 575, y: 565 }
+        { x: 252, y: 572, dash: true },
+        { x: 478, y: 570, dash: false }
       ]
     },
     {
       id: 'l2',
-      title: '2 MAZE · 16-BIT',
+      resLabel: '480p',
       resW: 480,
       resH: 270,
       ratIdx: 1,
       bgIdx: 1,
-      bgAlpha: 0.25,
       redStyle: true,
-      ratScale: 1.05,
-      // Exact red-line maze layout from refs/m2_main_ref.png & study/sheet.jpg row 1!
-      spawn: { x: 148, y: 565, angle: 0 },
-      keyPos: { x: 278, y: 565 },
-      exitRect: { x: 494, y: 92, w: 92, h: 86, label: 'BENCH VENT' },
-      clue: { x: 455, y: 455, text: 'CLUE 2/4: IR SENSOR LOGGING TURN LATENCY' },
+      ratScale: 1.24,
+      cageRect: { x: 84, y: 508, w: 138, h: 126 },
+      spawn: { x: 148, y: 574, angle: 0 },
+      keyPos: { x: 254, y: 574 },
+      exitRect: { x: 698, y: 142, w: 68, h: 74 },
+      camPos: { x: 638, y: 382 },
+      cluePos: { x: 585, y: 430 },
+      covers: [
+        { x: 432, y: 575, r: 52 }, // 16-bit Petri dish cover
+        { x: 735, y: 295, r: 54 }  // Central scalpel/bench shadow
+      ],
       walls: [
-        { x: 54,  y: 238, w: 326, h: 10 },
-        { x: 372, y: 238, w: 10,  h: 162 },
-        { x: 372, y: 390, w: 248, h: 10 },
-        { x: 372, y: 558, w: 10,  h: 106 },
-        { x: 658, y: 56,  w: 10,  h: 204 },
-        { x: 658, y: 250, w: 312, h: 10 },
-        { x: 960, y: 462, w: 10,  h: 202 },
-        { x: 960, y: 462, w: 170, h: 10 }
+        { x: 0,   y: 58,  w: 380, h: 42 },
+        { x: 368, y: 58,  w: 292, h: 232 },
+        { x: 805, y: 58,  w: 415, h: 64 },
+        { x: 0,   y: 265, w: 116, h: 165 },
+        { x: 80,  y: 405, w: 440, h: 74 },
+        { x: 648, y: 448, w: 170, h: 210 },
+        { x: 0,   y: 646, w: W,   h: 74 }
       ],
       traps: [
-        { x: 225, y: 345, r: 34, sprung: false },
-        { x: 1085, y: 575, r: 34, sprung: false }
+        { x: 235, y: 335, r: 32, sprung: false },
+        { x: 1035, y: 555, r: 32, sprung: false }
       ],
       syringes: [
-        { x: 1045, y: 330, w: 150, h: 26, angle: -0.18 }
+        { x: 985, y: 335, w: 155, h: 26, angle: -0.06 }
       ],
       hand: null,
       waypoints: [
-        { x: 282, y: 565 },
-        { x: 315, y: 476 },
-        { x: 705, y: 476 },
-        { x: 705, y: 325 },
-        { x: 540, y: 320 },
-        { x: 540, y: 135 }
+        { x: 254, y: 574, dash: false },
+        { x: 582, y: 568, dash: true },
+        { x: 582, y: 346, dash: false },
+        { x: 734, y: 346, dash: true },
+        { x: 734, y: 178, dash: false }
       ]
     },
     {
       id: 'l3',
-      title: '3 BENCH · 32-BIT',
+      resLabel: '960p',
       resW: 960,
       resH: 540,
       ratIdx: 2,
       bgIdx: 2,
-      bgAlpha: 0.92,
       redStyle: false,
-      ratScale: 1.28,
-      spawn: { x: 165, y: 418, angle: 0 },
-      keyPos: { x: 415, y: 418 },
-      exitRect: { x: 1005, y: 376, w: 96, h: 102, label: 'LAB FLOOR' },
-      clue: { x: 645, y: 455, text: 'CLUE 3/4: CLIPBOARD — "TRIAL 47: EXPECTED BENCH PATH"' },
+      ratScale: 1.56,
+      cageRect: null,
+      spawn: { x: 245, y: 574, angle: 0 },
+      keyPos: { x: 392, y: 574 },
+      exitRect: { x: 1152, y: 342, w: 64, h: 92 },
+      camPos: { x: 606, y: 414 },
+      cluePos: { x: 552, y: 395 },
+      covers: [
+        { x: 392, y: 582, r: 58 }, // Glass petri dish
+        { x: 765, y: 348, r: 64 }, // Specimen slide tray under scalpel
+        { x: 1025, y: 442, r: 62 } // Microscope glass plate
+      ],
       walls: [
-        { x: 54,  y: 285, w: 310, h: 14 },
-        { x: 470, y: 515, w: 14,  h: 149 },
-        { x: 560, y: 255, w: 350, h: 14 }
+        { x: 0,   y: 55,  w: 338, h: 42 },
+        { x: 328, y: 55,  w: 304, h: 248 },
+        { x: 785, y: 55,  w: 425, h: 68 },
+        { x: 0,   y: 268, w: 96,  h: 175 },
+        { x: 68,  y: 416, w: 418, h: 82 },
+        { x: 618, y: 482, w: 185, h: 210 },
+        { x: 0,   y: 668, w: W,   h: 52 }
       ],
       traps: [
-        { x: 210, y: 185, r: 34, sprung: false },
-        { x: 345, y: 585, r: 34, sprung: false }
+        { x: 212, y: 342, r: 32, sprung: false }
       ],
       syringes: [
-        { x: 745, y: 155, w: 175, h: 28, angle: 0.06 }
+        { x: 960, y: 162, w: 168, h: 28, angle: 0.03 }
       ],
       hand: {
-        baseX: 660,
-        ampX: 150,
-        reachY: 185,
-        speed: 1.55,
-        dangerR: 48
+        baseX: 965,
+        ampX: 85,
+        reachY: 225,
+        period: 2.35,
+        phaseOffset: 1.15,
+        dangerR: 50
       },
       waypoints: [
-        { x: 415, y: 418 },
-        { x: 740, y: 418 },
-        { x: 1048, y: 425 }
+        { x: 392, y: 574, dash: false },
+        { x: 556, y: 560, dash: true },
+        { x: 556, y: 368, dash: false },
+        { x: 885, y: 368, dash: true },
+        { x: 1178, y: 386, dash: false }
       ]
     },
     {
       id: 'l4',
-      title: '4 HUMANS · FULL RES',
+      resLabel: '1280p',
       resW: 1280,
       resH: 720,
       ratIdx: 3,
       bgIdx: 3,
-      bgAlpha: 0.98,
       redStyle: false,
-      ratScale: 1.38,
       isHumanRoom: true,
-      spawn: { x: 155, y: 515, angle: 0 },
-      keyPos: { x: 435, y: 515 },
-      // Glowing amber exit doorway on bottom-right matching study/sheet.jpg row 4!
-      exitRect: { x: 925, y: 438, w: 132, h: 158, label: 'FREEDOM?' },
-      clue: { x: 685, y: 535, text: 'CLUE 4/4: ONE-WAY MIRROR — THREE HUMANS WATCHING' },
+      ratScale: 1.72,
+      cageRect: null,
+      spawn: { x: 162, y: 356, angle: 0 },
+      keyPos: { x: 396, y: 356 },
+      // Hinged surgical steel door & brass keyhole latch matching study/f_027.jpg, f_036.jpg & f_040.jpg!
+      exitRect: { x: 902, y: 432, w: 158, h: 196 },
+      camPos: { x: 286, y: 406 },
+      cluePos: { x: 685, y: 465 },
+      covers: [
+        { x: 410, y: 356, r: 58 }, // Surgical basin beside vertical scalpel
+        { x: 695, y: 465, r: 68 }, // Glass microscope slide tray
+        { x: 815, y: 542, r: 64 }  // Green PCB workbench housing
+      ],
       walls: [
-        { x: 320, y: 260, w: 480, h: 14 },
-        { x: 800, y: 105, w: 14,  h: 169 }
+        { x: 0,   y: 0,   w: 308, h: 278 },
+        { x: 465, y: 58,  w: 445, h: 52 },
+        { x: 902, y: 78,  w: 32,  h: 340 },
+        { x: 0,   y: 428, w: 142, h: 72 },
+        { x: 278, y: 478, w: 162, h: 34 },
+        { x: 0,   y: 684, w: W,   h: 36 }
       ],
       traps: [
-        { x: 215, y: 185, r: 36, sprung: false }
+        { x: 218, y: 585, r: 33, sprung: false }
       ],
       syringes: [
-        { x: 565, y: 175, w: 185, h: 30, angle: 0.0 }
+        { x: 645, y: 155, w: 175, h: 28, angle: 0.02 }
       ],
-      // Looming black scientist hand shadow reaching down from top-center (exact match to sheet.jpg rows 3 & 4!)
+      // Sweeping overhead scientist hand shadow matching study/f_027.jpg!
       hand: {
         baseX: 545,
-        ampX: 155,
-        reachY: 275,
-        speed: 1.75,
-        dangerR: 52
+        ampX: 78,
+        reachY: 238,
+        period: 2.30,
+        phaseOffset: 0.35,
+        alwaysLooming: true,
+        dangerR: 54
       },
       waypoints: [
-        { x: 435, y: 515 },
-        { x: 715, y: 515 },
-        { x: 975, y: 515 }
+        { x: 396, y: 356, dash: false },
+        { x: 585, y: 455, dash: false },
+        { x: 785, y: 542, dash: false },
+        { x: 922, y: 542, dash: false }
       ]
     }
   ];
 
-  // Sparks array for metallic key unlock effect (matches sheet.jpg frames 30-34!)
+  // Tactile particles: metallic sparks, paw scurry dust, pointer ripple
   const sparks = [];
-  function emitSparks(x, y, count = 24) {
+  const dusts = [];
+  const ripples = [];
+
+  function emitSparks(x, y, count = 24, warm = true) {
     for (let i = 0; i < count; i++) {
       const a = rand() * Math.PI * 2;
-      const sp = 70 + rand() * 240;
+      const sp = 80 + rand() * 280;
       sparks.push({
         x, y,
         vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - 30,
-        life: 0.28 + rand() * 0.35,
-        maxLife: 0.6
+        vy: Math.sin(a) * sp - 40,
+        life: 0.24 + rand() * 0.36,
+        maxLife: 0.60,
+        warm
       });
     }
   }
 
-  // Input handling
+  function emitDust(x, y, backAngle, count = 5) {
+    for (let i = 0; i < count; i++) {
+      const a = backAngle + (rand() - 0.5) * 0.9;
+      const sp = 28 + rand() * 68;
+      dusts.push({
+        x: x + Math.cos(a) * 14,
+        y: y + Math.sin(a) * 14,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        r: 2.5 + rand() * 3.5,
+        life: 0.22 + rand() * 0.18,
+        maxLife: 0.40
+      });
+    }
+  }
+
+  // Input handling: WASD/Arrows + Space/Shift dash-scurry + [P] pause + [R] instant retry + Click-to-scurry
   const keys = new Set();
   const justPressed = new Set();
+  let pointerDown = false;
+  let pointerTarget = null;
+
+  function canvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / Math.max(1, rect.width)) * W,
+      y: ((e.clientY - rect.top) / Math.max(1, rect.height)) * H
+    };
+  }
+
   window.addEventListener('keydown', (e) => {
     ensureAudio();
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) {
@@ -399,65 +635,152 @@
     keys.add(e.code);
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
-  canvas.addEventListener('pointerdown', () => {
-    ensureAudio();
-    if (S.phase === 'title') loadLevel(0);
-    else if (S.phase === 'end') loadLevel(0);
-  });
 
-  // Game State (matches spec.json states: title, l1, l2, l3, l4, caught, end)
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('pointerdown', (e) => {
+    ensureAudio();
+    const pt = canvasCoords(e);
+    if (S.phase === 'title') {
+      loadLevel(0, false);
+      return;
+    }
+    if (S.phase === 'end') {
+      S.cluesTotal = 0;
+      loadLevel(0, false);
+      return;
+    }
+    if (S.phase === 'caught') {
+      loadLevel(S.levelIdx, false);
+      return;
+    }
+    if (e.button === 2) {
+      justPressed.add('Space');
+      return;
+    }
+    pointerDown = true;
+    pointerTarget = pt;
+    ripples.push({ x: pt.x, y: pt.y, life: 0.36, maxLife: 0.36 });
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (pointerDown && S.phase.startsWith('l')) {
+      pointerTarget = canvasCoords(e);
+    }
+  });
+  window.addEventListener('pointerup', () => { pointerDown = false; });
+
+  // Game State
   const S = {
     phase: AUTOSTART ? 'l1' : 'title',
+    paused: false,
     levelIdx: 0,
-    x: 132,
-    y: 565,
+    levelTime: 0,
+    x: 146,
+    y: 572,
     vx: 0,
     vy: 0,
     angle: 0,
     sneaking: false,
+    dashTimer: 0,
+    dashCooldown: 0,
+    inCover: false,
+    activeCover: null,
     hasKey: false,
-    doorOpenAnim: 0,      // 0..1 exit door unlocking & amber light spill
+    doorOpenAnim: 0,
     unlocking: false,
     clueSeen: false,
+    camLockTimer: 0,
     cluesTotal: 0,
     caughtTimer: 0,
     caughtReason: '',
+    hitStop: 0,
+    transitionAlpha: 0, // Smooth cross-dissolve when sharpening between resolutions
     endTimer: 0,
+    cageSlamDone: false,
+    keyDropDone: false,
     handX: 640,
-    handY: 180,
+    handY: 220,
+    handDepth: 0,       // 0 = high anticipation penumbra, 1 = low palm sweep
     handFrame: 0,
+    whooshPlayed: false,
     skitterTimer: 0,
     beatTimer: 0,
     t: 0
   };
 
-  function loadLevel(idx) {
+  function captureTransitionFrame() {
+    try {
+      pbctx.clearRect(0, 0, W, H);
+      pbctx.drawImage(canvas, 0, 0);
+      S.transitionAlpha = 1.0;
+    } catch (_) {
+      S.transitionAlpha = 0;
+    }
+  }
+
+  function loadLevel(idx, dissolve = true) {
+    if (dissolve && S.t > 0.05) captureTransitionFrame();
     S.levelIdx = idx;
     const lv = LEVELS[idx];
     S.phase = lv.id;
+    S.levelTime = 0;
     S.x = lv.spawn.x;
     S.y = lv.spawn.y;
     S.vx = 0;
     S.vy = 0;
     S.angle = lv.spawn.angle || 0;
+    S.dashTimer = 0;
+    S.dashCooldown = 0;
+    S.inCover = false;
+    S.activeCover = null;
     S.hasKey = false;
     S.doorOpenAnim = 0;
     S.unlocking = false;
     S.clueSeen = false;
+    S.camLockTimer = 0;
+    S.hitStop = 0;
+    pointerTarget = null;
     for (const tr of lv.traps) tr.sprung = false;
     if (lv.hand) {
       S.handX = lv.hand.baseX;
       S.handY = lv.hand.reachY;
+      S.handDepth = 0.25;
+      S.whooshPlayed = false;
     }
   }
-  if (AUTOSTART) loadLevel(0);
+  if (AUTOSTART) loadLevel(0, false);
 
   function triggerCaught(reason) {
     if (S.phase === 'caught' || S.phase === 'end') return;
     S.phase = 'caught';
     S.caughtTimer = 0;
     S.caughtReason = reason;
+    S.hitStop = 0.06;
+    pointerTarget = null;
     sfxCaught();
+  }
+
+  // Smooth circle-vs-AABB push-out resolution so Subject 47 slides effortlessly along corners
+  function resolveWallCollisions(lv, rad) {
+    const allWalls = SCREEN_BOUNDS.concat(lv.walls);
+    for (let pass = 0; pass < 2; pass++) {
+      for (const w of allWalls) {
+        const nx = Math.max(w.x, Math.min(S.x, w.x + w.w));
+        const ny = Math.max(w.y, Math.min(S.y, w.y + w.h));
+        let dx = S.x - nx;
+        let dy = S.y - ny;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < rad * rad) {
+          const d = Math.sqrt(d2);
+          if (d > 0.0001) {
+            const overlap = rad - d;
+            S.x += (dx / d) * overlap;
+            S.y += (dy / d) * overlap;
+          } else {
+            S.y -= rad;
+          }
+        }
+      }
+    }
   }
 
   function circleRectCollide(cx, cy, cr, r) {
@@ -467,36 +790,33 @@
     return (dx * dx + dy * dy) < cr * cr;
   }
 
-  function moveWithWalls(lv, dx, dy) {
-    const rad = 18;
-    const allWalls = ARENA_WALLS.concat(lv.walls);
-    S.x += dx;
-    for (const w of allWalls) {
-      if (circleRectCollide(S.x, S.y, rad, w)) {
-        S.x -= dx;
-        break;
-      }
-    }
-    S.y += dy;
-    for (const w of allWalls) {
-      if (circleRectCollide(S.x, S.y, rad, w)) {
-        S.y -= dy;
-        break;
-      }
-    }
+  function getTaoState() {
+    if (S.phase === 'title') return 'REST';
+    if (S.phase === 'caught') return 'FAULT';
+    if (S.phase === 'end') return 'COMPLETE';
+    if (S.unlocking || S.transitionAlpha > 0.15) return 'CHANGED';
+    if (!S.hasKey) return 'READY';
+    return 'WORKING';
   }
 
-  // Expose state for play.mjs automated verification
+  // Expose rich deterministic state for play.mjs & verification harness
   window.__game = {
     get state() {
       const lv = LEVELS[S.levelIdx] || LEVELS[0];
       return {
         phase: S.phase,
+        taoState: getTaoState(),
+        paused: S.paused,
         level: S.levelIdx + 1,
         res: `${lv.resW}x${lv.resH}`,
+        resLabel: lv.resLabel,
         x: Math.round(S.x),
         y: Math.round(S.y),
+        angle: +S.angle.toFixed(2),
         hasKey: S.hasKey,
+        inCover: S.inCover,
+        dashing: S.dashTimer > 0,
+        sneaking: S.sneaking,
         unlocking: S.unlocking,
         cluesTotal: S.cluesTotal,
         keyPos: lv.keyPos,
@@ -504,29 +824,64 @@
           x: Math.round(lv.exitRect.x + lv.exitRect.w * 0.5),
           y: Math.round(lv.exitRect.y + lv.exitRect.h * 0.5)
         },
+        covers: lv.covers,
         waypoints: lv.waypoints,
-        handPos: lv.hand ? { x: Math.round(S.handX), y: Math.round(S.handY) } : null,
+        handPos: lv.hand ? { x: Math.round(S.handX), y: Math.round(S.handY), depth: +S.handDepth.toFixed(2) } : null,
         t: +S.t.toFixed(2)
       };
     }
   };
 
-  function update(dt) {
-    S.t += dt;
-
-    // Update unlock sparks
+  function updateParticles(dt) {
     for (let i = sparks.length - 1; i >= 0; i--) {
       const p = sparks[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 260 * dt;
+      p.vy += 310 * dt;
       p.life -= dt;
       if (p.life <= 0) sparks.splice(i, 1);
     }
+    for (let i = dusts.length - 1; i >= 0; i--) {
+      const d = dusts[i];
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vx *= 0.90;
+      d.vy *= 0.90;
+      d.life -= dt;
+      if (d.life <= 0) dusts.splice(i, 1);
+    }
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      ripples[i].life -= dt;
+      if (ripples[i].life <= 0) ripples.splice(i, 1);
+    }
+  }
+
+  function update(dt) {
+    // Pause toggle ([P] or Escape) during active rooms (Law 7)
+    if (S.phase.startsWith('l') && (justPressed.has('KeyP') || justPressed.has('Escape'))) {
+      S.paused = !S.paused;
+      justPressed.clear();
+    }
+    if (S.paused) {
+      justPressed.clear();
+      return;
+    }
+
+    if (S.hitStop > 0) {
+      S.hitStop -= dt;
+      justPressed.clear();
+      return;
+    }
+
+    S.t += dt;
+    if (S.transitionAlpha > 0) {
+      S.transitionAlpha = Math.max(0, S.transitionAlpha - dt * 2.5);
+    }
+    updateParticles(dt);
 
     if (S.phase === 'title') {
       if (justPressed.has('Enter') || justPressed.has('Space')) {
-        loadLevel(0);
+        loadLevel(0, false);
       }
       justPressed.clear();
       return;
@@ -534,8 +889,8 @@
 
     if (S.phase === 'caught') {
       S.caughtTimer += dt;
-      if (S.caughtTimer >= 0.85 || justPressed.has('KeyR') || justPressed.has('Enter')) {
-        loadLevel(S.levelIdx);
+      if (S.caughtTimer >= 0.72 || justPressed.has('KeyR') || justPressed.has('Space') || justPressed.has('Enter')) {
+        loadLevel(S.levelIdx, false);
       }
       justPressed.clear();
       return;
@@ -543,178 +898,469 @@
 
     if (S.phase === 'end') {
       S.endTimer += dt;
+      if (!S.cageSlamDone && S.endTimer >= 0.22) {
+        S.cageSlamDone = true;
+        sfxCageDrop();
+        emitSparks(W * 0.5 - 210, 468, 14, false);
+        emitSparks(W * 0.5 + 210, 468, 14, false);
+      }
+      if (!S.keyDropDone && S.endTimer >= 0.95) {
+        S.keyDropDone = true;
+        sfxKey();
+        emitSparks(W * 0.5 + 125, 385, 10, true);
+      }
       if (justPressed.has('KeyR') || justPressed.has('Enter')) {
         S.cluesTotal = 0;
-        loadLevel(0);
+        loadLevel(0, true);
       }
       justPressed.clear();
       return;
     }
 
-    // Active level gameplay (l1..l4)
+    // Active room gameplay (l1..l4)
     const lv = LEVELS[S.levelIdx];
+    S.levelTime += dt;
+
     if (justPressed.has('KeyR')) {
-      loadLevel(S.levelIdx);
+      loadLevel(S.levelIdx, false);
       justPressed.clear();
       return;
     }
 
-    // Tense heartbeat pulse in later levels
+    if (S.camLockTimer > 0) S.camLockTimer = Math.max(0, S.camLockTimer - dt);
+
+    // Tense heartbeat pulse rising with resolution
     S.beatTimer += dt;
-    if (S.beatTimer >= (S.levelIdx >= 2 ? 0.72 : 1.1)) {
+    const beatInterval = S.levelIdx >= 2 ? 0.74 : 1.12;
+    if (S.beatTimer >= beatInterval) {
       S.beatTimer = 0;
-      sfxHeartbeat();
+      sfxHeartbeat(S.levelIdx >= 2);
     }
 
-    // Update looming human scientist hand shadow on l3 & l4
+    // Scientist Hand Shadow cycle: readable Anticipation Penumbra -> Low Palm Sweep
     if (lv.hand) {
       const h = lv.hand;
-      S.handX = h.baseX + Math.sin(S.t * h.speed) * h.ampX;
-      S.handY = h.reachY + Math.sin(S.t * h.speed * 1.7) * 48;
-      S.handFrame = Math.floor((S.t * 4.5) % HAND_RECTS.length);
+      const cyc = ((S.levelTime + h.phaseOffset) / h.period) % 1;
+      S.handX = h.baseX + Math.sin((S.levelTime + h.phaseOffset) * (Math.PI * 2 / h.period)) * h.ampX;
+      const minD = h.alwaysLooming ? 0.56 : 0.22;
+      let depth = minD;
+      if (cyc < 0.48) {
+        depth = minD + (0.66 - minD) * (cyc / 0.48);
+        S.whooshPlayed = false;
+      } else if (cyc < 0.84) {
+        const u = (cyc - 0.48) / 0.36;
+        depth = 0.66 + 0.34 * Math.sin(u * Math.PI);
+        if (!S.whooshPlayed && depth > 0.74) {
+          S.whooshPlayed = true;
+          sfxShadowWhoosh();
+        }
+      } else {
+        depth = minD + (0.66 - minD) * (1 - (cyc - 0.84) / 0.16);
+      }
+      S.handDepth = Math.max(minD, Math.min(1, depth));
+      S.handY = h.reachY + S.handDepth * 64;
+      // Use open spread hand frames (0..2) so all 5 fingers cast distinct shadows like study/f_027.jpg!
+      S.handFrame = S.handDepth > 0.86 ? 3 : (S.handDepth > 0.68 ? 2 : 1);
     }
 
-    // Door unlocking spark sequence on Level 4 (matches sheet.jpg frames 30-38!)
+    // Hinged door unlocking & golden-amber light spill sequence on Level 4 (matches study/f_036 & f_040!)
     if (S.unlocking) {
-      S.doorOpenAnim += dt * 1.35;
-      if (rand() < 0.55 && S.doorOpenAnim < 0.65) {
-        emitSparks(lv.exitRect.x + 12, lv.exitRect.y + lv.exitRect.h * 0.5, 4);
+      S.doorOpenAnim += dt * 0.78;
+      if (S.doorOpenAnim < 0.48 && rand() < 0.68) {
+        emitSparks(lv.exitRect.x + 14, lv.exitRect.y + lv.exitRect.h * 0.54, 5, true);
       }
-      // Gently pull rat into open amber doorway
-      const tx = lv.exitRect.x + lv.exitRect.w * 0.52;
-      const ty = lv.exitRect.y + lv.exitRect.h * 0.58;
-      S.x += (tx - S.x) * Math.min(1, dt * 4.5);
-      S.y += (ty - S.y) * Math.min(1, dt * 4.5);
-      if (S.doorOpenAnim >= 1.0) {
-        if (S.levelIdx < LEVELS.length - 1) {
-          loadLevel(S.levelIdx + 1);
-        } else {
-          S.phase = 'end';
-          S.endTimer = 0;
-          sfxUnlock();
-        }
+      // Scurry Subject 47 smoothly across the open threshold into the warm golden glow
+      const tx = lv.exitRect.x + lv.exitRect.w * 0.48;
+      const ty = lv.exitRect.y + lv.exitRect.h * 0.54;
+      S.x += (tx - S.x) * Math.min(1, dt * 3.8);
+      S.y += (ty - S.y) * Math.min(1, dt * 3.8);
+      const ta = Math.atan2(ty - S.y, tx - S.x);
+      if (Math.hypot(tx - S.x, ty - S.y) > 6) S.angle = ta;
+
+      if (S.doorOpenAnim >= 1.08) {
+        S.phase = 'end';
+        S.endTimer = 0;
+        S.cageSlamDone = false;
+        S.keyDropDone = false;
       }
       justPressed.clear();
       return;
     }
 
-    const ix = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
-    const iy = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
-    S.sneaking = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('Space');
+    // Dash-scurry burst cooldown & trigger (Space / Shift tap)
+    if (S.dashCooldown > 0) S.dashCooldown = Math.max(0, S.dashCooldown - dt);
+    if (S.dashTimer > 0) S.dashTimer = Math.max(0, S.dashTimer - dt);
+
+    const dashTriggered = justPressed.has('Space') || justPressed.has('ShiftLeft') || justPressed.has('ShiftRight');
+    if (dashTriggered && S.dashCooldown <= 0) {
+      S.dashTimer = 0.21;
+      S.dashCooldown = 0.50;
+      sfxDash();
+      emitDust(S.x, S.y, S.angle + Math.PI, 6);
+    }
+
+    // Keyboard vector or Click-to-scurry pointer vector
+    let ix = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+    let iy = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+
+    if (ix !== 0 || iy !== 0) {
+      pointerTarget = null;
+    } else if (pointerTarget) {
+      const pdx = pointerTarget.x - S.x;
+      const pdy = pointerTarget.y - S.y;
+      const pdist = Math.hypot(pdx, pdy);
+      if (pdist < 14) {
+        pointerTarget = null;
+      } else {
+        ix = pdx / pdist;
+        iy = pdy / pdist;
+      }
+    }
+
+    S.sneaking = (keys.has('ShiftLeft') || keys.has('ShiftRight')) && S.dashTimer <= 0;
+
+    // If dashing with zero directional input, burst forward along current snout facing
+    if (S.dashTimer > 0 && ix === 0 && iy === 0) {
+      ix = Math.cos(S.angle);
+      iy = Math.sin(S.angle);
+    }
 
     const mag = Math.hypot(ix, iy) || 1;
-    const baseSpeed = S.sneaking ? 210 : 305;
-    const targetVx = ix ? (ix / mag) * baseSpeed : 0;
-    const targetVy = iy ? (iy / mag) * baseSpeed : 0;
+    const topSpeed = S.dashTimer > 0 ? 485 : (S.sneaking ? 225 : 325);
+    const targetVx = (ix !== 0 || iy !== 0) ? (ix / mag) * topSpeed : 0;
+    const targetVy = (ix !== 0 || iy !== 0) ? (iy / mag) * topSpeed : 0;
 
-    S.vx += (targetVx - S.vx) * Math.min(1, dt * 14);
-    S.vy += (targetVy - S.vy) * Math.min(1, dt * 14);
+    const accel = S.dashTimer > 0 ? 22 : 15;
+    S.vx += (targetVx - S.vx) * Math.min(1, dt * accel);
+    S.vy += (targetVy - S.vy) * Math.min(1, dt * accel);
 
-    moveWithWalls(lv, S.vx * dt, S.vy * dt);
+    S.x += S.vx * dt;
+    S.y += S.vy * dt;
+    resolveWallCollisions(lv, 17);
 
     const speed = Math.hypot(S.vx, S.vy);
-    if (speed > 18) {
+    if (speed > 16) {
       const targetAngle = Math.atan2(S.vy, S.vx);
       let diff = targetAngle - S.angle;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      S.angle += diff * Math.min(1, dt * 14);
+      S.angle += diff * Math.min(1, dt * 16);
 
-      S.skitterTimer += dt * (speed / 220);
-      if (S.skitterTimer >= 0.14) {
+      S.skitterTimer += dt * (speed / 210);
+      if (S.skitterTimer >= 0.13) {
         S.skitterTimer = 0;
-        sfxSkitter();
+        sfxSkitter(S.dashTimer > 0);
+        if (S.dashTimer > 0) emitDust(S.x, S.y, S.angle + Math.PI, 2);
       }
     }
 
-    // Collect key
+    // Check spatial workbench cover props
+    S.inCover = false;
+    S.activeCover = null;
+    for (const cov of lv.covers) {
+      if (Math.hypot(S.x - cov.x, S.y - cov.y) <= cov.r) {
+        S.inCover = true;
+        S.activeCover = cov;
+        break;
+      }
+    }
+
+    // Collect gleaming hollow-ring key
     if (!S.hasKey) {
-      const dk = Math.hypot(S.x - lv.keyPos.x, S.y - lv.keyPos.y);
-      if (dk < 46) {
+      if (Math.hypot(S.x - lv.keyPos.x, S.y - lv.keyPos.y) < 48) {
         S.hasKey = true;
+        S.hitStop = 0.028;
         sfxKey();
-        emitSparks(lv.keyPos.x, lv.keyPos.y, 12);
+        emitSparks(lv.keyPos.x, lv.keyPos.y, 14, true);
       }
     }
 
-    // Discover planted observation clue (1 per level!)
+    // Diegetic observation anomaly check -> security camera locks onto Subject 47 & logs door LED pip
     if (!S.clueSeen) {
-      const dc = Math.hypot(S.x - lv.clue.x, S.y - lv.clue.y);
-      if (dc < 95) {
+      if (Math.hypot(S.x - lv.cluePos.x, S.y - lv.cluePos.y) < 105) {
         S.clueSeen = true;
+        S.camLockTimer = 0.85;
         S.cluesTotal = Math.max(S.cluesTotal, S.levelIdx + 1);
+        sfxCamClick();
       }
     }
 
-    // Check cheese trap collisions
+    // Baited cheese trap collision
     for (const tr of lv.traps) {
       if (Math.hypot(S.x - tr.x, S.y - tr.y) < tr.r) {
         tr.sprung = true;
-        triggerCaught('SPRUNG BY BAITED TRAP');
+        emitSparks(tr.x, tr.y, 12, false);
+        triggerCaught('trap');
         return;
       }
     }
 
-    // Check syringe needle collisions
+    // Lab syringe needle collision
     for (const sy of lv.syringes) {
-      if (Math.abs(S.x - sy.x) < sy.w * 0.42 && Math.abs(S.y - sy.y) < sy.h * 0.7) {
-        triggerCaught('PRICKED BY LAB NEEDLE');
+      if (Math.abs(S.x - sy.x) < sy.w * 0.40 && Math.abs(S.y - sy.y) < sy.h * 0.65) {
+        triggerCaught('needle');
         return;
       }
     }
 
-    // Check sweeping human hand shadow palm collision (sneaking lowers profile)
-    if (lv.hand && !S.sneaking) {
-      const palmY = S.handY + 55;
+    // Sweeping researcher hand shadow collision (cover props, Shift stalk, or active dash-burst slips underneath!)
+    const lowProfile = S.inCover || keys.has('ShiftLeft') || keys.has('ShiftRight') || S.dashTimer > 0;
+    if (lv.hand && S.handDepth > 0.74 && !lowProfile) {
+      const palmY = S.handY + 54;
       if (Math.hypot(S.x - S.handX, S.y - palmY) < lv.hand.dangerR) {
-        triggerCaught('SNATCHED BY RESEARCHER HAND');
+        S.handFrame = HAND_RECTS.length - 1;
+        triggerCaught('hand');
         return;
       }
     }
 
-    // Check exit gate / doorway with key
-    if (S.hasKey && circleRectCollide(S.x, S.y, 26, lv.exitRect)) {
+    // Exit latch / doorway unlock with key
+    if (S.hasKey && circleRectCollide(S.x, S.y, 28, lv.exitRect)) {
       sfxUnlock();
-      emitSparks(lv.exitRect.x + 16, lv.exitRect.y + lv.exitRect.h * 0.5, 22);
-      if (S.levelIdx === 3) {
-        // Dramatic sparking amber doorway opening on Level 4!
+      S.cluesTotal = Math.max(S.cluesTotal, S.levelIdx + 1);
+      emitSparks(lv.exitRect.x + 14, lv.exitRect.y + lv.exitRect.h * 0.5, 26, true);
+      if (S.levelIdx === LEVELS.length - 1) {
+        S.hitStop = 0.045;
         S.unlocking = true;
-        S.doorOpenAnim = 0.05;
+        S.doorOpenAnim = 0.04;
       } else {
-        loadLevel(S.levelIdx + 1);
+        loadLevel(S.levelIdx + 1, true);
       }
     }
 
     justPressed.clear();
   }
 
-  // --- World Rendering onto Pixel-Escalated Buffer ---
-  function drawWireCage(g, x, y, w, h, doorOpen) {
+  // --- Spatial World Rendering ---
+  function drawExtrudedWireCage(g, r, gateOpen) {
     g.save();
-    g.fillStyle = 'rgba(38, 12, 12, 0.72)';
-    g.fillRect(x, y, w, h);
-    g.strokeStyle = '#d16b60';
-    g.lineWidth = 3;
-    g.strokeRect(x, y, w, h);
+    const depth = 12;
+    // 3D top/left extrusion matching study/f_001.jpg
+    g.fillStyle = 'rgba(26, 6, 6, 0.78)';
+    g.fillRect(r.x, r.y, r.w, r.h);
 
-    // Wire mesh grid matching study/sheet.jpg top-left frames!
-    g.strokeStyle = 'rgba(255, 138, 122, 0.58)';
+    g.strokeStyle = 'rgba(165, 68, 60, 0.65)';
     g.lineWidth = 2;
-    for (let gx = x + 18; gx < x + w; gx += 18) {
+    g.strokeRect(r.x + depth, r.y - depth, r.w, r.h);
+
+    // Wire mesh grid
+    g.strokeStyle = '#e88378';
+    g.lineWidth = 2.2;
+    for (let gx = r.x + 16; gx < r.x + r.w; gx += 17) {
       g.beginPath();
-      g.moveTo(gx, y);
-      g.lineTo(gx, y + h);
+      g.moveTo(gx, r.y);
+      g.lineTo(gx, r.y + r.h);
       g.stroke();
     }
-    for (let gy = y + 18; gy < y + h; gy += 18) {
+    for (let gy = r.y + 16; gy < r.y + r.h; gy += 17) {
       g.beginPath();
-      g.moveTo(x, gy);
-      g.lineTo(x + w, gy);
+      g.moveTo(r.x, gy);
+      g.lineTo(r.x + r.w, gy);
       g.stroke();
     }
-    if (doorOpen) {
-      g.fillStyle = PAL.deepBg;
-      g.fillRect(x + w - 8, y + 24, 14, h - 48);
+    g.strokeStyle = '#ffa69b';
+    g.lineWidth = 3;
+    g.strokeRect(r.x, r.y, r.w, r.h);
+
+    if (gateOpen) {
+      // Open right gate gap + swung wire door leaf
+      g.fillStyle = '#180605';
+      g.fillRect(r.x + r.w - 5, r.y + 24, 10, r.h - 48);
+      g.strokeStyle = '#ffa69b';
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.moveTo(r.x + r.w, r.y + 24);
+      g.lineTo(r.x + r.w + 22, r.y + 10);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  function drawDiegeticDoorAndLEDs(g, lv) {
+    const ex = lv.exitRect;
+    g.save();
+
+    if (lv.isHumanRoom) {
+      const open = Math.min(1, S.doorOpenAnim);
+      // Warm golden-amber laboratory room revealed behind swinging steel door (exact match to study/f_036 & f_040!)
+      if (open > 0.01) {
+        // Warm floor spill radial glow across cold surgical tiles
+        const spill = g.createRadialGradient(
+          ex.x + ex.w * 0.45, ex.y + ex.h * 0.55, 8,
+          ex.x + ex.w * 0.45, ex.y + ex.h * 0.55, 290
+        );
+        spill.addColorStop(0, `rgba(255, 234, 176, ${0.88 * open})`);
+        spill.addColorStop(0.45, `rgba(242, 186, 104, ${0.42 * open})`);
+        spill.addColorStop(1, 'rgba(220, 145, 65, 0)');
+        g.fillStyle = spill;
+        g.fillRect(ex.x - 210, ex.y - 160, ex.w + 360, ex.h + 320);
+
+        // Recessed warm lab interior inside doorway
+        g.save();
+        g.beginPath();
+        g.rect(ex.x + 6, ex.y + 6, ex.w - 12, ex.h - 12);
+        g.clip();
+
+        const roomGrad = g.createLinearGradient(ex.x, ex.y, ex.x, ex.y + ex.h);
+        roomGrad.addColorStop(0, '#f4dba4');
+        roomGrad.addColorStop(0.68, '#d9b173');
+        roomGrad.addColorStop(1, '#8c6d46');
+        g.fillStyle = roomGrad;
+        g.fillRect(ex.x, ex.y, ex.w, ex.h);
+
+        // Soft out-of-focus distant lab benches & Erlenmeyer flasks (matching study/f_040.jpg!)
+        g.fillStyle = 'rgba(110, 84, 52, 0.45)';
+        g.fillRect(ex.x + 8, ex.y + 88, 52, 6);
+        g.fillRect(ex.x + 16, ex.y + 94, 8, 52);
+        g.fillRect(ex.x + ex.w - 58, ex.y + 88, 52, 6);
+        g.fillRect(ex.x + ex.w - 28, ex.y + 94, 8, 52);
+        // Glass flask silhouettes
+        g.fillStyle = 'rgba(255, 248, 224, 0.65)';
+        g.beginPath();
+        g.moveTo(ex.x + 28, ex.y + 62);
+        g.lineTo(ex.x + 18, ex.y + 88);
+        g.lineTo(ex.x + 42, ex.y + 88);
+        g.closePath();
+        g.fill();
+        g.beginPath();
+        g.moveTo(ex.x + ex.w - 34, ex.y + 64);
+        g.lineTo(ex.x + ex.w - 44, ex.y + 88);
+        g.lineTo(ex.x + ex.w - 22, ex.y + 88);
+        g.closePath();
+        g.fill();
+        g.restore();
+
+        // Steel doorframe & swinging door leaf ONLY once door begins opening (matches study/f_027 -> f_040!)
+        g.strokeStyle = '#526066';
+        g.lineWidth = 4;
+        g.strokeRect(ex.x, ex.y, ex.w, ex.h);
+
+        const leafW = Math.max(18, (ex.w - 8) * (1 - open * 0.84));
+        const leafSkew = open * 18;
+        g.fillStyle = '#39454a';
+        g.beginPath();
+        g.moveTo(ex.x + 4, ex.y + 4);
+        g.lineTo(ex.x + 4 + leafW, ex.y + 4 - leafSkew);
+        g.lineTo(ex.x + 4 + leafW, ex.y + ex.h - 4 + leafSkew);
+        g.lineTo(ex.x + 4, ex.y + ex.h - 4);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = '#78888f';
+        g.lineWidth = 2;
+        g.stroke();
+        g.strokeStyle = '#9aaab0';
+        g.lineWidth = 3;
+        g.strokeRect(ex.x + leafW - 14, ex.y + ex.h * 0.46, 7, 32);
+      } else {
+        // Flush steel partition jamb & hinged seam matching study/f_027.jpg (zero grey box covering floor tiles!)
+        g.fillStyle = '#252e32';
+        g.fillRect(ex.x + 18, ex.y, 12, ex.h);
+        g.strokeStyle = '#4e5d63';
+        g.lineWidth = 2;
+        g.strokeRect(ex.x + 18, ex.y, 12, ex.h);
+      }
+
+      // Brass keyhole escutcheon latch mounted right beside partition seam (exact match to study/f_027.jpg!)
+      const kx = open > 0.01 ? (ex.x + ex.w + 8) : (ex.x + 30);
+      const ky = ex.y + ex.h * 0.56;
+      g.fillStyle = '#5e5543';
+      g.fillRect(kx, ky - 19, 24, 38);
+      g.strokeStyle = S.hasKey ? '#ffe09c' : '#8a7e68';
+      g.lineWidth = 1.8;
+      g.strokeRect(kx, ky - 19, 24, 38);
+      g.fillStyle = '#111314';
+      g.beginPath();
+      g.arc(kx + 12, ky - 5, 4.5, 0, Math.PI * 2);
+      g.fill();
+      g.fillRect(kx + 9.5, ky - 3, 5, 12);
+    } else {
+      // Sleek recessed dark bulkhead grate (no bright neon rectangle border)
+      g.fillStyle = lv.redStyle ? 'rgba(28, 7, 6, 0.86)' : 'rgba(24, 31, 34, 0.86)';
+      g.fillRect(ex.x, ex.y, ex.w, ex.h);
+      g.strokeStyle = S.hasKey ? 'rgba(255, 195, 145, 0.62)' : 'rgba(130, 62, 56, 0.45)';
+      g.lineWidth = 2;
+      g.strokeRect(ex.x, ex.y, ex.w, ex.h);
+
+      g.strokeStyle = lv.redStyle ? 'rgba(255, 106, 90, 0.28)' : 'rgba(120, 140, 148, 0.28)';
+      g.lineWidth = 2;
+      for (let ly = ex.y + 16; ly < ex.y + ex.h - 12; ly += 13) {
+        g.beginPath();
+        g.moveTo(ex.x + 8, ly);
+        g.lineTo(ex.x + ex.w - 8, ly);
+        g.stroke();
+      }
+      g.fillStyle = '#0c0404';
+      g.fillRect(ex.x + 8, ex.y + ex.h * 0.5 - 7, 9, 14);
+    }
+
+    // 4 Diegetic Hardware Telemetry LEDs mounted directly above the door latch (replaces HUD clue/level text!)
+    const ledBaseX = ex.x + 10;
+    const ledY = ex.y - 11;
+    for (let i = 0; i < 4; i++) {
+      const lx = ledBaseX + i * 14;
+      const lit = i < S.cluesTotal || i < S.levelIdx;
+      const activeRoom = i === S.levelIdx;
+      g.fillStyle = '#111517';
+      g.fillRect(lx - 4, ledY - 4, 8, 8);
+      if (lit) {
+        g.fillStyle = '#ff6a5a';
+        g.shadowColor = '#ff4b3a';
+        g.shadowBlur = 6;
+      } else if (activeRoom && S.hasKey) {
+        const p = 0.55 + 0.45 * Math.sin(S.t * 8);
+        g.fillStyle = `rgba(255, 208, 120, ${p})`;
+        g.shadowColor = '#ffd078';
+        g.shadowBlur = 7;
+      } else {
+        g.fillStyle = 'rgba(120, 42, 38, 0.45)';
+        g.shadowBlur = 0;
+      }
+      g.beginPath();
+      g.arc(lx, ledY, 2.8, 0, Math.PI * 2);
+      g.fill();
+      g.shadowBlur = 0;
+    }
+    g.restore();
+  }
+
+  function drawDiegeticSecurityCam(g, lv) {
+    const cp = lv.camPos;
+    g.save();
+    // Subtle rotating IR scan cone (snaps onto rat when observation anomaly triggered!)
+    const scanAngle = S.camLockTimer > 0
+      ? Math.atan2(S.y - cp.y, S.x - cp.x)
+      : Math.sin(S.t * 1.4 + S.levelIdx) * 1.15 + Math.PI * 0.75;
+
+    const coneLen = S.camLockTimer > 0 ? Math.hypot(S.x - cp.x, S.y - cp.y) + 24 : 165;
+    const coneGrad = g.createRadialGradient(cp.x, cp.y, 4, cp.x, cp.y, coneLen);
+    const coneAlpha = S.camLockTimer > 0 ? 0.26 : 0.11;
+    coneGrad.addColorStop(0, `rgba(255, 68, 56, ${coneAlpha})`);
+    coneGrad.addColorStop(1, 'rgba(255, 68, 56, 0)');
+    g.fillStyle = coneGrad;
+    g.beginPath();
+    g.moveTo(cp.x, cp.y);
+    g.arc(cp.x, cp.y, coneLen, scanAngle - 0.26, scanAngle + 0.26);
+    g.closePath();
+    g.fill();
+
+    // Diegetic optical lens glint right on the painted camera dome
+    const blink = S.camLockTimer > 0 ? (Math.sin(S.t * 28) > 0 ? 1 : 0.35) : (0.55 + 0.45 * Math.sin(S.t * 4.2));
+    g.fillStyle = `rgba(255, 72, 58, ${0.45 + 0.5 * blink})`;
+    g.shadowColor = '#ff3b2f';
+    g.shadowBlur = 10;
+    g.beginPath();
+    g.arc(cp.x, cp.y, 5.2, 0, Math.PI * 2);
+    g.fill();
+
+    // Brief optical lock ring around Subject 47 when camera logs observation clue in-world
+    if (S.camLockTimer > 0) {
+      g.shadowBlur = 0;
+      g.strokeStyle = `rgba(255, 106, 90, ${Math.min(1, S.camLockTimer * 1.2) * 0.65})`;
+      g.lineWidth = 1.6;
+      const r = 28 + (1 - S.camLockTimer) * 8;
+      g.beginPath();
+      g.arc(S.x, S.y, r, 0, Math.PI * 2);
+      g.stroke();
     }
     g.restore();
   }
@@ -722,313 +1368,389 @@
   function drawLevelScene(g) {
     const lv = LEVELS[S.levelIdx] || LEVELS[0];
 
-    // Base crimson-black ground (#170704 / #1a0606)
-    g.fillStyle = lv.redStyle ? '#170704' : '#13181a';
+    // 1. Full-bleed pre-graded Nano Banana level background
+    g.fillStyle = lv.redStyle ? PAL.bg : PAL.slate;
     g.fillRect(0, 0, W, H);
-
-    // Draw quadrant from Nano Banana 4_level_backgrounds_one_per_member.png
-    if (loaded.bgs) {
+    if (gradedBgs[lv.bgIdx]) {
+      g.drawImage(gradedBgs[lv.bgIdx], 0, 0, W, H);
+    } else if (loaded.bgs) {
       const q = BG_QUADS[lv.bgIdx];
+      g.drawImage(imgs.bgs, q.x, q.y, q.w, q.h, 0, 0, W, H);
+    }
+
+    // 2. Extruded 8-bit/16-bit wire cage on L1 & L2 (matches study/f_001.jpg!)
+    if (lv.cageRect) {
+      drawExtrudedWireCage(g, lv.cageRect, S.levelIdx > 0 || S.hasKey || S.x > lv.cageRect.x + lv.cageRect.w - 10);
+    }
+
+    // 3. Subtle spatial shelter cue on workbench cover props ONLY when nearby/inside (Law 4 & 5)
+    for (const cov of lv.covers) {
+      const d = Math.hypot(S.x - cov.x, S.y - cov.y);
+      if (d < cov.r + 75) {
+        const active = S.activeCover === cov;
+        g.save();
+        g.strokeStyle = active
+          ? 'rgba(255, 214, 207, 0.34)'
+          : 'rgba(255, 160, 148, 0.14)';
+        g.setLineDash([6, 6]);
+        g.lineWidth = active ? 2 : 1.2;
+        g.beginPath();
+        g.arc(cov.x, cov.y, cov.r - 4, 0, Math.PI * 2);
+        g.stroke();
+        g.restore();
+      }
+    }
+
+    // 4. Click-to-scurry acoustic claw ripple in world space
+    for (const rp of ripples) {
+      const u = 1 - rp.life / rp.maxLife;
       g.save();
-      g.globalAlpha = lv.bgAlpha;
-      g.drawImage(imgs.bgs, q.x, q.y, q.w, q.h, 48, 50, W - 96, H - 100);
+      g.strokeStyle = `rgba(255, 214, 207, ${(1 - u) * 0.45})`;
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.arc(rp.x, rp.y, 6 + u * 22, 0, Math.PI * 2);
+      g.stroke();
       g.restore();
-
-      if (!lv.redStyle) {
-        // Harmonize dark surgical steel tint to match study/sheet.jpg rows 2-4
-        g.fillStyle = 'rgba(16, 22, 24, 0.34)';
-        g.fillRect(0, 0, W, H);
-      }
     }
 
-    // Wire cage in bottom-left on Levels 1 & 2 (exact visual anchor from sheet.jpg row 1!)
-    if (S.levelIdx <= 1) {
-      drawWireCage(g, 68, 496, 156, 126, S.levelIdx === 1 || S.hasKey);
-    }
+    // 5. Diegetic Door / Bulkhead & 4 Hardware Lock LEDs
+    drawDiegeticDoorAndLEDs(g, lv);
 
-    // Observation camera clue marker (1 subtle clue per level!)
-    g.save();
-    const pulse = 0.55 + 0.45 * Math.sin(S.t * 5);
-    g.fillStyle = `rgba(255, 90, 75, ${0.35 + 0.45 * pulse})`;
-    g.beginPath();
-    g.arc(lv.clue.x, lv.clue.y, 7, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = 'rgba(255, 214, 207, 0.45)';
-    g.lineWidth = 1.5;
-    g.strokeRect(lv.clue.x - 14, lv.clue.y - 14, 28, 28);
-    g.restore();
+    // 6. Diegetic Security Camera Dome & IR Scan Cone
+    drawDiegeticSecurityCam(g, lv);
 
-    // Arena & Maze Walls
-    const allWalls = ARENA_WALLS.concat(lv.walls);
-    g.save();
-    for (const w of allWalls) {
-      if (lv.redStyle) {
-        // Glowing crimson monochrome maze bars (#ff6a5a) matching m2_main_ref.png & sheet.jpg!
-        g.shadowColor = '#ff4b3a';
-        g.shadowBlur = 10;
-        g.fillStyle = PAL.fg;
-        g.fillRect(w.x, w.y, w.w, w.h);
-      } else {
-        // High-res stainless surgical partition dividers
-        g.fillStyle = '#364145';
-        g.fillRect(w.x, w.y, w.w, w.h);
-        g.strokeStyle = '#6c7a80';
-        g.lineWidth = 2;
-        g.strokeRect(w.x, w.y, w.w, w.h);
-      }
-    }
-    g.restore();
-
-    // Exit Gate / Doorway
-    const ex = lv.exitRect;
-    g.save();
-    if (lv.isHumanRoom) {
-      // Heavy metal lab door on right that opens into warm golden-amber light (sheet.jpg row 4!)
-      const open = S.doorOpenAnim;
-      if (open > 0.02) {
-        const spill = g.createRadialGradient(
-          ex.x + ex.w * 0.5, ex.y + ex.h * 0.5, 10,
-          ex.x + ex.w * 0.5, ex.y + ex.h * 0.5, 240
-        );
-        spill.addColorStop(0, `rgba(255, 236, 178, ${0.95 * open})`);
-        spill.addColorStop(0.45, `rgba(255, 198, 112, ${0.55 * open})`);
-        spill.addColorStop(1, 'rgba(255, 170, 80, 0)');
-        g.fillStyle = spill;
-        g.fillRect(ex.x - 150, ex.y - 120, ex.w + 260, ex.h + 240);
-
-        // Warm lit interior room behind open door
-        g.fillStyle = '#f8dea2';
-        g.fillRect(ex.x + 8, ex.y + 8, ex.w - 16, ex.h - 16);
-      } else {
-        g.fillStyle = '#242c2e';
-        g.fillRect(ex.x, ex.y, ex.w, ex.h);
-      }
-      g.strokeStyle = S.hasKey ? PAL.acc : '#5c686b';
-      g.lineWidth = 4;
-      g.strokeRect(ex.x, ex.y, ex.w, ex.h);
-      // Keyhole plate
-      g.fillStyle = '#111617';
-      g.fillRect(ex.x + 10, ex.y + ex.h * 0.5 - 12, 16, 24);
-    } else {
-      g.fillStyle = S.hasKey ? 'rgba(255, 106, 90, 0.24)' : 'rgba(90, 30, 28, 0.28)';
-      g.fillRect(ex.x, ex.y, ex.w, ex.h);
-      g.strokeStyle = S.hasKey ? PAL.acc : PAL.fg;
-      g.setLineDash(S.hasKey ? [] : [8, 6]);
-      g.lineWidth = 3;
-      g.strokeRect(ex.x, ex.y, ex.w, ex.h);
-    }
-    g.restore();
-
-    // Draw Cheese Traps & Syringe Needles from key_cheese_trap_needles.png
+    // 7. Cleaned Cheese Traps & Lab Syringe Needles (zero grey islands!)
     if (loaded.props) {
       for (const tr of lv.traps) {
         const rect = tr.sprung ? PROP_RECTS.trapSprung : PROP_RECTS.trapArmed;
-        const dw = 92, dh = 62;
+        const dw = 84, dh = 56;
+        g.save();
+        g.fillStyle = 'rgba(0, 0, 0, 0.42)';
+        g.beginPath();
+        g.ellipse(tr.x, tr.y + 8, dw * 0.42, dh * 0.32, 0, 0, Math.PI * 2);
+        g.fill();
         g.drawImage(imgs.props, rect.x, rect.y, rect.w, rect.h, tr.x - dw / 2, tr.y - dh / 2, dw, dh);
+        g.restore();
       }
       for (const sy of lv.syringes) {
         const rect = PROP_RECTS.syringe;
         g.save();
         g.translate(sy.x, sy.y);
         g.rotate(sy.angle || 0);
+        g.fillStyle = 'rgba(0, 0, 0, 0.38)';
+        g.fillRect(-sy.w * 0.44, 4, sy.w * 0.88, sy.h * 0.32);
         g.drawImage(imgs.props, rect.x, rect.y, rect.w, rect.h, -sy.w / 2, -sy.h / 2, sy.w, sy.h);
         g.restore();
       }
     }
 
-    // Draw Key on floor (or carried in rat's mouth once picked up!)
+    // 8. Gleaming Hollow-Ring Brass Key on floor (before pickup)
     if (!S.hasKey) {
       const kp = lv.keyPos;
+      const bob = Math.sin(S.t * 4.4) * 2.5;
       g.save();
-      const bob = Math.sin(S.t * 4.5) * 3;
-      g.shadowColor = '#ffd6cf';
-      g.shadowBlur = 14;
+      const kGlow = g.createRadialGradient(kp.x, kp.y, 2, kp.x, kp.y, 44);
+      kGlow.addColorStop(0, 'rgba(255, 224, 178, 0.36)');
+      kGlow.addColorStop(1, 'rgba(255, 190, 120, 0)');
+      g.fillStyle = kGlow;
+      g.beginPath();
+      g.arc(kp.x, kp.y, 44, 0, Math.PI * 2);
+      g.fill();
+
       if (loaded.props) {
         const kr = PROP_RECTS.key;
-        g.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, kp.x - 34, kp.y - 14 + bob, 68, 28);
-      } else {
-        g.fillStyle = PAL.acc;
-        g.fillRect(kp.x - 16, kp.y - 6, 32, 12);
+        g.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, kp.x - 31, kp.y - 13 + bob, 62, 25);
       }
       g.restore();
     }
 
-    // Draw the Lab Rat at the current level's exact resolution sprite!
+    // 9. Paw scurry dust motes
+    for (const d of dusts) {
+      const a = (d.life / d.maxLife) * 0.42;
+      g.fillStyle = lv.redStyle ? `rgba(255, 182, 168, ${a})` : `rgba(210, 222, 226, ${a})`;
+      g.beginPath();
+      g.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    // 10. Subject 47 (White-Pink Lab Rat at room's exact resolution sprite!)
     g.save();
     g.translate(S.x, S.y);
     const speed = Math.hypot(S.vx, S.vy);
-    const wiggle = speed > 20 ? Math.sin(S.t * 18) * 0.08 : 0;
-    // Rat sprites in sheet face UP (-Y), so add PI/2 to align snout with movement angle
-    g.rotate(S.angle + Math.PI / 2 + wiggle);
-    const scaleCrouch = (S.sneaking ? 0.88 : 1.0) * (lv.ratScale || 1.0);
-    g.scale(scaleCrouch, scaleCrouch);
+    const gaitWiggle = speed > 18 ? Math.sin(S.t * (S.dashTimer > 0 ? 28 : 19)) * 0.075 : 0;
 
-    // Soft shadow beneath rat
-    g.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    // Warm forward light cone cast by gleaming key held in mouth on dark rooms (matches study/f_001..f_009!)
+    if (S.hasKey) {
+      g.save();
+      g.rotate(S.angle);
+      const cone = g.createRadialGradient(24, 0, 4, 24, 0, 135);
+      cone.addColorStop(0, lv.redStyle ? 'rgba(255, 195, 170, 0.20)' : 'rgba(255, 232, 190, 0.14)');
+      cone.addColorStop(1, 'rgba(255, 180, 150, 0)');
+      g.fillStyle = cone;
+      g.beginPath();
+      g.moveTo(12, 0);
+      g.arc(12, 0, 135, -0.45, 0.45);
+      g.closePath();
+      g.fill();
+      g.restore();
+    }
+
+    // Rat sprites in sheet face UP (-Y); +PI/2 aligns snout with S.angle
+    g.rotate(S.angle + Math.PI / 2 + gaitWiggle);
+    const crouchScale = (S.dashTimer > 0 ? 1.08 : (S.sneaking || S.inCover ? 0.90 : 1.0)) * (lv.ratScale || 1.0);
+    const stretchY = S.dashTimer > 0 ? 1.14 : 1.0;
+    g.scale(crouchScale, crouchScale * stretchY);
+
+    // Natural soft contact shadow beneath rat on workbench tiles
+    g.fillStyle = 'rgba(0, 0, 0, 0.52)';
     g.beginPath();
-    g.ellipse(4, 6, 22, 42, 0, 0, Math.PI * 2);
+    g.ellipse(4, 7, 21, 40, 0, 0, Math.PI * 2);
     g.fill();
 
     if (loaded.rats) {
       const rr = RAT_RECTS[lv.ratIdx];
-      const rw = 54, rh = 132;
+      const rw = 56, rh = 136;
       const srcSheet = paleRatReady ? paleRatCanvas : imgs.rats;
       g.drawImage(srcSheet, rr.x, rr.y, rr.w, rr.h, -rw / 2, -rh * 0.36, rw, rh);
-    } else {
-      g.fillStyle = PAL.acc;
-      g.beginPath();
-      g.arc(0, 0, 20, 0, Math.PI * 2);
-      g.fill();
     }
 
-    // If rat has collected the key, carry gleaming key right at its snout (just like sheet.jpg!)
+    // Hollow-ring brass key carried cleanly in teeth right at snout (exact match to study/f_014 & f_027!)
     if (S.hasKey && loaded.props) {
       const kr = PROP_RECTS.key;
-      g.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, -8, -68, 44, 18);
+      g.save();
+      g.translate(4, -52);
+      g.rotate(0.28);
+      g.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, -16, -7, 36, 14);
+      g.restore();
     }
     g.restore();
 
-    // Looming Scientist Hand Shadow Hazard sweeping from top (matches study/sheet.jpg rows 3 & 4!)
-    if (lv.hand && loaded.hands) {
+    // 11. Unified Looming Scientist Hand Cast Shadow (zero wrist seam, soft penumbra matching study/f_027 & f_036!)
+    if (lv.hand && shadowHandReady) {
       const hr = HAND_RECTS[S.handFrame];
-      g.save();
-      // Forearm shadow extending from top of screen down to grasping hand
-      const armGrad = g.createLinearGradient(S.handX - 40, 0, S.handX + 40, S.handY);
-      armGrad.addColorStop(0, 'rgba(5, 6, 7, 0.92)');
-      armGrad.addColorStop(1, 'rgba(8, 9, 10, 0.84)');
-      g.fillStyle = armGrad;
-      g.beginPath();
-      g.moveTo(S.handX - 78, 0);
-      g.lineTo(S.handX + 68, 0);
-      g.lineTo(S.handX + 44, S.handY - 30);
-      g.lineTo(S.handX - 48, S.handY - 30);
-      g.closePath();
-      g.fill();
+      const d = S.handDepth;
+      const hw = 285 - d * 18;
+      const hh = 380 - d * 22;
 
-      // Rotate hand PI so fingers reach downward toward the rat!
-      g.translate(S.handX, S.handY + 42);
-      g.rotate(Math.PI + Math.sin(S.t * 2.2) * 0.12);
-      g.globalAlpha = 0.88;
-      const hw = 210, hh = 290;
-      g.drawImage(imgs.hands, hr.x, hr.y, hr.w, hr.h, -hw / 2, -hh / 2, hw, hh);
+      // Composite forearm + hand at 100% solid black onto offscreen armCompCanvas first so there is ZERO alpha overlap seam!
+      acctx.clearRect(0, 0, 520, 720);
+      acctx.save();
+      acctx.fillStyle = '#040608';
+      acctx.beginPath();
+      acctx.moveTo(260 - 135, 0);
+      acctx.lineTo(260 + 105, 0);
+      acctx.lineTo(260 + 54, 415);
+      acctx.lineTo(260 - 58, 415);
+      acctx.closePath();
+      acctx.fill();
+
+      acctx.translate(260, 485);
+      acctx.rotate(Math.PI + Math.sin(S.t * 1.9) * 0.06 - 0.16);
+      acctx.drawImage(shadowHandCanvas, hr.x, hr.y, hr.w, hr.h, -hw / 2, -hh / 2, hw, hh);
+      acctx.restore();
+
+      g.save();
+      const blurPx = Math.round(7 - d * 3);
+      if (lv.resW >= 960) {
+        g.filter = `blur(${blurPx}px)`;
+      }
+      g.globalAlpha = 0.72 + d * 0.20;
+      g.drawImage(armCompCanvas, S.handX - 260, S.handY - 425);
+      g.filter = 'none';
       g.restore();
     }
 
-    // Spark particles on key pickup / door unlock
+    // 12. Bright metallic spark particles (key pickup, trap snap, brass keyhole unlock!)
     for (const p of sparks) {
-      g.fillStyle = p.life > 0.25 ? '#fff6d6' : '#ff9848';
-      g.fillRect(p.x - 2, p.y - 2, 5, 5);
+      const u = p.life / p.maxLife;
+      g.save();
+      g.strokeStyle = p.warm ? (u > 0.45 ? '#fff9df' : '#ff9d42') : '#ff6a5a';
+      g.lineWidth = u > 0.5 ? 2.6 : 1.8;
+      g.beginPath();
+      g.moveTo(p.x, p.y);
+      g.lineTo(p.x - p.vx * 0.028, p.y - p.vy * 0.028);
+      g.stroke();
+      g.restore();
+    }
+  }
+
+  function renderTitle() {
+    // Stark, uncluttered chamber title matching refs/m2_title_ref.png & VOIDBASTARD-TAO Law 1
+    ctx.fillStyle = PAL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle dark maze linework silhouette in background
+    ctx.strokeStyle = 'rgba(255, 106, 90, 0.12)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(56, 54, W - 112, H - 108);
+    ctx.beginPath();
+    ctx.moveTo(56, 240); ctx.lineTo(376, 240); ctx.lineTo(376, 396); ctx.lineTo(616, 396);
+    ctx.moveTo(640, 54); ctx.lineTo(640, 256); ctx.lineTo(960, 256);
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.acc;
+    ctx.font = 'bold 82px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('LAB-RAT-ORY', W * 0.5, 295);
+
+    ctx.fillStyle = PAL.fg;
+    ctx.font = '26px "Courier New", monospace';
+    ctx.fillText('subject 47, begin', W * 0.5, 358);
+
+    ctx.strokeStyle = PAL.fg;
+    ctx.lineWidth = 3.5;
+    ctx.strokeRect(W * 0.5 - 140, 418, 280, 62);
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText('START', W * 0.5, 457);
+  }
+
+  function renderTwistFinale() {
+    // COMPLETE: Warm doorway cools into 1280p Full-Resolution Steel Test Cage closing around Subject 47!
+    ctx.fillStyle = '#0d1113';
+    ctx.fillRect(0, 0, W, H);
+
+    if (gradedBgs[3]) {
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      ctx.drawImage(gradedBgs[3], 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // Radial overhead surgical spotlight on Cage 48
+    const spot = ctx.createRadialGradient(W * 0.5, H * 0.48, 30, W * 0.5, H * 0.48, 460);
+    spot.addColorStop(0, 'rgba(215, 232, 238, 0.14)');
+    spot.addColorStop(1, 'rgba(6, 8, 10, 0.88)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W * 0.5 - 260, cy = 185, cw = 520, ch = 310;
+
+    // Stainless steel cage tray floor
+    const trayGrad = ctx.createLinearGradient(cx, cy, cx, cy + ch);
+    trayGrad.addColorStop(0, '#1c2427');
+    trayGrad.addColorStop(1, '#121719');
+    ctx.fillStyle = trayGrad;
+    ctx.fillRect(cx, cy, cw, ch);
+
+    // High-resolution white-pink Subject 47 inside the new cage
+    if (loaded.rats) {
+      const rr = RAT_RECTS[3];
+      const srcSheet = paleRatReady ? paleRatCanvas : imgs.rats;
+      ctx.save();
+      ctx.translate(W * 0.5 - 38, cy + ch * 0.56);
+      ctx.rotate(Math.PI * 0.46 + Math.sin(S.t * 1.8) * 0.03);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(6, 10, 32, 64, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.drawImage(srcSheet, rr.x, rr.y, rr.w, rr.h, -42, -102, 84, 206);
+      ctx.restore();
+    }
+
+    // Fresh gleaming brass key slid into Cage 48 ("The key in your cage was not an accident.")
+    const keySlide = Math.min(1, Math.max(0, (S.endTimer - 0.75) / 0.25));
+    if (keySlide > 0 && loaded.props) {
+      const kr = PROP_RECTS.key;
+      const kx = W * 0.5 + 215 - keySlide * 95;
+      const ky = cy + ch * 0.62;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255, 224, 175, 0.55)';
+      ctx.shadowBlur = 14;
+      ctx.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, kx - 38, ky - 15, 76, 30);
+      ctx.restore();
+    }
+
+    // 1280p Full-HD brushed steel cage bars slamming down from above
+    const slam = Math.min(1, S.endTimer / 0.22);
+    const barOffsetY = (1 - slam * slam) * -360;
+    ctx.save();
+    ctx.translate(0, barOffsetY);
+
+    // Cast bar shadows onto cage floor
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.lineWidth = 6;
+    for (let bx = cx + 26; bx < cx + cw; bx += 26) {
+      ctx.beginPath();
+      ctx.moveTo(bx + 5, cy + 4);
+      ctx.lineTo(bx + 5, cy + ch - 4);
+      ctx.stroke();
+    }
+
+    // Specular stainless steel bars
+    for (let bx = cx + 26; bx < cx + cw; bx += 26) {
+      ctx.strokeStyle = '#7e9096';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(bx, cy);
+      ctx.lineTo(bx, cy + ch);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#c8d6db';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(bx - 1, cy);
+      ctx.lineTo(bx - 1, cy + ch);
+      ctx.stroke();
+    }
+    for (let by = cy + 62; by < cy + ch; by += 62) {
+      ctx.strokeStyle = '#8fa1a8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, by);
+      ctx.lineTo(cx + cw, by);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#b0c0c7';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(cx, cy, cw, ch);
+
+    // Physical riveted metal specimen plate bolted to bottom cage rail (Law 6 & 12: diegetic world label, zero HUD essay!)
+    const pw = 248, ph = 34;
+    const px = W * 0.5 - pw * 0.5, py = cy + ch - 17;
+    ctx.fillStyle = '#1b2224';
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = '#7e9096';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, pw, ph);
+    ctx.fillStyle = PAL.acc;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 15px "Courier New", monospace';
+    ctx.fillText('SUBJECT 47 · TRIAL 48', W * 0.5, py + 22);
+    ctx.restore();
+
+    // 4 silent crimson observation camera lenses glowing in the dark corners of the bay
+    const cams = [[88, 76], [W - 88, 76], [88, H - 76], [W - 88, H - 76]];
+    const blink = 0.55 + 0.45 * Math.sin(S.t * 3.6);
+    for (const [ox, oy] of cams) {
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 68, 56, ${0.45 + 0.45 * blink})`;
+      ctx.shadowColor = '#ff3b2f';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(ox, oy, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for (const p of sparks) {
+      ctx.fillStyle = p.warm ? '#ffe6a3' : '#c8d6db';
+      ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
     }
   }
 
   function render() {
+    ctx.imageSmoothingEnabled = true;
     if (S.phase === 'title') {
-      // Title screen styled directly after refs/m2_title_ref.png
-      ctx.fillStyle = PAL.bg;
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(255, 106, 90, 0.18)';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(56, 56, W - 112, H - 112);
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.acc;
-      ctx.font = 'bold 84px "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText('LAB-RAT-ORY', W / 2, 285);
-
-      ctx.fillStyle = PAL.fg;
-      ctx.font = '28px "Courier New", monospace';
-      ctx.fillText('subject 47, begin', W / 2, 352);
-
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(W / 2 - 160, 412, 320, 68);
-      ctx.font = 'bold 26px "Courier New", monospace';
-      ctx.fillText('START', W / 2, 455);
-
-      ctx.fillStyle = 'rgba(255, 106, 90, 0.75)';
-      ctx.font = '17px "Courier New", monospace';
-      ctx.fillText('WASD / Arrows: Sneak & Solve   ·   Shift / Space: Low Crouch', W / 2, 535);
+      renderTitle();
       return;
     }
-
     if (S.phase === 'end') {
-      // Twist Finale: STILL IN THE TEST — Full-resolution cage reveal!
-      ctx.fillStyle = '#120606';
-      ctx.fillRect(0, 0, W, H);
-
-      if (loaded.bgs) {
-        const q = BG_QUADS[3];
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        ctx.drawImage(imgs.bgs, q.x, q.y, q.w, q.h, 0, 0, W, H);
-        ctx.restore();
-      }
-
-      // Full-resolution gleaming steel cage enclosing the high-res rat!
-      const cx = W / 2 - 250, cy = 195, cw = 500, ch = 290;
-      ctx.fillStyle = 'rgba(18, 22, 24, 0.88)';
-      ctx.fillRect(cx, cy, cw, ch);
-
-      if (loaded.rats) {
-        const rr = RAT_RECTS[3];
-        const srcSheet = paleRatReady ? paleRatCanvas : imgs.rats;
-        ctx.save();
-        ctx.translate(W / 2 - 20, cy + ch * 0.56);
-        ctx.rotate(Math.PI * 0.42);
-        ctx.drawImage(srcSheet, rr.x, rr.y, rr.w, rr.h, -38, -95, 76, 190);
-        ctx.restore();
-      }
-
-      // Fresh key placed right back inside the cage ("The key in your cage was not an accident.")
-      if (loaded.props) {
-        const kr = PROP_RECTS.key;
-        ctx.drawImage(imgs.props, kr.x, kr.y, kr.w, kr.h, W / 2 + 85, cy + ch * 0.52, 76, 31);
-      }
-
-      // Crisp full-HD steel cage bars over the rat
-      ctx.strokeStyle = '#9fb0b5';
-      ctx.lineWidth = 5;
-      ctx.strokeRect(cx, cy, cw, ch);
-      ctx.lineWidth = 2.5;
-      for (let bx = cx + 28; bx < cx + cw; bx += 28) {
-        ctx.beginPath();
-        ctx.moveTo(bx, cy);
-        ctx.lineTo(bx, cy + ch);
-        ctx.stroke();
-      }
-      for (let by = cy + 48; by < cy + ch; by += 48) {
-        ctx.beginPath();
-        ctx.moveTo(cx, by);
-        ctx.lineTo(cx + cw, by);
-        ctx.stroke();
-      }
-
-      // Surveillance monitor overlay
-      ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.fg;
-      ctx.font = 'bold 20px "Courier New", monospace';
-      ctx.fillText('● REC  OBSERVATION BAY 04  ·  1920x1080 FULL RESOLUTION', W / 2, 86);
-
-      ctx.fillStyle = PAL.acc;
-      ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText('STILL IN THE TEST', W / 2, 148);
-
-      ctx.fillStyle = PAL.acc;
-      ctx.font = '20px "Courier New", monospace';
-      ctx.fillText('The door opened into Cage 48. A fresh key is already waiting.', W / 2, 535);
-      ctx.fillStyle = PAL.fg;
-      ctx.fillText(`Clues noticed: ${Math.max(S.cluesTotal, 4)}/4  ·  "Subject believes escape was self-directed."`, W / 2, 570);
-
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(W / 2 - 175, 608, 350, 52);
-      ctx.fillStyle = PAL.acc;
-      ctx.font = 'bold 19px "Courier New", monospace';
-      ctx.fillText('[R / ENTER] BEGIN TRIAL #48', W / 2, 641);
+      renderTwistFinale();
       return;
     }
 
-    // Render active level through pixelation escalation buffer!
+    // Active room rendered via offscreen pixelation escalation buffer (256p -> 480p -> 960p -> 1280p)
     const lv = LEVELS[S.levelIdx] || LEVELS[0];
     if (lv.resW < W) {
       if (buf.width !== lv.resW || buf.height !== lv.resH) {
@@ -1036,6 +1758,7 @@
         buf.height = lv.resH;
       }
       bctx.save();
+      bctx.imageSmoothingEnabled = lv.resW >= 960;
       bctx.scale(lv.resW / W, lv.resH / H);
       drawLevelScene(bctx);
       bctx.restore();
@@ -1047,17 +1770,25 @@
       drawLevelScene(ctx);
     }
 
-    // Post-processing: crimson-dark vignette + subtle film grain
-    const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.28, W * 0.5, H * 0.5, W * 0.66);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(10,2,2,0.62)');
+    // Seamless cross-dissolve sharpen when advancing rooms
+    if (S.transitionAlpha > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = S.transitionAlpha;
+      ctx.drawImage(prevBuf, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // Subtle atmospheric vignette + film grain matching study/sheet.jpg
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.34, W * 0.5, H * 0.5, W * 0.68);
+    vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vig.addColorStop(1, lv.redStyle ? 'rgba(8, 2, 2, 0.52)' : 'rgba(5, 8, 10, 0.48)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
 
     ctx.save();
-    ctx.globalAlpha = 0.24;
-    const ox = ((S.t * 50) | 0) % 40;
-    const oy = ((S.t * 33) | 0) % 30;
+    ctx.globalAlpha = 0.20;
+    const ox = ((S.t * 48) | 0) % 40;
+    const oy = ((S.t * 32) | 0) % 30;
     for (let y = -oy; y < H; y += 90) {
       for (let x = -ox; x < W; x += 160) {
         ctx.drawImage(grainCanvas, x, y);
@@ -1065,31 +1796,37 @@
     }
     ctx.restore();
 
-    // Minimal diegetic HUD matching refs/m2_main_ref.png ("LEVEL 2 · 16px" top-right)
-    ctx.save();
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(255, 106, 90, 0.82)';
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.fillText(lv.title, W - 72, 92);
-
-    if (S.clueSeen) {
-      ctx.textAlign = 'left';
-      ctx.fillStyle = 'rgba(255, 214, 207, 0.86)';
-      ctx.font = '15px "Courier New", monospace';
-      ctx.fillText(`● ${lv.clue.text}`, 68, 88);
-    }
-
+    // FAULT state: crimson optical pulse + compact spatial [R] badge directly beside Subject 47 (zero text wall!)
     if (S.phase === 'caught') {
-      ctx.fillStyle = 'rgba(120, 12, 12, 0.58)';
+      const pulse = Math.max(0, 1 - S.caughtTimer * 1.15);
+      ctx.fillStyle = `rgba(135, 16, 16, ${0.34 * pulse + 0.14})`;
       ctx.fillRect(0, 0, W, H);
-      ctx.textAlign = 'center';
+
+      const bx = Math.max(60, Math.min(W - 60, S.x + 36));
+      const by = Math.max(50, Math.min(H - 50, S.y - 34));
+      ctx.save();
+      ctx.fillStyle = 'rgba(18, 6, 6, 0.86)';
+      ctx.strokeStyle = PAL.acc;
+      ctx.lineWidth = 2;
+      ctx.fillRect(bx - 22, by - 15, 44, 30);
+      ctx.strokeRect(bx - 22, by - 15, 44, 30);
       ctx.fillStyle = PAL.acc;
-      ctx.font = 'bold 54px "Courier New", monospace';
-      ctx.fillText('CAUGHT', W / 2, H / 2 - 12);
-      ctx.font = '20px "Courier New", monospace';
-      ctx.fillText(`${S.caughtReason} — RESETTING SUBJECT 47`, W / 2, H / 2 + 34);
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 16px "Courier New", monospace';
+      ctx.fillText('[R]', bx, by + 6);
+      ctx.restore();
     }
-    ctx.restore();
+
+    // Pause indicator ONLY while paused (Law 4 & 7)
+    if (S.paused) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(8, 10, 12, 0.42)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = PAL.acc;
+      ctx.fillRect(W - 54, 32, 7, 24);
+      ctx.fillRect(W - 41, 32, 7, 24);
+      ctx.restore();
+    }
   }
 
   let lastTime = performance.now();

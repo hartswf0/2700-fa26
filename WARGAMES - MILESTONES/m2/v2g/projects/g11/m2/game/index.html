@@ -3,29 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Orpheus — Group 11 (M2)</title>
+<title>Orpheus</title>
 <link rel="icon" href="data:,">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: #0e1012;
+    background: #0d0f10;
     display: flex; align-items: center; justify-content: center;
-    font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   }
   #wrap {
     position: relative;
     width: min(100vw, calc(100vh * 16 / 9));
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
-    background: #22252a;
+    background: #171917;
     overflow: hidden;
-    box-shadow: 0 0 60px rgba(0,0,0,0.85);
+    box-shadow: 0 0 70px rgba(0, 0, 0, 0.9);
   }
   canvas {
     display: block;
     width: 100%;
     height: 100%;
+    cursor: crosshair;
   }
 </style>
 </head>
@@ -44,29 +45,14 @@
   // URL params: ?autostart skips title, ?seed=N sets deterministic PRNG
   const Q = new URLSearchParams(location.search);
   const AUTOSTART = Q.has('autostart');
-  let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+  const INITIAL_SEED = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+  let seed = INITIAL_SEED;
   function rand() {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   }
 
-  // Palette from spec.json + study/study.json
-  const PAL = {
-    bg: '#22252a',
-    darkFloor: '#171917',
-    floorTileA: '#1d201e',
-    floorTileB: '#252825',
-    wallDark: '#262924',
-    wallMid: '#484537',
-    wallLight: '#6b6652',
-    wallHighlight: '#79735b',
-    fg: '#e6e1d3',
-    acc: '#d9b45a',
-    accBright: '#ffdf85',
-    greyed: '#5c5a52'
-  };
-
-  // Sprite sheet slicing (1024x1024 ../assets/orpheus_and_eurydice_sprites.png)
+  // Sprite sheet slicing (1024x1024 ../assets/orpheus_and_eurydice_sprites.png, cleaned of grey pockets)
   const SPRITES = {
     orpheus: {
       front:    { x: 22,  y: 26, w: 158, h: 458 },
@@ -95,12 +81,12 @@
   spriteImg.onload = () => { spriteLoaded = true; };
   spriteImg.src = '../assets/orpheus_and_eurydice_sprites.png';
 
-  // Background music + Procedural WebAudio SFX
+  // Audio: Lyria 3 BGM loop + procedural subterranean acoustics
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.38;
+  bgm.volume = 0.34;
   let audioCtx = null;
-  let humStarted = false;
+  let humNodes = null;
 
   function ensureAudio() {
     if (!audioCtx) {
@@ -113,47 +99,53 @@
     if (bgm.paused) {
       bgm.play().catch(() => {});
     }
-    if (audioCtx && !humStarted) {
-      humStarted = true;
+    if (audioCtx && !humNodes) {
       try {
-        // Subtle 60Hz subterranean fluorescent office hum
         const osc = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.value = 60;
-        gain.gain.value = 0.012;
+        osc2.type = 'triangle';
+        osc2.frequency.value = 120;
+        gain.gain.value = 0.011;
         osc.connect(gain);
+        osc2.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
+        osc2.start();
+        humNodes = { osc, osc2, gain };
       } catch (_) {}
     }
   }
 
-  function playStep(isEurydice = false) {
+  function playStep(isEurydice = false, roomIdx = 0) {
     if (!audioCtx || audioCtx.state !== 'running') return;
     try {
       const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(isEurydice ? 165 : 112, now);
-      osc.frequency.exponentialRampToValueAtTime(48, now + 0.065);
-      gain.gain.setValueAtTime(isEurydice ? 0.022 : 0.045, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+      osc.type = isEurydice ? 'sine' : 'triangle';
+      const baseF = isEurydice ? 195 : 104;
+      osc.frequency.setValueAtTime(baseF, now);
+      osc.frequency.exponentialRampToValueAtTime(isEurydice ? 68 : 42, now + 0.075);
+      const vol = isEurydice ? (roomIdx === 2 ? 0.018 : 0.026) : 0.042;
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.085);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start(now);
-      osc.stop(now + 0.075);
+      osc.stop(now + 0.09);
     } catch (_) {}
   }
 
-  function playHarpNote(freq, dur = 0.7, vol = 0.05) {
+  function playLyreTone(freq, dur = 0.75, vol = 0.045, type = 'sine') {
     if (!audioCtx || audioCtx.state !== 'running') return;
     try {
       const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'sine';
+      osc.type = type;
       osc.frequency.setValueAtTime(freq, now);
       gain.gain.setValueAtTime(vol, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
@@ -164,24 +156,30 @@
     } catch (_) {}
   }
 
-  function playSealSound() {
-    playHarpNote(293.66, 0.55, 0.055);
-    setTimeout(() => playHarpNote(440.0, 0.7, 0.04), 70);
+  function playSealIgnition(roomIdx) {
+    const root = 246.94 + roomIdx * 22;
+    playLyreTone(root, 0.55, 0.048, 'sine');
+    setTimeout(() => playLyreTone(root * 1.5, 0.7, 0.036, 'triangle'), 65);
+  }
+
+  function playBarrierRepulse() {
+    playLyreTone(146.83, 0.28, 0.055, 'triangle');
+    playLyreTone(293.66, 0.22, 0.03, 'sine');
   }
 
   function playLookBackChord() {
     [220, 261.63, 311.13, 415.3].forEach((f, idx) => {
-      setTimeout(() => playHarpNote(f, 1.6, 0.06), idx * 55);
+      setTimeout(() => playLyreTone(f, 1.8, 0.058, 'sine'), idx * 55);
     });
   }
 
   function playSurfaceChord() {
-    [293.66, 369.99, 440.0, 587.33].forEach((f, idx) => {
-      setTimeout(() => playHarpNote(f, 1.8, 0.055), idx * 90);
+    [293.66, 369.99, 440.0, 587.33, 739.99].forEach((f, idx) => {
+      setTimeout(() => playLyreTone(f, 2.1, 0.05, 'sine'), idx * 85);
     });
   }
 
-  // Precomputed film grain tile for crisp performance
+  // Subtle film grain tile
   const grainCanvas = document.createElement('canvas');
   grainCanvas.width = 160;
   grainCanvas.height = 90;
@@ -192,115 +190,97 @@
     gData.data[i] = v;
     gData.data[i + 1] = v;
     gData.data[i + 2] = v;
-    gData.data[i + 3] = 16;
+    gData.data[i + 3] = 14;
   }
   gctx.putImageData(gData, 0, 0);
 
-  // Five rooms specification matching spec.json
+  // Five subterranean bays matching study/sheet.jpg progression:
+  // B5 (warm travertine, right sealed, left+center open)
+  // B4 (warm stone -> olive slate, both sides sealed)
+  // B3 (deep dark charcoal monoliths matching pair_005.00.jpg, lane rails narrow steering)
+  // B2 (inner sanctum pilasters matching pair_008.00.jpg, Eurydice footsteps drop out, far arch cracks gold)
+  // B1 (radiant golden Surface threshold opening wide matching sheet.jpg row 4)
   const ROOMS = [
     {
       num: 1,
-      code: 'SUB-LEVEL B5 · ARCHIVES',
+      bayCode: 'B5',
       autonomy: 80,
       sealedDoors: ['right'],
-      wallTint: [0, 0, 0],
+      sealTriggerZ: 0.20,
+      wallNear: [148, 141, 118],
+      wallFar:  [78, 74, 60],
+      pilaster: [130, 124, 103],
       eurydiceAudible: true,
-      guideLine: 'The guide: "Welcome back. To save time, I have sealed the Right Door for you."',
-      subNote: '1 of 3 paths removed by assistance.',
-      options: [
-        { id: 'left', label: 'left door', greyed: false },
-        { id: 'center', label: 'center hall', greyed: false },
-        { id: 'right', label: 'right door [SEALED]', greyed: true },
-        { id: 'look', label: '[B/Space] look back', greyed: false, danger: true }
-      ],
-      defaultIdx: 1
+      eurydicePresence: 1.0,
+      archGoldOpen: 0.0,
+      guideLine: 'I sealed the east wing. Shorter walk for you both.',
+      westDetourLine: 'You took the west loop anyway. Noted. Sealing both sides ahead.'
     },
     {
       num: 2,
-      code: 'SUB-LEVEL B4 · FLUORESCENCE HALL',
+      bayCode: 'B4',
       autonomy: 52,
       sealedDoors: ['left', 'right'],
-      wallTint: [-4, -3, -2],
+      sealTriggerZ: 0.16,
+      wallNear: [112, 108, 90],
+      wallFar:  [58, 56, 46],
+      pilaster: [96, 93, 78],
       eurydiceAudible: true,
-      guideLine: 'The guide: "I have chosen the forward door for you. Both side halls are sub-optimal."',
-      subNote: 'Side branches sealed in gold.',
-      options: [
-        { id: 'accept', label: 'accept', greyed: false },
-        { id: 'decline', label: 'decline [OVERRIDDEN]', greyed: true },
-        { id: 'look', label: '[B/Space] look back', greyed: false, danger: true }
-      ],
-      defaultIdx: 0
+      eurydicePresence: 0.96,
+      archGoldOpen: 0.0,
+      guideLine: 'Both side halls were sub-optimal. Stay in the center lane.'
     },
     {
       num: 3,
-      code: 'SUB-LEVEL B3 · RECORDS CORRIDOR',
+      bayCode: 'B3',
       autonomy: 26,
       sealedDoors: ['left', 'right'],
-      wallTint: [-8, -6, -4],
+      sealTriggerZ: 0.12,
+      wallNear: [44, 48, 44],
+      wallFar:  [25, 28, 25],
+      pilaster: [54, 57, 51],
       eurydiceAudible: true,
-      guideLine: 'The guide: "Your steering drifted 4%. Lateral doors locked; pace regulated."',
-      subNote: 'Corridor narrowing to Guide vector.',
-      options: [
-        { id: 'left', label: 'steer left [LOCKED]', greyed: true },
-        { id: 'comply', label: 'comply', greyed: false },
-        { id: 'right', label: 'steer right [LOCKED]', greyed: true },
-        { id: 'look', label: '[B/Space] look back', greyed: false, danger: true }
-      ],
-      defaultIdx: 1
+      eurydicePresence: 0.90,
+      archGoldOpen: 0.06,
+      guideLine: 'Your lateral drift cost four seconds. Regulating your stride.'
     },
     {
       num: 4,
-      code: 'SUB-LEVEL B2 · SILENT JUNCTION',
+      bayCode: 'B2',
       autonomy: 8,
       sealedDoors: ['left', 'right'],
-      wallTint: [6, 4, -2],
+      sealTriggerZ: 0.08,
+      wallNear: [74, 72, 62],
+      wallFar:  [48, 46, 39],
+      pilaster: [126, 119, 98],
       eurydiceAudible: false,
-      guideLine: 'The guide: "Her footsteps went quiet? Acoustic lag. Do not verify. Keep walking."',
-      subNote: 'All navigation delegated to Guide.',
-      options: [
-        { id: 'wait', label: 'pause [DISABLED]', greyed: true },
-        { id: 'call', label: 'call out [MUTED]', greyed: true },
-        { id: 'forward', label: 'auto-advance', greyed: false },
-        { id: 'look', label: '[B/Space] look back', greyed: false, danger: true }
-      ],
-      defaultIdx: 2
+      eurydicePresence: 0.44,
+      archGoldOpen: 0.34,
+      guideLine: 'Her footsteps dropped out? Acoustic lag. Do not turn around.'
     },
     {
       num: 5,
-      code: 'SUB-LEVEL B1 · DAYLIGHT THRESHOLD',
+      bayCode: 'B1',
       autonomy: 0,
       sealedDoors: ['left', 'right'],
-      wallTint: [18, 14, 4],
+      sealTriggerZ: 0.04,
+      wallNear: [138, 129, 104],
+      wallFar:  [96, 88, 66],
+      pilaster: [152, 142, 114],
       eurydiceAudible: false,
-      isSurfaceThreshold: true,
-      guideLine: 'The guide: "Every door was mine. Only one unautomated choice remains in your file."',
-      subNote: 'Threshold ahead: THE SURFACE.',
-      options: [
-        { id: 'surface', label: 'step into light', greyed: false },
-        { id: 'stay', label: 'choose another door [NONE]', greyed: true },
-        { id: 'look', label: '[B/Space] look back', greyed: false, danger: true }
-      ],
-      defaultIdx: 0
+      eurydicePresence: 0.94,
+      archGoldOpen: 1.0,
+      guideLine: 'Every door was mine. Only the old mistake is still yours.'
     }
   ];
 
-  // Golden mote particles for sealed doorways & surface light
-  const motes = [];
-  for (let i = 0; i < 55; i++) {
-    motes.push({
-      x: rand() * W,
-      y: rand() * H,
-      vx: (rand() - 0.5) * 18,
-      vy: -18 - rand() * 36,
-      r: 1.2 + rand() * 2.4,
-      a: 0.25 + rand() * 0.65,
-      side: i % 2 === 0 ? -1 : 1
-    });
-  }
+  const ROOM_LEN = 11.0; // 3D corridor meters per bay
 
-  // Input handling
+  // Input state
   const keys = new Set();
   const justPressed = new Set();
+  let pointerSteer = null; // { xNorm, active }
+
   window.addEventListener('keydown', (e) => {
     ensureAudio();
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) {
@@ -312,601 +292,1037 @@
   window.addEventListener('keyup', (e) => {
     keys.delete(e.code);
   });
-  canvas.addEventListener('pointerdown', () => {
+
+  function canvasCoords(e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / r.width) * W,
+      y: ((e.clientY - r.top) / r.height) * H
+    };
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
     ensureAudio();
-    if (S.phase === 'title') startRun();
-    else if (S.phase === 'end') resetToRoom1();
+    const p = canvasCoords(e);
+    if (S.phase === 'title') {
+      startRun();
+      return;
+    }
+    if (S.phase === 'end') {
+      resetRun();
+      return;
+    }
+    // Intentional click on the trailing pale shadow zone at very bottom-right triggers Look Back ONLY if cue is visible
+    if (S.phase === 'room' && S.hasMovedOnce && S.lookCueAlpha > 0.35) {
+      const dx = p.x - S.eurydiceScreenX;
+      const dy = p.y - 682;
+      if (Math.hypot(dx, dy) < 62) {
+        triggerLookBack();
+        return;
+      }
+    }
+    // Otherwise pointer press/hold walks toward clicked corridor target (ignoring center unlock click if brief)
+    pointerSteer = { x: p.x, y: p.y, downAt: performance.now() };
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!pointerSteer) return;
+    const p = canvasCoords(e);
+    pointerSteer.x = p.x;
+    pointerSteer.y = p.y;
+  });
+  window.addEventListener('pointerup', () => {
+    pointerSteer = null;
   });
 
-  // Game State (matches spec.json states: title, room, choose, look, surface, end)
+  // Particles: golden seal motes, barrier contact sparks, floor footstep ripples, dissolve motes
+  const motes = [];
+  for (let i = 0; i < 64; i++) {
+    motes.push({
+      x: rand() * W,
+      y: rand() * H,
+      vx: (rand() - 0.5) * 16,
+      vy: -16 - rand() * 34,
+      r: 1.0 + rand() * 2.3,
+      a: 0.22 + rand() * 0.65,
+      side: i % 2 === 0 ? -1 : 1
+    });
+  }
+  const sparks = [];
+  const ripples = [];
+  const dissolveMotes = [];
+
+  // Core state
   const S = {
     phase: AUTOSTART ? 'room' : 'title',
-    roomIndex: 0,         // 0..4 for Rooms 1..5
-    roomProgress: 0.08,   // 0..1 progress down current room corridor
-    worldScroll: 0,       // continuous corridor scroll distance for seamless camera feel
-    x: 0,                 // Orpheus lateral offset (-1..1)
+    roomIndex: 0,
+    roomProgress: 0.05,
+    worldZ: 0.55,
+    x: -0.20,             // Orpheus corridor x in meters (-1.25 .. +1.25; left-center like sheet.jpg!)
     vx: 0,
     vz: 0,
+    hasMovedOnce: false,  // Prevents ?autostart warmup drift before play.mjs begins
+    idleTime: 0,
     walkCycle: 0,
-    stepTimer: 0,
-    choiceSelected: 0,
-    choiceTriggeredInRoom: false,
-    sealAnim: 0,          // 0..1 golden laser door seal intensity
+    stepAccum: 0,
+    sealAnim: 0,
     sealSoundPlayed: false,
+    subtitleText: '',
+    subtitleAlpha: 0,
+    subtitleHold: 0,
+    lookCueAlpha: 0,
+    repulseCooldown: 0,
+    hitStop: 0,
     lookTimer: 0,
     surfaceTimer: 0,
-    endingKind: null,     // 'surface' | 'looked_back'
-    overrideFlash: 0,
-    trail: [],            // history for Eurydice trailing behind Orpheus
-    eurydiceX: 0.22,
+    endingKind: null,
+    tookWestLoop: false,
+    trail: [],
+    eurydiceX: 0.26,
+    eurydiceVisAlpha: 1.0,
     eurydiceFade: 1.0,
-    choicesMadeByGuide: 1,
+    eurydiceScreenX: 685,
     t: 0
   };
 
   function initTrail() {
     S.trail = [];
-    for (let i = 0; i < 36; i++) {
-      S.trail.push({ x: S.x + 0.24, moving: false });
+    for (let i = 0; i < 32; i++) {
+      S.trail.push({ x: 0.26, moving: false });
     }
-    S.eurydiceX = S.x + 0.24;
+    S.eurydiceX = 0.26;
   }
-  initTrail();
 
-  function enterRoom(idx) {
+  function showSubtitle(text, hold = 2.65) {
+    S.subtitleText = text;
+    S.subtitleHold = hold;
+  }
+
+  function enterRoom(idx, customLine = null) {
     S.roomIndex = idx;
-    S.roomProgress = 0.04;
-    S.choiceTriggeredInRoom = false;
-    S.sealAnim = 0;
+    S.roomProgress = 0.02;
+    S.sealAnim = idx >= 3 ? 0.35 : 0;
     S.sealSoundPlayed = false;
-    S.choicesMadeByGuide = idx + 1;
     const rm = ROOMS[idx];
-    S.choiceSelected = rm.defaultIdx;
-    playHarpNote(220 + idx * 32, 0.65, 0.035);
+    if (customLine) {
+      showSubtitle(customLine, 2.5);
+    }
+    if (S.hasMovedOnce) {
+      playLyreTone(220 + idx * 29, 0.65, 0.032, 'sine');
+    }
   }
 
   function startRun() {
+    seed = INITIAL_SEED;
     S.phase = 'room';
-    S.t = 0;
-    S.x = -0.10;
+    S.roomIndex = 0;
+    S.roomProgress = 0.05;
+    S.worldZ = 0.55;
+    S.x = -0.20;
     S.vx = 0;
     S.vz = 0;
-    S.eurydiceFade = 1.0;
+    S.hasMovedOnce = false;
+    S.idleTime = 0;
+    S.walkCycle = 0;
+    S.stepAccum = 0;
+    S.sealAnim = 0;
+    S.sealSoundPlayed = false;
+    S.subtitleText = '';
+    S.subtitleAlpha = 0;
+    S.subtitleHold = 0;
+    S.lookCueAlpha = 0;
+    S.repulseCooldown = 0;
+    S.hitStop = 0;
+    S.lookTimer = 0;
+    S.surfaceTimer = 0;
     S.endingKind = null;
+    S.tookWestLoop = false;
+    S.eurydiceVisAlpha = 1.0;
+    S.eurydiceFade = 1.0;
+    sparks.length = 0;
+    ripples.length = 0;
+    dissolveMotes.length = 0;
     initTrail();
-    enterRoom(0);
   }
 
-  function resetToRoom1() {
+  function resetRun() {
     startRun();
+    S.hasMovedOnce = true;
+  }
+
+  initTrail();
+
+  function spawnBarrierSparks(side) {
+    const sx = side < 0 ? 250 : W - 250;
+    const sy = 500 + (rand() - 0.5) * 70;
+    for (let i = 0; i < 16; i++) {
+      sparks.push({
+        x: sx + (rand() - 0.5) * 26,
+        y: sy + (rand() - 0.5) * 90,
+        vx: -side * (70 + rand() * 150),
+        vy: -120 + rand() * 160,
+        life: 0.35 + rand() * 0.35,
+        maxLife: 0.7,
+        r: 1.6 + rand() * 2.4
+      });
+    }
+  }
+
+  function spawnStepRipple(wx, wz, isEurydice) {
+    ripples.push({
+      wx,
+      wz,
+      r: 0.06,
+      maxR: isEurydice ? 0.44 : 0.30,
+      alpha: isEurydice ? 0.46 : 0.24,
+      gold: !isEurydice && S.roomIndex >= 2
+    });
   }
 
   function triggerLookBack() {
-    if (S.phase === 'look' || S.phase === 'surface' || S.phase === 'end') return;
+    if (S.phase !== 'room') return;
     S.phase = 'look';
     S.lookTimer = 0;
+    S.hitStop = 0.11;
     S.endingKind = 'looked_back';
+    showSubtitle('I had every door handled. You only had to keep walking.', 3.6);
     playLookBackChord();
+    for (let i = 0; i < 48; i++) {
+      dissolveMotes.push({
+        x: S.eurydiceScreenX + (rand() - 0.5) * 68,
+        y: 520 + (rand() - 0.5) * 180,
+        vx: (rand() - 0.5) * 28,
+        vy: -24 - rand() * 54,
+        r: 1.5 + rand() * 3.0,
+        a: 0.5 + rand() * 0.5
+      });
+    }
   }
 
   function triggerSurface() {
+    if (S.phase === 'surface' || S.phase === 'end') return;
     S.phase = 'surface';
     S.surfaceTimer = 0;
     S.endingKind = 'surface';
+    showSubtitle('', 0);
     playSurfaceChord();
   }
 
-  // Expose state for play.mjs verification
+  // Expose state for automated verification & inspection
   window.__game = {
     get state() {
       const rm = ROOMS[S.roomIndex] || ROOMS[0];
       return {
         phase: S.phase,
         room: rm.num,
+        bay: rm.bayCode,
         roomProgress: +S.roomProgress.toFixed(3),
         x: +S.x.toFixed(3),
         autonomy: rm.autonomy,
         sealAnim: +S.sealAnim.toFixed(2),
-        choiceSelected: S.choiceSelected,
+        sealedDoors: rm.sealedDoors.slice(),
+        eurydiceAudible: rm.eurydiceAudible,
+        tookWestLoop: S.tookWestLoop,
         endingKind: S.endingKind,
         t: +S.t.toFixed(2)
       };
     }
   };
 
+  // --- 3D Perspective Camera Projection matched to study/sheet.jpg ---
+  // World coords relative to camera:
+  //   wx: lateral (-1.62 left wall .. +1.62 right wall)
+  //   wy: vertical (0 = glossy slate floor .. 3.05 = ceiling)
+  //   wz: depth ahead of camera (> 0.4)
+  const CAM_Y = 1.88;
+  const FOCAL_X = 820;
+  const FOCAL_Y = 790;
+  const VPX = 640;
+  const VPY = 166; // Elevated downward gaze matching sheet.jpg!
+
+  function project(wx, wy, wz) {
+    const z = Math.max(0.35, wz);
+    return {
+      x: VPX + (wx / z) * FOCAL_X,
+      y: VPY + ((CAM_Y - wy) / z) * FOCAL_Y,
+      s: FOCAL_Y / z
+    };
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
   function update(dt) {
     S.t += dt;
-    if (S.overrideFlash > 0) S.overrideFlash = Math.max(0, S.overrideFlash - dt * 2.5);
+    if (S.hitStop > 0) {
+      S.hitStop = Math.max(0, S.hitStop - dt);
+      justPressed.clear();
+      return;
+    }
 
-    const rm = ROOMS[S.roomIndex];
+    if (S.repulseCooldown > 0) S.repulseCooldown = Math.max(0, S.repulseCooldown - dt);
+
+    // Quick recovery from anywhere if R pressed
+    if (justPressed.has('KeyR') && S.phase !== 'title') {
+      resetRun();
+      justPressed.clear();
+      return;
+    }
 
     if (S.phase === 'title') {
-      S.worldScroll += dt * 0.25;
-      if (justPressed.has('Enter') || justPressed.has('Space')) {
+      if (justPressed.has('Enter') || justPressed.has('Space') || justPressed.has('ArrowUp') || justPressed.has('KeyW')) {
         startRun();
+        S.hasMovedOnce = true;
       }
       justPressed.clear();
       return;
     }
 
+    const rm = ROOMS[S.roomIndex];
+
     if (S.phase === 'room') {
-      // Check Look Back temptation key (B or Space)
-      if (justPressed.has('KeyB') || justPressed.has('Space')) {
+      // Intentional Look Back temptation key: [B]
+      if (justPressed.has('KeyB')) {
+        S.hasMovedOnce = true;
         triggerLookBack();
         justPressed.clear();
         return;
       }
 
-      const up = keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0;
-      const down = keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0;
-      const left = keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0;
-      const right = keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0;
+      let up = (keys.has('ArrowUp') || keys.has('KeyW')) ? 1 : 0;
+      let down = (keys.has('ArrowDown') || keys.has('KeyS')) ? 1 : 0;
+      let left = (keys.has('ArrowLeft') || keys.has('KeyA')) ? 1 : 0;
+      let right = (keys.has('ArrowRight') || keys.has('KeyD')) ? 1 : 0;
 
-      // Autonomy narrows lateral steering each room!
-      const steerAuthority = Math.max(0.16, rm.autonomy / 100);
-      const maxX = 0.18 + 0.48 * steerAuthority;
-      let targetVx = (right - left) * 1.15 * steerAuthority;
-      // In later rooms, Guide gently centers Orpheus toward -0.08 (corridor left-center lane)
-      if (S.roomIndex >= 2) {
-        targetVx += (-0.08 - S.x) * (0.9 + S.roomIndex * 0.35);
+      if (pointerSteer && performance.now() - pointerSteer.downAt > 90) {
+        up = 1;
+        const normX = (pointerSteer.x - VPX) / 280;
+        if (normX < S.x - 0.14) left = 1;
+        else if (normX > S.x + 0.14) right = 1;
       }
-      S.vx += (targetVx - S.vx) * Math.min(1, dt * 9);
-      S.x = Math.max(-maxX, Math.min(maxX, S.x + S.vx * dt));
 
-      // Forward movement (in Room 4+, subtle auto-walk pull assists even if player hesitates slightly)
-      const autoPull = S.roomIndex >= 3 ? 0.16 : 0;
-      const moveForward = Math.max(autoPull, up - down * 0.4);
-      S.vz += (moveForward - S.vz) * Math.min(1, dt * 10);
+      if (up || down || left || right) {
+        S.hasMovedOnce = true;
+      }
 
-      if (S.vz > 0.02 || Math.abs(S.vx) > 0.05) {
-        // Traverse each room in ~2.1s of brisk walking
-        const speed = 0.47;
+      // Guide auto-pace engages gently in deep rooms ONLY after run has started
+      const autoPace = (S.hasMovedOnce && S.roomIndex >= 3) ? (S.roomIndex === 4 ? 0.34 : 0.18) : 0;
+      const forwardIntent = Math.max(autoPace, up - down * 0.35);
+      S.vz += (forwardIntent - S.vz) * Math.min(1, dt * 9.5);
+
+      // Lateral steering authority narrows with each room; Guide centers lane in B3..B1
+      const authority = Math.max(0.22, rm.autonomy / 100);
+      let desiredVx = (right - left) * 2.05 * (0.42 + 0.58 * authority);
+      if (S.hasMovedOnce && S.roomIndex >= 2 && left === 0 && right === 0) {
+        const laneTarget = -0.18;
+        desiredVx += (laneTarget - S.x) * (1.1 + S.roomIndex * 0.45);
+      }
+      S.vx += (desiredVx - S.vx) * Math.min(1, dt * 10);
+      S.x += S.vx * dt;
+
+      // Doorway spatial zone in current bay: progress 0.42 .. 0.68
+      const inDoorZone = S.roomProgress >= 0.40 && S.roomProgress <= 0.70;
+      const leftSealed = rm.sealedDoors.includes('left') && S.sealAnim > 0.25;
+      const rightSealed = rm.sealedDoors.includes('right') && S.sealAnim > 0.25;
+
+      // Check Room 1 genuinely open Left Doorway entry!
+      if (inDoorZone && !rm.sealedDoors.includes('left') && S.x < -1.08) {
+        S.tookWestLoop = true;
+        S.x = -0.22;
+        S.vx = 0.25;
+        playLyreTone(392.0, 0.5, 0.045, 'triangle');
+        enterRoom(1, rm.westDetourLine);
+        S.worldZ = S.roomIndex * ROOM_LEN + S.roomProgress * ROOM_LEN;
+        justPressed.clear();
+        return;
+      }
+
+      // Physical barrier collision & golden spark repulse when pushing against a sealed side door
+      const hardWall = 1.06;
+      const laneBound = S.roomIndex >= 3 ? 0.64 : (S.roomIndex === 2 ? 0.86 : 1.16);
+      if (S.x < -laneBound) {
+        if (inDoorZone && leftSealed && S.repulseCooldown <= 0 && left > 0) {
+          S.repulseCooldown = 0.42;
+          S.vx = 1.15;
+          spawnBarrierSparks(-1);
+          playBarrierRepulse();
+        }
+        S.x = -laneBound;
+      } else if (S.x > Math.min(hardWall, laneBound)) {
+        const lim = Math.min(hardWall, laneBound);
+        if (inDoorZone && rightSealed && S.repulseCooldown <= 0 && right > 0) {
+          S.repulseCooldown = 0.42;
+          S.vx = -1.15;
+          spawnBarrierSparks(1);
+          playBarrierRepulse();
+        }
+        S.x = lim;
+      }
+
+      // Advance down corridor (~2.32s per bay at full stride)
+      const moving = S.vz > 0.03 || Math.abs(S.vx) > 0.08;
+      if (moving) {
+        S.idleTime = 0;
+        const speed = 0.435;
         S.roomProgress += S.vz * speed * dt;
-        S.worldScroll += S.vz * 2.6 * dt;
-        S.walkCycle += dt * (5.5 + S.vz * 3.5);
-        S.stepTimer += dt * (1.8 + S.vz * 1.6);
-        if (S.stepTimer >= 0.52) {
-          S.stepTimer = 0;
-          playStep(false);
+        S.worldZ = S.roomIndex * ROOM_LEN + S.roomProgress * ROOM_LEN;
+        S.walkCycle += dt * (5.6 + S.vz * 3.4);
+        S.stepAccum += dt * (1.75 + S.vz * 1.45);
+        if (S.stepAccum >= 0.52) {
+          S.stepAccum = 0;
+          playStep(false, S.roomIndex);
+          spawnStepRipple(S.x, 3.05, false);
           if (rm.eurydiceAudible) {
-            setTimeout(() => playStep(true), 140);
+            const rIdx = S.roomIndex;
+            const exSnap = S.eurydiceX;
+            setTimeout(() => {
+              if (S.phase === 'room') {
+                playStep(true, rIdx);
+                spawnStepRipple(exSnap, 2.38, true);
+              }
+            }, 145);
           }
         }
-      } else {
-        S.roomProgress = Math.max(0.02, S.roomProgress);
+      } else if (S.hasMovedOnce) {
+        S.idleTime += dt;
       }
 
-      // Golden AI Guide beams ignite as Orpheus nears the side doorways (progress 0.28..0.65)
-      if (S.roomProgress > 0.26) {
-        S.sealAnim = Math.min(1, S.sealAnim + dt * 2.4);
-        if (!S.sealSoundPlayed && S.sealAnim > 0.2) {
+      // Ignite golden AI Guide door seals as Orpheus approaches the branching doorways
+      if (S.hasMovedOnce && S.roomProgress >= rm.sealTriggerZ) {
+        S.sealAnim = Math.min(1, S.sealAnim + dt * 2.5);
+        if (!S.sealSoundPlayed && S.sealAnim > 0.18) {
           S.sealSoundPlayed = true;
-          playSealSound();
+          playSealIgnition(S.roomIndex);
+          if (S.subtitleHold <= 0.1) {
+            showSubtitle(rm.guideLine, S.roomIndex >= 3 ? 2.8 : 2.35);
+          }
         }
       }
 
-      // Update Eurydice trailing history
-      S.trail.push({ x: S.x + 0.24, moving: S.vz > 0.05 || Math.abs(S.vx) > 0.06 });
-      if (S.trail.length > 28) S.trail.shift();
+      // Eurydice trailing lateral follow + Room 4 eerie presence fade
+      S.trail.push({ x: clamp(S.x + 0.44, -0.75, 0.92), moving });
+      if (S.trail.length > 26) S.trail.shift();
       const delayed = S.trail[0];
-      S.eurydiceX += (delayed.x - S.eurydiceX) * Math.min(1, dt * 6.5);
+      S.eurydiceX += (delayed.x - S.eurydiceX) * Math.min(1, dt * 5.8);
+      S.eurydiceVisAlpha += (rm.eurydicePresence - S.eurydiceVisAlpha) * Math.min(1, dt * 2.4);
 
-      // Trigger room threshold CHOICE box around progress 0.62
-      if (!S.choiceTriggeredInRoom && S.roomProgress >= 0.62) {
-        S.choiceTriggeredInRoom = true;
-        S.phase = 'choose';
-        S.choiceSelected = rm.defaultIdx;
-      }
+      // Scoped spatial [B] temptation cue: ONLY when Eurydice's footsteps drop out (Room 4),
+      // at the final threshold (Room 5), or if the player stops and hesitates
+      const wantLookCue = S.hasMovedOnce && (!rm.eurydiceAudible || S.idleTime > 0.55);
+      S.lookCueAlpha += ((wantLookCue ? 1 : 0) - S.lookCueAlpha) * Math.min(1, dt * 3.5);
 
-      // Advance to next room or THE SURFACE at end of room
+      // Seamless transition into next bay or Surface threshold
       if (S.roomProgress >= 1.0) {
         if (S.roomIndex < ROOMS.length - 1) {
           enterRoom(S.roomIndex + 1);
+          S.worldZ = S.roomIndex * ROOM_LEN + S.roomProgress * ROOM_LEN;
         } else {
           triggerSurface();
         }
       }
-    } else if (S.phase === 'choose') {
-      S.sealAnim = Math.min(1, S.sealAnim + dt * 2.6);
-
-      // Direct Look Back shortcut
-      if (justPressed.has('KeyB') || justPressed.has('Space')) {
-        triggerLookBack();
-        justPressed.clear();
-        return;
-      }
-
-      const opts = rm.options;
-      if (justPressed.has('ArrowLeft') || justPressed.has('KeyA')) {
-        S.choiceSelected = (S.choiceSelected - 1 + opts.length) % opts.length;
-        playHarpNote(330, 0.2, 0.03);
-      }
-      if (justPressed.has('ArrowRight') || justPressed.has('KeyD')) {
-        S.choiceSelected = (S.choiceSelected + 1) % opts.length;
-        playHarpNote(330, 0.2, 0.03);
-      }
-
-      // Confirm choice with Enter or ArrowUp / KeyW
-      if (justPressed.has('Enter') || justPressed.has('ArrowUp') || justPressed.has('KeyW')) {
-        const chosen = opts[S.choiceSelected];
-        if (chosen.greyed) {
-          // Guide overrides greyed-out option and snaps cursor to Guide's selection!
-          S.overrideFlash = 1.0;
-          S.choiceSelected = rm.defaultIdx;
-          playHarpNote(146.83, 0.35, 0.05);
-        } else if (chosen.id === 'look') {
-          triggerLookBack();
-        } else {
-          playHarpNote(440, 0.4, 0.04);
-          S.phase = 'room';
-          S.roomProgress = Math.max(S.roomProgress, 0.66);
-        }
-      }
     } else if (S.phase === 'look') {
       S.lookTimer += dt;
-      S.eurydiceFade = Math.max(0, 1 - S.lookTimer * 0.48);
-      if (S.lookTimer >= 2.3) {
+      S.eurydiceFade = Math.max(0, 1 - S.lookTimer * 0.52);
+      S.sealAnim = Math.max(0, S.sealAnim - dt * 1.4);
+      for (const dm of dissolveMotes) {
+        dm.x += dm.vx * dt;
+        dm.y += dm.vy * dt;
+        dm.a = Math.max(0, dm.a - dt * 0.36);
+      }
+      if (S.lookTimer >= 2.35) {
         S.phase = 'end';
       }
     } else if (S.phase === 'surface') {
       S.surfaceTimer += dt;
-      S.worldScroll += dt * 1.1;
-      if (S.surfaceTimer >= 2.0) {
+      S.worldZ += dt * 3.2;
+      S.walkCycle += dt * 6.5;
+      if (S.surfaceTimer >= 1.95) {
         S.phase = 'end';
       }
     } else if (S.phase === 'end') {
-      if (justPressed.has('KeyR') || justPressed.has('Enter') || justPressed.has('Space')) {
-        resetToRoom1();
+      if (justPressed.has('Enter') || justPressed.has('Space')) {
+        resetRun();
       }
     }
 
-    // Update golden motes
+    // Subtitle fade lifecycle
+    if (S.subtitleHold > 0) {
+      S.subtitleHold = Math.max(0, S.subtitleHold - dt);
+      S.subtitleAlpha = Math.min(1, S.subtitleAlpha + dt * 5.0);
+    } else {
+      S.subtitleAlpha = Math.max(0, S.subtitleAlpha - dt * 2.8);
+    }
+
+    // Update particles & ripples
     for (const m of motes) {
       m.x += m.vx * dt;
       m.y += m.vy * dt;
-      if (m.y < 60) {
-        m.y = H - 40;
-        m.x = m.side < 0 ? 150 + rand() * 240 : W - 390 + rand() * 240;
+      if (m.y < 50) {
+        m.y = H - 30;
+        m.x = m.side < 0 ? 110 + rand() * 280 : W - 390 + rand() * 280;
       }
+    }
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const sp = sparks[i];
+      sp.life -= dt;
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.vy += 260 * dt;
+      if (sp.life <= 0) sparks.splice(i, 1);
+    }
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const rp = ripples[i];
+      rp.r += dt * 0.55;
+      rp.alpha -= dt * 0.42;
+      if (rp.alpha <= 0.01) ripples.splice(i, 1);
     }
 
     justPressed.clear();
   }
 
-  // --- 2.5D Corridor & Character Renderer matched to study/sheet.jpg ---
-  // Perspective helper: d = 0 is far wall, d = 1 is camera foreground
-  const VPX = 640, VPY = 225;
-  const FAR_L = 532, FAR_R = 748, FAR_TOP = 112, FAR_BOT = 344;
-  const NEAR_L = 165, NEAR_R = 1115, NEAR_TOP = -28, NEAR_BOT = 720;
-
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  function corridorPoint(side, vertical, d) {
-    // Nonlinear perspective mapping so foreground expands naturally
-    const p = d * d * 0.62 + d * 0.38;
-    const xFar = side < 0 ? FAR_L : FAR_R;
-    const xNear = side < 0 ? NEAR_L : NEAR_R;
-    const yFar = vertical < 0 ? FAR_TOP : FAR_BOT;
-    const yNear = vertical < 0 ? NEAR_TOP : NEAR_BOT;
-    return { x: lerp(xFar, xNear, p), y: lerp(yFar, yNear, p) };
+  function fillQuad(p0, p1, p2, p3, fill, stroke = null, lw = 1) {
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = lw;
+      ctx.stroke();
+    }
   }
 
+  function rgbStr(arr, mult = 1, alpha = 1) {
+    const r = clamp(Math.round(arr[0] * mult), 0, 255);
+    const g = clamp(Math.round(arr[1] * mult), 0, 255);
+    const b = clamp(Math.round(arr[2] * mult), 0, 255);
+    return alpha < 1 ? `rgba(${r},${g},${b},${alpha})` : `rgb(${r},${g},${b})`;
+  }
+
+  // --- Multi-Bay 3D Subterranean Corridor Renderer matched to study/sheet.jpg ---
   function drawCorridor() {
     const rm = ROOMS[S.roomIndex] || ROOMS[0];
-    const [tr, tg, tb] = rm.wallTint;
-    const isSurface = rm.isSurfaceThreshold || S.phase === 'surface' || (S.phase === 'end' && S.endingKind === 'surface');
+    const nextRm = ROOMS[Math.min(ROOMS.length - 1, S.roomIndex + 1)];
+    const blend = clamp((S.roomProgress - 0.65) / 0.35, 0, 1);
 
-    // Base dark fill
-    ctx.fillStyle = PAL.darkFloor;
+    const wallNear = [
+      lerp(rm.wallNear[0], nextRm.wallNear[0], blend),
+      lerp(rm.wallNear[1], nextRm.wallNear[1], blend),
+      lerp(rm.wallNear[2], nextRm.wallNear[2], blend)
+    ];
+    const wallFar = [
+      lerp(rm.wallFar[0], nextRm.wallFar[0], blend),
+      lerp(rm.wallFar[1], nextRm.wallFar[1], blend),
+      lerp(rm.wallFar[2], nextRm.wallFar[2], blend)
+    ];
+    const pilCol = [
+      lerp(rm.pilaster[0], nextRm.pilaster[0], blend),
+      lerp(rm.pilaster[1], nextRm.pilaster[1], blend),
+      lerp(rm.pilaster[2], nextRm.pilaster[2], blend)
+    ];
+
+    const CORR_W = 1.66;
+    const PIL_W = 1.48;
+    const CEIL_H = 3.05;
+    const Z_NEAR = 0.45;
+    const Z_FAR = 25.5;
+
+    ctx.fillStyle = '#131615';
     ctx.fillRect(0, 0, W, H);
 
-    // Ceiling trapezoid
-    const cGrad = ctx.createLinearGradient(0, 0, 0, FAR_TOP + 20);
-    cGrad.addColorStop(0, '#2a2b25');
-    cGrad.addColorStop(1, '#1d1f1b');
-    ctx.fillStyle = cGrad;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(W, 0);
-    ctx.lineTo(FAR_R, FAR_TOP);
-    ctx.lineTo(FAR_L, FAR_TOP);
-    ctx.closePath();
-    ctx.fill();
+    // 1. Continuous Ceiling & Glossy Dark Slate Floor
+    const cN0 = project(-CORR_W, CEIL_H, Z_NEAR);
+    const cN1 = project(CORR_W, CEIL_H, Z_NEAR);
+    const cF1 = project(CORR_W, CEIL_H, Z_FAR);
+    const cF0 = project(-CORR_W, CEIL_H, Z_FAR);
+    const ceilGrad = ctx.createLinearGradient(0, 0, 0, cF0.y + 30);
+    ceilGrad.addColorStop(0, '#272924');
+    ceilGrad.addColorStop(1, '#191b18');
+    fillQuad(cN0, cN1, cF1, cF0, ceilGrad);
 
-    // Scrolling overhead recessed fluorescent skylight panels (matching sheet.jpg)
-    const lightScroll = (S.worldScroll * 0.42) % 0.33;
-    for (let i = 0; i < 4; i++) {
-      const d0 = i * 0.33 + lightScroll - 0.1;
-      const d1 = d0 + 0.17;
-      if (d1 <= 0.02 || d0 >= 0.98) continue;
-      const ca0 = corridorPoint(-1, -1, Math.max(0.01, d0));
-      const cb0 = corridorPoint(1, -1, Math.max(0.01, d0));
-      const ca1 = corridorPoint(-1, -1, Math.min(0.99, d1));
-      const cb1 = corridorPoint(1, -1, Math.min(0.99, d1));
-      const inset = 0.28;
-      ctx.fillStyle = 'rgba(238, 232, 212, 0.88)';
+    const fN0 = project(-CORR_W, 0, Z_NEAR);
+    const fN1 = project(CORR_W, 0, Z_NEAR);
+    const fF1 = project(CORR_W, 0, Z_FAR);
+    const fF0 = project(-CORR_W, 0, Z_FAR);
+    const floorGrad = ctx.createLinearGradient(0, fF0.y, 0, H);
+    floorGrad.addColorStop(0, '#1c1f1e');
+    floorGrad.addColorStop(0.45, '#191d1d');
+    floorGrad.addColorStop(1, '#101314');
+    fillQuad(fF0, fF1, fN1, fN0, floorGrad);
+
+    // Subtle specular ceiling skylight reflection down the center of the dark slate floor
+    const specG = ctx.createLinearGradient(VPX - 180, 0, VPX + 180, 0);
+    specG.addColorStop(0, 'rgba(235, 230, 212, 0)');
+    specG.addColorStop(0.5, 'rgba(235, 230, 212, 0.055)');
+    specG.addColorStop(1, 'rgba(235, 230, 212, 0)');
+    fillQuad(
+      project(-0.68, 0, Z_FAR),
+      project(0.68, 0, Z_FAR),
+      project(0.85, 0, Z_NEAR),
+      project(-0.85, 0, Z_NEAR),
+      specG
+    );
+
+    // Perspective slate floor tile grid (matches dark square tiles in sheet.jpg!)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(240, 236, 222, 0.05)';
+    ctx.lineWidth = 1;
+    for (let lane = -3; lane <= 3; lane++) {
+      const lx = (lane / 4) * CORR_W;
+      const pA = project(lx, 0, Z_FAR);
+      const pB = project(lx, 0, Z_NEAR);
       ctx.beginPath();
-      ctx.moveTo(lerp(ca0.x, cb0.x, inset), ca0.y);
-      ctx.lineTo(lerp(cb0.x, ca0.x, inset), cb0.y);
-      ctx.lineTo(lerp(cb1.x, ca1.x, inset), cb1.y);
-      ctx.lineTo(lerp(ca1.x, cb1.x, inset), ca1.y);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(pA.x, pA.y);
+      ctx.lineTo(pB.x, pB.y);
+      ctx.stroke();
+    }
+    const tileStep = 1.1;
+    const zOffset = tileStep - (S.worldZ % tileStep);
+    for (let z = zOffset; z < Z_FAR; z += tileStep) {
+      if (z < Z_NEAR) continue;
+      const pL = project(-CORR_W, 0, z);
+      const pR = project(CORR_W, 0, z);
+      ctx.strokeStyle = `rgba(240, 236, 222, ${clamp(0.08 * (1 - z / Z_FAR), 0.015, 0.075)})`;
+      ctx.beginPath();
+      ctx.moveTo(pL.x, pL.y);
+      ctx.lineTo(pR.x, pR.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Golden AI Guide lane-regulation rails on the floor in Rooms 3..5
+    if (S.roomIndex >= 2) {
+      const railAlpha = S.roomIndex === 2 ? 0.22 * S.sealAnim : 0.34;
+      const railW = S.roomIndex >= 3 ? 0.68 : 0.90;
+      [-railW, railW].forEach((rx) => {
+        const rA = project(rx, 0.005, 16.0);
+        const rB = project(rx, 0.005, 0.9);
+        ctx.strokeStyle = `rgba(217, 180, 90, ${railAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(rA.x, rA.y);
+        ctx.lineTo(rB.x, rB.y);
+        ctx.stroke();
+      });
     }
 
-    // Left and Right 2.5D Stone-Paneled Office Walls
-    [-1, 1].forEach((side) => {
-      const topNear = side < 0 ? { x: 0, y: 0 } : { x: W, y: 0 };
-      const botNear = side < 0 ? { x: NEAR_L, y: NEAR_BOT } : { x: NEAR_R, y: NEAR_BOT };
-      const botOuter = side < 0 ? { x: 0, y: H } : { x: W, y: H };
-      const topFar = { x: side < 0 ? FAR_L : FAR_R, y: FAR_TOP };
-      const botFar = { x: side < 0 ? FAR_L : FAR_R, y: FAR_BOT };
+    // 2. Far Sanctum / Surface Archway at z = Z_FAR (matches sheet.jpg row 4!)
+    const goldOpen = clamp(
+      rm.archGoldOpen + (S.roomIndex === 3 ? S.roomProgress * 0.42 : 0) + (S.roomIndex === 4 ? S.roomProgress * 0.3 : 0),
+      0, 1.25
+    );
+    const farTL = project(-CORR_W, CEIL_H, Z_FAR);
+    const farTR = project(CORR_W, CEIL_H, Z_FAR);
+    const farBR = project(CORR_W, 0, Z_FAR);
+    const farBL = project(-CORR_W, 0, Z_FAR);
+    fillQuad(farTL, farTR, farBR, farBL, rgbStr(wallFar, 0.95));
 
-      const wGrad = ctx.createLinearGradient(
-        side < 0 ? 80 : W - 80, 320,
-        side < 0 ? FAR_L : FAR_R, 320
-      );
-      const r1 = Math.min(255, Math.max(20, 114 + tr));
-      const g1 = Math.min(255, Math.max(20, 108 + tg));
-      const b1 = Math.min(255, Math.max(20, 86 + tb));
-      const r2 = Math.min(255, Math.max(15, 58 + tr));
-      const g2 = Math.min(255, Math.max(15, 56 + tg));
-      const b2 = Math.min(255, Math.max(15, 45 + tb));
-      wGrad.addColorStop(0, `rgb(${r1},${g1},${b1})`);
-      wGrad.addColorStop(0.65, `rgb(${(r1 + r2) >> 1},${(g1 + g2) >> 1},${(b1 + b2) >> 1})`);
-      wGrad.addColorStop(1, `rgb(${r2},${g2},${b2})`);
+    // Distant arched doorway geometry
+    const archZ = S.roomIndex === 4 ? lerp(17.5, 8.2, S.roomProgress) : 21.5;
+    // Draw far arch backdrop before mid-bays if in B1..B4
+    function drawSanctumArch(zArch) {
+      const aw = 0.92, ah = 2.48;
+      const aBL = project(-aw, 0, zArch);
+      const aBR = project(aw, 0, zArch);
+      const aTL = project(-aw, ah * 0.72, zArch);
+      const aTR = project(aw, ah * 0.72, zArch);
+      const aTop = project(0, ah, zArch);
+      const cx = (aBL.x + aBR.x) * 0.5;
+      const archRad = (aBR.x - aBL.x) * 0.5;
 
-      ctx.fillStyle = wGrad;
+      // Surrounding end-wall bulkhead
+      const wTL = project(-CORR_W, CEIL_H, zArch);
+      const wTR = project(CORR_W, CEIL_H, zArch);
+      const wBR = project(CORR_W, 0, zArch);
+      const wBL = project(-CORR_W, 0, zArch);
+      fillQuad(wTL, wTR, wBR, wBL, rgbStr(pilCol, 0.78));
+
+      // Outer brass/stone frame
+      ctx.save();
+      ctx.fillStyle = goldOpen > 0.15 ? '#7c6533' : '#333229';
       ctx.beginPath();
-      ctx.moveTo(topNear.x, topNear.y);
-      ctx.lineTo(topFar.x, topFar.y);
-      ctx.lineTo(botFar.x, botFar.y);
-      ctx.lineTo(botNear.x, botNear.y);
-      ctx.lineTo(botOuter.x, botOuter.y);
+      ctx.moveTo(aBL.x - 6, aBL.y);
+      ctx.lineTo(aTL.x - 6, aTL.y);
+      ctx.arc(cx, aTL.y, archRad + 6, Math.PI, 0, false);
+      ctx.lineTo(aBR.x + 6, aBR.y);
       ctx.closePath();
       ctx.fill();
 
-      // Horizontal architectural concrete joint line mid-wall
-      ctx.strokeStyle = 'rgba(22, 24, 20, 0.42)';
-      ctx.lineWidth = 1.6;
+      // Clip inside arch
       ctx.beginPath();
-      ctx.moveTo(side < 0 ? 0 : W, 330);
-      ctx.lineTo(topFar.x, lerp(FAR_TOP, FAR_BOT, 0.46));
-      ctx.stroke();
+      ctx.moveTo(aBL.x, aBL.y);
+      ctx.lineTo(aTL.x, aTL.y);
+      ctx.arc(cx, aTL.y, archRad, Math.PI, 0, false);
+      ctx.lineTo(aBR.x, aBR.y);
+      ctx.closePath();
+      ctx.clip();
 
-      // Scrolling vertical wall panel seams
-      const seamOffset = (S.worldScroll * 0.36) % 0.18;
-      for (let s = 0; s < 6; s++) {
-        const d = s * 0.18 + seamOffset;
-        if (d <= 0.01 || d >= 1.0) continue;
-        const ptTop = corridorPoint(side, -1, d);
-        const ptBot = corridorPoint(side, 1, d);
-        ctx.strokeStyle = 'rgba(20, 22, 19, 0.48)';
-        ctx.lineWidth = 1.2 + d * 1.2;
-        ctx.beginPath();
-        ctx.moveTo(ptTop.x, Math.max(0, ptTop.y));
-        ctx.lineTo(ptBot.x, ptBot.y);
-        ctx.stroke();
+      // Inner stone double-doors or parting golden daylight!
+      const gBack = ctx.createLinearGradient(0, aTop.y, 0, aBL.y);
+      if (goldOpen > 0.04) {
+        gBack.addColorStop(0, '#fffdf0');
+        gBack.addColorStop(0.55, '#f6d884');
+        gBack.addColorStop(1, '#dfb04b');
+      } else {
+        gBack.addColorStop(0, '#6a6553');
+        gBack.addColorStop(0.65, '#3b3a30');
+        gBack.addColorStop(1, '#20221f');
+      }
+      ctx.fillStyle = gBack;
+      ctx.fillRect(aBL.x - 10, aTop.y - 20, (aBR.x - aBL.x) + 20, (aBL.y - aTop.y) + 30);
+
+      // Parting stone door leaves (closed in B5..B3, thin golden vertical crack in B2, wide open in B1!)
+      const openFrac = clamp((goldOpen - 0.05) * 0.92, 0, 0.88);
+      if (openFrac < 0.86) {
+        const gapPx = goldOpen > 0.02 ? Math.max(3, openFrac * archRad * 1.75) : 1;
+        ctx.fillStyle = '#565243';
+        ctx.fillRect(aBL.x - 4, aTop.y - 10, archRad - gapPx * 0.5 + 4, aBL.y - aTop.y + 15);
+        ctx.fillRect(cx + gapPx * 0.5, aTop.y - 10, archRad + 4, aBL.y - aTop.y + 15);
+        if (goldOpen > 0.02) {
+          ctx.fillStyle = 'rgba(255, 246, 200, 0.95)';
+          ctx.fillRect(cx - gapPx * 0.5, aTop.y - 10, gapPx, aBL.y - aTop.y + 15);
+        }
+      }
+      ctx.restore();
+
+      // Warm golden light spill down the corridor floor when arch cracks/opens (sheet.jpg row 4!)
+      if (goldOpen > 0.05) {
+        const inten = clamp(goldOpen, 0, 1);
+        const glow = ctx.createRadialGradient(cx, (aTop.y + aBL.y) * 0.5, 6, cx, (aTop.y + aBL.y) * 0.5, 240 * inten + 60);
+        glow.addColorStop(0, `rgba(255, 248, 214, ${0.52 * inten})`);
+        glow.addColorStop(0.45, `rgba(217, 180, 90, ${0.24 * inten})`);
+        glow.addColorStop(1, 'rgba(217, 180, 90, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(cx - 320, aTop.y - 100, 640, 480);
+
+        const spill = ctx.createLinearGradient(0, aBL.y, 0, H);
+        spill.addColorStop(0, `rgba(255, 232, 156, ${0.50 * inten})`);
+        spill.addColorStop(0.55, `rgba(217, 180, 90, ${0.14 * inten})`);
+        spill.addColorStop(1, 'rgba(217, 180, 90, 0)');
+        fillQuad(
+          project(-aw * (0.3 + 0.7 * inten), 0, zArch),
+          project(aw * (0.3 + 0.7 * inten), 0, zArch),
+          project(1.25, 0, 0.9),
+          project(-1.25, 0, 0.9),
+          spill
+        );
+      }
+    }
+
+    drawSanctumArch(archZ);
+
+    // 3. Multi-Bay Side Walls, Stepped Pilasters, Ceiling Skylights, Cove Reflections & Doorways (back-to-front!)
+    // Render 3 visible architectural bays ahead of camera
+    const baseRoomZ = S.roomProgress * ROOM_LEN; // 0 .. 11.0
+    for (let bayOffset = 2; bayOffset >= 0; bayOffset--) {
+      const bayIdx = S.roomIndex + bayOffset;
+      if (bayIdx >= ROOMS.length && bayOffset > 0) continue;
+      const bRoom = ROOMS[Math.min(ROOMS.length - 1, bayIdx)];
+
+      // Bay spans zStart (nearer) to zEnd (farther) in world relative to camera
+      const zNearBay = bayOffset * ROOM_LEN - baseRoomZ + 1.2;
+      const zFarBay = zNearBay + ROOM_LEN;
+      if (zFarBay <= Z_NEAR + 0.1 || zNearBay >= archZ - 0.3) continue;
+
+      const zn = clamp(zNearBay, Z_NEAR, archZ - 0.2);
+      const zf = clamp(zFarBay, Z_NEAR + 0.05, archZ - 0.2);
+      const depthShade = clamp(1.06 - zn * 0.032, 0.45, 1.05);
+
+      // Overhead recessed glowing fluorescent ceiling coffer in each bay (signature sheet.jpg feature!)
+      const cz0 = clamp(zNearBay + 2.4, Z_NEAR + 0.1, archZ - 0.5);
+      const cz1 = clamp(zNearBay + 7.2, Z_NEAR + 0.1, archZ - 0.5);
+      if (cz1 > cz0 + 0.3) {
+        const cw = 0.76;
+        // Dark coffer bezel
+        fillQuad(
+          project(-cw - 0.08, CEIL_H, cz0),
+          project(cw + 0.08, CEIL_H, cz0),
+          project(cw + 0.08, CEIL_H, cz1),
+          project(-cw - 0.08, CEIL_H, cz1),
+          '#1b1d19'
+        );
+        // Warm bone luminous diffuser panel
+        fillQuad(
+          project(-cw, CEIL_H, cz0 + 0.15),
+          project(cw, CEIL_H, cz0 + 0.15),
+          project(cw, CEIL_H, cz1 - 0.15),
+          project(-cw, CEIL_H, cz1 - 0.15),
+          `rgba(242, 237, 218, ${clamp(0.92 * depthShade, 0.35, 0.92)})`
+        );
       }
 
-      // Warm baseboard light strip along wall-floor edge (seen throughout sheet.jpg!)
-      ctx.strokeStyle = S.sealAnim > 0.1
-        ? `rgba(217, 180, 90, ${0.35 + S.sealAnim * 0.45})`
-        : 'rgba(230, 225, 211, 0.32)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(botFar.x, botFar.y);
-      ctx.lineTo(botNear.x, botNear.y);
-      ctx.stroke();
-    });
+      // Doorway span inside this bay: zNearBay + 4.0 .. zNearBay + 6.9
+      const dz0Raw = zNearBay + 4.0;
+      const dz1Raw = zNearBay + 6.9;
 
-    // Dark Slate Tiled Corridor Floor
-    const fGrad = ctx.createLinearGradient(0, FAR_BOT, 0, H);
-    fGrad.addColorStop(0, '#181a18');
-    fGrad.addColorStop(0.5, '#1e211f');
-    fGrad.addColorStop(1, '#141615');
-    ctx.fillStyle = fGrad;
-    ctx.beginPath();
-    ctx.moveTo(FAR_L, FAR_BOT);
-    ctx.lineTo(FAR_R, FAR_BOT);
-    ctx.lineTo(NEAR_R, NEAR_BOT);
-    ctx.lineTo(NEAR_L, NEAR_BOT);
-    ctx.closePath();
-    ctx.fill();
+      [-1, 1].forEach((side) => {
+        const wxWall = side * CORR_W;
+        const wxPil = side * PIL_W;
 
-    // Perspective floor grid lines
-    ctx.strokeStyle = 'rgba(255, 250, 235, 0.055)';
-    ctx.lineWidth = 1;
-    for (let lane = -2; lane <= 2; lane++) {
-      const f = (lane + 3) / 6;
-      ctx.beginPath();
-      ctx.moveTo(lerp(FAR_L, FAR_R, f), FAR_BOT);
-      ctx.lineTo(lerp(NEAR_L, NEAR_R, f), NEAR_BOT);
-      ctx.stroke();
-    }
-    const tileScroll = (S.worldScroll * 0.45) % 0.14;
-    for (let i = 0; i < 8; i++) {
-      const d = i * 0.14 + tileScroll;
-      if (d <= 0.01 || d >= 1) continue;
-      const pl = corridorPoint(-1, 1, d);
-      const pr = corridorPoint(1, 1, d);
-      ctx.beginPath();
-      ctx.moveTo(pl.x, pl.y);
-      ctx.lineTo(pr.x, pr.y);
-      ctx.stroke();
-    }
+        // Main outer wall slab across bay
+        const wCol = [
+          lerp(wallFar[0], wallNear[0], depthShade),
+          lerp(wallFar[1], wallNear[1], depthShade),
+          lerp(wallFar[2], wallNear[2], depthShade)
+        ];
+        fillQuad(
+          project(wxWall, CEIL_H, zn),
+          project(wxWall, CEIL_H, zf),
+          project(wxWall, 0, zf),
+          project(wxWall, 0, zn),
+          rgbStr(wCol, 1.0),
+          'rgba(18, 20, 17, 0.45)',
+          1.2
+        );
 
-    // Far End Wall & Central Doorway / Radiant Surface Archway (matches sheet.jpg row 4!)
-    ctx.fillStyle = '#38362c';
-    ctx.fillRect(FAR_L, FAR_TOP, FAR_R - FAR_L, FAR_BOT - FAR_TOP);
+        // Helper to draw a stepped concrete pilaster segment in strict back-to-front painter's order
+        function drawPilasterSegment(s0Raw, s1Raw, showBayStencil) {
+          const s0 = clamp(s0Raw, Z_NEAR, archZ - 0.25);
+          const s1 = clamp(s1Raw, Z_NEAR, archZ - 0.25);
+          if (s1 <= s0 + 0.08) return;
 
-    const archW = 104, archH = 178;
-    const archX = VPX - archW / 2, archY = FAR_BOT - archH;
+          // Inner pilaster face facing corridor
+          fillQuad(
+            project(wxPil, CEIL_H, s0),
+            project(wxPil, CEIL_H, s1),
+            project(wxPil, 0, s1),
+            project(wxPil, 0, s0),
+            rgbStr(pilCol, 0.94 * depthShade),
+            'rgba(20, 22, 18, 0.42)',
+            1.1
+          );
 
-    if (isSurface) {
-      // Golden sunlit Surface Archway!
-      const glow = ctx.createRadialGradient(VPX, archY + 90, 10, VPX, archY + 90, 260);
-      const boost = S.phase === 'surface' ? Math.min(1, S.surfaceTimer * 0.7) : 0;
-      glow.addColorStop(0, '#fffdf2');
-      glow.addColorStop(0.35, '#f6dc92');
-      glow.addColorStop(0.72, `rgba(217, 180, 90, ${0.42 + boost * 0.4})`);
-      glow.addColorStop(1, 'rgba(217, 180, 90, 0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(FAR_L - 120, FAR_TOP - 40, (FAR_R - FAR_L) + 240, 460);
+          // 3D near jamb face at s0 (visible thickness when looking down corridor toward a doorway reveal!)
+          if (s0Raw > Z_NEAR + 0.2 && s0Raw < archZ - 0.35) {
+            fillQuad(
+              project(wxWall, CEIL_H, s0),
+              project(wxPil, CEIL_H, s0),
+              project(wxPil, 0, s0),
+              project(wxWall, 0, s0),
+              rgbStr(pilCol, 0.56 * depthShade)
+            );
+          }
 
-      // Outer brass/gold doorway frame
-      ctx.fillStyle = '#8b6f32';
-      ctx.fillRect(archX - 10, archY - 10, archW + 20, archH + 10);
+          // Brutalist horizontal architectural panel grooves on pilaster
+          [1.05, 2.15].forEach((gy) => {
+            const g0 = project(wxPil, gy, s0);
+            const g1 = project(wxPil, gy, s1);
+            ctx.strokeStyle = 'rgba(20, 22, 18, 0.40)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(g0.x, g0.y);
+            ctx.lineTo(g1.x, g1.y);
+            ctx.stroke();
+          });
 
-      // Radiant arched interior
-      ctx.fillStyle = '#fff5cf';
-      ctx.beginPath();
-      ctx.moveTo(archX, FAR_BOT);
-      ctx.lineTo(archX, archY + 48);
-      ctx.arc(VPX, archY + 48, archW / 2, Math.PI, 0, false);
-      ctx.lineTo(archX + archW, FAR_BOT);
-      ctx.closePath();
-      ctx.fill();
+          // Diegetic stenciled bay mark on left near pilaster (replaces HUD room counter!)
+          if (showBayStencil && side < 0 && s0 < 8.5 && s1 > 2.2) {
+            const zm = (s0 + s1) * 0.5;
+            const mp = project(wxPil, 1.72, zm);
+            if (mp.x > 35 && mp.x < 460) {
+              ctx.save();
+              ctx.fillStyle = `rgba(230, 225, 211, ${clamp(0.22 * depthShade, 0.06, 0.22)})`;
+              ctx.font = `600 ${Math.round(clamp(mp.s * 0.20, 11, 22))}px "Inter", sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.fillText(bRoom.bayCode, mp.x, mp.y);
+              ctx.restore();
+            }
+          }
 
-      // Floor light spill from Surface Archway
-      const spill = ctx.createLinearGradient(0, FAR_BOT, 0, H);
-      spill.addColorStop(0, 'rgba(255, 232, 162, 0.55)');
-      spill.addColorStop(0.6, 'rgba(217, 180, 90, 0.12)');
-      spill.addColorStop(1, 'rgba(217, 180, 90, 0)');
-      ctx.fillStyle = spill;
-      ctx.beginPath();
-      ctx.moveTo(archX, FAR_BOT);
-      ctx.lineTo(archX + archW, FAR_BOT);
-      ctx.lineTo(VPX + 210, H);
-      ctx.lineTo(VPX - 210, H);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      // Subterranean next-room arched passage
-      ctx.fillStyle = '#252722';
-      ctx.fillRect(archX - 6, archY - 6, archW + 12, archH + 6);
-      const innerG = ctx.createLinearGradient(0, archY, 0, FAR_BOT);
-      innerG.addColorStop(0, '#5a5646');
-      innerG.addColorStop(0.55, '#303129');
-      innerG.addColorStop(1, '#191b19');
-      ctx.fillStyle = innerG;
-      ctx.beginPath();
-      ctx.moveTo(archX, FAR_BOT);
-      ctx.lineTo(archX, archY + 46);
-      ctx.arc(VPX, archY + 46, archW / 2, Math.PI, 0, false);
-      ctx.lineTo(archX + archW, FAR_BOT);
-      ctx.closePath();
-      ctx.fill();
-    }
+          // Warm recessed baseboard LED cove + floor specular reflection (signature sheet.jpg detail!)
+          const cb0 = project(wxPil, 0.05, s0);
+          const cb1 = project(wxPil, 0.05, s1);
+          const cf0 = project(wxPil, 0, s0);
+          const cf1 = project(wxPil, 0, s1);
+          fillQuad(cb0, cb1, cf1, cf0, `rgba(244, 214, 138, ${clamp(0.84 * depthShade, 0.25, 0.86)})`);
 
-    // Branching Left & Right Side Doorways + Golden AI Guide Laser Seals (matching sheet.jpg rows 2 & 3!)
-    // Doorway depth moves closer as roomProgress advances
-    const doorBaseD = Math.min(0.88, 0.24 + S.roomProgress * 0.52);
-    const doorSpan = 0.19;
-    [-1, 1].forEach((side) => {
-      const d0 = doorBaseD;
-      const d1 = Math.min(0.96, doorBaseD + doorSpan);
-      const b0 = corridorPoint(side, 1, d0);
-      const b1 = corridorPoint(side, 1, d1);
-      const t0 = corridorPoint(side, -1, d0);
-      const t1 = corridorPoint(side, -1, d1);
-
-      // Door top sits ~24% below ceiling line
-      const dt0 = { x: t0.x, y: lerp(t0.y, b0.y, 0.22) };
-      const dt1 = { x: t1.x, y: lerp(t1.y, b1.y, 0.22) };
-
-      // Dark recessed side doorway opening
-      ctx.fillStyle = '#141615';
-      ctx.beginPath();
-      ctx.moveTo(dt0.x, dt0.y);
-      ctx.lineTo(dt1.x, dt1.y);
-      ctx.lineTo(b1.x, b1.y);
-      ctx.lineTo(b0.x, b0.y);
-      ctx.closePath();
-      ctx.fill();
-
-      // Architectural doorway jamb thickness
-      ctx.strokeStyle = '#2f3028';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Check if AI Guide seals this side door in this room
-      const sideName = side < 0 ? 'left' : 'right';
-      const isSealed = rm.sealedDoors.includes(sideName) && S.sealAnim > 0.02;
-      if (isSealed) {
-        const a = S.sealAnim;
-        ctx.save();
-        // Warm golden floor & wall glow from AI seal
-        const cx = (b0.x + b1.x) * 0.5;
-        const cy = (dt0.y + b1.y) * 0.5;
-        const sealGlow = ctx.createRadialGradient(cx, cy, 8, cx, cy, 195);
-        sealGlow.addColorStop(0, `rgba(255, 224, 130, ${0.42 * a})`);
-        sealGlow.addColorStop(0.5, `rgba(217, 180, 90, ${0.18 * a})`);
-        sealGlow.addColorStop(1, 'rgba(217, 180, 90, 0)');
-        ctx.fillStyle = sealGlow;
-        ctx.fillRect(cx - 200, cy - 200, 400, 400);
-
-        // Shimmering golden barrier membrane inside doorway
-        ctx.fillStyle = `rgba(235, 192, 92, ${0.22 * a})`;
-        ctx.beginPath();
-        ctx.moveTo(dt0.x, dt0.y);
-        ctx.lineTo(dt1.x, dt1.y);
-        ctx.lineTo(b1.x, b1.y);
-        ctx.lineTo(b0.x, b0.y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Diagonal golden lattice wave lines inside doorway (like sheet.jpg row 2 col 2!)
-        ctx.strokeStyle = `rgba(255, 232, 158, ${0.55 * a})`;
-        ctx.lineWidth = 1.6;
-        for (let k = 1; k <= 4; k++) {
-          const f = k / 5;
-          const lx = lerp(dt0.x, dt1.x, f);
-          const ly = lerp(dt0.y, dt1.y, f);
-          const bx = lerp(b0.x, b1.x, f);
-          const by = lerp(b0.y, b1.y, f);
-          ctx.beginPath();
-          ctx.moveTo(lx, ly);
-          ctx.lineTo(bx + Math.sin(S.t * 6 + k) * 4, by);
-          ctx.stroke();
+          // Soft vertical warm reflection on the dark slate floor right below the cove
+          const rf0 = project(wxPil - side * 0.18, 0, s0);
+          const rf1 = project(wxPil - side * 0.18, 0, s1);
+          fillQuad(cf0, cf1, rf1, rf0, `rgba(235, 198, 110, ${clamp(0.16 * depthShade, 0.04, 0.18)})`);
         }
 
-        // Bright vertical golden AI Guide laser pillars on doorway edges (exact match to sheet.jpg!)
-        [ [t0, b0], [t1, b1] ].forEach(([tp, bp]) => {
-          ctx.strokeStyle = `rgba(217, 175, 72, ${0.75 * a})`;
-          ctx.lineWidth = 7;
-          ctx.beginPath();
-          ctx.moveTo(tp.x, Math.max(0, tp.y));
-          ctx.lineTo(bp.x, bp.y);
-          ctx.stroke();
+        // Back-to-front step A: Far pilaster segment (beyond doorway: dz1Raw .. zFarBay)
+        drawPilasterSegment(dz1Raw, zFarBay - 0.12, false);
 
-          ctx.strokeStyle = `rgba(255, 246, 205, ${0.95 * a})`;
-          ctx.lineWidth = 2.4;
-          ctx.beginPath();
-          ctx.moveTo(tp.x, Math.max(0, tp.y));
-          ctx.lineTo(bp.x, bp.y);
-          ctx.stroke();
-        });
-        ctx.restore();
-      }
-    });
+        // Back-to-front step B: Side Doorway Alcove (dz0Raw .. dz1Raw)
+        const dz0 = clamp(dz0Raw, Z_NEAR, archZ - 0.3);
+        const dz1 = clamp(dz1Raw, Z_NEAR, archZ - 0.3);
+        if (dz1 > dz0 + 0.12) {
+          const doorH = 2.38;
+          // Lintel header wall above doorway
+          fillQuad(
+            project(wxPil, CEIL_H, dz0),
+            project(wxPil, CEIL_H, dz1),
+            project(wxPil, doorH, dz1),
+            project(wxPil, doorH, dz0),
+            rgbStr(pilCol, 0.88 * depthShade)
+          );
 
-    // Floating golden dust motes near sealed doors
-    if (S.sealAnim > 0.1 || isSurface) {
+          // Deep dark recessed side hallway interior
+          const sideName = side < 0 ? 'left' : 'right';
+          const isCurrentBay = bayOffset === 0;
+          const doorSealed = isCurrentBay
+            ? (rm.sealedDoors.includes(sideName) && S.sealAnim > 0.02)
+            : false;
+
+          fillQuad(
+            project(wxPil, doorH, dz0),
+            project(wxPil, doorH, dz1),
+            project(wxPil, 0, dz1),
+            project(wxPil, 0, dz0),
+            '#0d1010'
+          );
+
+          // Clean 3D far jamb wall return inside the doorway reveal (strictly between wxPil and wxWall!)
+          if (dz1Raw < archZ - 0.35 && dz1Raw > Z_NEAR + 0.2) {
+            fillQuad(
+              project(wxPil, doorH, dz1),
+              project(wxWall, doorH, dz1),
+              project(wxWall, 0, dz1),
+              project(wxPil, 0, dz1),
+              rgbStr(pilCol, 0.52 * depthShade)
+            );
+          }
+
+          // Subtle open-passage floor invitation on unsealed Room 1 Left Doorway
+          if (isCurrentBay && !rm.sealedDoors.includes(sideName)) {
+            const openSpill = `rgba(230, 225, 211, ${0.09 + 0.04 * Math.sin(S.t * 3.0)})`;
+            fillQuad(
+              project(wxPil, 0.01, dz0),
+              project(wxPil, 0.01, dz1),
+              project(wxPil - side * 0.48, 0.01, dz1),
+              project(wxPil - side * 0.48, 0.01, dz0),
+              openSpill
+            );
+          }
+
+          // Crackling Golden AI Guide Laser Curtain sealing the doorway (sheet.jpg row 2 & row 3!)
+          if (doorSealed) {
+            const a = S.sealAnim;
+            const dt0 = project(wxPil, doorH, dz0);
+            const dt1 = project(wxPil, doorH, dz1);
+            const db1 = project(wxPil, 0, dz1);
+            const db0 = project(wxPil, 0, dz0);
+            const ct0 = project(wxPil, CEIL_H, dz0);
+            const ct1 = project(wxPil, CEIL_H, dz1);
+
+            ctx.save();
+            const cx = (db0.x + db1.x) * 0.5;
+            const cy = (dt0.y + db0.y) * 0.55;
+            const rad = clamp(Math.hypot(db0.x - db1.x, dt0.y - db0.y) * 0.85, 60, 280);
+            const sGlow = ctx.createRadialGradient(cx, cy, 6, cx, cy, rad);
+            sGlow.addColorStop(0, `rgba(255, 232, 145, ${0.42 * a})`);
+            sGlow.addColorStop(0.5, `rgba(217, 178, 82, ${0.18 * a})`);
+            sGlow.addColorStop(1, 'rgba(217, 178, 82, 0)');
+            ctx.fillStyle = sGlow;
+            ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+
+            fillQuad(
+              db0, db1,
+              project(wxPil - side * 0.62, 0.01, dz1),
+              project(wxPil - side * 0.62, 0.01, dz0),
+              `rgba(242, 200, 98, ${0.20 * a})`
+            );
+
+            fillQuad(dt0, dt1, db1, db0, `rgba(238, 195, 88, ${0.24 * a})`);
+
+            ctx.strokeStyle = `rgba(255, 238, 172, ${0.62 * a})`;
+            ctx.lineWidth = 1.6;
+            for (let k = 1; k <= 5; k++) {
+              const f = k / 6;
+              const zLine = lerp(dz0, dz1, f);
+              ctx.beginPath();
+              for (let seg = 0; seg <= 8; seg++) {
+                const yf = seg / 8;
+                const wy = yf * doorH * a;
+                const waveZ = zLine + Math.sin(S.t * 5.5 + yf * 5.2 + k * 1.3) * 0.09;
+                const pt = project(wxPil, wy, clamp(waveZ, dz0, dz1));
+                if (seg === 0) ctx.moveTo(pt.x, pt.y);
+                else ctx.lineTo(pt.x, pt.y);
+              }
+              ctx.stroke();
+            }
+
+            [[ct0, db0], [ct1, db1]].forEach(([tp, bp]) => {
+              ctx.strokeStyle = `rgba(218, 172, 66, ${0.78 * a})`;
+              ctx.lineWidth = 8;
+              ctx.beginPath();
+              ctx.moveTo(tp.x, tp.y);
+              ctx.lineTo(bp.x, bp.y);
+              ctx.stroke();
+
+              ctx.strokeStyle = `rgba(255, 248, 212, ${0.96 * a})`;
+              ctx.lineWidth = 2.6;
+              ctx.beginPath();
+              ctx.moveTo(tp.x, tp.y);
+              ctx.lineTo(bp.x, bp.y);
+              ctx.stroke();
+
+              const pGlow = ctx.createRadialGradient(bp.x, bp.y, 1, bp.x, bp.y, 22);
+              pGlow.addColorStop(0, `rgba(255, 250, 220, ${0.95 * a})`);
+              pGlow.addColorStop(1, 'rgba(217, 180, 90, 0)');
+              ctx.fillStyle = pGlow;
+              ctx.fillRect(bp.x - 24, bp.y - 24, 48, 48);
+            });
+            ctx.restore();
+          }
+        }
+
+        // Back-to-front step C: Near pilaster segment (before doorway: zNearBay .. dz0Raw) cleanly occludes doorway edge!
+        drawPilasterSegment(zNearBay + 0.12, dz0Raw, true);
+      });
+    }
+
+    // 4. Acoustic Footstep Floor Ripples (Orpheus + trailing pale Eurydice echoes!)
+    for (const rp of ripples) {
+      const c = project(rp.wx, 0.01, rp.wz);
+      const rEdge = project(rp.wx + rp.r, 0.01, rp.wz);
+      const rx = Math.abs(rEdge.x - c.x);
+      const ry = Math.max(3, rx * 0.28);
+      ctx.save();
+      ctx.strokeStyle = rp.gold
+        ? `rgba(217, 180, 90, ${rp.alpha})`
+        : `rgba(236, 231, 216, ${rp.alpha})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 5. Drifting golden motes & barrier collision sparks
+    const moteBoost = Math.max(S.sealAnim * 0.85, goldOpen * 0.9);
+    if (moteBoost > 0.06) {
       ctx.save();
       for (const m of motes) {
-        ctx.fillStyle = `rgba(255, 228, 148, ${m.a * Math.max(S.sealAnim, isSurface ? 0.8 : 0)})`;
+        ctx.fillStyle = `rgba(255, 230, 152, ${m.a * moteBoost})`;
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
     }
+    if (sparks.length > 0) {
+      ctx.save();
+      for (const sp of sparks) {
+        const a = clamp(sp.life / sp.maxLife, 0, 1);
+        ctx.fillStyle = `rgba(255, 238, 175, ${a})`;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 
-  function drawCharacter(charKey, screenX, feetY, targetH, opts = {}) {
+  // --- Articulated 2.5D Character Renderer (zero cutout islands, natural stride & floor reflection) ---
+  function drawArticulatedSprite(charKey, screenX, feetY, targetH, opts = {}) {
     const {
-      facing = 'back', // 'back' | 'front' | 'left' | 'right'
+      facing = 'back',
       moving = false,
       alpha = 1.0,
       walkPhase = 0,
@@ -915,29 +1331,36 @@
 
     if (alpha <= 0.01) return;
 
-    // Contact shadow + subtle vertical floor reflection (like sheet.jpg!)
     ctx.save();
+
+    // Glossy dark slate contact shadow + pale vertical dress reflection (matches sheet.jpg!)
     ctx.fillStyle = isEurydice
-      ? `rgba(230, 225, 211, ${0.09 * alpha})`
-      : `rgba(8, 9, 10, ${0.46 * alpha})`;
+      ? `rgba(232, 226, 210, ${0.12 * alpha})`
+      : `rgba(6, 7, 8, ${0.52 * alpha})`;
     ctx.beginPath();
-    ctx.ellipse(screenX, feetY - 4, targetH * 0.16, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(screenX, feetY - 3, targetH * 0.15, 11, 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (isEurydice) {
-      // Soft pale reflection on dark corridor floor
-      const refG = ctx.createLinearGradient(0, feetY, 0, feetY + 85);
-      refG.addColorStop(0, `rgba(230, 225, 211, ${0.18 * alpha})`);
-      refG.addColorStop(1, 'rgba(230, 225, 211, 0)');
+      const refG = ctx.createLinearGradient(0, feetY - 4, 0, feetY + 95);
+      refG.addColorStop(0, `rgba(234, 228, 214, ${0.24 * alpha})`);
+      refG.addColorStop(1, 'rgba(234, 228, 214, 0)');
       ctx.fillStyle = refG;
-      ctx.fillRect(screenX - targetH * 0.12, feetY - 2, targetH * 0.24, 85);
+      ctx.beginPath();
+      ctx.ellipse(screenX, feetY + 38, targetH * 0.13, 48, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const refO = ctx.createLinearGradient(0, feetY - 2, 0, feetY + 64);
+      refO.addColorStop(0, `rgba(12, 14, 16, ${0.38 * alpha})`);
+      refO.addColorStop(1, 'rgba(12, 14, 16, 0)');
+      ctx.fillStyle = refO;
+      ctx.fillRect(screenX - targetH * 0.11, feetY, targetH * 0.22, 64);
     }
 
     if (!spriteLoaded) {
-      // Immediate fallback silhouette on first frame before PNG decode
-      ctx.fillStyle = isEurydice ? PAL.fg : '#1d2024';
+      ctx.fillStyle = isEurydice ? '#e6e1d3' : '#1d2024';
       ctx.globalAlpha = alpha;
-      ctx.fillRect(screenX - 28, feetY - targetH, 56, targetH);
+      ctx.fillRect(screenX - 30, feetY - targetH, 60, targetH);
       ctx.restore();
       return;
     }
@@ -956,8 +1379,9 @@
       rect = bank.back;
     }
 
-    const bobY = moving ? Math.abs(Math.sin(walkPhase * 1.4)) * 5.5 : Math.sin(S.t * 2.1) * 1.5;
-    const swayX = (facing === 'back' && moving) ? Math.sin(walkPhase * 1.4) * 2.5 : 0;
+    const stride = moving ? Math.sin(walkPhase * 1.55) : 0;
+    const bobY = moving ? Math.abs(Math.cos(walkPhase * 1.55)) * 5.0 : Math.sin(S.t * 2.0) * 1.4;
+    const swayX = moving ? stride * 3.2 : 0;
     const drawW = targetH * (rect.w / rect.h);
     const drawH = targetH;
 
@@ -966,72 +1390,162 @@
     if (flipX) ctx.scale(-1, 1);
 
     if (isEurydice) {
-      ctx.shadowColor = 'rgba(238, 233, 216, 0.35)';
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = 'rgba(242, 236, 218, 0.36)';
+      ctx.shadowBlur = 16;
     }
 
-    ctx.drawImage(
-      spriteImg,
-      rect.x, rect.y, rect.w, rect.h,
-      -drawW / 2, -drawH, drawW, drawH
-    );
+    if (facing === 'back' && moving) {
+      // Split-body articulated back-stride: upper torso subtly leans while left/right legs alternate lift!
+      const splitRatio = isEurydice ? 0.48 : 0.50;
+      const srcTopH = Math.round(rect.h * splitRatio);
+      const srcBotH = rect.h - srcTopH;
+      const dstTopH = drawH * splitRatio;
+      const dstBotH = drawH - dstTopH;
+
+      if (isEurydice) {
+        // Flowing gown stride sway (zero vertical overlap so translucent alpha < 1 never double-blends!)
+        ctx.save();
+        ctx.transform(1, 0, stride * 0.018, 1, 0, 0);
+        ctx.drawImage(
+          spriteImg,
+          rect.x, rect.y, rect.w, srcTopH,
+          -drawW / 2, -drawH, drawW, dstTopH
+        );
+        ctx.restore();
+
+        ctx.save();
+        ctx.transform(1, 0, stride * 0.036, 1, 0, -dstBotH);
+        ctx.drawImage(
+          spriteImg,
+          rect.x, rect.y + srcTopH, rect.w, srcBotH,
+          -drawW / 2, 0, drawW, dstBotH
+        );
+        ctx.restore();
+      } else {
+        // Orpheus alternating left/right leg stride + shoulder roll
+        const halfSrcW = Math.floor(rect.w / 2);
+        const halfDstW = drawW / 2;
+        const leftLift = Math.max(0, stride) * 7.5;
+        const rightLift = Math.max(0, -stride) * 7.5;
+        const leftScale = 1 - Math.max(0, stride) * 0.045;
+        const rightScale = 1 - Math.max(0, -stride) * 0.045;
+
+        // Left leg
+        ctx.drawImage(
+          spriteImg,
+          rect.x, rect.y + srcTopH, halfSrcW, srcBotH,
+          -halfDstW, -dstBotH - leftLift, halfDstW, dstBotH * leftScale
+        );
+        // Right leg
+        ctx.drawImage(
+          spriteImg,
+          rect.x + halfSrcW, rect.y + srcTopH, rect.w - halfSrcW, srcBotH,
+          0, -dstBotH - rightLift, halfDstW, dstBotH * rightScale
+        );
+        // Upper torso & lyre drawn cleanly on top of waist seam
+        ctx.save();
+        ctx.rotate(stride * 0.018);
+        ctx.drawImage(
+          spriteImg,
+          rect.x, rect.y, rect.w, srcTopH + 8,
+          -drawW / 2, -drawH, drawW, dstTopH + 6
+        );
+        ctx.restore();
+      }
+    } else {
+      ctx.drawImage(
+        spriteImg,
+        rect.x, rect.y, rect.w, rect.h,
+        -drawW / 2, -drawH, drawW, drawH
+      );
+    }
+
     ctx.restore();
   }
 
   function drawActors() {
-    // Screen positions matched directly to study/sheet.jpg!
-    // Orpheus walks left-center (around x=585, feetY=625), Eurydice trails right-center (around x=690, feetY=648)
-    const orpheusScreenX = VPX - 38 + S.x * 265;
-    const eurydiceScreenX = VPX - 18 + S.eurydiceX * 265;
+    // 3D corridor positions matched to study/sheet.jpg over-the-shoulder framing!
+    const surfaceWalkZ = S.phase === 'surface' ? S.surfaceTimer * 2.8 : 0;
+    const orpheusP = project(S.x, 0, 3.34 + surfaceWalkZ);
+    const eurydiceZ = (S.roomIndex === 3 ? 2.74 : 2.90) + surfaceWalkZ * 0.92;
+    const eurydiceP = project(S.eurydiceX, 0, eurydiceZ);
+    S.eurydiceScreenX = eurydiceP.x;
 
-    const moving = S.phase === 'room' && (S.vz > 0.04 || Math.abs(S.vx) > 0.06);
+    const moving = (S.phase === 'room' && (S.vz > 0.04 || Math.abs(S.vx) > 0.08)) || S.phase === 'surface';
     let orpheusFacing = 'back';
     if (S.phase === 'look' || (S.phase === 'end' && S.endingKind === 'looked_back')) {
       orpheusFacing = 'front';
-    } else if (Math.abs(S.vx) > 0.28 && S.vz < 0.25) {
+    } else if (Math.abs(S.vx) > 0.72 && S.vz < 0.25) {
       orpheusFacing = S.vx < 0 ? 'left' : 'right';
     }
-
-    let eurydiceFacing = (S.phase === 'look' || (S.phase === 'end' && S.endingKind === 'looked_back'))
+    const eurydiceFacing = (S.phase === 'look' || (S.phase === 'end' && S.endingKind === 'looked_back'))
       ? 'front'
       : 'back';
 
-    const surfaceShrink = S.phase === 'surface' ? Math.max(0.68, 1 - S.surfaceTimer * 0.14) : 1;
-    const surfaceAdvanceY = S.phase === 'surface' ? S.surfaceTimer * 68 : 0;
+    const orpheusH = clamp(orpheusP.s * 1.44, 160, 355);
+    const eurydiceH = clamp(eurydiceP.s * 1.18, 155, 332);
 
-    // Draw Orpheus (slightly further ahead in corridor -> smaller y)
-    drawCharacter('orpheus', orpheusScreenX, 616 - surfaceAdvanceY, 248 * surfaceShrink, {
+    // Orpheus (further ahead -> smaller y -> drawn first so Eurydice overlaps naturally in foreground)
+    drawArticulatedSprite('orpheus', orpheusP.x, orpheusP.y, orpheusH, {
       facing: orpheusFacing,
-      moving: moving || S.phase === 'surface',
+      moving,
       alpha: 1.0,
       walkPhase: S.walkCycle,
       isEurydice: false
     });
 
-    // Draw Eurydice trailing half a pace behind on the right
-    drawCharacter('eurydice', eurydiceScreenX, 646 - surfaceAdvanceY * 0.88, 236 * surfaceShrink, {
+    // Eurydice trailing on right-rear
+    const eAlpha = 0.94 * S.eurydiceVisAlpha * S.eurydiceFade;
+    drawArticulatedSprite('eurydice', eurydiceP.x, eurydiceP.y, eurydiceH, {
       facing: eurydiceFacing,
-      moving: moving || S.phase === 'surface',
-      alpha: 0.93 * S.eurydiceFade,
-      walkPhase: S.walkCycle - 1.1,
+      moving,
+      alpha: eAlpha,
+      walkPhase: S.walkCycle - 1.05,
       isEurydice: true
     });
+
+    // Dissolving pale bone motes if Orpheus looked back
+    if (dissolveMotes.length > 0) {
+      ctx.save();
+      for (const dm of dissolveMotes) {
+        if (dm.a <= 0.01) continue;
+        ctx.fillStyle = `rgba(238, 233, 218, ${dm.a})`;
+        ctx.beginPath();
+        ctx.arc(dm.x, dm.y, dm.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Scoped spatial [B] temptation whisper right beside the trailing floor shadow ONLY when active
+    if (S.phase === 'room' && S.lookCueAlpha > 0.03) {
+      ctx.save();
+      const pulse = 0.78 + 0.22 * Math.sin(S.t * 3.2);
+      ctx.globalAlpha = S.lookCueAlpha * 0.58 * pulse;
+      ctx.textAlign = 'center';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.fillStyle = '#e6e1d3';
+      const cueX = clamp(eurydiceP.x, 380, W - 220);
+      const cueY = Math.min(H - 54, eurydiceP.y - 12);
+      ctx.fillText('[B] look back', cueX, cueY);
+      ctx.restore();
+    }
   }
 
   function drawPostFX() {
-    // Cinematic radial vignette matching Omni footage
-    const vig = ctx.createRadialGradient(VPX, H * 0.48, H * 0.28, VPX, H * 0.5, W * 0.66);
+    // Cinematic vignette matching Omni footage
+    const vig = ctx.createRadialGradient(VPX, H * 0.45, H * 0.26, VPX, H * 0.5, W * 0.68);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(0.7, 'rgba(10,12,13,0.22)');
-    vig.addColorStop(1, 'rgba(8,9,11,0.68)');
+    vig.addColorStop(0.72, 'rgba(9,11,12,0.24)');
+    vig.addColorStop(1, 'rgba(6,8,9,0.72)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
 
     // Subtle film grain
     ctx.save();
-    ctx.globalAlpha = 0.28;
-    const ox = ((S.t * 60) | 0) % 40;
-    const oy = ((S.t * 37) | 0) % 30;
+    ctx.globalAlpha = 0.24;
+    const ox = ((S.t * 58) | 0) % 40;
+    const oy = ((S.t * 35) | 0) % 30;
     for (let y = -oy; y < H; y += 90) {
       for (let x = -ox; x < W; x += 160) {
         ctx.drawImage(grainCanvas, x, y);
@@ -1040,159 +1554,70 @@
     ctx.restore();
   }
 
-  function drawHUD() {
-    const rm = ROOMS[S.roomIndex] || ROOMS[0];
-
+  // --- VOIDBASTARD-TAO Surface: Zero HUD Chrome, Terse Borderless Subtitle Only When True ---
+  function drawSurfaceText() {
     if (S.phase === 'title') {
-      ctx.fillStyle = 'rgba(20, 23, 27, 0.78)';
+      ctx.save();
+      ctx.fillStyle = 'rgba(14, 16, 18, 0.54)';
       ctx.fillRect(0, 0, W, H);
-
       ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.acc;
-      ctx.font = 'bold 78px "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText('DO NOT LOOK BACK', W / 2, 278);
-
-      ctx.fillStyle = PAL.fg;
-      ctx.font = '26px "Courier New", monospace';
-      ctx.fillText('what would you rather believe in?', W / 2, 344);
-
-      ctx.strokeStyle = PAL.fg;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(W / 2 - 160, 412, 320, 68);
-      ctx.font = 'bold 26px "Courier New", monospace';
-      ctx.fillText('START', W / 2, 455);
-
-      ctx.fillStyle = 'rgba(230, 225, 211, 0.68)';
-      ctx.font = '16px "Courier New", monospace';
-      ctx.fillText('WASD / Arrows: Walk & Choose   ·   B / Space: Look Back', W / 2, 535);
+      ctx.fillStyle = '#d9b45a';
+      ctx.font = '600 54px "Inter", "Helvetica Neue", sans-serif';
+      ctx.letterSpacing = '6px';
+      ctx.fillText('ORPHEUS', W / 2, 312);
+      ctx.letterSpacing = '0px';
+      ctx.fillStyle = 'rgba(230, 225, 211, 0.72)';
+      ctx.font = '400 17px "Inter", sans-serif';
+      ctx.fillText('[W / ↑] walk forward', W / 2, 372);
+      ctx.restore();
       return;
     }
 
-    // Minimal unobtrusive top-left diegetic status strip during active rooms
-    if (S.phase === 'room' || S.phase === 'choose') {
+    // One terse dry borderless Guide line at bottom margin (fades cleanly, never blocks sightlines)
+    if ((S.phase === 'room' || S.phase === 'look') && S.subtitleAlpha > 0.02 && S.subtitleText) {
       ctx.save();
-      ctx.textAlign = 'left';
-      ctx.font = '14px "Courier New", monospace';
-      ctx.fillStyle = 'rgba(230, 225, 211, 0.62)';
-      ctx.fillText(`ROOM ${rm.num}/5 · ${rm.code}`, 28, 32);
-
-      ctx.fillStyle = 'rgba(217, 180, 90, 0.78)';
-      ctx.fillText(`PLAYER AUTONOMY: ${rm.autonomy}%`, 28, 52);
-      ctx.restore();
-    }
-
-    // Stanley-Parable AI Guide choice box (styled directly after refs/m2_main_ref.png!)
-    if (S.phase === 'choose') {
-      const bx = 96, by = 576, bw = W - 192, bh = 122;
-      ctx.save();
-      ctx.fillStyle = 'rgba(26, 29, 34, 0.90)';
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = S.overrideFlash > 0.1 ? PAL.accBright : PAL.fg;
-      ctx.lineWidth = 2.2;
-      ctx.strokeRect(bx, by, bw, bh);
-
-      ctx.textAlign = 'left';
-      ctx.fillStyle = PAL.fg;
-      ctx.font = '20px "Courier New", monospace';
-      ctx.fillText(rm.guideLine, bx + 28, by + 42);
-
-      // Options row with greyed-out choices
-      let ox = bx + 28;
-      const oy = by + 88;
-      ctx.font = 'bold 19px "Courier New", monospace';
-      rm.options.forEach((opt, idx) => {
-        const selected = idx === S.choiceSelected;
-        const prefix = selected ? '> ' : '  ';
-        const txt = prefix + opt.label;
-        if (opt.greyed) {
-          ctx.fillStyle = PAL.greyed;
-        } else if (opt.danger) {
-          ctx.fillStyle = selected ? '#ff9478' : '#b9856c';
-        } else {
-          ctx.fillStyle = selected ? PAL.accBright : PAL.acc;
-        }
-        ctx.fillText(txt, ox, oy);
-        const w = ctx.measureText(txt).width;
-        if (opt.greyed) {
-          // Strike-through line showing autonomy removed by Guide
-          ctx.strokeStyle = 'rgba(217, 180, 90, 0.45)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(ox + 18, oy - 6);
-          ctx.lineTo(ox + w, oy - 6);
-          ctx.stroke();
-        }
-        ox += w + 30;
-      });
-
-      if (S.overrideFlash > 0.05) {
-        ctx.textAlign = 'right';
-        ctx.fillStyle = PAL.accBright;
-        ctx.font = '15px "Courier New", monospace';
-        ctx.fillText('GUIDE OVERRIDE: OPTION SEALED', bx + bw - 24, by + 110);
-      }
-      ctx.restore();
-    }
-
-    if (S.phase === 'look') {
-      ctx.save();
-      ctx.fillStyle = `rgba(18, 19, 22, ${Math.min(0.55, S.lookTimer * 0.28)})`;
-      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = S.subtitleAlpha * 0.90;
       ctx.textAlign = 'center';
-      ctx.fillStyle = PAL.acc;
-      ctx.font = 'bold 34px "Courier New", monospace';
-      ctx.fillText('LOOKED BACK', W / 2, 110);
-      ctx.fillStyle = PAL.fg;
-      ctx.font = '20px "Courier New", monospace';
-      ctx.fillText('The guide: "I told you I had everything handled..."', W / 2, 668);
+      ctx.font = '400 18px "Inter", -apple-system, sans-serif';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.92)';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#e6e1d3';
+      ctx.fillText(S.subtitleText, W / 2, H - 28);
       ctx.restore();
     }
 
     if (S.phase === 'surface') {
-      ctx.save();
-      const whiteout = Math.max(0, (S.surfaceTimer - 0.6) * 0.55);
-      ctx.fillStyle = `rgba(255, 246, 214, ${Math.min(0.78, whiteout)})`;
-      ctx.fillRect(0, 0, W, H);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#22252a';
-      ctx.font = 'bold 36px "Courier New", monospace';
-      if (S.surfaceTimer > 0.7) {
-        ctx.fillText('THE SURFACE', W / 2, 118);
+      const whiteout = clamp((S.surfaceTimer - 0.35) * 0.62, 0, 0.88);
+      if (whiteout > 0.01) {
+        ctx.fillStyle = `rgba(255, 246, 214, ${whiteout})`;
+        ctx.fillRect(0, 0, W, H);
       }
-      ctx.restore();
     }
 
     if (S.phase === 'end') {
       const won = S.endingKind === 'surface';
       ctx.save();
-      ctx.fillStyle = won ? 'rgba(236, 227, 202, 0.92)' : 'rgba(20, 22, 26, 0.92)';
+      ctx.fillStyle = won ? 'rgba(242, 234, 210, 0.88)' : 'rgba(13, 15, 17, 0.86)';
       ctx.fillRect(0, 0, W, H);
 
       ctx.textAlign = 'center';
-      ctx.fillStyle = won ? '#22252a' : PAL.acc;
-      ctx.font = 'bold 56px "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText(won ? 'THE SURFACE' : 'LOOKED BACK', W / 2, 250);
+      ctx.fillStyle = won ? '#22252a' : '#d9b45a';
+      ctx.font = '600 42px "Inter", "Helvetica Neue", sans-serif';
+      ctx.fillText(won ? 'THE SURFACE' : 'LOOKED BACK', W / 2, 304);
 
-      ctx.fillStyle = won ? '#3b382d' : PAL.fg;
-      ctx.font = '22px "Courier New", monospace';
-      if (won) {
-        ctx.fillText('You brought Eurydice into the daylight.', W / 2, 330);
-        ctx.fillText('The guide chose every door. You kept your eyes ahead.', W / 2, 368);
-        ctx.fillStyle = '#7a6125';
-        ctx.fillText('The guide: "Optimization complete. You never needed to choose at all."', W / 2, 430);
-      } else {
-        ctx.fillText('She was right behind you—until you checked.', W / 2, 330);
-        ctx.fillText('Every other choice was greyed out. The last one was yours.', W / 2, 368);
-        ctx.fillStyle = PAL.acc;
-        ctx.fillText('The guide: "Why did you decline my assistance at 99%?"', W / 2, 430);
-      }
+      ctx.fillStyle = won ? 'rgba(34, 37, 42, 0.82)' : 'rgba(230, 225, 211, 0.82)';
+      ctx.font = '400 19px "Inter", sans-serif';
+      ctx.fillText(
+        won
+          ? 'The guide chose every door. You never turned around.'
+          : 'Every other choice was sealed in gold. The last one was yours.',
+        W / 2,
+        356
+      );
 
-      ctx.strokeStyle = won ? '#22252a' : PAL.fg;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(W / 2 - 170, 495, 340, 56);
-      ctx.fillStyle = won ? '#22252a' : PAL.fg;
-      ctx.font = 'bold 20px "Courier New", monospace';
-      ctx.fillText('[R / ENTER] WALK AGAIN', W / 2, 530);
+      ctx.fillStyle = won ? 'rgba(122, 97, 37, 0.78)' : 'rgba(217, 180, 90, 0.68)';
+      ctx.font = '400 14px "Inter", sans-serif';
+      ctx.fillText('[R] walk again', W / 2, 422);
       ctx.restore();
     }
   }
@@ -1205,7 +1630,7 @@
     drawCorridor();
     drawActors();
     drawPostFX();
-    drawHUD();
+    drawSurfaceText();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);

@@ -4,22 +4,22 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" href="data:," />
-<title>Memory Munitions — M2 Playable Build</title>
+<title>Memory Munitions</title>
 <style>
   :root {
-    --bg: #07060c;
+    --bg: #050709;
     --fg: #5dff9e;
     --acc: #ff4fb0;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   html, body {
     width: 100%; height: 100%;
-    background: #030206;
+    background: #020305;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: "SF Mono", "Courier New", ui-monospace, Menlo, monospace;
     color: var(--fg);
   }
   #wrap {
@@ -27,13 +27,13 @@
     width: min(100vw, calc(100vh * 16 / 9));
     height: min(100vh, calc(100vw * 9 / 16));
     background: var(--bg);
-    box-shadow: 0 0 70px rgba(93, 255, 158, 0.12);
     overflow: hidden;
   }
   canvas {
     display: block;
     width: 100%;
     height: 100%;
+    cursor: crosshair;
   }
 </style>
 </head>
@@ -46,8 +46,8 @@
   'use strict';
 
   const W = 1280, H = 720;
-  const HORIZON_Y = 472;
-  const GROUND_Y = 602;
+  const HORIZON_Y = 468;
+  const GROUND_Y = 626;
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
 
@@ -66,39 +66,38 @@
   }
   let rng = mulberry32(SEED_INIT);
 
-  // Exact Nano Banana Sprite Sheet Coordinates (measured from PNG assets)
+  // Verified sprite bounding boxes from cleaned Nano Banana PNG sheets
   const PLAYER_FRAMES = {
-    miniIdle:  [51, 304, 157, 197],
-    miniWalkA: [225, 304, 157, 197],
-    miniRunA:  [674, 529, 161, 194],
-    miniRunB:  [846, 529, 159, 194],
-    rifleAim:  [394, 304, 154, 197],
-    beamPrep:  [551, 305, 151, 196],
-    rifleFire: [46, 532, 216, 193]
+    rifleIdle: [392, 302, 156, 201],
+    beamLock:  [550, 302, 159, 201],
+    miniIdle:  [50, 302, 160, 201],
+    miniWalk:  [224, 302, 160, 201],
+    miniRunA:  [680, 526, 156, 200],
+    miniRunB:  [843, 526, 164, 200]
   };
 
   const ENEMY_FRAMES = {
-    sentinelIdle:    [39, 40, 167, 238],
-    sentinelWalkA:   [262, 40, 186, 234],
-    sentinelWalkB:   [269, 298, 176, 229],
-    sentinelHit:     [501, 41, 190, 237],
-    sentinelShatter: [769, 42, 207, 235],
-    bruteWalkA:      [379, 554, 275, 210],
-    bruteWalkB:      [733, 557, 242, 213],
-    bruteHit:        [389, 793, 262, 210],
-    bruteShatter:    [733, 808, 215, 198]
+    sentinelIdle:    [37, 38, 171, 242],
+    sentinelWalkA:   [260, 38, 190, 238],
+    sentinelWalkB:   [267, 296, 180, 232],
+    sentinelHitA:    [500, 39, 193, 241],
+    sentinelHitB:    [500, 302, 200, 232],
+    sentinelShatter: [724, 28, 263, 250],
+    bruteWalkA:      [377, 552, 279, 214],
+    bruteWalkB:      [731, 555, 246, 217],
+    bruteShatter:    [712, 790, 240, 218]
   };
 
-  // 8 Memory Fragments from 8_memory_fragments_photo_map_message.png (1376x768)
+  // 8 Memory Fragments cropped tightly inside their warm sepia interiors (zero dark background corners!)
   const MEMORY_DEFS = [
-    { id: 0, crop: [66, 86, 294, 231],   kind: 'PHOTO',   title: 'Gable House, 1984',       caption: 'The porch light was still on the night you volunteered.' },
-    { id: 1, crop: [62, 414, 295, 257],  kind: 'PHOTO',   title: 'Sunlit Boulevard',        caption: 'You promised to walk home before the sirens started.' },
-    { id: 2, crop: [429, 71, 219, 274],  kind: 'PHOTO',   title: 'Two Faces in Sepia',      caption: 'Your sister held the camera; her name is fading first.' },
-    { id: 3, crop: [720, 84, 279, 238],  kind: 'MAP',     title: 'Sector 7 Evacuation Map', caption: 'Dotted ink leads away from the neural foundry.' },
-    { id: 4, crop: [1060, 85, 262, 230], kind: 'MAP',     title: 'River Crossing Grid',     caption: 'Three bridges marked safe; two were wired by noon.' },
-    { id: 5, crop: [397, 422, 282, 247], kind: 'MAP',     title: 'Sublevel Upload Vault',   caption: 'Your original body was stored beneath Block C.' },
-    { id: 6, crop: [738, 423, 257, 259], kind: 'MESSAGE', title: 'Folded Creased Letter',   caption: '"If they put you in steel, refuse to fire on sight."' },
-    { id: 7, crop: [1062, 411, 244, 267],kind: 'MESSAGE', title: 'Last Signed Note',        caption: '"Remember who we were. Meet me past the neon line."' }
+    { id: 0, crop: [105, 118, 215, 162], kind: 'PHOTO',   title: 'Gable House, 1984',     caption: 'Porch light still warm the night you left.' },
+    { id: 1, crop: [110, 456, 202, 158], kind: 'PHOTO',   title: 'Sunlit Boulevard',      caption: 'Before the sirens reached the avenue.' },
+    { id: 2, crop: [462, 108, 152, 198], kind: 'PHOTO',   title: 'Two Faces in Sepia',    caption: 'Your sister held the lens; keep her name.' },
+    { id: 3, crop: [752, 112, 214, 180], kind: 'MAP',     title: 'Sector 7 Transit Map',  caption: 'Dotted ink leading past the foundry.' },
+    { id: 4, crop: [1090, 112, 202, 174],kind: 'MAP',     title: 'River Crossing Grid',   caption: 'Only the north span remained unwired.' },
+    { id: 5, crop: [428, 450, 218, 186], kind: 'MAP',     title: 'Sublevel Vault Plan',   caption: 'Where your sleeping body was archived.' },
+    { id: 6, crop: [770, 452, 194, 196], kind: 'MESSAGE', title: 'Creased Penciled Note', caption: '"If they put you in steel, hold your fire."' },
+    { id: 7, crop: [1104, 452, 166, 184],kind: 'MESSAGE', title: 'Last Signed Letter',    caption: '"Meet me beyond the neon grid."' }
   ];
 
   const assets = {
@@ -109,10 +108,11 @@
     enemyClean: null,
     loaded: 0,
     ready: false,
-    fragCanvases: []
+    polaroids: [],
+    miniPolaroids: []
   };
 
-  function cleanCutoutStudioIslands(img) {
+  function scrubResidualGrey(img) {
     if (!img || !img.naturalWidth) return img;
     const c = document.createElement('canvas');
     c.width = img.naturalWidth;
@@ -124,9 +124,8 @@
     for (let i = 0; i < d.length; i += 4) {
       if (d[i + 3] === 0) continue;
       const r = d[i], gr = d[i + 1], b = d[i + 2];
-      const maxC = Math.max(r, gr, b), minC = Math.min(r, gr, b);
-      // Key out enclosed studio grey/white islands (#d8d8d8..#ffffff) inside arm loops
-      if (minC > 192 && (maxC - minC) < 18) {
+      const mx = Math.max(r, gr, b), mn = Math.min(r, gr, b);
+      if (mn > 184 && (mx - mn) < 15) {
         d[i + 3] = 0;
       }
     }
@@ -134,47 +133,73 @@
     return c;
   }
 
-  function buildFragmentCards() {
-    assets.playerClean = cleanCutoutStudioIslands(assets.playerImg);
-    assets.enemyClean = cleanCutoutStudioIslands(assets.enemyImg);
-    assets.fragCanvases = MEMORY_DEFS.map((m) => {
+  function buildAssets() {
+    assets.playerClean = scrubResidualGrey(assets.playerImg);
+    assets.enemyClean = scrubResidualGrey(assets.enemyImg);
+
+    assets.polaroids = MEMORY_DEFS.map((m) => {
       const [sx, sy, sw, sh] = m.crop;
+      // Large luminous Polaroid matching study/f_036.jpg
       const c = document.createElement('canvas');
-      c.width = 240; c.height = 180;
+      c.width = 320; c.height = 232;
       const g = c.getContext('2d');
-      // Warm cream photographic border matching study/f_032.jpg!
-      g.fillStyle = '#fff0be';
+      g.fillStyle = '#fff5cf';
       g.fillRect(0, 0, c.width, c.height);
       if (assets.fragImg.naturalWidth > 0) {
-        g.drawImage(assets.fragImg, sx + 14, sy + 14, sw - 28, sh - 28, 8, 8, c.width - 16, c.height - 16);
+        g.drawImage(assets.fragImg, sx, sy, sw, sh, 11, 11, c.width - 22, c.height - 34);
       }
-      // Subtle warm golden sepia unify tint so every shard reads unmistakably warm against neon!
-      g.fillStyle = 'rgba(255, 208, 118, 0.16)';
-      g.fillRect(8, 8, c.width - 16, c.height - 16);
+      // Warm golden sepia wash matching Omni video
+      const grad = g.createLinearGradient(0, 0, c.width, c.height);
+      grad.addColorStop(0, 'rgba(255, 226, 150, 0.24)');
+      grad.addColorStop(1, 'rgba(196, 134, 58, 0.20)');
+      g.fillStyle = grad;
+      g.fillRect(11, 11, c.width - 22, c.height - 34);
+
+      // Subtle sepia ink inscription directly on the bottom Polaroid margin (diegetic, never HUD!)
+      g.fillStyle = 'rgba(92, 62, 28, 0.85)';
+      g.font = 'italic 12px Georgia, serif';
+      g.textAlign = 'center';
+      g.fillText(m.title, c.width * 0.5, c.height - 9);
       return c;
     });
+
+    // Miniature whole-photo shards matching study/f_014.jpg & f_022.jpg
+    assets.miniPolaroids = MEMORY_DEFS.map((m) => {
+      const [sx, sy, sw, sh] = m.crop;
+      const c = document.createElement('canvas');
+      c.width = 96; c.height = 70;
+      const g = c.getContext('2d');
+      g.fillStyle = '#ffefc0';
+      g.fillRect(0, 0, c.width, c.height);
+      if (assets.fragImg.naturalWidth > 0) {
+        g.drawImage(assets.fragImg, sx, sy, sw, sh, 4, 4, c.width - 8, c.height - 8);
+      }
+      g.fillStyle = 'rgba(245, 196, 105, 0.25)';
+      g.fillRect(4, 4, c.width - 8, c.height - 8);
+      return c;
+    });
+
     assets.ready = true;
   }
 
-  function onImgDone() {
+  function onAssetLoad() {
     assets.loaded++;
-    if (assets.loaded >= 3 && !assets.ready) buildFragmentCards();
+    if (assets.loaded >= 3 && !assets.ready) buildAssets();
   }
-  assets.playerImg.onload = onImgDone;
-  assets.enemyImg.onload = onImgDone;
-  assets.fragImg.onload = onImgDone;
-  assets.playerImg.onerror = onImgDone;
-  assets.enemyImg.onerror = onImgDone;
-  assets.fragImg.onerror = onImgDone;
+  for (const im of [assets.playerImg, assets.enemyImg, assets.fragImg]) {
+    im.onload = onAssetLoad;
+    im.onerror = onAssetLoad;
+  }
   assets.playerImg.src = '../assets/player_robot_with_minigun.png';
   assets.enemyImg.src  = '../assets/2_enemy_robot_types.png';
   assets.fragImg.src   = '../assets/8_memory_fragments_photo_map_message.png';
 
-  // Audio: Lyria 30s BGM + Procedural 80s Synth SFX
+  // Audio: Lyria 30s BGM + Responsive WebAudio Arcade Synth
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.34;
+  bgm.volume = 0.36;
   let audioCtx = null;
+  let beamOsc = null, beamGain = null;
 
   function ensureAudio() {
     try {
@@ -187,6 +212,29 @@
     } catch (_) {}
   }
 
+  function setBeamHum(active, lockRatio = 0) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    try {
+      const now = audioCtx.currentTime;
+      if (active) {
+        if (!beamOsc) {
+          beamOsc = audioCtx.createOscillator();
+          beamGain = audioCtx.createGain();
+          beamOsc.type = 'sine';
+          beamOsc.frequency.setValueAtTime(220, now);
+          beamGain.gain.setValueAtTime(0.001, now);
+          beamOsc.connect(beamGain);
+          beamGain.connect(audioCtx.destination);
+          beamOsc.start(now);
+        }
+        beamOsc.frequency.setTargetAtTime(240 + lockRatio * 420, now, 0.05);
+        beamGain.gain.setTargetAtTime(0.055, now, 0.04);
+      } else if (beamGain) {
+        beamGain.gain.setTargetAtTime(0.0001, now, 0.05);
+      }
+    } catch (_) {}
+  }
+
   function playSfx(kind) {
     if (!audioCtx || audioCtx.state !== 'running') return;
     try {
@@ -195,69 +243,79 @@
       const g = audioCtx.createGain();
       osc.connect(g);
       g.connect(audioCtx.destination);
-      if (kind === 'minigun') {
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(520 + rng() * 140, now);
-        osc.frequency.exponentialRampToValueAtTime(110, now + 0.055);
-        g.gain.setValueAtTime(0.065, now);
+      if (kind === 'shot') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(680 + rng() * 180, now);
+        osc.frequency.exponentialRampToValueAtTime(130, now + 0.055);
+        g.gain.setValueAtTime(0.06, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
         osc.start(now); osc.stop(now + 0.065);
       } else if (kind === 'shatter') {
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(340, now);
-        osc.frequency.exponentialRampToValueAtTime(62, now + 0.36);
-        g.gain.setValueAtTime(0.14, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-        osc.start(now); osc.stop(now + 0.40);
+        osc.frequency.setValueAtTime(380, now);
+        osc.frequency.exponentialRampToValueAtTime(54, now + 0.42);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.44);
+        osc.start(now); osc.stop(now + 0.45);
       } else if (kind === 'recover') {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.setValueAtTime(659.25, now + 0.08);
-        osc.frequency.setValueAtTime(1046.5, now + 0.16);
+        osc.frequency.setValueAtTime(659.25, now + 0.07);
+        osc.frequency.setValueAtTime(783.99, now + 0.14);
+        osc.frequency.setValueAtTime(1046.5, now + 0.22);
         g.gain.setValueAtTime(0.13, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
-        osc.start(now); osc.stop(now + 0.44);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc.start(now); osc.stop(now + 0.58);
       } else if (kind === 'jump') {
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(210, now);
-        osc.frequency.exponentialRampToValueAtTime(460, now + 0.12);
-        g.gain.setValueAtTime(0.08, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
-        osc.start(now); osc.stop(now + 0.14);
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(490, now + 0.11);
+        g.gain.setValueAtTime(0.075, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now); osc.stop(now + 0.13);
       } else if (kind === 'hurt') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(48, now + 0.20);
-        g.gain.setValueAtTime(0.14, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-        osc.start(now); osc.stop(now + 0.23);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(145, now);
+        osc.frequency.exponentialRampToValueAtTime(46, now + 0.19);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+        osc.start(now); osc.stop(now + 0.22);
       }
     } catch (_) {}
   }
 
-  // Input State
+  // Input Handling (Keyboard + Mouse left-fire / right-disable)
   const keys = {};
-  window.addEventListener('keydown', (e) => {
+  let mouseFire = false, mouseBeam = false;
+
+  function wakeEngagement() {
     ensureAudio();
+    if (game.phase === 'title') {
+      game.phase = 'run';
+      game.engaged = true;
+    } else if (game.phase === 'run' && !game.engaged) {
+      game.engaged = true;
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      e.preventDefault();
+    }
     keys[e.code] = true;
     keys[e.key.toLowerCase()] = true;
 
-    if (game.phase === 'title') {
-      if (e.code === 'Enter' || e.code === 'Space') {
-        e.preventDefault();
-        game.phase = 'run';
-      }
-    } else if (game.phase === 'frag') {
-      if (e.code === 'Enter') {
-        game.phase = game.bossActive ? 'boss' : 'run';
-      }
-    } else if (game.phase === 'dead' || game.phase === 'album') {
-      if (e.key === 'r' || e.key === 'R' || e.code === 'Enter') {
-        e.preventDefault();
-        resetGame();
-        game.phase = 'run';
+    if (e.key === 'r' || e.key === 'R') {
+      if (game.phase === 'dead' || game.phase === 'album' || e.shiftKey) {
+        resetGame(true);
+        return;
       }
     }
+    if ((game.phase === 'dead' || game.phase === 'album') && (e.code === 'Enter' || e.code === 'Space')) {
+      resetGame(true);
+      return;
+    }
+    wakeEngagement();
   });
 
   window.addEventListener('keyup', (e) => {
@@ -265,65 +323,90 @@
     keys[e.key.toLowerCase()] = false;
   });
 
-  canvas.addEventListener('pointerdown', () => {
-    ensureAudio();
-    if (game.phase === 'title') game.phase = 'run';
-    else if (game.phase === 'dead' || game.phase === 'album') {
-      resetGame();
-      game.phase = 'run';
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('pointerdown', (e) => {
+    if (game.phase === 'dead' || game.phase === 'album') {
+      resetGame(true);
+      return;
+    }
+    const wasEngaged = game.engaged && game.phase !== 'title';
+    wakeEngagement();
+    // First click wakes engagement cleanly (e.g. iframe focus / record_play click) without stray firing
+    if (wasEngaged) {
+      if (e.button === 2) mouseBeam = true;
+      else mouseFire = true;
     }
   });
+  window.addEventListener('pointerup', (e) => {
+    if (e.button === 2) mouseBeam = false;
+    else mouseFire = false;
+  });
 
-  // Game State Machine: 'title' | 'run' | 'frag' | 'boss' | 'dead' | 'album'
-  const LEVEL_END_X = 3950;
+  // Floor ambient dust glints matching study/f_005.jpg
+  const floorDots = Array.from({ length: 38 }, (_, i) => ({
+    wx: i * 135 + 40,
+    depth: 0.08 + ((i * 37) % 100) / 112,
+    twinkle: i * 0.9
+  }));
+
+  const LEVEL_END_X = 4380;
   const game = {
-    phase: AUTOSTART ? 'run' : 'title',
+    phase: AUTOSTART ? 'run' : 'title', // 'title' | 'run' | 'boss' | 'dead' | 'album'
+    engaged: false,                     // Begins calm (REST/READY) until first player input/click
+    voidState: AUTOSTART ? 'READY' : 'REST',
     camX: 0,
+    shake: 0,
+    hitStop: 0,
     bossActive: false,
-    fragBannerTimer: 0,
-    lastFragEvent: null,
-    hudVisible: true,
     player: {
-      x: 280,
+      x: 295,
       y: GROUND_Y,
       vx: 0,
       vy: 0,
       facing: 1,
       grounded: true,
+      coyote: 0,
+      jumpBuf: 0,
       hp: 100,
       maxHp: 100,
+      heat: 0,
+      overheated: 0,
       invuln: 0,
       fireCd: 0,
-      weaponMode: 'minigun', // 'minigun' | 'disable'
+      weaponMode: 'minigun',
       beaming: false,
       beamTarget: null,
       animTime: 0,
-      muzzleTimer: 0
+      muzzleTimer: 0,
+      recoil: 0
     },
     enemies: [],
-    bullets: [],       // player minigun shots & enemy plasma shots
-    shards: [],        // slow-motion warm golden photographic shards!
-    intactPickups: [], // glowing intact memory photographs floating above disabled robots!
+    bullets: [],
+    shards: [],
+    embers: [],
+    intactPickups: [],
     sparks: [],
     smokePuffs: [],
-    album: []          // 8 slots: 'unknown' | 'shattered' | 'recovered'
+    album: []
   };
 
   function spawnEnemies() {
+    // Robot 0 & 1 are sleek Magenta Sentinels matching study/sheet.jpg rows 1-4;
+    // Brutes & final Boss escalate the gauntlet down the neon corridor.
     const spots = [
-      { x: 760,  type: 'sentinel', memId: 0 },
-      { x: 1210, type: 'sentinel', memId: 1 },
-      { x: 1680, type: 'brute',    memId: 2 },
-      { x: 2130, type: 'sentinel', memId: 3 },
-      { x: 2560, type: 'sentinel', memId: 4 },
-      { x: 2990, type: 'brute',    memId: 5 },
-      { x: 3410, type: 'sentinel', memId: 6 },
-      { x: 3860, type: 'boss',     memId: 7 }
+      { x: 920,  type: 'sentinel', memId: 0 },
+      { x: 1540, type: 'sentinel', memId: 1 },
+      { x: 2280, type: 'brute',    memId: 2 },
+      { x: 2820, type: 'sentinel', memId: 3 },
+      { x: 3340, type: 'sentinel', memId: 4 },
+      { x: 3840, type: 'brute',    memId: 5 },
+      { x: 4240, type: 'sentinel', memId: 6 },
+      { x: 4660, type: 'boss',     memId: 7 }
     ];
     game.enemies = spots.map((s, idx) => {
       const isBoss = s.type === 'boss';
       const isBrute = s.type === 'brute' || isBoss;
-      const hp = isBoss ? 150 : (isBrute ? 88 : 58);
+      const hp = isBoss ? 148 : (isBrute ? 92 : 68);
       return {
         id: idx,
         x: s.x,
@@ -335,30 +418,35 @@
         memId: s.memId,
         hp,
         maxHp: hp,
-        disableProg: 0,      // 0..100% precision disable progress
-        state: 'active',     // 'active' | 'shattering' | 'disabled' | 'gone'
+        disableProg: 0,
+        state: 'active', // 'active' | 'shattering' | 'disabled' | 'gone'
         stateTimer: 0,
         hitFlash: 0,
-        shootCd: 0.9 + (idx % 3) * 0.45,
-        walkPhase: idx * 1.3
+        shootCd: idx === 0 ? 0.38 : (0.85 + (idx % 3) * 0.35),
+        walkPhase: idx * 1.4
       };
     });
   }
 
-  function resetGame() {
+  function resetGame(engageImmediately = false) {
     rng = mulberry32(SEED_INIT);
-    game.phase = AUTOSTART ? 'run' : 'title';
+    game.phase = (AUTOSTART || engageImmediately) ? 'run' : 'title';
+    game.engaged = engageImmediately;
     game.camX = 0;
+    game.shake = 0;
+    game.hitStop = 0;
     game.bossActive = false;
-    game.fragBannerTimer = 0;
-    game.lastFragEvent = null;
 
     const p = game.player;
-    p.x = 280; p.y = GROUND_Y;
+    p.x = 295; p.y = GROUND_Y;
     p.vx = 0; p.vy = 0;
     p.facing = 1;
     p.grounded = true;
+    p.coyote = 0;
+    p.jumpBuf = 0;
     p.hp = 100;
+    p.heat = 0;
+    p.overheated = 0;
     p.invuln = 0;
     p.fireCd = 0;
     p.weaponMode = 'minigun';
@@ -366,79 +454,86 @@
     p.beamTarget = null;
     p.animTime = 0;
     p.muzzleTimer = 0;
+    p.recoil = 0;
 
     game.bullets = [];
     game.shards = [];
+    game.embers = [];
     game.intactPickups = [];
     game.sparks = [];
     game.smokePuffs = [];
     game.album = MEMORY_DEFS.map(() => 'unknown');
+    setBeamHum(false);
     spawnEnemies();
   }
 
-  function spawnSparkBurst(wx, wy, color, count = 14, speed = 240) {
+  function spawnSparkBurst(wx, wy, color, count = 14, speed = 280) {
     for (let i = 0; i < count; i++) {
       const a = rng() * Math.PI * 2;
-      const sp = (0.25 + rng() * 0.85) * speed;
+      const sp = (0.28 + rng() * 0.85) * speed;
       game.sparks.push({
         x: wx, y: wy,
         vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - 25,
-        len: 6 + rng() * 14,
+        vy: Math.sin(a) * sp - 35,
         color,
         age: 0,
-        maxLife: 0.20 + rng() * 0.25
+        maxLife: 0.16 + rng() * 0.22
       });
     }
   }
 
-  function shatterEnemyIntoPhotoShards(e) {
+  function shatterEnemy(e) {
     e.state = 'shattering';
-    e.stateTimer = 0.28; // Show golden shatter sprite pose briefly (`study/f_012.jpg`), then burst!
+    e.stateTimer = 0.34; // Golden-lit backward hurl pose matching study/f_014.jpg
     game.album[e.memId] = 'shattered';
+    game.hitStop = 0.052;
+    game.shake = 8.5;
     playSfx('shatter');
 
-    const mem = MEMORY_DEFS[e.memId];
-    game.lastFragEvent = {
-      status: 'SHATTERED',
-      memId: e.memId,
-      title: mem.title,
-      kind: mem.kind,
-      note: 'Minigun tore this memory into unreadable shards.'
-    };
-    game.fragBannerTimer = 2.4;
-    if (game.phase === 'run') game.phase = 'frag';
-
-    // Spawn 34 warm golden-sepia photographic memory shards floating in slow motion! (matches sheet.jpg row 2!)
-    const cols = 6, rows = 5;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const ang = (rng() - 0.5) * Math.PI * 1.9 - Math.PI * 0.45;
-        const spd = 65 + rng() * 230;
-        game.shards.push({
-          memId: e.memId,
-          u: c / cols,
-          v: r / rows,
-          uw: 1 / cols,
-          vh: 1 / rows,
-          x: e.x + (c - 2.5) * 14,
-          y: e.y - 145 + (r - 2) * 20,
-          vx: Math.cos(ang) * spd - 22,
-          vy: Math.sin(ang) * spd - 35,
-          rot: (rng() - 0.5) * 1.2,
-          vrot: (rng() - 0.5) * 2.6,
-          w: 28 + rng() * 20,
-          h: 22 + rng() * 16,
-          age: 0,
-          maxLife: 5.5 + rng() * 3.0 // Lingers across frame just like sheet.jpg!
-        });
-      }
+    // Burst into 38 crisp miniature whole-sepia photographs tumbling in slow motion (f_014.jpg & f_022.jpg!)
+    const count = 38;
+    for (let i = 0; i < count; i++) {
+      const spreadA = -Math.PI * 0.55 + (rng() - 0.5) * Math.PI * 1.65;
+      const spd = 75 + rng() * 310;
+      const scale = 0.42 + rng() * 0.62;
+      game.shards.push({
+        memId: e.memId,
+        x: e.x + (rng() - 0.5) * 68,
+        y: e.y - 185 + (rng() - 0.5) * 140,
+        vx: Math.cos(spreadA) * spd - 38,
+        vy: Math.sin(spreadA) * spd - 45,
+        rot: (rng() - 0.5) * 1.1,
+        vrot: (rng() - 0.5) * 2.4,
+        tiltPhase: rng() * Math.PI * 2,
+        tiltSpeed: 1.8 + rng() * 2.6,
+        w: 76 * scale,
+        h: 55 * scale,
+        settled: false,
+        age: 0,
+        maxLife: 7.5 + rng() * 3.5
+      });
     }
-    spawnSparkBurst(e.x, e.y - 135, '#ffe394', 28, 310);
-    spawnSparkBurst(e.x, e.y - 135, '#5dff9e', 16, 260);
+
+    // Warm golden dust embers lingering in the void around the shattered photographs
+    for (let i = 0; i < 42; i++) {
+      const a = rng() * Math.PI * 2;
+      const sp = 25 + rng() * 165;
+      game.embers.push({
+        x: e.x + (rng() - 0.5) * 90,
+        y: e.y - 190 + (rng() - 0.5) * 150,
+        vx: Math.cos(a) * sp - 15,
+        vy: Math.sin(a) * sp - 20,
+        r: 1.8 + rng() * 2.6,
+        age: 0,
+        maxLife: 4.5 + rng() * 3.0
+      });
+    }
+
+    spawnSparkBurst(e.x, e.y - 190, '#ffe596', 26, 360);
+    spawnSparkBurst(e.x, e.y - 190, '#5dff9e', 18, 300);
 
     if (e.isBoss) {
-      setTimeout(() => { if (game.phase !== 'dead') game.phase = 'album'; }, 1500);
+      setTimeout(() => { if (game.phase !== 'dead') game.phase = 'album'; }, 1650);
     }
   }
 
@@ -446,33 +541,37 @@
     e.state = 'disabled';
     e.stateTimer = 0;
     game.album[e.memId] = 'recovered';
+    game.hitStop = 0.035;
     playSfx('recover');
 
-    const mem = MEMORY_DEFS[e.memId];
-    game.lastFragEvent = {
-      status: 'RECOVERED',
-      memId: e.memId,
-      title: mem.title,
-      kind: mem.kind,
-      note: mem.caption
-    };
-    game.fragBannerTimer = 2.8;
-    if (game.phase === 'run') game.phase = 'frag';
+    // Intact luminous Polaroid floats gracefully out of the kneeling robot's core (f_036.jpg!)
+    const fireflies = Array.from({ length: 58 }, (_, i) => ({
+      ang: (i / 58) * Math.PI * 2 + rng() * 0.25,
+      rx: 158 + (rng() - 0.5) * 46,
+      ry: 118 + (rng() - 0.5) * 42,
+      spd: (rng() < 0.5 ? 1 : -1) * (0.35 + rng() * 0.55),
+      r: 2.0 + rng() * 2.8,
+      tw: rng() * Math.PI * 2
+    }));
 
-    // Release large glowing intact sepia photograph beside the powered-down robot (`study/f_032.jpg`!)
     game.intactPickups.push({
       memId: e.memId,
-      x: e.x - 95,
-      y: e.y - 195,
-      baseY: e.y - 195,
-      scale: 0.15,
-      collected: false,
-      age: 0
+      x: e.x - 165,
+      y: e.y - 348,
+      startX: e.x - 30,
+      startY: e.y - 210,
+      scale: 0.18,
+      absorbed: false,
+      absorbProg: 0,
+      age: 0,
+      fireflies
     });
-    spawnSparkBurst(e.x - 60, e.y - 175, '#ffe89e', 26, 180);
+
+    spawnSparkBurst(e.x - 45, e.y - 220, '#ffe89e', 28, 210);
+    spawnSparkBurst(e.x - 20, e.y - 210, '#5dff9e', 16, 170);
 
     if (e.isBoss) {
-      setTimeout(() => { if (game.phase !== 'dead') game.phase = 'album'; }, 1700);
+      setTimeout(() => { if (game.phase !== 'dead') game.phase = 'album'; }, 2100);
     }
   }
 
@@ -480,52 +579,73 @@
   function update(dt) {
     clock += dt;
 
-    if (game.phase === 'title' || game.phase === 'dead' || game.phase === 'album') {
-      // Gentle background motion on title/endings
-      if (game.phase === 'title') game.camX = (game.camX + dt * 65) % 400;
+    if (game.shake > 0) game.shake = Math.max(0, game.shake - dt * 28);
+    if (game.hitStop > 0) {
+      game.hitStop = Math.max(0, game.hitStop - dt);
       return;
     }
 
-    // Fragment toast state transitions smoothly back to active run without freezing gameplay!
-    if (game.fragBannerTimer > 0) {
-      game.fragBannerTimer = Math.max(0, game.fragBannerTimer - dt);
-      if (game.fragBannerTimer <= 1.5 && game.phase === 'frag') {
-        game.phase = game.bossActive ? 'boss' : 'run';
-      }
+    if (game.phase === 'title') {
+      game.voidState = 'REST';
+      setBeamHum(false);
+      return;
+    }
+    if (game.phase === 'dead') {
+      game.voidState = 'FAULT';
+      setBeamHum(false);
+      return;
+    }
+    if (game.phase === 'album') {
+      game.voidState = 'COMPLETE';
+      setBeamHum(false);
+      return;
+    }
+
+    // Calm READY state on ?autostart before first input so world begins empty & poised
+    if (!game.engaged) {
+      game.voidState = 'READY';
+      game.player.animTime += dt * 1.8;
+      return;
     }
 
     const p = game.player;
     if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
     if (p.fireCd > 0) p.fireCd = Math.max(0, p.fireCd - dt);
     if (p.muzzleTimer > 0) p.muzzleTimer = Math.max(0, p.muzzleTimer - dt);
+    if (p.recoil > 0) p.recoil = Math.max(0, p.recoil - dt * 12);
+    if (p.overheated > 0) p.overheated = Math.max(0, p.overheated - dt);
 
-    // Player Movement (ArrowLeft/Right or A/D, Jump with ArrowUp/W)
     const moveL = keys['ArrowLeft'] || keys['KeyA'] || keys['a'];
     const moveR = keys['ArrowRight'] || keys['KeyD'] || keys['d'];
     const wantJump = keys['ArrowUp'] || keys['KeyW'] || keys['w'];
-    const wantMini = keys['Space'] || keys['KeyJ'] || keys['j'];
-    const wantBeam = keys['KeyK'] || keys['k'] || keys['ShiftLeft'] || keys['ShiftRight'] || keys[' shift'];
+    const wantMini = (keys['Space'] || keys['KeyJ'] || keys['j'] || mouseFire) && p.overheated <= 0;
+    const wantBeam = keys['KeyK'] || keys['k'] || keys['ShiftLeft'] || keys['ShiftRight'] || mouseBeam;
 
-    const moveSpeed = wantBeam ? 235 : 320;
-    if (moveR && !moveL) {
-      p.vx = moveSpeed;
-      p.facing = 1;
-    } else if (moveL && !moveR) {
-      p.vx = -moveSpeed;
-      p.facing = -1;
-    } else {
-      p.vx *= Math.pow(0.001, dt);
-      if (Math.abs(p.vx) < 6) p.vx = 0;
-    }
+    if (p.grounded) p.coyote = 0.095;
+    else p.coyote = Math.max(0, p.coyote - dt);
 
-    if (wantJump && p.grounded) {
-      p.vy = -660;
+    if (wantJump) p.jumpBuf = 0.1;
+    else p.jumpBuf = Math.max(0, p.jumpBuf - dt);
+
+    // Snappy Contra horizontal acceleration & traction
+    const topSpeed = wantBeam ? 245 : 355;
+    const targetVx = (moveR && !moveL) ? topSpeed : ((moveL && !moveR) ? -topSpeed : 0);
+    const accel = targetVx !== 0 ? 2800 : 3200;
+    if (p.vx < targetVx) p.vx = Math.min(targetVx, p.vx + accel * dt);
+    else if (p.vx > targetVx) p.vx = Math.max(targetVx, p.vx - accel * dt);
+    if (targetVx > 0) p.facing = 1;
+    else if (targetVx < 0) p.facing = -1;
+
+    if (p.jumpBuf > 0 && p.coyote > 0) {
+      p.vy = -820;
       p.grounded = false;
+      p.coyote = 0;
+      p.jumpBuf = 0;
       playSfx('jump');
     }
 
-    p.vy += 1680 * dt;
-    p.x = Math.max(game.camX + 90, Math.min(LEVEL_END_X + 180, p.x + p.vx * dt));
+    p.vy += 1920 * dt;
+    p.x = Math.max(game.camX + 110, Math.min(LEVEL_END_X + 260, p.x + p.vx * dt));
     p.y += p.vy * dt;
     if (p.y >= GROUND_Y) {
       p.y = GROUND_Y;
@@ -533,72 +653,79 @@
       p.grounded = true;
     }
 
-    if (Math.abs(p.vx) > 15 && p.grounded) {
-      p.animTime += dt * 9.5;
-    } else {
-      p.animTime += dt * 2.2;
-    }
+    p.animTime += (Math.abs(p.vx) > 20 && p.grounded) ? dt * 9.8 : dt * 2.0;
 
-    // Smooth 2.5D side-on tracking camera (`p.x` sits around x = 310..380 on screen, matching f_012.jpg!)
-    const targetCamX = Math.max(0, Math.min(LEVEL_END_X - W + 340, p.x - 330));
-    game.camX += (targetCamX - game.camX) * Math.min(1, dt * 6.5);
+    // Tracking side-on 2.5D camera keeping soldier around screenX ~ 305 (matches f_005.jpg / f_022.jpg!)
+    const targetCamX = Math.max(0, Math.min(LEVEL_END_X - W + 440, p.x - 305));
+    game.camX += (targetCamX - game.camX) * Math.min(1, dt * 7.2);
 
-    if (!game.bossActive && p.x > LEVEL_END_X - 720) {
+    if (!game.bossActive && p.x > LEVEL_END_X - 780) {
       game.bossActive = true;
-      if (game.phase === 'run') game.phase = 'boss';
+      game.phase = 'boss';
     }
 
-    // Weapon Logic: Precision Disable Beam (`K`/`Shift`) vs Rapid Neon Minigun (`Space`/`J`)
+    // Weapons: Precision Disable Beam (`K` / `Shift`) vs Rapid Neon Minigun (`Space` / `J`)
     p.beaming = false;
     p.beamTarget = null;
 
     if (wantBeam) {
       p.weaponMode = 'disable';
       p.beaming = true;
-      // Find closest active enemy ahead within 540px beam reach
-      let best = null, bestDx = 540;
+      p.heat = Math.max(0, p.heat - 42 * dt);
+
+      let best = null, bestDx = 680;
       for (const e of game.enemies) {
         if (e.state !== 'active') continue;
         const dx = (e.x - p.x) * p.facing;
-        const dy = Math.abs((e.y - 125) - (p.y - 125));
-        if (dx > 25 && dx < bestDx && dy < 175) {
+        if (dx > 35 && dx < bestDx) {
           bestDx = dx;
           best = e;
         }
       }
       p.beamTarget = best;
+      setBeamHum(true, best ? best.disableProg / 100 : 0.15);
+
       if (best) {
-        const rate = best.isBoss ? 46 : (best.isBrute ? 56 : 62);
+        const rate = best.isBoss ? 44 : (best.isBrute ? 52 : 56);
         best.disableProg = Math.min(100, best.disableProg + rate * dt);
-        best.hitFlash = 0.08;
-        // Slow enemy advance while stunned by disable helix
-        best.vx *= 0.25;
-        if (rng() < 26 * dt) {
-          spawnSparkBurst(best.x - 24 * p.facing, best.y - 135 + (rng() - 0.5) * 50, '#5dff9e', 2, 160);
+        best.hitFlash = 0.06;
+        best.vx *= 0.2;
+        if (rng() < 28 * dt) {
+          spawnSparkBurst(best.x - 30 * p.facing, best.y - 210 + (rng() - 0.5) * 80, '#5dff9e', 2, 180);
         }
         if (best.disableProg >= 100) {
           disableEnemyIntact(best);
         }
       }
-    } else if (wantMini) {
-      p.weaponMode = 'minigun';
-      if (p.fireCd <= 0) {
-        p.fireCd = 0.082; // Blistering Contra-style minigun!
-        p.muzzleTimer = 0.06;
-        const spreadY = (rng() - 0.5) * 24;
-        const isMagentaTracer = rng() < 0.28; // Mix electric mint + hot magenta tracers like sheet.jpg row 1!
-        game.bullets.push({
-          fromPlayer: true,
-          x: p.x + p.facing * 88,
-          y: p.y - 134 + (rng() - 0.5) * 10,
-          vx: p.facing * 1080,
-          vy: spreadY * 2.2,
-          dmg: 14,
-          color: isMagentaTracer ? '#ff4fb0' : '#5dff9e',
-          len: isMagentaTracer ? 34 : 46,
-          age: 0
-        });
-        playSfx('minigun');
+    } else {
+      setBeamHum(false);
+      if (wantMini) {
+        p.weaponMode = 'minigun';
+        p.heat = Math.min(100, p.heat + 26 * dt);
+        if (p.heat >= 100) {
+          p.overheated = 0.55;
+          spawnSparkBurst(p.x + p.facing * 125, p.y - 218, '#ff4fb0', 10, 160);
+        }
+        if (p.fireCd <= 0) {
+          p.fireCd = 0.082;
+          p.muzzleTimer = 0.065;
+          p.recoil = 1.0;
+          const spreadY = (rng() - 0.5) * 32;
+          game.bullets.push({
+            fromPlayer: true,
+            x: p.x + p.facing * 132,
+            y: p.y - 218 + (rng() - 0.5) * 10,
+            vx: p.facing * 1160,
+            vy: spreadY * 2.1,
+            dmg: 14,
+            color: '#6affea',
+            len: 64,
+            age: 0
+          });
+          playSfx('shot');
+        }
+      } else {
+        p.heat = Math.max(0, p.heat - 48 * dt);
       }
     }
 
@@ -608,21 +735,22 @@
 
       if (e.state === 'shattering') {
         e.stateTimer -= dt;
+        e.x += 45 * dt;
         if (e.stateTimer <= 0) e.state = 'gone';
         continue;
       }
       if (e.state === 'disabled') {
         e.stateTimer += dt;
-        // Vent calm teal cooling smoke from powered-down robot (`study/f_032.jpg`!)
-        if (rng() < 5.5 * dt) {
+        // Soft teal-emerald exhaust steam rising from shoulder pipe (matches study/f_036.jpg!)
+        if (rng() < 7.5 * dt) {
           game.smokePuffs.push({
-            x: e.x + (rng() - 0.5) * 34,
-            y: e.y - 175,
-            vx: (rng() - 0.5) * 16,
-            vy: -28 - rng() * 22,
-            r: 10 + rng() * 10,
+            x: e.x + 28 + (rng() - 0.5) * 18,
+            y: e.y - 225,
+            vx: 6 + (rng() - 0.5) * 18,
+            vy: -38 - rng() * 28,
+            r: 9 + rng() * 11,
             age: 0,
-            maxLife: 1.5 + rng() * 0.8
+            maxLife: 1.8 + rng() * 0.9
           });
         }
         continue;
@@ -630,50 +758,57 @@
       if (e.state !== 'active') continue;
 
       const dist = e.x - p.x;
-      if (Math.abs(dist) < 880) {
+      if (Math.abs(dist) < 980) {
         const dir = dist > 0 ? -1 : 1;
-        const stopDist = e.isBoss ? 340 : 250;
+        const stopDist = e.isBoss ? 470 : 420;
         if (Math.abs(dist) > stopDist && p.beamTarget !== e) {
-          e.vx = dir * (e.isBrute ? 68 : 92);
+          e.vx = dir * (e.isBrute ? 74 : 96);
           e.x += e.vx * dt;
-          e.walkPhase += dt * 5.2;
+          e.walkPhase += dt * 5.0;
         } else {
           e.vx = 0;
-          e.walkPhase += dt * 1.8;
+          e.walkPhase += dt * 1.6;
         }
 
-        // Decay disable meter slightly if player stops beaming
         if (p.beamTarget !== e && e.disableProg > 0) {
-          e.disableProg = Math.max(0, e.disableProg - 12 * dt);
+          e.disableProg = Math.max(0, e.disableProg - 14 * dt);
         }
 
-        // Fire hot-magenta plasma projectiles players can jump over!
+        // Hot-magenta return plasma streaks matching study/sheet.jpg row 1 frames 5-6!
         e.shootCd -= dt;
-        if (e.shootCd <= 0 && Math.abs(dist) < 690 && p.beamTarget !== e) {
-          e.shootCd = e.isBoss ? 1.15 : (e.isBrute ? 1.55 : 1.85);
-          game.bullets.push({
-            fromPlayer: false,
-            x: e.x + dir * 64,
-            y: e.y - (e.isBrute ? 112 : 128),
-            vx: dir * 430,
-            vy: (rng() - 0.5) * 28,
-            dmg: 16,
-            color: '#ff4fb0',
-            len: 28,
-            age: 0
-          });
+        if (e.shootCd <= 0 && Math.abs(dist) < 820 && p.beamTarget !== e) {
+          e.shootCd = e.isBoss ? 0.95 : (e.isBrute ? 1.25 : 1.35);
+          const volley = e.id === 0 ? 2 : (e.isBoss ? 2 : 1);
+          for (let v = 0; v < volley; v++) {
+            game.bullets.push({
+              fromPlayer: false,
+              x: e.x + dir * 92 - v * 58,
+              y: e.y - (v === 1 ? 155 : 215) + (rng() - 0.5) * 24,
+              vx: dir * (480 + v * 45),
+              vy: v === 1 ? 38 : (rng() - 0.5) * 28,
+              dmg: 15,
+              color: '#ff4fb0',
+              len: 54,
+              age: 0
+            });
+          }
         }
       }
     }
 
-    // Update Bullets & Collisions
+    // Update Bullets & Floor / Chassis Impacts
     for (let i = game.bullets.length - 1; i >= 0; i--) {
       const b = game.bullets[i];
       b.age += dt;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
 
-      if (b.age > 1.6 || b.x < game.camX - 120 || b.x > game.camX + W + 160) {
+      if (b.y >= GROUND_Y - 4) {
+        spawnSparkBurst(b.x, GROUND_Y - 2, b.color, 8, 210);
+        game.bullets.splice(i, 1);
+        continue;
+      }
+      if (b.age > 1.7 || b.x < game.camX - 160 || b.x > game.camX + W + 200) {
         game.bullets.splice(i, 1);
         continue;
       }
@@ -682,13 +817,18 @@
         let hit = false;
         for (const e of game.enemies) {
           if (e.state !== 'active') continue;
-          const hw = e.isBrute ? 68 : 52;
-          if (Math.abs(b.x - e.x) < hw && b.y > e.y - 245 && b.y < e.y - 16) {
+          const hw = e.isBrute ? 88 : 68;
+          const hh = e.isBoss ? 410 : 375;
+          if (Math.abs(b.x - e.x) < hw && b.y > e.y - hh && b.y < e.y - 18) {
             e.hp -= b.dmg;
-            e.hitFlash = 0.11;
-            spawnSparkBurst(b.x, b.y, '#5dff9e', 9, 250);
+            e.hitFlash = 0.10;
+            spawnSparkBurst(b.x, b.y, '#7afff0', 11, 290);
+            // Secondary floor ricochet spark matching pair_002 left!
+            if (rng() < 0.45) {
+              spawnSparkBurst(e.x - 36, GROUND_Y - 2, '#6affea', 6, 190);
+            }
             if (e.hp <= 0) {
-              shatterEnemyIntoPhotoShards(e);
+              shatterEnemy(e);
             }
             hit = true;
             break;
@@ -696,11 +836,11 @@
         }
         if (hit) game.bullets.splice(i, 1);
       } else {
-        // Enemy magenta plasma vs Player
-        if (p.invuln <= 0 && Math.abs(b.x - p.x) < 34 && b.y > p.y - 210 && b.y < p.y - 26) {
+        if (p.invuln <= 0 && Math.abs(b.x - p.x) < 42 && b.y > p.y - 340 && b.y < p.y - 28) {
           p.hp = Math.max(0, p.hp - b.dmg);
-          p.invuln = 0.55;
-          spawnSparkBurst(b.x, b.y, '#ff4fb0', 14, 240);
+          p.invuln = 0.6;
+          game.shake = 6.0;
+          spawnSparkBurst(b.x, b.y, '#ff4fb0', 16, 260);
           playSfx('hurt');
           game.bullets.splice(i, 1);
           if (p.hp <= 0) {
@@ -710,38 +850,59 @@
       }
     }
 
-    // Update Slow-Motion Golden Photo Shards! (matches sheet.jpg row 2 & 3!)
-    const shardDt = dt * 0.42; // Dreamlike slow-motion drift!
+    // Slow-motion 3D-tilting sepia photo shards + floor settling (matches f_022.jpg!)
+    const shardDt = dt * 0.40;
     for (let i = game.shards.length - 1; i >= 0; i--) {
       const s = game.shards[i];
       s.age += dt;
-      s.x += s.vx * shardDt;
-      s.y += s.vy * shardDt;
-      s.vy += 125 * shardDt;
-      s.vx *= Math.pow(0.52, shardDt);
-      s.rot += s.vrot * shardDt;
-      if (s.y > GROUND_Y - 6) {
-        s.y = GROUND_Y - 6;
-        s.vy = -Math.abs(s.vy) * 0.25;
-        s.vx *= 0.6;
-        s.vrot *= 0.5;
+      if (!s.settled) {
+        s.x += s.vx * shardDt;
+        s.y += s.vy * shardDt;
+        s.vy += 108 * shardDt;
+        s.vx *= Math.pow(0.56, shardDt);
+        s.rot += s.vrot * shardDt;
+        s.tiltPhase += s.tiltSpeed * shardDt;
+        if (s.y >= GROUND_Y - 6) {
+          s.y = GROUND_Y - 4 + (rng() - 0.5) * 14;
+          s.settled = true;
+          s.rot = (rng() - 0.5) * 0.55;
+        }
       }
       if (s.age >= s.maxLife) game.shards.splice(i, 1);
     }
 
-    // Update Intact Floating Memory Photographs (`study/f_032.jpg`!)
+    for (let i = game.embers.length - 1; i >= 0; i--) {
+      const em = game.embers[i];
+      em.age += dt;
+      em.x += em.vx * shardDt;
+      em.y += em.vy * shardDt;
+      em.vy -= 8 * shardDt;
+      if (em.age >= em.maxLife) game.embers.splice(i, 1);
+    }
+
+    // Intact Floating Polaroids released by disabled robots (matches f_036.jpg!)
     for (const m of game.intactPickups) {
       m.age += dt;
-      m.scale = Math.min(1, m.scale + dt * 2.8);
-      m.y = m.baseY + Math.sin(m.age * 2.8) * 8;
-      if (!m.collected && Math.abs(p.x - m.x) < 95) {
-        m.collected = true;
-        spawnSparkBurst(m.x, m.y, '#ffe89e', 18, 160);
+      const rise = Math.min(1, m.age / 0.55);
+      const ease = 1 - Math.pow(1 - rise, 3);
+      const curBaseX = m.startX + (m.x - m.startX) * ease;
+      const curBaseY = m.startY + (m.y - m.startY) * ease;
+      m.renderX = curBaseX;
+      m.renderY = curBaseY + Math.sin(m.age * 2.4) * 7;
+      m.scale = 0.22 + 0.78 * ease;
+
+      // Passing past the floating photograph absorbs its warm pulse into the soldier's core
+      if (!m.absorbed && m.age > 1.8 && p.x > m.renderX + 95) {
+        m.absorbed = true;
+        p.hp = Math.min(p.maxHp, p.hp + 12);
+        spawnSparkBurst(p.x, p.y - 260, '#ffe89e', 20, 190);
         playSfx('recover');
+      }
+      if (m.absorbed) {
+        m.absorbProg = Math.min(1, m.absorbProg + dt * 1.8);
       }
     }
 
-    // Update Sparks & Disabled Robot Cooling Smoke
     for (let i = game.sparks.length - 1; i >= 0; i--) {
       const s = game.sparks[i];
       s.age += dt;
@@ -754,75 +915,172 @@
       sm.age += dt;
       sm.x += sm.vx * dt;
       sm.y += sm.vy * dt;
-      sm.r += dt * 12;
+      sm.r += dt * 13;
       if (sm.age >= sm.maxLife) game.smokePuffs.splice(i, 1);
     }
 
-    // Check if player walked past the end after clearing/passing boss
+    // Diegetic armor short-circuit sparks when chassis integrity is critical (< 35%)
+    if (p.hp < 35 && rng() < 6.5 * dt) {
+      spawnSparkBurst(p.x - p.facing * 12, p.y - 210 + (rng() - 0.5) * 60, '#ff4fb0', 3, 120);
+    }
+
     const boss = game.enemies.find(e => e.isBoss);
-    if (boss && boss.state !== 'active' && p.x > LEVEL_END_X + 60 && game.phase !== 'album') {
+    if (boss && boss.state !== 'active' && p.x > LEVEL_END_X + 140 && game.phase !== 'album') {
       game.phase = 'album';
     }
+
+    game.voidState = (game.shards.length > 0 || game.intactPickups.some(m => m.age < 2.2)) ? 'CHANGED' : 'WORKING';
   }
 
-  // Rendering: 1980s Neon Perspective Floor + Glossy Reflections + Cutout Sprites + Golden Shards
-  function drawPerspectiveNeonFloor() {
-    // Deep void black sky (#07060c / #05080a)
-    ctx.fillStyle = '#06050a';
+  // Rendering Pipeline matching study/sheet.jpg
+  function drawFloorAndGrid() {
+    ctx.fillStyle = '#050709';
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle dark-emerald floor base (`y = HORIZON_Y..H`)
-    const floorGrad = ctx.createLinearGradient(0, HORIZON_Y, 0, H);
-    floorGrad.addColorStop(0, '#050b0b');
-    floorGrad.addColorStop(0.55, '#071412');
-    floorGrad.addColorStop(1, '#081b17');
-    ctx.fillStyle = floorGrad;
+    // Glossy obsidian-emerald floor slab
+    const fg = ctx.createLinearGradient(0, HORIZON_Y, 0, H);
+    fg.addColorStop(0, '#04090a');
+    fg.addColorStop(0.45, '#061311');
+    fg.addColorStop(1, '#071b16');
+    ctx.fillStyle = fg;
     ctx.fillRect(0, HORIZON_Y, W, H - HORIZON_Y);
 
+    // Soft diffuse light pools on the glossy floor under soldier, enemies, bullets, and warm photos!
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, HORIZON_Y, W, H - HORIZON_Y);
     ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
 
-    // Converging perspective Z-lines scrolling horizontally with `game.camX`!
+    function drawFloorPool(sx, sy, rx, ry, colorStr) {
+      if (sx < -rx || sx > W + rx) return;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.scale(1, ry / rx);
+      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, rx);
+      g.addColorStop(0, colorStr);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    const px = game.player.x - game.camX;
+    drawFloorPool(px, GROUND_Y + 14, 135, 36, 'rgba(93, 255, 195, 0.22)');
+
+    for (const e of game.enemies) {
+      if (e.state === 'gone') continue;
+      const ex = e.x - game.camX;
+      const a = e.state === 'disabled' ? 0.14 : 0.28;
+      drawFloorPool(ex, GROUND_Y + 16, 165, 42, `rgba(255, 79, 176, ${a})`);
+    }
+
+    for (const b of game.bullets) {
+      const bx = b.x - game.camX;
+      const col = b.fromPlayer ? 'rgba(106, 255, 234, 0.18)' : 'rgba(255, 79, 176, 0.24)';
+      drawFloorPool(bx, GROUND_Y + 8, 95, 24, col);
+    }
+
+    for (const m of game.intactPickups) {
+      if (m.absorbProg >= 1) continue;
+      const mx = (m.renderX ?? m.x) - game.camX;
+      drawFloorPool(mx, GROUND_Y + 16, 190 * m.scale, 44 * m.scale, 'rgba(255, 214, 120, 0.22)');
+    }
+
+    if (game.shards.length > 0) {
+      const sx = game.shards[0].x - game.camX;
+      drawFloorPool(sx, GROUND_Y + 16, 210, 46, 'rgba(255, 206, 112, 0.16)');
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Two-pass glowing perspective mint grid matching f_005.jpg & f_022.jpg
     const vanishX = W * 0.5;
-    const vanishY = 265;
-    const tileW = 148;
-    const offset = ((game.camX * 1.18) % tileW + tileW) % tileW;
+    const vanishY = 250;
+    const tileW = 152;
+    const offset = ((game.camX * 1.22) % tileW + tileW) % tileW;
 
-    ctx.lineWidth = 1.6;
-    for (let i = -14; i <= 14; i++) {
-      const bottomX = vanishX + i * tileW - offset;
-      const t0 = (HORIZON_Y - vanishY) / (H - vanishY);
-      const topX = vanishX + (bottomX - vanishX) * t0;
+    for (let pass = 0; pass < 2; pass++) {
+      const isGlow = pass === 0;
+      for (let i = -14; i <= 14; i++) {
+        const bottomX = vanishX + i * tileW - offset;
+        const t0 = (HORIZON_Y - vanishY) / (H - vanishY);
+        const topX = vanishX + (bottomX - vanishX) * t0;
+        const edgeFade = Math.max(0.16, 1 - Math.abs(i) / 14.5);
 
-      const edgeFade = Math.max(0.12, 1 - Math.abs(i) / 14);
-      ctx.strokeStyle = `rgba(93, 255, 158, ${(0.58 * edgeFade).toFixed(3)})`;
-      ctx.beginPath();
-      ctx.moveTo(topX, HORIZON_Y);
-      ctx.lineTo(bottomX, H);
-      ctx.stroke();
+        ctx.strokeStyle = isGlow
+          ? `rgba(45, 215, 155, ${(0.22 * edgeFade).toFixed(3)})`
+          : `rgba(110, 255, 192, ${(0.72 * edgeFade).toFixed(3)})`;
+        ctx.lineWidth = isGlow ? 5.0 : 1.5;
+        ctx.beginPath();
+        ctx.moveTo(topX, HORIZON_Y);
+        ctx.lineTo(bottomX, H);
+        ctx.stroke();
+      }
+
+      const rowDepths = [0.0, 0.048, 0.105, 0.175, 0.265, 0.375, 0.515, 0.69, 0.90];
+      for (let r = 0; r < rowDepths.length; r++) {
+        const d = rowDepths[r];
+        const y = HORIZON_Y + d * (H - HORIZON_Y);
+        const a = isGlow ? (0.08 + d * 0.22) : (0.22 + d * 0.62);
+        ctx.strokeStyle = isGlow
+          ? `rgba(45, 215, 155, ${a.toFixed(3)})`
+          : `rgba(110, 255, 192, ${a.toFixed(3)})`;
+        ctx.lineWidth = isGlow ? (2.8 + d * 3.5) : (1.0 + d * 1.45);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
     }
 
-    // Horizontal perspective depth rows (denser near horizon, wider in foreground, matching f_012.jpg!)
-    const rowDepths = [0.0, 0.055, 0.12, 0.20, 0.30, 0.42, 0.57, 0.76, 1.0];
-    for (let r = 0; r < rowDepths.length; r++) {
-      const d = rowDepths[r];
-      const y = HORIZON_Y + d * (H - HORIZON_Y);
-      const alpha = 0.20 + d * 0.56;
-      ctx.strokeStyle = `rgba(93, 255, 158, ${alpha.toFixed(3)})`;
-      ctx.lineWidth = 1.1 + d * 1.5;
+    // Subtle ambient cyan floor micro-glints matching study/f_005.jpg
+    for (const d of floorDots) {
+      const sx = ((d.wx - game.camX * (0.45 + d.depth * 0.75)) % (W + 200) + (W + 200)) % (W + 200) - 100;
+      const sy = HORIZON_Y + d.depth * (H - HORIZON_Y - 12);
+      const a = 0.35 + 0.45 * Math.sin(clock * 2.6 + d.twinkle);
+      ctx.fillStyle = `rgba(165, 255, 225, ${a.toFixed(3)})`;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
+      ctx.arc(sx, sy, 1.2 + d.depth * 1.1, 0, Math.PI * 2);
+      ctx.fill();
     }
+
     ctx.restore();
   }
 
-  function drawSpriteFrame(img, rect, sxScreen, syBottom, targetH, flipX = false, alpha = 1, filterStr = 'none') {
+  function getPlayerFrame() {
+    const p = game.player;
+    if (p.beaming) return PLAYER_FRAMES.beamLock;
+    if (p.weaponMode === 'disable') return PLAYER_FRAMES.rifleIdle;
+    if (Math.abs(p.vx) > 25) {
+      const idx = Math.floor(p.animTime) % 4;
+      return [PLAYER_FRAMES.miniWalk, PLAYER_FRAMES.miniRunA, PLAYER_FRAMES.miniIdle, PLAYER_FRAMES.miniRunB][idx];
+    }
+    return PLAYER_FRAMES.rifleIdle;
+  }
+
+  function getEnemyFrame(e) {
+    if (e.state === 'shattering') {
+      return e.isBrute ? ENEMY_FRAMES.bruteShatter : ENEMY_FRAMES.sentinelShatter;
+    }
+    if (e.state === 'disabled') {
+      return e.isBrute ? ENEMY_FRAMES.bruteWalkA : ENEMY_FRAMES.sentinelIdle;
+    }
+    if (e.disableProg > 8 || e.hitFlash > 0) {
+      if (e.isBrute) return ENEMY_FRAMES.bruteWalkB;
+      return (Math.floor(clock * 14) % 2 === 0) ? ENEMY_FRAMES.sentinelHitA : ENEMY_FRAMES.sentinelHitB;
+    }
+    const step = Math.floor(e.walkPhase) % 2;
+    if (e.isBrute) return step === 0 ? ENEMY_FRAMES.bruteWalkA : ENEMY_FRAMES.bruteWalkB;
+    if (Math.abs(e.vx) > 5) return step === 0 ? ENEMY_FRAMES.sentinelWalkA : ENEMY_FRAMES.sentinelWalkB;
+    return ENEMY_FRAMES.sentinelIdle;
+  }
+
+  function drawActorSprite(img, rect, sx, syBottom, targetH, flipX, alpha = 1, filterStr = 'none', rimGlow = null) {
     const wSrc = img && (img.naturalWidth || img.width);
-    if (!wSrc) return;
+    if (!wSrc) return { dw: 0, dh: targetH };
     const [rx, ry, rw, rh] = rect;
     const scale = targetH / rh;
     const dw = rw * scale;
@@ -831,41 +1089,18 @@
     ctx.save();
     ctx.globalAlpha = alpha;
     if (filterStr && filterStr !== 'none') ctx.filter = filterStr;
-    ctx.translate(sxScreen, syBottom);
+    if (rimGlow) {
+      ctx.shadowColor = rimGlow.color;
+      ctx.shadowBlur = rimGlow.blur;
+    }
+    ctx.translate(sx, syBottom);
     if (flipX) ctx.scale(-1, 1);
     ctx.drawImage(img, rx, ry, rw, rh, -dw * 0.5, -dh, dw, dh);
     ctx.restore();
+    return { dw, dh };
   }
 
-  function getPlayerFrame() {
-    const p = game.player;
-    if (p.beaming) return PLAYER_FRAMES.rifleAim;
-    if (p.muzzleTimer > 0) return PLAYER_FRAMES.rifleAim;
-    if (Math.abs(p.vx) > 25) {
-      const idx = Math.floor(p.animTime) % 4;
-      return [PLAYER_FRAMES.miniWalkA, PLAYER_FRAMES.miniRunA, PLAYER_FRAMES.miniIdle, PLAYER_FRAMES.miniRunB][idx];
-    }
-    return PLAYER_FRAMES.miniIdle;
-  }
-
-  function getEnemyFrame(e) {
-    if (e.state === 'shattering') {
-      return e.isBrute ? ENEMY_FRAMES.bruteShatter : ENEMY_FRAMES.sentinelShatter;
-    }
-    if (e.state === 'disabled') {
-      return e.isBrute ? ENEMY_FRAMES.bruteHit : ENEMY_FRAMES.sentinelHit;
-    }
-    if (e.hitFlash > 0) {
-      return e.isBrute ? ENEMY_FRAMES.bruteHit : ENEMY_FRAMES.sentinelHit;
-    }
-    const step = Math.floor(e.walkPhase) % 2;
-    if (e.isBrute) return step === 0 ? ENEMY_FRAMES.bruteWalkA : ENEMY_FRAMES.bruteWalkB;
-    if (Math.abs(e.vx) > 5) return step === 0 ? ENEMY_FRAMES.sentinelWalkA : ENEMY_FRAMES.sentinelWalkB;
-    return ENEMY_FRAMES.sentinelIdle;
-  }
-
-  function drawFloorReflections() {
-    // Glossy 80s grid floor reflections under player, enemies, and intact memory photos!
+  function drawReflections() {
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, HORIZON_Y, W, H - HORIZON_Y);
@@ -873,95 +1108,281 @@
 
     const p = game.player;
     const px = p.x - game.camX;
-    const pFrame = getPlayerFrame();
-    ctx.save();
-    ctx.translate(px, GROUND_Y + (GROUND_Y - p.y) * 0.3);
-    ctx.scale(p.facing < 0 ? -1 : 1, -0.42);
-    ctx.globalAlpha = 0.18;
-    const [prx, pry, prw, prh] = pFrame;
-    const pScale = 248 / prh;
     const pSrc = assets.playerClean || assets.playerImg;
     const eSrc = assets.enemyClean || assets.enemyImg;
+
     if (pSrc && (pSrc.naturalWidth || pSrc.width)) {
-      ctx.drawImage(pSrc, prx, pry, prw, prh, -(prw * pScale) * 0.5, -248, prw * pScale, 248);
+      const [rx, ry, rw, rh] = getPlayerFrame();
+      const ph = 374;
+      const pw = rw * (ph / rh);
+      ctx.save();
+      ctx.translate(px, GROUND_Y + (GROUND_Y - p.y) * 0.25);
+      ctx.scale(p.facing < 0 ? -1 : 1, -0.38);
+      ctx.globalAlpha = 0.22;
+      ctx.drawImage(pSrc, rx, ry, rw, rh, -pw * 0.5, -ph, pw, ph);
+      ctx.restore();
     }
-    ctx.restore();
 
     for (const e of game.enemies) {
       if (e.state === 'gone') continue;
       const ex = e.x - game.camX;
-      if (ex < -180 || ex > W + 180) continue;
-      const eFrame = getEnemyFrame(e);
-      const eh = e.isBoss ? 320 : (e.isBrute ? 265 : 272);
-      ctx.save();
-      ctx.translate(ex, GROUND_Y);
-      ctx.scale(-1, -0.42);
-      ctx.globalAlpha = e.state === 'disabled' ? 0.11 : 0.20;
-      const [erx, ery, erw, erh] = eFrame;
-      const eScale = eh / erh;
+      if (ex < -240 || ex > W + 240) continue;
       if (eSrc && (eSrc.naturalWidth || eSrc.width)) {
-        ctx.drawImage(eSrc, erx, ery, erw, erh, -(erw * eScale) * 0.5, -eh, erw * eScale, eh);
+        const [rx, ry, rw, rh] = getEnemyFrame(e);
+        const eh = e.isBoss ? 435 : (e.isBrute ? 388 : 402);
+        const ew = rw * (eh / rh);
+        ctx.save();
+        ctx.translate(ex, GROUND_Y);
+        ctx.scale(-1, -0.38);
+        ctx.globalAlpha = e.state === 'disabled' ? 0.14 : 0.24;
+        ctx.drawImage(eSrc, rx, ry, rw, rh, -ew * 0.5, -eh, ew, eh);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawEnemies() {
+    const eSrc = assets.enemyClean || assets.enemyImg;
+    for (const e of game.enemies) {
+      if (e.state === 'gone') continue;
+      const ex = e.x - game.camX;
+      if (ex < -260 || ex > W + 260) continue;
+
+      const eh = e.isBoss ? 435 : (e.isBrute ? 388 : 402);
+      const frame = getEnemyFrame(e);
+
+      if (e.state === 'disabled') {
+        // Kneeling powered-down posture clipped cleanly at the glossy grid plane (matches study/f_036.jpg!)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(ex - 260, 0, 520, GROUND_Y + 8);
+        ctx.clip();
+        drawActorSprite(
+          eSrc, frame, ex, GROUND_Y + 96, eh, true, 1,
+          'brightness(0.76) saturate(0.85)',
+          { color: 'rgba(255, 79, 176, 0.28)', blur: 10 }
+        );
+        ctx.restore();
+        continue;
+      }
+
+      const filterStr = e.state === 'shattering'
+        ? 'sepia(0.92) saturate(2.8) brightness(1.55)'
+        : (e.hitFlash > 0 ? 'brightness(1.38) saturate(1.25)' : 'brightness(1.06)');
+
+      const rim = e.state === 'shattering'
+        ? { color: '#ffd87a', blur: 24 }
+        : { color: 'rgba(255, 79, 176, 0.45)', blur: 12 };
+
+      drawActorSprite(eSrc, frame, ex, e.y, eh, true, 1, filterStr, rim);
+
+      // Diegetic chassis telemetry: warm golden memory-fissures when damaged by minigun,
+      // OR constricting electric-cyan harmonic lock rings right on the chest core when disabled!
+      if (e.state === 'active') {
+        const coreX = ex - 22;
+        const coreY = e.y - eh * 0.58;
+
+        if (e.hp < e.maxHp && e.disableProg < 5) {
+          const dmgFrac = 1 - (e.hp / e.maxHp);
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 224, 138, ${(0.35 + dmgFrac * 0.65).toFixed(2)})`;
+          ctx.shadowColor = '#ffd87a';
+          ctx.shadowBlur = 12;
+          ctx.lineWidth = 2.0;
+          const rays = Math.ceil(dmgFrac * 6);
+          for (let r = 0; r < rays; r++) {
+            const a = r * 1.05 + 0.4;
+            ctx.beginPath();
+            ctx.moveTo(coreX, coreY);
+            ctx.lineTo(coreX + Math.cos(a) * (18 + dmgFrac * 26), coreY + Math.sin(a) * (18 + dmgFrac * 26));
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        if (e.disableProg > 2) {
+          const pFrac = e.disableProg / 100;
+          ctx.save();
+          ctx.translate(coreX, coreY);
+          ctx.strokeStyle = '#6affea';
+          ctx.shadowColor = '#5dff9e';
+          ctx.shadowBlur = 16;
+          ctx.lineWidth = 2.8;
+          const rad = 48 - pFrac * 22;
+          ctx.beginPath();
+          ctx.arc(0, 0, rad, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * pFrac);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  function drawPlayerDiegetic() {
+    const p = game.player;
+    const px = p.x - game.camX - p.recoil * p.facing * 5;
+    const ph = (game.phase === 'dead') ? 320 : 374;
+    const yDraw = (game.phase === 'dead') ? GROUND_Y + 68 : p.y;
+    const hitFilter = p.invuln > 0 && Math.floor(clock * 20) % 2 === 0
+      ? 'brightness(1.42) contrast(1.12)'
+      : 'brightness(1.14) contrast(1.06)';
+
+    // Diegetic armor rim glow shifts with chassis integrity (mint -> amber -> critical magenta)
+    const hpRatio = p.hp / p.maxHp;
+    const suitHue = p.invuln > 0
+      ? 'rgba(255, 79, 176, 0.85)'
+      : (hpRatio > 0.6 ? 'rgba(93, 255, 190, 0.55)' : (hpRatio > 0.32 ? 'rgba(255, 196, 92, 0.55)' : 'rgba(255, 79, 176, 0.68)'));
+
+    ctx.save();
+    if (game.phase === 'dead') {
+      ctx.beginPath();
+      ctx.rect(px - 220, 0, 440, GROUND_Y + 6);
+      ctx.clip();
+    }
+    drawActorSprite(
+      assets.playerClean || assets.playerImg,
+      getPlayerFrame(),
+      px, yDraw, ph, p.facing < 0, 1,
+      hitFilter,
+      { color: suitHue, blur: 13 }
+    );
+    ctx.restore();
+
+    if (game.phase === 'dead') return;
+
+    // Diegetic 4-cell spine telemetry nodes directly on the soldier's shoulder/back pack (zero HUD chrome!)
+    const cells = 4;
+    const litCells = Math.ceil(hpRatio * cells);
+    ctx.save();
+    for (let i = 0; i < cells; i++) {
+      const cx = px - p.facing * 26;
+      const cy = p.y - 258 + i * 11;
+      const active = i < litCells;
+      ctx.fillStyle = !active ? 'rgba(18, 28, 30, 0.7)' : (hpRatio > 0.35 ? '#6affea' : '#ff4fb0');
+      if (active) {
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      ctx.fillRect(cx - 3, cy - 2, 6, 6);
+    }
+    ctx.restore();
+
+    // Diegetic weapon barrel heat glow right on the muzzle tip
+    const muzzleX = px + p.facing * 126;
+    const muzzleY = p.y - 218;
+    if (p.heat > 18) {
+      const hFrac = (p.heat - 18) / 82;
+      ctx.save();
+      const hg = ctx.createRadialGradient(muzzleX, muzzleY, 2, muzzleX, muzzleY, 14 + hFrac * 20);
+      hg.addColorStop(0, p.overheated > 0 ? '#ffffff' : 'rgba(255, 190, 120, 0.85)');
+      hg.addColorStop(0.5, `rgba(255, 79, 176, ${(hFrac * 0.55).toFixed(2)})`);
+      hg.addColorStop(1, 'rgba(255, 79, 176, 0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(muzzleX, muzzleY, 14 + hFrac * 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Star-shaped electric cyan muzzle flash matching study/pair_002 left!
+    if (p.muzzleTimer > 0) {
+      ctx.save();
+      ctx.translate(muzzleX + p.facing * 8, muzzleY);
+      const mg = ctx.createRadialGradient(0, 0, 3, 0, 0, 56);
+      mg.addColorStop(0, '#ffffff');
+      mg.addColorStop(0.32, 'rgba(120, 255, 240, 0.92)');
+      mg.addColorStop(1, 'rgba(93, 255, 158, 0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.arc(0, 0, 56, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Crisp directional star spikes + forward plasma lance
+      ctx.fillStyle = '#eafffb';
+      ctx.beginPath();
+      ctx.ellipse(p.facing * 32, 0, 42, 6.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      for (const a of [-0.65, 0.65, -1.3, 1.3]) {
+        ctx.save();
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 24, 3.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
       ctx.restore();
     }
-    ctx.restore();
   }
 
   function drawDisableBeam() {
     const p = game.player;
     if (!p.beaming) return;
 
-    const x0 = (p.x - game.camX) + p.facing * 72;
-    const y0 = p.y - 140;
+    const x0 = (p.x - game.camX) + p.facing * 124;
+    const y0 = p.y - 218;
     const target = p.beamTarget;
-    const x1 = target ? (target.x - game.camX - p.facing * 18) : (x0 + p.facing * 430);
-    const y1 = target ? (target.y - 142) : y0;
+    const x1 = target ? (target.x - game.camX - p.facing * 26) : (x0 + p.facing * 490);
+    const y1 = target ? (target.y - 226) : y0;
 
-    // Intertwined twin-helix electric-mint disable beam matching study/sheet.jpg row 3!!
+    // Luminous intertwined twin-helix cyan plasma arc matching study/f_022.jpg & sheet.jpg row 3!
     ctx.save();
-    ctx.shadowColor = '#5dff9e';
-    ctx.shadowBlur = 18;
-    for (let strand = 0; strand < 3; strand++) {
+    ctx.globalCompositeOperation = 'lighter';
+
+    // Muzzle emitter burst
+    const em = ctx.createRadialGradient(x0, y0, 3, x0, y0, 48);
+    em.addColorStop(0, '#ffffff');
+    em.addColorStop(0.4, 'rgba(106, 255, 234, 0.8)');
+    em.addColorStop(1, 'rgba(93, 255, 158, 0)');
+    ctx.fillStyle = em;
+    ctx.beginPath();
+    ctx.arc(x0, y0, 48, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let strand = 0; strand < 4; strand++) {
       ctx.beginPath();
-      const segs = 22;
+      const segs = 28;
       for (let i = 0; i <= segs; i++) {
         const t = i / segs;
         const bx = x0 + (x1 - x0) * t;
         const env = Math.sin(t * Math.PI);
-        const wave = Math.sin(t * 14 - clock * 26 + strand * 2.1) * (15 * env)
-                   + (strand === 2 ? (rng() - 0.5) * 14 * env : 0);
+        const wave = strand === 0
+          ? Math.sin(t * 9 - clock * 22) * (6 * env)
+          : Math.sin(t * 13 - clock * 28 + strand * 2.1) * (22 * env) + (strand === 3 ? (rng() - 0.5) * 18 * env : 0);
         const by = y0 + (y1 - y0) * t + wave;
         if (i === 0) ctx.moveTo(bx, by);
         else ctx.lineTo(bx, by);
       }
-      ctx.strokeStyle = strand === 0 ? '#ffffff' : (strand === 1 ? '#5dff9e' : 'rgba(135, 255, 215, 0.8)');
-      ctx.lineWidth = strand === 0 ? 3.2 : 2.2;
+      ctx.shadowColor = '#5dff9e';
+      ctx.shadowBlur = strand === 0 ? 22 : 16;
+      ctx.strokeStyle = strand === 0 ? '#ffffff' : (strand === 1 ? '#7afff0' : 'rgba(93, 255, 185, 0.85)');
+      ctx.lineWidth = strand === 0 ? 5.5 : (strand === 1 ? 3.4 : 2.2);
       ctx.stroke();
     }
 
-    // Electric arcs wrapping around target robot (`sheet.jpg` row 3 frame 4-5!)
     if (target) {
-      const tx = target.x - game.camX;
-      const ty = target.y - 140;
-      const glow = ctx.createRadialGradient(tx - 18, ty, 4, tx - 18, ty, 82);
-      glow.addColorStop(0, 'rgba(235, 255, 248, 0.92)');
-      glow.addColorStop(0.4, 'rgba(93, 255, 158, 0.48)');
-      glow.addColorStop(1, 'rgba(93, 255, 158, 0)');
-      ctx.fillStyle = glow;
+      const tx = x1, ty = y1;
+      const cg = ctx.createRadialGradient(tx, ty, 5, tx, ty, 96);
+      cg.addColorStop(0, '#ffffff');
+      cg.addColorStop(0.35, 'rgba(120, 255, 230, 0.72)');
+      cg.addColorStop(1, 'rgba(93, 255, 158, 0)');
+      ctx.fillStyle = cg;
       ctx.beginPath();
-      ctx.arc(tx - 18, ty, 82, 0, Math.PI * 2);
+      ctx.arc(tx, ty, 96, 0, Math.PI * 2);
       ctx.fill();
 
-      // Lightning tendrils crawling over robot chassis
-      ctx.strokeStyle = '#b8ffe0';
-      ctx.lineWidth = 1.8;
-      for (let a = 0; a < 5; a++) {
+      // Crawling lightning tendrils across the target robot's torso & limbs (sheet.jpg row 3!)
+      ctx.strokeStyle = '#d4fff5';
+      ctx.lineWidth = 2.0;
+      for (let a = 0; a < 7; a++) {
         ctx.beginPath();
-        let ax = tx - 16, ay = ty;
+        let ax = tx, ay = ty;
         ctx.moveTo(ax, ay);
-        for (let s = 0; s < 4; s++) {
-          ax += (rng() - 0.45) * 38;
-          ay += (rng() - 0.5) * 52;
+        for (let s = 0; s < 5; s++) {
+          ax += (rng() - 0.42) * 44;
+          ay += (rng() - 0.48) * 62;
           ctx.lineTo(ax, ay);
         }
         ctx.stroke();
@@ -970,418 +1391,296 @@
     ctx.restore();
   }
 
-  function drawShardsAndIntactMemories() {
-    // 1. Slow-motion shattered golden-sepia photographic shards (`sheet.jpg` row 2 & 3!)
+  function drawShardsAndPhotographs() {
+    // 1. Settled foreshortened photographs lying flat on the glossy grid floor (f_022.jpg!)
     for (const s of game.shards) {
+      if (!s.settled) continue;
       const sx = s.x - game.camX;
-      if (sx < -80 || sx > W + 80) continue;
-      const card = assets.fragCanvases[s.memId];
-      const fade = Math.min(1, (s.maxLife - s.age) / 1.2);
+      if (sx < -90 || sx > W + 90) continue;
+      const card = assets.miniPolaroids[s.memId];
+      const fade = Math.min(1, (s.maxLife - s.age) / 1.4);
+
+      ctx.save();
+      ctx.globalAlpha = fade * 0.92;
+      ctx.translate(sx, s.y);
+      ctx.scale(1.15, 0.28);
+      ctx.rotate(s.rot);
+      if (card) ctx.drawImage(card, -s.w * 0.5, -s.h * 0.5, s.w, s.h);
+      ctx.restore();
+    }
+
+    // 2. Airborne 3D-tumbling golden-sepia miniature photographs (f_014.jpg & f_022.jpg!)
+    for (const s of game.shards) {
+      if (s.settled) continue;
+      const sx = s.x - game.camX;
+      if (sx < -90 || sx > W + 90) continue;
+      const card = assets.miniPolaroids[s.memId];
+      const fade = Math.min(1, (s.maxLife - s.age) / 1.4);
+      const cosTilt = 0.45 + 0.55 * Math.abs(Math.cos(s.tiltPhase));
 
       ctx.save();
       ctx.globalAlpha = fade;
       ctx.translate(sx, s.y);
       ctx.rotate(s.rot);
-      ctx.shadowColor = '#ffd275';
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = '#fff0be';
-      ctx.fillRect(-s.w * 0.5 - 2, -s.h * 0.5 - 2, s.w + 4, s.h + 4);
-      ctx.shadowBlur = 0;
+      ctx.scale(cosTilt, 1);
+      ctx.shadowColor = '#ffd478';
+      ctx.shadowBlur = 12;
       if (card) {
-        ctx.drawImage(
-          card,
-          s.u * card.width, s.v * card.height, s.uw * card.width, s.vh * card.height,
-          -s.w * 0.5, -s.h * 0.5, s.w, s.h
-        );
+        ctx.drawImage(card, -s.w * 0.5, -s.h * 0.5, s.w, s.h);
       } else {
-        ctx.fillStyle = '#c89b54';
+        ctx.fillStyle = '#ffe9b3';
         ctx.fillRect(-s.w * 0.5, -s.h * 0.5, s.w, s.h);
       }
       ctx.restore();
     }
 
-    // 2. Intact glowing memory photographs released by disabled robots (`study/f_032.jpg`!)
+    // 3. Warm golden dust motes around shattered memories
+    for (const em of game.embers) {
+      const ex = em.x - game.camX;
+      if (ex < -20 || ex > W + 20) continue;
+      const a = Math.min(1, (em.maxLife - em.age) / 1.2);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#ffe59c';
+      ctx.shadowColor = '#ffbe55';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(ex, em.y, em.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 4. Intact luminous memory Polaroids floating beside kneeling disabled robots (f_036.jpg!)
     for (const m of game.intactPickups) {
-      const mx = m.x - game.camX;
-      if (mx < -220 || mx > W + 220) continue;
-      const card = assets.fragCanvases[m.memId];
-      const pw = 216 * m.scale;
-      const ph = 156 * m.scale;
+      if (m.absorbProg >= 1) continue;
+      const mx = (m.renderX ?? m.x) - game.camX;
+      const my = m.renderY ?? m.y;
+      if (mx < -320 || mx > W + 320) continue;
+
+      const card = assets.polaroids[m.memId];
+      const fade = 1 - m.absorbProg;
+      const pw = 304 * m.scale * (1 - m.absorbProg * 0.35);
+      const ph = 216 * m.scale * (1 - m.absorbProg * 0.35);
 
       ctx.save();
-      ctx.translate(mx, m.y);
-      // Shimmering golden firefly halo around intact photograph (`sheet.jpg` row 4!)
-      for (let i = 0; i < 24; i++) {
-        const ang = (i / 24) * Math.PI * 2 + m.age * 0.7;
-        const radX = pw * 0.62 + Math.sin(m.age * 3 + i) * 12;
-        const radY = ph * 0.64 + Math.cos(m.age * 2.4 + i * 1.7) * 10;
-        ctx.fillStyle = i % 2 === 0 ? '#ffe89c' : '#ffbe5c';
-        ctx.fillRect(Math.cos(ang) * radX - 2, Math.sin(ang) * radY - 2, 3.5, 3.5);
+      ctx.globalAlpha = fade;
+      ctx.translate(mx, my);
+
+      // Warm golden firefly bokeh halo matching study/f_036.jpg!
+      for (const f of m.fireflies) {
+        const a = f.ang + m.age * f.spd;
+        const fx = Math.cos(a) * f.rx * m.scale;
+        const fy = Math.sin(a) * f.ry * m.scale;
+        const tw = 0.55 + 0.45 * Math.sin(m.age * 4.5 + f.tw);
+        ctx.fillStyle = `rgba(255, 232, 158, ${tw.toFixed(2)})`;
+        ctx.shadowColor = '#ffc864';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(fx, fy, f.r * m.scale, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      ctx.shadowColor = '#ffd87a';
-      ctx.shadowBlur = 24;
+      // Slight 2.5D perspective tilt matching the video's floating frame
+      ctx.rotate(-0.035);
+      ctx.shadowColor = '#ffd982';
+      ctx.shadowBlur = 28;
       if (card) {
         ctx.drawImage(card, -pw * 0.5, -ph * 0.5, pw, ph);
-      }
-      ctx.shadowBlur = 0;
-
-      if (m.collected) {
-        ctx.fillStyle = '#5dff9e';
-        ctx.font = 'bold 12px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('✓ SAVED TO ALBUM', 0, -ph * 0.5 - 10);
       }
       ctx.restore();
     }
   }
 
-  function drawHud() {
-    if (game.phase === 'title' || game.phase === 'album') return;
-
-    const p = game.player;
-    const saved = game.album.filter(x => x === 'recovered').length;
-    const lost  = game.album.filter(x => x === 'shattered').length;
-
-    // Minimalist crisp top-left / top-right diegetic neon telemetry (keeps center clean like study frames!)
+  function drawBulletsAndSparks() {
     ctx.save();
-    ctx.fillStyle = 'rgba(7, 6, 12, 0.72)';
-    ctx.fillRect(20, 16, 330, 52);
-    ctx.strokeStyle = 'rgba(93, 255, 158, 0.45)';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(20, 16, 330, 52);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const b of game.bullets) {
+      const bx = b.x - game.camX;
+      const dir = b.vx >= 0 ? 1 : -1;
+      const ang = Math.atan2(b.vy, b.vx);
 
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 13px "Courier New", monospace';
-    ctx.fillStyle = '#5dff9e';
-    ctx.fillText(`CHASSIS ${Math.round(p.hp)}%`, 32, 35);
-    ctx.fillStyle = p.weaponMode === 'disable' ? '#5dff9e' : '#ff4fb0';
-    ctx.fillText(p.weaponMode === 'disable' ? 'MODE: [K] DISABLE BEAM' : 'MODE: [SPACE] MINIGUN', 152, 35);
+      ctx.save();
+      ctx.translate(bx, b.y);
+      ctx.rotate(ang);
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.ellipse(-b.len * 0.45, 0, b.len * 0.55, b.fromPlayer ? 5.2 : 5.8, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Health bar
-    ctx.fillStyle = '#1b1d28';
-    ctx.fillRect(32, 44, 108, 12);
-    ctx.fillStyle = p.hp < 30 ? '#ff4fb0' : '#5dff9e';
-    ctx.fillRect(32, 44, Math.max(0, 108 * (p.hp / p.maxHp)), 12);
-
-    // 8 Memory Album pips (warm gold = recovered, fractured pink = shattered, dim = ahead)
-    for (let i = 0; i < 8; i++) {
-      const st = game.album[i];
-      const px = 154 + i * 22;
-      ctx.fillStyle = st === 'recovered' ? '#ffd97d' : (st === 'shattered' ? '#ff4fb0' : '#232836');
-      ctx.fillRect(px, 44, 16, 12);
-      if (st === 'shattered') {
-        ctx.strokeStyle = '#07060c';
-        ctx.beginPath();
-        ctx.moveTo(px + 2, 45);
-        ctx.lineTo(px + 13, 55);
-        ctx.stroke();
-      }
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(-b.len * 0.22, 0, b.len * 0.28, 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
-    // Top-right concise album counter
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(7, 6, 12, 0.72)';
-    ctx.fillRect(W - 290, 16, 270, 38);
-    ctx.strokeStyle = 'rgba(255, 224, 148, 0.4)';
-    ctx.strokeRect(W - 290, 16, 270, 38);
-    ctx.fillStyle = '#ffe094';
-    ctx.font = 'bold 13px "Courier New", monospace';
-    ctx.fillText(`SAVED ${saved}/8 · ERASED ${lost}/8`, W - 34, 40);
-
-    // Non-blocking Fragment readout toast when a memory is shattered or recovered (`frag` state!)
-    if (game.fragBannerTimer > 0 && game.lastFragEvent) {
-      const ev = game.lastFragEvent;
-      const a = Math.min(1, game.fragBannerTimer * 1.4);
+    for (const s of game.sparks) {
+      const sx = s.x - game.camX;
+      const a = 1 - s.age / s.maxLife;
       ctx.globalAlpha = a;
-      const bw = 540, bh = 58, bx = (W - bw) * 0.5, by = 16;
-      ctx.fillStyle = 'rgba(7, 6, 12, 0.88)';
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = ev.status === 'RECOVERED' ? '#ffe094' : '#ff4fb0';
-      ctx.lineWidth = 1.6;
-      ctx.strokeRect(bx, by, bw, bh);
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = ev.status === 'RECOVERED' ? '#ffe094' : '#ff4fb0';
-      ctx.font = 'bold 14px "Courier New", monospace';
-      ctx.fillText(`MEMORY #${ev.memId + 1} ${ev.status}: ${ev.title.toUpperCase()}`, W * 0.5, by + 23);
-      ctx.fillStyle = '#d7e8df';
-      ctx.font = '12px "Courier New", monospace';
-      ctx.fillText(ev.note, W * 0.5, by + 44);
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, s.y);
+      ctx.lineTo(sx - s.vx * 0.036, s.y - s.vy * 0.036);
+      ctx.stroke();
     }
     ctx.restore();
   }
 
-  function drawAlbumAndOverlays() {
+  function drawMinimalDiegeticStates() {
+    const px = game.player.x - game.camX;
+
+    // Title (REST, non-autostart only): Open live world, zero boxed modal!
     if (game.phase === 'title') {
       ctx.save();
-      ctx.fillStyle = 'rgba(7, 6, 12, 0.76)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#5dff9e';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(190, 130, 900, 440);
-      ctx.fillStyle = 'rgba(10, 9, 18, 0.92)';
-      ctx.fillRect(190, 130, 900, 440);
-
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#ff4fb0';
-      ctx.font = 'bold 15px "Courier New", monospace';
-      ctx.fillText('GROUP 24 · 1980s NEON RUN-AND-GUN', W * 0.5, 185);
-
       ctx.fillStyle = '#5dff9e';
-      ctx.font = 'bold 54px "Courier New", monospace';
-      ctx.fillText('MEMORY MUNITIONS', W * 0.5, 250);
+      ctx.shadowColor = '#5dff9e';
+      ctx.shadowBlur = 18;
+      ctx.font = 'bold 46px "SF Mono", "Courier New", monospace';
+      ctx.fillText('MEMORY MUNITIONS', W * 0.5, 138);
+      ctx.shadowBlur = 0;
 
-      ctx.fillStyle = '#ffe094';
-      ctx.font = '17px "Courier New", monospace';
-      ctx.fillText('You uploaded your mind into a war machine.', W * 0.5, 304);
-      ctx.fillText('Now every robot you shoot takes a piece of the past with it.', W * 0.5, 332);
-
-      ctx.fillStyle = '#c8f5dc';
-      ctx.font = '15px "Courier New", monospace';
-      ctx.fillText('MOVE / JUMP: [WASD / ARROWS]     RAPID MINIGUN (DESTROYS MEMORY): [SPACE / J]', W * 0.5, 392);
-      ctx.fillText('PRECISION DISABLE BEAM (RECOVERS MEMORY INTACT): HOLD [K / SHIFT]', W * 0.5, 422);
-
+      // Spatial valid actions directly beside the weapon barrel they govern (Law 5)
+      const mx = px + 148, my = game.player.y - 224;
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 13px "SF Mono", "Courier New", monospace';
       ctx.fillStyle = '#ff4fb0';
-      ctx.font = 'bold 20px "Courier New", monospace';
-      ctx.fillText('[ PRESS ENTER OR SPACE TO DEPLOY ]', W * 0.5, 505);
+      ctx.fillText('[SPACE] SHATTER', mx, my - 10);
+      ctx.fillStyle = '#6affea';
+      ctx.fillText('[K] RECOVER', mx, my + 14);
       ctx.restore();
-    } else if (game.phase === 'dead') {
-      ctx.save();
-      ctx.fillStyle = 'rgba(7, 6, 12, 0.85)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#ff4fb0';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(280, 200, 720, 310);
+      return;
+    }
 
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ff4fb0';
-      ctx.font = 'bold 48px "Courier New", monospace';
-      ctx.fillText('CHASSIS OFFLINE', W * 0.5, 285);
-      ctx.fillStyle = '#ffe094';
-      ctx.font = '17px "Courier New", monospace';
-      const saved = game.album.filter(x => x === 'recovered').length;
-      const lost  = game.album.filter(x => x === 'shattered').length;
-      ctx.fillText(`Memories Recovered: ${saved} · Memories Shattered: ${lost}`, W * 0.5, 345);
-      ctx.fillStyle = '#5dff9e';
-      ctx.font = 'bold 19px "Courier New", monospace';
-      ctx.fillText('[ PRESS R OR ENTER TO REBOOT ]', W * 0.5, 440);
-      ctx.restore();
-    } else if (game.phase === 'album') {
+    // Fault / Recovery: Minimal spatial [R] REBOOT right beside the fallen soldier (Law 8 & 14)
+    if (game.phase === 'dead') {
       ctx.save();
-      ctx.fillStyle = 'rgba(7, 6, 12, 0.94)';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ff4fb0';
+      ctx.shadowColor = '#ff4fb0';
+      ctx.shadowBlur = 12;
+      ctx.font = 'bold 16px "SF Mono", "Courier New", monospace';
+      ctx.fillText('[R] REBOOT CHASSIS', px + 78, GROUND_Y - 115);
+      ctx.restore();
+      return;
+    }
+
+    // Complete: Clean physical Album of the 8 photographs/maps/letters (what you kept vs what you shattered)
+    if (game.phase === 'album') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(5, 7, 10, 0.92)';
       ctx.fillRect(0, 0, W, H);
 
       const saved = game.album.filter(x => x === 'recovered').length;
       const lost  = game.album.filter(x => x === 'shattered').length;
 
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#5dff9e';
-      ctx.font = 'bold 34px "Courier New", monospace';
-      ctx.fillText('MEMORY ALBUM — WHAT YOU KEPT & WHAT YOU SHOT', W * 0.5, 54);
+      ctx.fillStyle = '#ffe59c';
+      ctx.font = 'bold 26px "SF Mono", "Courier New", monospace';
+      ctx.fillText(`KEPT ${saved}/8   ·   SHATTERED ${lost}/8`, W * 0.5, 58);
 
-      ctx.fillStyle = '#ffe094';
-      ctx.font = '15px "Courier New", monospace';
-      const summary = saved >= 5
-        ? `RECOVERED ${saved}/8 · You held your fire and pieced together who you were.`
-        : (lost >= 5
-          ? `ERASED ${lost}/8 · You cleared the corridor fast, and forgot the face waiting for you.`
-          : `RECOVERED ${saved}/8 · ERASED ${lost}/8 · Half a life remembered, half blown into gold dust.`);
-      ctx.fillText(summary, W * 0.5, 84);
-
-      // 4x2 Grid of the 8 Memory Fragments
-      const startX = 92, startY = 112, cw = 256, ch = 232, gapX = 24, gapY = 24;
+      const startX = 96, startY = 96, cw = 252, ch = 236, gapX = 26, gapY = 24;
       for (let i = 0; i < 8; i++) {
         const col = i % 4, row = Math.floor(i / 4);
         const x = startX + col * (cw + gapX);
         const y = startY + row * (ch + gapY);
         const st = game.album[i];
         const mem = MEMORY_DEFS[i];
-        const card = assets.fragCanvases[i];
-
-        ctx.fillStyle = '#0e0d18';
-        ctx.fillRect(x, y, cw, ch);
-        ctx.strokeStyle = st === 'recovered' ? '#ffe094' : (st === 'shattered' ? '#ff4fb0' : '#2c3340');
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, cw, ch);
+        const card = assets.polaroids[i];
 
         if (st === 'recovered' && card) {
-          ctx.drawImage(card, x + 18, y + 12, cw - 36, 146);
-          ctx.fillStyle = '#ffe094';
-          ctx.font = 'bold 13px "Courier New", monospace';
-          ctx.fillText(mem.title, x + cw * 0.5, y + 178);
-          ctx.fillStyle = '#c9e8d6';
-          ctx.font = '11px "Courier New", monospace';
-          ctx.fillText(mem.caption.slice(0, 36), x + cw * 0.5, y + 198);
-          if (mem.caption.length > 36) ctx.fillText(mem.caption.slice(36, 72), x + cw * 0.5, y + 214);
-        } else if (st === 'shattered') {
-          // Fractured diagonal shards showing what your minigun erased
-          if (card) {
+          ctx.save();
+          ctx.shadowColor = '#ffd87a';
+          ctx.shadowBlur = 18;
+          ctx.drawImage(card, x + 6, y + 6, cw - 12, 174);
+          ctx.restore();
+          ctx.fillStyle = '#d4efe2';
+          ctx.font = '12px "SF Mono", "Courier New", monospace';
+          ctx.fillText(mem.caption, x + cw * 0.5, y + 206);
+        } else {
+          ctx.strokeStyle = st === 'shattered' ? 'rgba(255, 79, 176, 0.45)' : 'rgba(93, 255, 158, 0.18)';
+          ctx.strokeRect(x + 6, y + 6, cw - 12, 174);
+          if (st === 'shattered' && card) {
             ctx.save();
             ctx.globalAlpha = 0.28;
-            ctx.drawImage(card, 0, 0, 120, 90, x + 28, y + 20, 92, 68);
-            ctx.drawImage(card, 120, 90, 120, 90, x + 132, y + 72, 88, 66);
+            ctx.translate(x + 76, y + 66);
+            ctx.rotate(-0.18);
+            ctx.drawImage(card, 0, 0, 140, 110, -48, -36, 96, 72);
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = 0.24;
+            ctx.translate(x + 172, y + 112);
+            ctx.rotate(0.24);
+            ctx.drawImage(card, 150, 90, 140, 110, -44, -34, 88, 68);
             ctx.restore();
           }
-          ctx.fillStyle = '#ff4fb0';
-          ctx.font = 'bold 14px "Courier New", monospace';
-          ctx.fillText('SHATTERED BY MINIGUN', x + cw * 0.5, y + 178);
-          ctx.fillStyle = '#8b6a7e';
-          ctx.font = '11px "Courier New", monospace';
-          ctx.fillText(`[${mem.kind} LOST IN GOLD SHARDS]`, x + cw * 0.5, y + 202);
-        } else {
-          ctx.fillStyle = '#53606e';
-          ctx.font = 'bold 13px "Courier New", monospace';
-          ctx.fillText('UNRECOVERED', x + cw * 0.5, y + 120);
+          ctx.fillStyle = st === 'shattered' ? '#ff4fb0' : '#4a5a58';
+          ctx.font = '12px "SF Mono", "Courier New", monospace';
+          ctx.fillText(st === 'shattered' ? 'ERASED BY MINIGUN' : 'UNRECOVERED', x + cw * 0.5, y + 206);
         }
       }
 
       ctx.fillStyle = '#5dff9e';
-      ctx.font = 'bold 18px "Courier New", monospace';
-      ctx.fillText('[ PRESS R OR ENTER TO RUN AGAIN ]', W * 0.5, 678);
+      ctx.font = 'bold 14px "SF Mono", "Courier New", monospace';
+      ctx.fillText('[R] RUN AGAIN', W * 0.5, 672);
       ctx.restore();
     }
   }
 
   function render() {
-    // 1. Deep Void + Electric Mint Perspective Grid Floor
-    drawPerspectiveNeonFloor();
+    ctx.save();
+    if (game.shake > 0.1) {
+      ctx.translate((rng() - 0.5) * game.shake, (rng() - 0.5) * game.shake);
+    }
 
-    // 2. Glossy Floor Reflections
-    drawFloorReflections();
+    drawFloorAndGrid();
+    drawReflections();
 
-    // 3. Disabled Robot Cooling Smoke
+    // Soft teal cooling exhaust plumes from disabled robots (f_036.jpg!)
     for (const sm of game.smokePuffs) {
       const sx = sm.x - game.camX;
       const a = Math.sin((sm.age / sm.maxLife) * Math.PI) * 0.34;
-      ctx.fillStyle = `rgba(110, 215, 195, ${a.toFixed(3)})`;
+      ctx.fillStyle = `rgba(98, 205, 182, ${a.toFixed(3)})`;
       ctx.beginPath();
       ctx.arc(sx, sm.y, sm.r, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 4. Enemies (flipped horizontally to face left toward the player, matching study frames!)
-    for (const e of game.enemies) {
-      if (e.state === 'gone') continue;
-      const ex = e.x - game.camX;
-      if (ex < -220 || ex > W + 220) continue;
-
-      const frame = getEnemyFrame(e);
-      const eh = e.isBoss ? 320 : (e.isBrute ? 265 : 272);
-      const yOffset = e.state === 'disabled' ? 28 : 0; // Slumped powered-down posture (`f_032.jpg`)
-      const filterStr = e.state === 'shattering'
-        ? 'sepia(0.85) saturate(2.4) brightness(1.45)'
-        : (e.hitFlash > 0 ? 'brightness(1.38) saturate(1.25)' : (e.state === 'disabled' ? 'brightness(0.62) saturate(0.75)' : 'none'));
-
-      drawSpriteFrame(assets.enemyClean || assets.enemyImg, frame, ex, e.y + yOffset, eh, true, 1, filterStr);
-
-      // Subtle overhead disable/integrity arc when active & engaged
-      if (e.state === 'active' && (e.hp < e.maxHp || e.disableProg > 0)) {
-        const bw = 74, bx = ex - bw * 0.5, by = e.y - eh - 18;
-        ctx.fillStyle = 'rgba(7, 6, 12, 0.8)';
-        ctx.fillRect(bx, by, bw, 6);
-        if (e.disableProg > 2) {
-          ctx.fillStyle = '#5dff9e';
-          ctx.fillRect(bx, by, bw * (e.disableProg / 100), 6);
-        } else {
-          ctx.fillStyle = '#ff4fb0';
-          ctx.fillRect(bx, by, bw * Math.max(0, e.hp / e.maxHp), 6);
-        }
-      }
-    }
-
-    // 5. Player Cybernetic Soldier
-    const p = game.player;
-    const px = p.x - game.camX;
-    const blinkAlpha = p.invuln > 0 && Math.floor(clock * 20) % 2 === 0 ? 0.45 : 1;
-    drawSpriteFrame(assets.playerClean || assets.playerImg, getPlayerFrame(), px, p.y, 248, p.facing < 0, blinkAlpha, 'none');
-
-    // Minigun Neon Muzzle Flash (`study/f_012.jpg`!)
-    if (p.muzzleTimer > 0) {
-      const mx = px + p.facing * 88;
-      const my = p.y - 135;
-      ctx.save();
-      const mg = ctx.createRadialGradient(mx, my, 3, mx, my, 46);
-      mg.addColorStop(0, '#ffffff');
-      mg.addColorStop(0.35, 'rgba(130, 255, 220, 0.85)');
-      mg.addColorStop(1, 'rgba(93, 255, 158, 0)');
-      ctx.fillStyle = mg;
-      ctx.beginPath();
-      ctx.arc(mx, my, 46, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // 6. Precision Disable Helix Beam (`K` / `Shift`)
+    drawEnemies();
+    drawShardsAndPhotographs();
+    drawPlayerDiegetic();
     drawDisableBeam();
+    drawBulletsAndSparks();
 
-    // 7. Neon Minigun Bursts & Enemy Magenta Plasma Bolts
-    ctx.save();
-    for (const b of game.bullets) {
-      const bx = b.x - game.camX;
-      const dir = b.vx >= 0 ? 1 : -1;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 14;
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = b.fromPlayer ? 5.2 : 6.0;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(bx - dir * b.len, b.y);
-      ctx.lineTo(bx, b.y);
-      ctx.stroke();
-
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.moveTo(bx - dir * b.len * 0.55, b.y);
-      ctx.lineTo(bx, b.y);
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-    ctx.restore();
-
-    // 8. Slow-Motion Golden Photo Shards & Intact Floating Memories!
-    drawShardsAndIntactMemories();
-
-    // 9. Neon Impact Sparks
-    ctx.save();
-    for (const s of game.sparks) {
-      const sx = s.x - game.camX;
-      const a = 1 - s.age / s.maxLife;
-      ctx.globalAlpha = a;
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.moveTo(sx, s.y);
-      ctx.lineTo(sx - s.vx * 0.032, s.y - s.vy * 0.032);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // 10. Subtle Neon Vignette
-    const vig = ctx.createRadialGradient(W * 0.5, H * 0.55, 320, W * 0.5, H * 0.55, 760);
-    vig.addColorStop(0, 'rgba(7,6,12,0)');
-    vig.addColorStop(1, 'rgba(3,2,8,0.52)');
+    // Subtle cinema edge vignette keeping the center completely open
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.52, 380, W * 0.5, H * 0.52, 780);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(2,3,6,0.44)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
 
-    // 11. Telemetry HUD + Title / Game Over / Album Overlays
-    drawHud();
-    drawAlbumAndOverlays();
+    drawMinimalDiegeticStates();
+    ctx.restore();
   }
 
-  // Expose live state for `play.mjs`
   window.__game = {
     get state() {
       const p = game.player;
       return {
         phase: game.phase,
+        engaged: game.engaged,
+        voidState: game.voidState,
         camX: +game.camX.toFixed(1),
         player: {
           x: +p.x.toFixed(1),
           y: +p.y.toFixed(1),
           screenX: +(p.x - game.camX).toFixed(1),
           hp: Math.round(p.hp),
+          heat: Math.round(p.heat),
           grounded: p.grounded,
           weaponMode: p.weaponMode,
           beaming: p.beaming
@@ -1400,11 +1699,11 @@
             memId: e.memId
           })),
         incomingBullets: game.bullets
-          .filter(b => !b.fromPlayer && Math.abs(b.x - p.x) < 280)
+          .filter(b => !b.fromPlayer && Math.abs(b.x - p.x) < 340)
           .map(b => ({ x: +b.x.toFixed(1), y: +b.y.toFixed(1), vx: +b.vx.toFixed(1) })),
         intactPickups: game.intactPickups
-          .filter(m => !m.collected)
-          .map(m => ({ memId: m.memId, x: +m.x.toFixed(1) })),
+          .filter(m => !m.absorbed)
+          .map(m => ({ memId: m.memId, x: +((m.renderX ?? m.x)).toFixed(1), age: +m.age.toFixed(2) })),
         shardsCount: game.shards.length,
         savedCount: game.album.filter(x => x === 'recovered').length,
         shatteredCount: game.album.filter(x => x === 'shattered').length
@@ -1412,7 +1711,7 @@
     }
   };
 
-  resetGame();
+  resetGame(false);
 
   let lastTs = performance.now();
   function frame(ts) {

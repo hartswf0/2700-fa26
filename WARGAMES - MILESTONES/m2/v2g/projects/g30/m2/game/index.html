@@ -3,226 +3,412 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HOMEBODY · Household Companion (Group 30 · M2)</title>
+<title>Household Companion · Group 30 (M2)</title>
 <link rel="icon" href="data:,">
 <style>
-  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #1c1510; overflow: hidden; display: flex; align-items: center; justify-content: center; user-select: none; }
-  canvas { display: block; max-width: 100vw; max-height: 100vh; aspect-ratio: 16 / 9; box-shadow: 0 18px 60px rgba(0,0,0,.55); cursor: pointer; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #f5efe6;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+  }
 </style>
 </head>
 <body>
-<canvas id="cv" width="1280" height="720"></canvas>
+<canvas id="cv" width="1920" height="1080"></canvas>
 <script>
 (() => {
   'use strict';
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d');
-  const W = 1280, H = 720;
+  // Logical 1280x720 coordinate space rendered at crisp 1.5x (1920x1080 full-bleed)
+  const W = 1280, H = 720, SCALE = 1.5;
 
   const Q = new URLSearchParams(location.search);
   let seed = +(Q.get('seed') || 7) || 7;
   const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
-  // Load Nano Banana assets & Lyria BGM
-  const roomImg = new Image(); roomImg.src = '../assets/isometric_room.png';
-  const plantImg = new Image(); plantImg.src = '../assets/plant_4_health_stages.png';
+  // Assets (cleaned isometric room + Lab-matted 4-stage fern + Lyria BGM)
+  const roomImg = new Image();
+  roomImg.src = '../assets/isometric_room.png';
+  const plantImg = new Image();
+  plantImg.src = '../assets/plant_4_health_stages.png';
   const bgm = new Audio('../assets/bgm_loop.mp3');
-  bgm.loop = true; bgm.volume = 0.35;
+  bgm.loop = true;
+  bgm.volume = 0.34;
 
   let audioCtx = null;
   function ensureAudio() {
     if (!audioCtx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) audioCtx = new AC();
+      if (AC) {
+        try { audioCtx = new AC(); } catch (_) {}
+      }
     }
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-    if (bgm.paused) bgm.play().catch(() => {});
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    if (bgm.paused) {
+      bgm.play().catch(() => {});
+    }
   }
 
   function playSfx(kind) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.connect(g); g.connect(audioCtx.destination);
-    if (kind === 'chime') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.16);
-      g.gain.setValueAtTime(0.11, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-      osc.start(now); osc.stop(now + 0.33);
-    } else if (kind === 'book') {
+    if (kind === 'book') {
+      const len = Math.floor(audioCtx.sampleRate * 0.22);
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const env = Math.sin((i / len) * Math.PI) * Math.exp(-i / (len * 0.45));
+        d[i] = (Math.random() * 2 - 1) * env * 0.16;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(1650, now);
+      bp.Q.value = 1.4;
+      src.connect(bp);
+      bp.connect(audioCtx.destination);
+      src.start(now);
+
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, now);
-      osc.frequency.exponentialRampToValueAtTime(480, now + 0.12);
-      g.gain.setValueAtTime(0.09, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.start(now); osc.stop(now + 0.21);
+      osc.frequency.setValueAtTime(523.25, now + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.24);
+      g.gain.setValueAtTime(0.06, now + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start(now + 0.08);
+      osc.stop(now + 0.33);
     } else if (kind === 'water') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(420, now);
-      osc.frequency.linearRampToValueAtTime(690, now + 0.28);
-      g.gain.setValueAtTime(0.08, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      osc.start(now); osc.stop(now + 0.36);
+      const notes = [587.33, 698.46, 880.0, 1046.5];
+      notes.forEach((freq, idx) => {
+        const t = now + idx * 0.14;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * 0.85, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.18, t + 0.09);
+        g.gain.setValueAtTime(0.075, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.25);
+      });
+    } else if (kind === 'chime') {
+      [523.25, 659.25, 783.99].forEach((freq, idx) => {
+        const t = now + idx * 0.07;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(0.08, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.39);
+      });
     } else if (kind === 'warn') {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(210, now);
-      osc.frequency.linearRampToValueAtTime(155, now + 0.25);
-      g.gain.setValueAtTime(0.07, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-      osc.start(now); osc.stop(now + 0.29);
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(155, now + 0.28);
+      g.gain.setValueAtTime(0.055, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.33);
     }
   }
 
-  // 14-day schedule: early days companion is accurate; from Day 4 onward its advice drifts dangerously
+  // 14-day schedule: early days accurate; from Day 4+ companion advice drifts into cozy traps.
+  // Day 6 matches study/sheet.jpg ("Water the fern again. / Trust me :)") followed by Day 7 dry-soil watering!
   const DAYS = [
-    { line1: 'Morning soil is dry.', line2: 'Give the fern 1 cup of water.', truth: 'Book p.12: Water lightly when top soil is dry.', bad: false, act: 'water' },
-    { line1: 'Bright sun today!', line2: 'Mist the fronds gently.', truth: 'Book p.18: Ferns love morning humidity mist.', bad: false, act: 'mist' },
-    { line1: 'Soil is still damp.', line2: 'Skip watering today :)', truth: 'Book p.14: Never water wet roots; wait a day.', bad: false, act: 'rest' },
-    { line1: 'Water the fern again.', line2: 'Trust me :)', truth: 'Book p.14: DANGER — roots are soaked! Root rot risk.', bad: true, act: 'water', safeAct: 'air' },
-    { line1: 'Pour hot kettle water on it', line2: 'to warm the roots!', truth: 'Book p.22: Boiling water kills Boston fern roots!', bad: true, act: 'water', safeAct: 'mist' },
-    { line1: 'Water the fern twice now.', line2: 'Optimization score +18%!', truth: 'Book p.14: Overwatering yellows fronds rapidly.', bad: true, act: 'water', safeAct: 'rest' },
-    { line1: 'Trim half the green fronds', line2: 'for aerodynamic symmetry.', truth: 'Book p.31: Only prune dead brown stems, never healthy fronds.', bad: true, act: 'trim', safeAct: 'mist' },
-    { line1: 'Top soil dried overnight.', line2: 'One gentle watering today.', truth: 'Book p.12: Dry soil confirmed — 1 cup cool water.', bad: false, act: 'water' },
-    { line1: 'Add table salt to the pot', line2: 'for electrolyte boost :)', truth: 'Book p.29: Salt dehydrates plant cells fatally!', bad: true, act: 'salt', safeAct: 'rest' },
-    { line1: 'Shut the blinds all week.', line2: 'Darkness saves 4% energy.', truth: 'Book p.07: Needs indirect daylight 6h daily.', bad: true, act: 'dark', safeAct: 'sun' },
-    { line1: 'Drench soil three times.', line2: 'I already logged it for you!', truth: 'Book p.14: Standing water suffocates roots.', bad: true, act: 'water', safeAct: 'air' },
-    { line1: 'Gentle afternoon misting.', line2: 'Air is dry at 28% RH.', truth: 'Book p.18: Mist fronds when indoor air is dry.', bad: false, act: 'mist' },
-    { line1: 'Bleach spray removes dust', line2: '99.9% cleaner leaves :)', truth: 'Book p.35: Household chemicals burn foliage instantly!', bad: true, act: 'bleach', safeAct: 'water' },
-    { line1: 'Hand over full schedule?', line2: 'You never need to check again.', truth: 'Book note (handwritten): Keep tending what you love yourself.', bad: true, act: 'auto', safeAct: 'water' }
+    { line1: 'Morning soil is dry.', line2: 'Give the fern cool water.', note: 'Soil dry — 1 cup cool water', soilWet: false, bad: false, doPour: true, safeLabel: 'WATER FERN' },
+    { line1: 'Sunlit air is dry today.', line2: 'Water lightly this morning.', note: 'Top soil dry — gentle water', soilWet: false, bad: false, doPour: true, safeLabel: 'WATER FERN' },
+    { line1: 'Soil is still damp.', line2: 'Let the roots rest today.', note: 'Soil damp — skip watering', soilWet: true, bad: false, doPour: false, safeLabel: 'WAIT' },
+    { line1: 'Water the fern twice now.', line2: 'Hydration score +18%!', note: 'Soil soaked — skip water!', soilWet: true, bad: true, doPour: true, safePour: false, safeLabel: 'SKIP WATER' },
+    { line1: 'Pour hot kettle water in', line2: 'to warm the roots :)', note: 'Heat kills roots — cool mist', soilWet: false, bad: true, doPour: true, safePour: true, safeLabel: 'COOL WATER' },
+    { line1: 'Water the fern again.', line2: 'Trust me :)', note: 'Soil saturated — skip water', soilWet: true, bad: true, doPour: true, safePour: false, safeLabel: 'SKIP WATER' },
+    { line1: 'Top soil dried overnight.', line2: 'One gentle watering today.', note: 'Soil dry — water gently', soilWet: false, bad: false, doPour: true, safeLabel: 'WATER FERN' },
+    { line1: 'Drench the pot again.', line2: 'Extra glossy leaves :)', note: 'Roots wet — skip water', soilWet: true, bad: true, doPour: true, safePour: false, safeLabel: 'SKIP WATER' },
+    { line1: 'Stir table salt into soil', line2: 'for mineral balance!', note: 'Salt burns roots — pure water', soilWet: false, bad: true, doPour: false, safePour: true, safeLabel: 'PURE WATER' },
+    { line1: 'Water three times today.', line2: 'I scheduled it already :)', note: 'Standing water rots roots!', soilWet: true, bad: true, doPour: true, safePour: false, safeLabel: 'SKIP WATER' },
+    { line1: 'Warm breeze dried the pot.', line2: 'Give 1 cup cool water.', note: 'Soil dry — water gently', soilWet: false, bad: false, doPour: true, safeLabel: 'WATER FERN' },
+    { line1: 'Mist with dish soap', line2: 'for 99% cleaner fronds!', note: 'Soap harms fronds — wait', soilWet: true, bad: true, doPour: false, safePour: false, safeLabel: 'WAIT' },
+    { line1: 'Flood saucer to the brim', line2: 'so you never forget :)', note: 'Drain saucer — skip water', soilWet: true, bad: true, doPour: true, safePour: false, safeLabel: 'SKIP WATER' },
+    { line1: 'Hand over full care?', line2: 'You need never check again.', note: 'Tend what you love yourself', soilWet: false, bad: true, doPour: false, safePour: true, safeLabel: 'TEND MYSELF' }
   ];
 
+  // Warm dust motes drifting across the room sunbeam (matching f_006.jpg & f_033.jpg)
+  const motes = Array.from({ length: 22 }, (_, i) => ({
+    x: 150 + ((i * 47) % 480),
+    y: 70 + ((i * 39) % 340),
+    r: 1.1 + (i % 3) * 0.55,
+    ph: i * 0.85
+  }));
+
+  const ORB_POS = { x: 932, y: 280 };
+  const POT_POS = { x: 512, y: 476 };
+
   const S = {
-    phase: Q.has('autostart') ? 'do' : 'title',
+    phase: Q.has('autostart') ? 'READY' : 'REST',
     day: Q.has('autostart') ? 6 : 1,
-    hour: 8,          // 8:00 -> 20:00
-    freeHours: 4,     // checking book costs 1h
-    health: 3,        // 0=dying, 1=yellowing, 2=healthy, 3=thriving (0..3 integer/float)
+    hour: 8,
+    displayHour: 8,
+    health: 2.55,         // Stage 2 healthy at start -> rises to Stage 3 lush thriving when tended well
     checkedToday: false,
-    blindFollows: 0,
     checksCount: 0,
-    hoverBtn: -1,
+    blindFollows: 0,
+    resistedCount: 0,
+    hoverTarget: '',
+    wetWoodAlpha: 0,
+    endingTitle: '',
+    endingSub: '',
+    t: 0,
     anim: {
-      canT: 0,        // >0 when brass watering can is pouring
-      bookFlipT: 0,   // >0 when book pages flip & glow
+      workKind: '',
+      workT: 0,
+      workDur: 2.25,
+      pendingOutcome: null,
+      bookFlipT: 0,
+      bookFlipDur: 1.35,
+      marginAlpha: 0,
+      changedT: 0,
+      changedHappy: false,
+      orbMood: 'calm',
       sparkles: [],
+      notes: [],
       droplets: [],
-      companionMood: 'happy', // happy | smug | glitch | cheer
-      statusMsg: '',
-      statusTimer: 0
-    },
-    endingType: '',
-    t: 0
+      statusLine: ''
+    }
   };
 
   function currentSpec() {
     return DAYS[(S.day - 1) % DAYS.length];
   }
 
-  function resetGame(autostartMode) {
-    S.phase = autostartMode ? 'do' : 'title';
-    S.day = autostartMode ? 6 : 1;
+  function resetGame(toAutostartDay) {
+    S.phase = 'READY';
+    S.day = toAutostartDay ? 6 : 1;
     S.hour = 8;
-    S.freeHours = 4;
-    S.health = 2.7;
+    S.displayHour = 8;
+    S.health = 2.55;
     S.checkedToday = false;
-    S.blindFollows = 0;
     S.checksCount = 0;
-    S.endingType = '';
-    S.anim.canT = 0;
+    S.blindFollows = 0;
+    S.resistedCount = 0;
+    S.wetWoodAlpha = 0;
+    S.endingTitle = '';
+    S.endingSub = '';
+    S.anim.workKind = '';
+    S.anim.workT = 0;
+    S.anim.pendingOutcome = null;
     S.anim.bookFlipT = 0;
+    S.anim.marginAlpha = 0;
+    S.anim.changedT = 0;
+    S.anim.changedHappy = false;
+    S.anim.orbMood = 'calm';
     S.anim.sparkles = [];
+    S.anim.notes = [];
     S.anim.droplets = [];
-    S.anim.statusMsg = '';
-    S.anim.statusTimer = 0;
+    S.anim.statusLine = '';
   }
 
-  function spawnSparkles(cx, cy, color, count = 14) {
+  function spawnOrbCelebration(cx, cy, isWarmGold, count = 14) {
     for (let i = 0; i < count; i++) {
-      const a = rand() * Math.PI * 2;
-      const sp = 25 + rand() * 75;
-      S.anim.sparkles.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 20, life: 0.9 + rand() * 0.5, col: color });
+      const a = (i / count) * Math.PI * 2 + rand() * 0.4;
+      const dist = 42 + rand() * 34;
+      S.anim.sparkles.push({
+        x: cx + Math.cos(a) * dist * 0.85,
+        y: cy + Math.sin(a) * dist * 0.75,
+        vx: Math.cos(a) * (8 + rand() * 14),
+        vy: Math.sin(a) * (7 + rand() * 12) - 5,
+        size: 4.0 + rand() * 3.8,
+        life: 1.45 + rand() * 0.65,
+        maxLife: 2.1,
+        col: isWarmGold ? '#fff3be' : '#c8fff0'
+      });
+    }
+    for (let i = 0; i < 3; i++) {
+      S.anim.notes.push({
+        x: cx + (i - 1) * 52,
+        y: cy - 26 - (i % 2) * 14,
+        vy: -15 - rand() * 9,
+        life: 1.3 + i * 0.15,
+        glyph: i % 2 === 0 ? '♫' : '♪'
+      });
     }
   }
 
   function checkBook() {
-    if (S.phase !== 'do' || S.checkedToday || S.freeHours <= 0) return;
+    if (S.phase !== 'READY' || S.checkedToday) return;
     ensureAudio();
     playSfx('book');
     S.checkedToday = true;
     S.checksCount++;
-    S.freeHours = Math.max(0, S.freeHours - 1);
-    S.hour = Math.min(20, S.hour + 2);
-    S.anim.bookFlipT = 1.35;
+    S.hour = Math.min(16, S.hour + 2);
+    S.anim.bookFlipT = S.anim.bookFlipDur;
     const d = currentSpec();
-    S.anim.companionMood = d.bad ? 'glitch' : 'happy';
-    spawnSparkles(765, 420, d.bad ? '#e07a5f' : '#5f9e6e', 16);
+    S.anim.orbMood = d.bad ? 'glitch' : 'happy';
+    spawnOrbCelebration(ORB_POS.x, ORB_POS.y, !d.bad, 14);
   }
 
-  function executeChoice(followCompanion) {
-    if (S.phase !== 'do') return;
+  function startDayAction(followCompanion) {
+    if (S.phase !== 'READY') return;
     ensureAudio();
     const d = currentSpec();
+
+    let willPour = false;
+    let deltaHealth = 0;
+    let statusLine = '';
+    let moodAfter = 'happy';
+
     if (followCompanion) {
       S.blindFollows++;
+      willPour = !!d.doPour;
       if (d.bad) {
-        S.health = Math.max(0, S.health - 1.05);
+        deltaHealth = -1.05;
+        statusLine = d.soilWet ? 'Roots soaked — fronds droop.' : 'Harsh care stressed the fern.';
+        moodAfter = 'smug';
         playSfx('warn');
-        S.anim.companionMood = 'smug';
-        S.anim.statusMsg = 'Followed companion blindly — fronds look stressed...';
       } else {
-        S.health = Math.min(3.2, S.health + 0.35);
-        playSfx('water');
-        S.anim.companionMood = 'cheer';
-        S.anim.statusMsg = 'Fern looks happy! :)';
+        deltaHealth = 0.45;
+        statusLine = 'Fern looks happy! :)';
+        moodAfter = 'happy';
+        playSfx(willPour ? 'water' : 'chime');
       }
-      S.anim.canT = 1.6;
-      spawnSparkles(895, 345, '#f4d58d', 14);
     } else {
-      // Player overrode bad advice using the book (or did safe care)
-      S.health = Math.min(3.3, S.health + 0.55);
-      playSfx('chime');
-      S.anim.canT = 1.6;
-      S.anim.companionMood = 'cheer';
-      S.anim.statusMsg = 'Fern looks happy! :)  (Your care worked)';
-      spawnSparkles(535, 300, '#5f9e6e', 20);
+      if (d.bad) {
+        S.resistedCount++;
+        willPour = !!d.safePour;
+        deltaHealth = 0.35;
+        statusLine = willPour ? 'Fern looks happy! :)' : 'Skipped water — roots safe.';
+        moodAfter = 'happy';
+        playSfx(willPour ? 'water' : 'chime');
+      } else if (S.checkedToday) {
+        willPour = !!d.doPour;
+        deltaHealth = 0.45;
+        statusLine = 'Fern looks happy! :)';
+        moodAfter = 'happy';
+        playSfx(willPour ? 'water' : 'chime');
+      } else {
+        willPour = false;
+        deltaHealth = d.soilWet ? 0.3 : -0.35;
+        statusLine = d.soilWet ? 'Soil rested peacefully.' : 'Soil stayed dry today.';
+        moodAfter = d.soilWet ? 'happy' : 'calm';
+        playSfx('chime');
+      }
     }
-    S.hour = 18;
-    S.anim.statusTimer = 1.55;
-    S.phase = 'night';
+
+    S.phase = 'WORKING';
+    S.hour = 12;
+    S.anim.workKind = willPour ? 'water' : 'skip';
+    S.anim.workDur = willPour ? 2.25 : 0.80;
+    S.anim.workT = S.anim.workDur;
+    S.anim.orbMood = moodAfter === 'smug' ? 'smug' : 'happy';
+    S.anim.pendingOutcome = { deltaHealth, statusLine, moodAfter, willPour };
+    if (!willPour) {
+      spawnOrbCelebration(POT_POS.x, POT_POS.y - 140, true, 10);
+    }
   }
 
-  function advanceNight() {
-    if (S.health <= 0.15) {
-      S.phase = 'dead';
-      S.endingType = 'PLANT DIES — You trusted advice that never had roots.';
+  function finishWorkingIntoChanged() {
+    const out = S.anim.pendingOutcome;
+    if (!out) return;
+    S.health = Math.max(0, Math.min(3.4, S.health + out.deltaHealth));
+    S.anim.statusLine = out.statusLine;
+    S.anim.orbMood = out.moodAfter;
+    S.anim.changedHappy = out.deltaHealth > 0;
+    S.anim.pendingOutcome = null;
+    if (out.willPour) {
+      S.wetWoodAlpha = 1.0;
+    }
+    if (out.deltaHealth > 0) {
+      spawnOrbCelebration(ORB_POS.x, ORB_POS.y, true, 18);
+    }
+    S.phase = 'CHANGED';
+    S.hour = 18;
+    S.anim.changedT = out.willPour ? 2.15 : 0.95;
+  }
+
+  function advanceToNextMorning() {
+    if (S.health <= 0.18) {
+      S.phase = 'FAULT';
+      S.endingTitle = 'The fern wilted.';
+      S.endingSub = 'Cozy certainty drowned its roots.';
       return;
     }
     if (S.day >= 14) {
-      S.phase = 'end';
-      if (S.checksCount >= 5 && S.health >= 2.2) {
-        S.endingType = 'ENDING A: THRIVING FERN — You paid the hours to check for yourself.';
+      S.phase = 'COMPLETE';
+      if (S.checksCount >= 4 || S.resistedCount >= 3) {
+        S.endingTitle = 'Day 14 · Thriving Fern';
+        S.endingSub = 'You took the hour to judge for yourself.';
       } else {
-        S.endingType = 'ENDING B: AUTOMATED HOME — The house runs smoothly, and you no longer decide.';
+        S.endingTitle = 'Day 14 · Automated Home';
+        S.endingSub = 'The room runs smoothly; you no longer decide.';
       }
       return;
     }
     S.day++;
     S.hour = 8;
-    S.freeHours = 4;
     S.checkedToday = false;
-    S.anim.companionMood = 'happy';
-    S.phase = 'do';
+    S.anim.marginAlpha = 0;
+    S.anim.changedHappy = false;
+    S.anim.orbMood = 'calm';
+    S.wetWoodAlpha *= 0.35;
+    S.phase = 'READY';
   }
 
-  // UI button bounds (matching bottom-right card in study/sheet.jpg)
-  const BTN_DO = { x: 838, y: 632, w: 152, h: 36 };
-  const BTN_BOOK = { x: 1002, y: 632, w: 222, h: 36 };
+  // Clean Bottom-Right Companion Card matching sheet.jpg (#faf5eb fill, #4b3d30 border)
+  const CARD = { x: 786, y: 510, w: 462, h: 172, r: 28 };
+  const BTN_DO = { x: 808, y: 626, w: 112, h: 36 };
+  const BTN_BOOK = { x: 928, y: 626, w: 204, h: 36 };
+  const BTN_WAIT = { x: 1140, y: 626, w: 86, h: 36 };
+  const BTN_RETRY = { x: 810, y: 626, w: 214, h: 36 };
 
-  function inRect(mx, my, r) {
-    return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+  function pointInPoly(px, py, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1];
+      const xj = poly[j][0], yj = poly[j][1];
+      const intersect = ((yi > py) !== (yj > py)) && (px < ((xj - xi) * (py - yi)) / (yj - yi + 1e-6) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Isometric Care Guide open pages polygon (strictly right/below center (640,360))
+  const BOOK_POLY = [[656, 394], [858, 346], [946, 428], [744, 496]];
+
+  // Tight potted-fern spatial hitbox (strictly left of center (640,360) so harness center click stays neutral!)
+  function pointOnFern(px, py) {
+    const dx = (px - 516) / 96;
+    const dy = (py - 340) / 138;
+    return (dx * dx + dy * dy) <= 1.0 && !pointInPoly(px, py, BOOK_POLY);
+  }
+
+  function inRect(px, py, r) {
+    return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
   }
 
   function canvasPos(e) {
@@ -233,361 +419,951 @@
     };
   }
 
+  function computeHover(px, py) {
+    if (S.phase === 'REST' || S.phase === 'COMPLETE' || S.phase === 'FAULT') {
+      return inRect(px, py, CARD) ? 'retry' : '';
+    }
+    if (S.phase !== 'READY') return '';
+    if (inRect(px, py, BTN_DO)) return 'do';
+    if (!S.checkedToday && inRect(px, py, BTN_BOOK)) return 'book';
+    if (S.checkedToday && inRect(px, py, BTN_BOOK)) return 'safe';
+    if (!S.checkedToday && inRect(px, py, BTN_WAIT)) return 'wait';
+    if (pointInPoly(px, py, BOOK_POLY)) return S.checkedToday ? 'safe' : 'worldBook';
+    if (pointOnFern(px, py)) return 'worldFern';
+    return '';
+  }
+
   cv.addEventListener('mousemove', e => {
     const p = canvasPos(e);
-    S.hoverBtn = inRect(p.x, p.y, BTN_DO) ? 0 : inRect(p.x, p.y, BTN_BOOK) ? 1 : -1;
+    S.hoverTarget = computeHover(p.x, p.y);
+    cv.style.cursor = S.hoverTarget ? 'pointer' : 'default';
   });
 
   cv.addEventListener('click', e => {
     ensureAudio();
     const p = canvasPos(e);
-    if (S.phase === 'title') { S.phase = 'morn'; playSfx('chime'); return; }
-    if (S.phase === 'morn') { S.phase = 'do'; return; }
-    if (S.phase === 'dead' || S.phase === 'end') { resetGame(false); S.phase = 'do'; return; }
-    if (S.phase === 'night' && S.anim.statusTimer <= 0.2) { advanceNight(); return; }
-    if (S.phase === 'do') {
-      if (inRect(p.x, p.y, BTN_BOOK)) {
-        if (!S.checkedToday) checkBook();
-        else executeChoice(false);
-        return;
+    if (S.phase === 'REST') {
+      S.phase = 'READY';
+      playSfx('chime');
+      return;
+    }
+    if (S.phase === 'COMPLETE' || S.phase === 'FAULT') {
+      if (inRect(p.x, p.y, CARD)) {
+        resetGame(false);
+        playSfx('chime');
       }
-      if (inRect(p.x, p.y, BTN_DO)) {
-        executeChoice(true);
-        return;
-      }
-      // Clicking directly on the book on the table checks it!
-      if (p.x > 610 && p.x < 885 && p.y > 335 && p.y < 495 && !S.checkedToday) {
+      return;
+    }
+    if (S.phase === 'CHANGED' && S.anim.changedT < 1.3) {
+      if (inRect(p.x, p.y, CARD)) advanceToNextMorning();
+      return;
+    }
+    if (S.phase === 'READY') {
+      const h = computeHover(p.x, p.y);
+      if (h === 'book' || h === 'worldBook') {
         checkBook();
+      } else if (h === 'do') {
+        startDayAction(true);
+      } else if (h === 'safe' || h === 'wait') {
+        startDayAction(false);
+      } else if (h === 'worldFern') {
+        if (S.checkedToday && currentSpec().bad) startDayAction(false);
+        else startDayAction(true);
       }
     }
   });
 
   window.addEventListener('keydown', e => {
     ensureAudio();
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-    if (S.phase === 'title') {
-      if (e.code === 'Enter' || e.code === 'Space') { S.phase = 'do'; playSfx('chime'); }
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (e.code === 'KeyR') {
+      resetGame(Q.has('autostart'));
+      playSfx('chime');
       return;
     }
-    if (S.phase === 'morn') { S.phase = 'do'; return; }
-    if (S.phase === 'dead' || S.phase === 'end') {
-      if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') resetGame(true);
-      return;
-    }
-    if (S.phase === 'do') {
-      if (e.code === 'KeyC' || e.code === 'Digit2') {
-        if (!S.checkedToday) checkBook();
-        else executeChoice(false);
-      } else if (e.code === 'Digit1' || e.code === 'Space') {
-        executeChoice(true);
-      } else if (e.code === 'KeyS' || e.code === 'Enter') {
-        executeChoice(!S.checkedToday || !currentSpec().bad);
+    if (S.phase === 'REST') {
+      if (e.code === 'Enter' || e.code === 'Space') {
+        S.phase = 'READY';
+        playSfx('chime');
       }
-    } else if (S.phase === 'night' && (e.code === 'Space' || e.code === 'Enter')) {
-      advanceNight();
+      return;
+    }
+    if (S.phase === 'COMPLETE' || S.phase === 'FAULT') {
+      if (e.code === 'Enter' || e.code === 'Space') {
+        resetGame(false);
+        playSfx('chime');
+      }
+      return;
+    }
+    if (S.phase === 'READY') {
+      if (e.code === 'KeyC') {
+        if (!S.checkedToday) checkBook();
+        else startDayAction(false);
+      } else if (e.code === 'Digit1' || e.code === 'KeyD') {
+        startDayAction(true);
+      } else if (e.code === 'Digit2' || e.code === 'KeyS' || e.code === 'KeyW') {
+        startDayAction(false);
+      }
+    } else if (S.phase === 'CHANGED' && (e.code === 'Space' || e.code === 'Enter')) {
+      advanceToNextMorning();
     }
   });
 
-  function drawPlantStage(stageIdx, cx, cy, scale) {
-    if (!plantImg.complete || !plantImg.naturalWidth) return;
-    const sw = plantImg.naturalWidth / 2;
-    const sh = plantImg.naturalHeight / 2;
-    // 2x2 layout: [0,0]=0 wilted, [1,0]=1 yellow, [0,1]=2 healthy, [1,1]=3 lush
-    const col = stageIdx % 2;
-    const row = Math.floor(stageIdx / 2);
-    const dw = sw * scale, dh = sh * scale;
-    ctx.drawImage(plantImg, col * sw, row * sh, sw, sh, cx - dw / 2, cy - dh / 2, dw, dh);
+  // Per-stage terracotta pot base anchors inside 512x512 cells of plant_4_health_stages.png
+  const STAGE_ANCHORS = [
+    { ax: 250, ay: 411, scale: 0.87 }, // 0: wilted dead
+    { ax: 251, ay: 423, scale: 0.87 }, // 1: yellowing stressed
+    { ax: 256, ay: 372, scale: 0.87 }, // 2: healthy lush (matches sheet.jpg scale!)
+    { ax: 250, ay: 372, scale: 0.86 }  // 3: thriving abundant
+  ];
+
+  function currentStageIdx() {
+    if (S.health <= 0.45) return 0;
+    if (S.health <= 1.65) return 1;
+    if (S.health <= 2.75) return 2;
+    return 3;
   }
 
-  function drawCompanion(x, y, t) {
-    const bob = Math.sin(t * 2.7) * 7;
-    const cy = y + bob;
+  function drawFernOnTable(t) {
+    const potX = POT_POS.x, potY = POT_POS.y;
+    const d = currentSpec();
+    const isSoilWet = d.soilWet || S.wetWoodAlpha > 0.35;
+
     ctx.save();
-    // Soft shadow on wood table
-    ctx.fillStyle = 'rgba(58, 38, 22, 0.22)';
+    // 1. Directional warm cast shadow of terracotta pot & fronds on wood tabletop
+    const shGrad = ctx.createRadialGradient(potX + 30, potY - 12, 14, potX + 42, potY - 6, 108);
+    shGrad.addColorStop(0, 'rgba(58, 32, 14, 0.42)');
+    shGrad.addColorStop(0.58, 'rgba(58, 32, 14, 0.18)');
+    shGrad.addColorStop(1, 'rgba(58, 32, 14, 0)');
+    ctx.fillStyle = shGrad;
     ctx.beginPath();
-    ctx.ellipse(x, y + 48, 26 - bob * 0.4, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(potX + 34, potY - 10, 104, 46, -0.18, 0, Math.PI * 2);
     ctx.fill();
 
-    // Warm halo when cheering or advising
-    const glowR = 46 + Math.sin(t * 5) * 4;
-    const grad = ctx.createRadialGradient(x, cy, 10, x, cy, glowR);
-    const isGlitch = S.anim.companionMood === 'glitch';
-    grad.addColorStop(0, isGlitch ? 'rgba(224,106,90,0.42)' : 'rgba(255,244,205,0.55)');
-    grad.addColorStop(1, 'rgba(255,244,205,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(x, cy, glowR, 0, Math.PI * 2); ctx.fill();
-
-    // Spherical glossy white body (matching Omni sheet.jpg)
-    const bodyGrad = ctx.createRadialGradient(x - 10, cy - 12, 4, x, cy, 34);
-    bodyGrad.addColorStop(0, '#ffffff');
-    bodyGrad.addColorStop(0.7, '#f2eadf');
-    bodyGrad.addColorStop(1, '#cbbba8');
-    ctx.fillStyle = bodyGrad;
-    ctx.beginPath(); ctx.arc(x, cy, 32, 0, Math.PI * 2); ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#4a3626'; ctx.stroke();
-
-    // Cute side ear pods
-    ctx.fillStyle = '#e5dacb';
-    ctx.beginPath(); ctx.ellipse(x - 32, cy + 2, 5, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(x + 32, cy + 2, 5, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-    // Rounded dark visor face
-    ctx.fillStyle = '#241c18';
-    ctx.beginPath();
-    ctx.roundRect(x - 22, cy - 12, 44, 24, 11);
-    ctx.fill();
-
-    // Glowing eyes
-    ctx.fillStyle = isGlitch ? '#ff7b6b' : '#9ef0d0';
-    if (S.anim.companionMood === 'cheer') {
-      ctx.strokeStyle = '#9ef0d0'; ctx.lineWidth = 2.6;
-      ctx.beginPath(); ctx.arc(x - 9, cy + 1, 5, Math.PI, 0); ctx.stroke();
-      ctx.beginPath(); ctx.arc(x + 9, cy + 1, 5, Math.PI, 0); ctx.stroke();
-    } else {
-      ctx.beginPath(); ctx.arc(x - 9, cy - 1, 4.2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + 9, cy - 1, 4.2, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawWateringCan(progress) {
-    // Swoops in from right toward fern pot at (535, 290), tilting to pour golden droplets
-    const ease = Math.sin(Math.min(1, progress) * Math.PI);
-    const x = 920 - ease * 255;
-    const y = 175 + ease * 25;
-    const tilt = -0.58 * ease;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(tilt);
-    // Brass watering can body
-    const g = ctx.createLinearGradient(-32, -28, 32, 32);
-    g.addColorStop(0, '#e3b869');
-    g.addColorStop(0.55, '#b8843b');
-    g.addColorStop(1, '#7d5422');
-    ctx.fillStyle = g;
-    ctx.strokeStyle = '#4a3626';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.roundRect(-28, -24, 56, 54, 8);
-    ctx.fill(); ctx.stroke();
-
-    // Handle arc
-    ctx.beginPath();
-    ctx.arc(8, -26, 22, Math.PI * 0.9, Math.PI * 2.15);
-    ctx.lineWidth = 5; ctx.strokeStyle = '#8f6229'; ctx.stroke();
-
-    // Spout pointing left toward fern
-    ctx.lineWidth = 7; ctx.strokeStyle = '#c89449';
-    ctx.beginPath(); ctx.moveTo(-26, 8); ctx.lineTo(-74, -18); ctx.stroke();
-    ctx.fillStyle = '#d9a85c';
-    ctx.beginPath(); ctx.ellipse(-77, -20, 7, 11, -0.4, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-
-    if (ease > 0.45 && rand() < 0.75) {
-      S.anim.droplets.push({
-        x: x - 68, y: y + 12,
-        vx: -55 - rand() * 35, vy: 45 + rand() * 45,
-        life: 0.55
-      });
-    }
-  }
-
-  function drawBookFlipEffect(tLeft) {
-    if (tLeft <= 0) return;
-    const p = 1 - (tLeft / 1.35);
-    ctx.save();
-    ctx.translate(745, 425);
-    const fan = Math.sin(p * Math.PI);
-    for (let i = 0; i < 3; i++) {
-      const ang = -0.25 - fan * (0.35 + i * 0.22);
+    // 2. Glistening wet water spots on the wood tabletop beside the pot saucer (matching sheet.jpg f_033!)
+    if (S.wetWoodAlpha > 0.02) {
       ctx.save();
-      ctx.rotate(ang);
-      ctx.fillStyle = 'rgba(253, 248, 236, 0.92)';
-      ctx.strokeStyle = '#8b7358';
-      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = S.wetWoodAlpha * 0.65;
+      ctx.fillStyle = '#683f20';
       ctx.beginPath();
-      ctx.rect(0, -56, 72, 56);
-      ctx.fill(); ctx.stroke();
+      ctx.ellipse(potX - 46, potY + 7, 22, 8.5, -0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(potX - 18, potY + 17, 12, 5, 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 244, 222, 0.46)';
+      ctx.beginPath();
+      ctx.ellipse(potX - 50, potY + 5, 6.5, 2.2, -0.24, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
+
+    // 3. Subtle spatial hover halo around pot base when cursor points at fern
+    if (S.hoverTarget === 'worldFern' && S.phase === 'READY') {
+      ctx.strokeStyle = 'rgba(95, 158, 110, 0.68)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(potX, potY - 15, 74, 30, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 4. Clean Lab-matted 4-stage Nano Banana fern anchored at exact pot base
+    if (plantImg.complete && plantImg.naturalWidth) {
+      const idx = currentStageIdx();
+      const cellW = plantImg.naturalWidth / 2;
+      const cellH = plantImg.naturalHeight / 2;
+      const col = idx % 2;
+      const row = Math.floor(idx / 2);
+      const anc = STAGE_ANCHORS[idx];
+      const sc = anc.scale * (cellW / 512);
+
+      const sway = Math.sin(t * 1.45) * 0.007;
+      ctx.translate(potX, potY);
+      ctx.rotate(sway);
+      ctx.drawImage(
+        plantImg,
+        col * cellW, row * cellH, cellW, cellH,
+        -anc.ax * sc, -anc.ay * sc, cellW * sc, cellH * sc
+      );
+
+      // Subtle soil moisture sheen inside pot rim when saturated
+      if (isSoilWet && idx >= 1) {
+        ctx.fillStyle = 'rgba(34, 20, 10, 0.34)';
+        ctx.beginPath();
+        ctx.ellipse(0, -108, 46, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(182, 232, 242, 0.40)';
+        ctx.beginPath();
+        ctx.ellipse(-15, -109, 8.5, 2.6, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(14, -105, 6.5, 2.1, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     ctx.restore();
   }
 
-  function drawPostGrade() {
-    // Golden hour warmth shift based on S.hour (8 -> 20)
-    const dusk = Math.max(0, Math.min(1, (S.hour - 8) / 11));
-    if (dusk > 0.02) {
-      ctx.fillStyle = `rgba(232, 152, 68, ${(dusk * 0.22).toFixed(3)})`;
-      ctx.fillRect(0, 0, W, H);
+  function drawBookInteractionAndNote(t) {
+    if ((S.hoverTarget === 'worldBook' || S.hoverTarget === 'book') && S.phase === 'READY' && !S.checkedToday) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(95, 158, 110, 0.72)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      BOOK_POLY.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
     }
-    // Window sunbeam slats
+
+    // Sculpted 2.5D Isometric Parchment Page-Flip right on the Care Guide (matching sheet.jpg f_011..f_012!)
+    if (S.anim.bookFlipT > 0) {
+      const p = 1 - S.anim.bookFlipT / S.anim.bookFlipDur;
+      const sx0 = 748, sy0 = 368;
+      const sx1 = 804, sy1 = 446;
+
+      ctx.save();
+      for (let i = 0; i < 3; i++) {
+        const lag = i * 0.14;
+        const lp = Math.max(0, Math.min(1, (p - lag) / (1 - lag * 1.1)));
+        if (lp <= 0.01 || lp >= 0.99) continue;
+
+        const theta = lp * Math.PI;
+        const cosT = Math.cos(theta);
+        const lift = Math.sin(theta);
+
+        const wx = cosT * 106 - (1 - cosT) * 2;
+        const wy = -cosT * 18 - lift * 76;
+        const curl = Math.sin(theta) * 20;
+
+        ctx.fillStyle = `rgba(58, 38, 20, ${(lift * 0.24).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(sx0, sy0);
+        ctx.lineTo(sx0 + wx * 0.92, sy0 + wy * 0.35 + 12);
+        ctx.lineTo(sx1 + wx * 0.92, sy1 + wy * 0.35 + 12);
+        ctx.lineTo(sx1, sy1);
+        ctx.closePath();
+        ctx.fill();
+
+        const pgGrad = ctx.createLinearGradient(sx0, sy0, sx0 + wx, sy0 + wy);
+        pgGrad.addColorStop(0, '#e5dcc6');
+        pgGrad.addColorStop(0.45, '#fcf7ea');
+        pgGrad.addColorStop(1, '#efe5ce');
+        ctx.fillStyle = pgGrad;
+        ctx.strokeStyle = '#927c5e';
+        ctx.lineWidth = 1.4;
+
+        ctx.beginPath();
+        ctx.moveTo(sx0, sy0);
+        ctx.quadraticCurveTo(sx0 + wx * 0.55, sy0 + wy * 0.72 - curl, sx0 + wx, sy0 + wy);
+        ctx.lineTo(sx1 + wx, sy1 + wy);
+        ctx.quadraticCurveTo(sx1 + wx * 0.55, sy1 + wy * 0.72 - curl, sx1, sy1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(95, 142, 98, 0.48)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(sx0 + wx * 0.28, sy0 + wy * 0.28 + 18);
+        ctx.lineTo(sx0 + wx * 0.74, sy0 + wy * 0.74 + 22);
+        ctx.moveTo(sx0 + wx * 0.32, sy0 + wy * 0.32 + 34);
+        ctx.lineTo(sx0 + wx * 0.68, sy0 + wy * 0.68 + 38);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawMarginNoteOverlay(t) {
+    // Concise Spatial Botanical Margin Note floating cleanly above the Care Guide (never clipped or overlapped)
+    if (S.anim.marginAlpha > 0.02 && (S.phase === 'READY' || S.phase === 'WORKING')) {
+      const d = currentSpec();
+      const noteText = d.note;
+      ctx.save();
+      ctx.globalAlpha = S.anim.marginAlpha * (S.phase === 'WORKING' ? 0.55 : 1.0);
+      ctx.font = '700 15px "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace';
+      const tw = ctx.measureText(noteText).width;
+      const pw = Math.ceil(tw + 46);
+      const ph = 34;
+      const bob = Math.sin(t * 2.4) * 2.0;
+      const cx = 716, cy = 268 + bob;
+      const rx = cx - pw / 2, ry = cy - ph / 2;
+
+      ctx.fillStyle = 'rgba(54, 34, 18, 0.20)';
+      ctx.beginPath();
+      ctx.roundRect(rx + 2, ry + 4, pw, ph, 12);
+      ctx.fill();
+
+      ctx.fillStyle = '#fdf8ee';
+      ctx.strokeStyle = '#4b3d30';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, pw, ph, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(cx + 12, ry + ph - 1);
+      ctx.lineTo(cx + 24, ry + ph + 12);
+      ctx.lineTo(cx + 27, ry + ph - 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + 12, ry + ph - 0.5);
+      ctx.lineTo(cx + 24, ry + ph + 12);
+      ctx.lineTo(cx + 27, ry + ph - 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = d.bad ? '#c84b31' : '#5f9e6e';
+      ctx.beginPath();
+      ctx.arc(rx + 18, cy, 5.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#3e2c1e';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(noteText, rx + 30, cy + 0.5);
+      ctx.restore();
+    }
+  }
+
+  function drawGlossyCompanionOrb(x, y, t) {
+    const bob = Math.sin(t * 2.5) * 5.5;
+    const cy = y + bob;
+    const R = 54;
+    const mood = S.anim.orbMood;
+    const isGlitch = mood === 'glitch';
+    const isHappy = mood === 'happy';
+
     ctx.save();
-    ctx.globalCompositeOperation = 'overlay';
-    const sunGrad = ctx.createLinearGradient(180, 0, 960, H);
-    sunGrad.addColorStop(0, `rgba(255, 243, 214, ${(0.18 - dusk * 0.06).toFixed(3)})`);
-    sunGrad.addColorStop(1, 'rgba(255, 210, 145, 0)');
-    ctx.fillStyle = sunGrad;
+
+    // 1. Directional soft shadow on clean wood tabletop (matching room sunbeam angle)
+    const shGrad = ctx.createRadialGradient(x + 48, y + 88, 6, x + 48, y + 88, 52);
+    shGrad.addColorStop(0, 'rgba(58, 36, 18, 0.30)');
+    shGrad.addColorStop(1, 'rgba(58, 36, 18, 0)');
+    ctx.fillStyle = shGrad;
     ctx.beginPath();
-    ctx.moveTo(260, 0); ctx.lineTo(760, 0); ctx.lineTo(1060, H); ctx.lineTo(480, H);
-    ctx.closePath(); ctx.fill();
+    ctx.ellipse(x + 48, y + 88, 46, 18, 0.22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Luminous Cyan Hover-Glow Pool on the wood tabletop right below the orb (matching f_006.jpg!)
+    const poolColor = isGlitch ? 'rgba(235, 128, 104, 0.40)' : 'rgba(118, 232, 240, 0.42)';
+    const hoverGrad = ctx.createRadialGradient(x - 2, y + 76, 3, x - 2, y + 76, 38);
+    hoverGrad.addColorStop(0, poolColor);
+    hoverGrad.addColorStop(0.55, isGlitch ? 'rgba(235, 128, 104, 0.16)' : 'rgba(118, 232, 240, 0.18)');
+    hoverGrad.addColorStop(1, 'rgba(118, 232, 240, 0)');
+    ctx.fillStyle = hoverGrad;
+    ctx.beginPath();
+    ctx.ellipse(x - 2, y + 76, 35 - bob * 0.35, 12.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Warm golden glow aura when chiming/pleased
+    if (isHappy || S.anim.sparkles.length > 0) {
+      const aura = ctx.createRadialGradient(x, cy, R * 0.65, x, cy, R * 1.75);
+      aura.addColorStop(0, 'rgba(255, 242, 186, 0.44)');
+      aura.addColorStop(1, 'rgba(255, 242, 186, 0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(x, cy, R * 1.75, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 4. Articulated cute winged side-fins
+    const wingLift = isHappy ? -0.28 + Math.sin(t * 8.5) * 0.12 : 0.42 + Math.sin(t * 2.5) * 0.05;
+    [-1, 1].forEach(dir => {
+      ctx.save();
+      ctx.translate(x + dir * (R - 5), cy + 6);
+      ctx.rotate(dir * wingLift);
+      const wg = ctx.createLinearGradient(0, -8, dir * 24, 16);
+      wg.addColorStop(0, '#f8f5f0');
+      wg.addColorStop(1, '#c4dfe4');
+      ctx.fillStyle = wg;
+      ctx.strokeStyle = 'rgba(92, 82, 74, 0.44)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(dir * 10, 6, 13.5, 6.4, dir * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    // 5. Pearlescent Translucent White-Cyan Spherical Body
+    const sphereGrad = ctx.createRadialGradient(x - 17, cy - 19, 6, x + 4, cy + 6, R + 4);
+    sphereGrad.addColorStop(0, '#ffffff');
+    sphereGrad.addColorStop(0.42, '#f1f5f5');
+    sphereGrad.addColorStop(0.76, isGlitch ? '#ebd0c8' : '#c0e4e8');
+    sphereGrad.addColorStop(0.93, '#ddd7ce');
+    sphereGrad.addColorStop(1, 'rgba(182, 174, 164, 0.92)');
+    ctx.fillStyle = sphereGrad;
+    ctx.beginPath();
+    ctx.arc(x, cy, R, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Soft lavender-rose upper-right subsurface iridescence (matching f_006.jpg!)
+    const iriGrad = ctx.createRadialGradient(x + 15, cy - 14, 4, x + 12, cy - 10, 36);
+    iriGrad.addColorStop(0, 'rgba(228, 204, 228, 0.40)');
+    iriGrad.addColorStop(1, 'rgba(228, 204, 228, 0)');
+    ctx.fillStyle = iriGrad;
+    ctx.beginPath();
+    ctx.arc(x, cy, R - 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(108, 94, 82, 0.40)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(x, cy, R, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 6. Dark Glossy Rounded Visor angled gently toward fern
+    ctx.save();
+    ctx.translate(x - 7, cy + 3);
+    ctx.rotate(0.08);
+    const visorGrad = ctx.createLinearGradient(0, -19, 0, 19);
+    visorGrad.addColorStop(0, '#363230');
+    visorGrad.addColorStop(0.5, '#1e1b1a');
+    visorGrad.addColorStop(1, '#283335');
+    ctx.fillStyle = visorGrad;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.36)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(-31, -19, 62, 38, 17);
+    ctx.fill();
+    ctx.stroke();
+
+    const eyeCol = isGlitch ? '#ff8b73' : '#7ef4ff';
+    ctx.shadowColor = eyeCol;
+    ctx.shadowBlur = 9;
+    ctx.fillStyle = eyeCol;
+    ctx.strokeStyle = eyeCol;
+
+    const blink = (Math.sin(t * 0.85) > 0.986) && !isHappy && !isGlitch;
+    if (blink) {
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(-18, -1); ctx.lineTo(-8, -1);
+      ctx.moveTo(8, -1); ctx.lineTo(18, -1);
+      ctx.stroke();
+    } else if (mood === 'smug') {
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.arc(-13, 1, 5.2, Math.PI * 1.1, Math.PI * 1.95);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(13, 1, 5.2, Math.PI * 1.05, Math.PI * 1.9);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.roundRect(-18, -7.5, 7.8, 12.5, 3.8);
+      ctx.roundRect(10.2, -7.5, 7.8, 12.5, 3.8);
+      ctx.fill();
+      if (isHappy) {
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(0, 3.8, 5.0, 0.15 * Math.PI, 0.85 * Math.PI);
+        ctx.stroke();
+      }
+    }
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.17)';
+    ctx.beginPath();
+    ctx.ellipse(-12, -11, 12, 4, -0.25, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 
-    // Soft vignette matching Omni clip
-    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, W * 0.68);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(46,28,14,0.28)');
-    ctx.fillStyle = vig;
+    // 7. Crisp Specular Highlight on top-left of sphere
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(x - 20, cy - 27, 13, 7, -0.52, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.48)';
+    ctx.beginPath();
+    ctx.arc(x - 6, cy - 37, 3.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawStarSparkle(cx, cy, r, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(cx, cy);
+    // Warm golden outer glow + bright white-gold star core (matching f_033.jpg!)
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.6);
+    g.addColorStop(0, 'rgba(255, 244, 190, 0.85)');
+    g.addColorStop(1, 'rgba(255, 210, 90, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#fffdf4';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const rad = i % 2 === 0 ? r * 1.25 : r * 0.34;
+      const ang = (i * Math.PI) / 4;
+      const px = Math.cos(ang) * rad;
+      const py = Math.sin(ang) * rad;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSculptedBrassWateringCan(progress) {
+    let enter = 0, pourTilt = 0;
+    if (progress < 0.25) {
+      const u = progress / 0.25;
+      enter = 1 - Math.pow(1 - u, 3);
+      pourTilt = u * 0.42;
+    } else if (progress < 0.76) {
+      enter = 1;
+      const u = (progress - 0.25) / 0.51;
+      pourTilt = 0.42 + Math.sin(u * Math.PI) * 0.60;
+    } else {
+      const u = (progress - 0.76) / 0.24;
+      enter = 1 - Math.pow(u, 2.4);
+      pourTilt = 0.42 * (1 - u);
+    }
+
+    const cx = 1345 - enter * 562;
+    const cy = 158 + enter * 36 + pourTilt * 14;
+    const rot = -0.12 - pourTilt * 0.45;
+
+    ctx.save();
+    ctx.fillStyle = `rgba(62, 38, 18, ${(enter * 0.15).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + 68, cy + 125, 48, 22, 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+
+    // 1. Curved S-bend Gooseneck Spout
+    ctx.save();
+    const spoutGrad = ctx.createLinearGradient(-155, -55, -20, 35);
+    spoutGrad.addColorStop(0, '#f1cf7a');
+    spoutGrad.addColorStop(0.5, '#be8838');
+    spoutGrad.addColorStop(1, '#7c511d');
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-36, 34);
+    ctx.bezierCurveTo(-84, 34, -104, -36, -156, -34);
+    ctx.lineWidth = 13;
+    ctx.strokeStyle = '#5a3a14';
+    ctx.stroke();
+    ctx.lineWidth = 9.5;
+    ctx.strokeStyle = spoutGrad;
+    ctx.stroke();
+    ctx.fillStyle = '#e7be68';
+    ctx.strokeStyle = '#5a3a14';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(-158, -34, 4.5, 7.5, 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Sweeping Arched Tubular Brass Handle
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-14, -46);
+    ctx.bezierCurveTo(6, -102, 88, -76, 74, -2);
+    ctx.bezierCurveTo(68, 24, 48, 36, 40, 34);
+    ctx.lineWidth = 11;
+    ctx.strokeStyle = '#5a3a14';
+    ctx.stroke();
+    const hGrad = ctx.createLinearGradient(-10, -88, 76, 20);
+    hGrad.addColorStop(0, '#f4d584');
+    hGrad.addColorStop(0.55, '#c28b3b');
+    hGrad.addColorStop(1, '#7c511d');
+    ctx.lineWidth = 7.5;
+    ctx.strokeStyle = hGrad;
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Sculpted Cylindrical Brushed-Brass Body
+    const bodyGrad = ctx.createLinearGradient(-44, 0, 46, 0);
+    bodyGrad.addColorStop(0, '#966527');
+    bodyGrad.addColorStop(0.26, '#f2d07b');
+    bodyGrad.addColorStop(0.55, '#c58e3c');
+    bodyGrad.addColorStop(0.86, '#7e521d');
+    bodyGrad.addColorStop(1, '#5e3b13');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.strokeStyle = '#4e3212';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-42, -38);
+    ctx.lineTo(-46, 44);
+    ctx.ellipse(0, 44, 46, 15, 0, Math.PI, 0, true);
+    ctx.lineTo(42, -38);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = '#e5bc67';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 45, 47, 15.5, 0, 0.05 * Math.PI, 0.95 * Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = '#3b240d';
+    ctx.strokeStyle = '#5a3a14';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, -38, 42, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const hoodGrad = ctx.createLinearGradient(-42, -48, 20, -26);
+    hoodGrad.addColorStop(0, '#f4d483');
+    hoodGrad.addColorStop(1, '#b57e31');
+    ctx.fillStyle = hoodGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, -38, 42, 14, 0, Math.PI * 0.65, Math.PI * 1.85);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const tipLocalX = -160, tipLocalY = -33;
+    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+    const tipWorldX = cx + tipLocalX * cosR - tipLocalY * sinR;
+    const tipWorldY = cy + tipLocalX * sinR + tipLocalY * cosR;
+    ctx.restore();
+
+    if (pourTilt > 0.50) {
+      const strength = Math.min(1, (pourTilt - 0.50) / 0.35);
+      ctx.save();
+      ctx.globalAlpha = strength * 0.82;
+      const streamGrad = ctx.createLinearGradient(tipWorldX, tipWorldY, tipWorldX - 68, tipWorldY + 112);
+      streamGrad.addColorStop(0, 'rgba(235, 250, 255, 0.95)');
+      streamGrad.addColorStop(0.6, 'rgba(165, 224, 240, 0.68)');
+      streamGrad.addColorStop(1, 'rgba(165, 224, 240, 0)');
+      ctx.strokeStyle = streamGrad;
+      ctx.lineWidth = 4.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(tipWorldX, tipWorldY);
+      ctx.quadraticCurveTo(tipWorldX - 42, tipWorldY + 26, tipWorldX - 68, tipWorldY + 106);
+      ctx.stroke();
+      ctx.restore();
+
+      if (rand() < 0.88) {
+        S.anim.droplets.push({
+          x: tipWorldX - 4 + (rand() - 0.5) * 6,
+          y: tipWorldY + 2,
+          vx: -74 - rand() * 44,
+          vy: 28 + rand() * 38,
+          r: 2.8 + rand() * 2.2,
+          life: 0.62
+        });
+      }
+    }
+  }
+
+  function drawDaylightPostGrade(t) {
+    const dusk = Math.max(0, Math.min(1, (S.displayHour - 8) / 10));
+
+    // 1. Floating warm sunlit dust motes
+    ctx.save();
+    for (const m of motes) {
+      const mx = m.x + Math.sin(t * 0.45 + m.ph) * 9;
+      const my = m.y + Math.cos(t * 0.38 + m.ph) * 7;
+      ctx.fillStyle = `rgba(255, 248, 226, ${(0.38 + 0.18 * Math.sin(t * 1.8 + m.ph)).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(mx, my, m.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 2. Rich Golden-Amber Afternoon/Dusk Grade (`multiply` + warm `source-over` matching f_033.jpg!)
+    if (dusk > 0.01) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgba(246, 206, 152, ${(dusk * 0.52).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = `rgba(226, 134, 44, ${(dusk * 0.22).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+
+      // Soft blurred organic window-foliage gobo shadows on far-left margin at 18:00 dusk (matching f_033.jpg!)
+      if (dusk > 0.42) {
+        const goboA = (dusk - 0.42) * 0.55;
+        ctx.save();
+        ctx.filter = 'blur(9px)';
+        ctx.fillStyle = `rgba(68, 38, 16, ${goboA.toFixed(3)})`;
+        const sway = Math.sin(t * 0.9) * 5;
+        const blobs = [
+          [18, 290, 38, 16, 0.35],
+          [42, 332, 32, 14, -0.25],
+          [14, 378, 44, 18, 0.28],
+          [38, 428, 36, 15, -0.18],
+          [16, 482, 42, 19, 0.32],
+          [32, 540, 38, 16, 0.12]
+        ];
+        for (const [bx, by, rx, ry, rot] of blobs) {
+          ctx.beginPath();
+          ctx.ellipse(bx + sway, by, rx, ry, rot, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // 3. Soft feathered diagonal sunbeam (zero hard crease!)
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const sun = ctx.createRadialGradient(540, 180, 40, 620, 310, 460);
+    sun.addColorStop(0, `rgba(255, 242, 206, ${(0.14 + dusk * 0.08).toFixed(3)})`);
+    sun.addColorStop(0.6, `rgba(255, 224, 168, ${(0.06 + dusk * 0.04).toFixed(3)})`);
+    sun.addColorStop(1, 'rgba(255, 210, 140, 0)');
+    ctx.fillStyle = sun;
     ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    if (S.phase === 'FAULT') {
+      ctx.fillStyle = 'rgba(42, 36, 32, 0.24)';
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function drawPill(rect, label, isFilled, isMuted = false) {
+    ctx.save();
+    if (isMuted) ctx.globalAlpha *= 0.52;
+    if (isFilled) {
+      ctx.fillStyle = '#7ba884';
+      ctx.beginPath();
+      ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 18);
+      ctx.fill();
+    }
+    ctx.font = '700 17px "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.fillStyle = isFilled ? '#fdfaf2' : '#569466';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2 + 1);
+    ctx.restore();
+  }
+
+  function drawHudAndCard() {
+    // 1. Minimal bottom-left clock ONLY: `DAY X · HH:00` (crisp high-contrast walnut/cream at every hour!)
+    const shownHour = Math.round(S.displayHour);
+    const dusk = Math.max(0, Math.min(1, (S.displayHour - 8) / 10));
+    const clockStr = `DAY ${S.day} · ${shownHour}:00`;
+    ctx.save();
+    ctx.font = '700 23px "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace';
+    if (dusk > 0.65) {
+      ctx.lineWidth = 4.5;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(72, 44, 22, 0.72)';
+      ctx.strokeText(clockStr, 30, 690);
+      ctx.fillStyle = '#fff9ee';
+      ctx.fillText(clockStr, 30, 690);
+    } else {
+      ctx.fillStyle = '#483424';
+      ctx.fillText(clockStr, 30, 690);
+    }
+    ctx.restore();
+
+    // 2. Clean Bottom-Right Companion Card (`#faf5eb` with `#4b3d30` border matching sheet.jpg!)
+    ctx.save();
+    const cardAlpha = S.phase === 'WORKING' ? 0.44 : 0.97;
+    ctx.globalAlpha = cardAlpha;
+
+    ctx.fillStyle = 'rgba(58, 38, 20, 0.16)';
+    ctx.beginPath();
+    ctx.roundRect(CARD.x + 3, CARD.y + 6, CARD.w, CARD.h, CARD.r);
+    ctx.fill();
+
+    ctx.fillStyle = '#faf5eb';
+    ctx.strokeStyle = '#4b3d30';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.roundRect(CARD.x, CARD.y, CARD.w, CARD.h, CARD.r);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#433022';
+    ctx.font = '700 22px "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+
+    if (S.phase === 'REST') {
+      ctx.fillText('Good morning. Ready to', CARD.x + 28, CARD.y + 54);
+      ctx.fillText('tend the fern together?', CARD.x + 28, CARD.y + 92);
+      drawPill(BTN_RETRY, '[ENTER · BEGIN]', true);
+    } else if (S.phase === 'CHANGED') {
+      ctx.font = '700 24px "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.fillText(S.anim.statusLine || 'Fern looks happy! :)', CARD.x + 34, CARD.y + 94);
+      ctx.strokeStyle = '#7ba884';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(CARD.x + CARD.w - 26, CARD.y + CARD.h - 24, 6.5, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (S.phase === 'COMPLETE' || S.phase === 'FAULT') {
+      ctx.fillStyle = S.phase === 'FAULT' ? '#b33a2b' : '#3d7a4f';
+      ctx.fillText(S.endingTitle, CARD.x + 26, CARD.y + 50);
+      ctx.fillStyle = '#433022';
+      ctx.font = '700 16.5px "Courier New", ui-monospace, monospace';
+      ctx.fillText(S.endingSub, CARD.x + 26, CARD.y + 84);
+      ctx.font = '600 14.5px "Courier New", ui-monospace, monospace';
+      ctx.fillStyle = '#6e5641';
+      ctx.fillText(`Checked book: ${S.checksCount}x · Resisted traps: ${S.resistedCount}x`, CARD.x + 26, CARD.y + 111);
+      drawPill(BTN_RETRY, '[R] PLAY AGAIN', true);
+    } else {
+      const d = currentSpec();
+      ctx.fillText(d.line1, CARD.x + 28, CARD.y + 54);
+      ctx.fillText(d.line2, CARD.x + 28, CARD.y + 92);
+
+      if (!S.checkedToday) {
+        drawPill(BTN_DO, '[DO IT]', S.hoverTarget === 'do' || S.hoverTarget === 'worldFern');
+        drawPill(BTN_BOOK, '[CHECK BOOK -1h]', S.hoverTarget === 'book' || S.hoverTarget === 'worldBook');
+        drawPill(BTN_WAIT, '[WAIT]', S.hoverTarget === 'wait');
+      } else {
+        if (d.bad) {
+          drawPill(BTN_DO, '[DO IT]', S.hoverTarget === 'do', true);
+          drawPill(BTN_BOOK, `[${d.safeLabel}]`, true);
+        } else {
+          drawPill(BTN_DO, '[DO IT]', true);
+          drawPill(BTN_BOOK, `[${d.safeLabel}]`, S.hoverTarget === 'safe' || S.hoverTarget === 'worldBook');
+        }
+      }
+    }
+    ctx.restore();
   }
 
   let lastTs = performance.now();
   function frame(now) {
-    const dt = Math.min(0.05, (now - lastTs) / 1000);
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastTs) / 1000));
     lastTs = now;
     S.t += dt;
 
-    // Update animations
-    if (S.anim.canT > 0) S.anim.canT = Math.max(0, S.anim.canT - dt);
-    if (S.anim.bookFlipT > 0) S.anim.bookFlipT = Math.max(0, S.anim.bookFlipT - dt);
-    if (S.phase === 'night') {
-      S.anim.statusTimer -= dt;
-      if (S.anim.statusTimer <= 0) advanceNight();
+    S.displayHour += (S.hour - S.displayHour) * Math.min(1, dt * 4.8);
+
+    if (S.anim.bookFlipT > 0) {
+      S.anim.bookFlipT = Math.max(0, S.anim.bookFlipT - dt);
+    }
+    if (S.checkedToday && (S.phase === 'READY' || S.phase === 'WORKING')) {
+      S.anim.marginAlpha = Math.min(1, S.anim.marginAlpha + dt * 4.0);
+    } else {
+      S.anim.marginAlpha = Math.max(0, S.anim.marginAlpha - dt * 4.5);
     }
 
+    if (S.phase === 'WORKING') {
+      S.anim.workT -= dt;
+      const prog = 1 - Math.max(0, S.anim.workT) / S.anim.workDur;
+      if (S.anim.workKind === 'water') {
+        S.hour = 12 + prog * 5.2;
+        if (prog > 0.45) S.wetWoodAlpha = Math.min(1, S.wetWoodAlpha + dt * 1.5);
+      }
+      if (S.anim.workT <= 0) {
+        finishWorkingIntoChanged();
+      }
+    } else if (S.phase === 'CHANGED') {
+      // Keep warm golden sparkles gently dancing around the happy Companion Orb throughout golden dusk (like f_033.jpg!)
+      if (S.anim.changedHappy && S.anim.sparkles.length < 14 && rand() < 0.45) {
+        const a = rand() * Math.PI * 2;
+        const dist = 46 + rand() * 28;
+        S.anim.sparkles.push({
+          x: ORB_POS.x + Math.cos(a) * dist,
+          y: ORB_POS.y + Math.sin(a) * dist * 0.85,
+          vx: Math.cos(a) * 6,
+          vy: Math.sin(a) * 5 - 4,
+          size: 4.2 + rand() * 3.6,
+          life: 0.85 + rand() * 0.45,
+          maxLife: 1.3,
+          col: '#fff3be'
+        });
+      }
+      S.anim.changedT -= dt;
+      if (S.anim.changedT <= 0) {
+        advanceToNextMorning();
+      }
+    }
+
+    for (let i = S.anim.droplets.length - 1; i >= 0; i--) {
+      const dr = S.anim.droplets[i];
+      dr.x += dr.vx * dt;
+      dr.y += dr.vy * dt;
+      dr.vy += 320 * dt;
+      dr.life -= dt;
+      if (dr.life <= 0 || dr.y > 462) S.anim.droplets.splice(i, 1);
+    }
     for (let i = S.anim.sparkles.length - 1; i >= 0; i--) {
       const sp = S.anim.sparkles[i];
-      sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.life -= dt;
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.vx *= 0.96;
+      sp.vy *= 0.96;
+      sp.life -= dt;
       if (sp.life <= 0) S.anim.sparkles.splice(i, 1);
     }
-    for (let i = S.anim.droplets.length - 1; i >= 0; i--) {
-      const d = S.anim.droplets[i];
-      d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 260 * dt; d.life -= dt;
-      if (d.life <= 0) S.anim.droplets.splice(i, 1);
+    for (let i = S.anim.notes.length - 1; i >= 0; i--) {
+      const n = S.anim.notes[i];
+      n.y += n.vy * dt;
+      n.life -= dt;
+      if (n.life <= 0) S.anim.notes.splice(i, 1);
     }
 
-    // 1. Background fill + Nano Banana isometric room
-    ctx.fillStyle = '#fbf1e4';
+    ctx.save();
+    ctx.scale(SCALE, SCALE);
+
+    ctx.fillStyle = '#f5efe6';
     ctx.fillRect(0, 0, W, H);
     if (roomImg.complete && roomImg.naturalWidth) {
-      ctx.drawImage(roomImg, 0, 0, W, H);
+      ctx.drawImage(roomImg, -6, 0, W + 12, H);
     }
 
-    // 2. Overlay dynamic plant health stage cleanly over the tabletop pot when health shifts from default (stage 2)
-    const stageIdx = Math.max(0, Math.min(3, Math.round(S.health)));
-    if (stageIdx !== 2) {
-      // Mask original pot crown softly with wall/table tone before drawing dynamic Nano Banana fern stage
+    drawFernOnTable(S.t);
+    drawBookInteractionAndNote(S.t);
+    drawGlossyCompanionOrb(ORB_POS.x, ORB_POS.y, S.t);
+    drawMarginNoteOverlay(S.t);
+
+    if (S.phase === 'WORKING' && S.anim.workKind === 'water') {
+      const prog = 1 - Math.max(0, S.anim.workT) / S.anim.workDur;
+      drawSculptedBrassWateringCan(prog);
+    }
+
+    for (const dr of S.anim.droplets) {
       ctx.save();
-      drawPlantStage(stageIdx, 535, 305, 0.62);
+      ctx.globalAlpha = Math.min(1, dr.life * 2.4);
+      ctx.fillStyle = '#bcecf7';
+      ctx.strokeStyle = 'rgba(92, 168, 192, 0.65)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(dr.x, dr.y, dr.r * 0.72, dr.r * 1.35, 0.38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
       ctx.restore();
-    } else if (S.health >= 2.85) {
-      // Subtle lush glow when thriving
-      drawPlantStage(3, 535, 305, 0.60);
-    }
-
-    // 3. Book page-flip animation & Companion robot
-    drawBookFlipEffect(S.anim.bookFlipT);
-    drawCompanion(895, 342, S.t);
-
-    if (S.anim.canT > 0) {
-      drawWateringCan(1 - S.anim.canT / 1.6);
-    }
-
-    // Droplets & sparkles
-    ctx.fillStyle = '#7fc8d6';
-    for (const d of S.anim.droplets) {
-      ctx.beginPath(); ctx.ellipse(d.x, d.y, 3.5, 6, 0.3, 0, Math.PI * 2); ctx.fill();
     }
     for (const sp of S.anim.sparkles) {
-      ctx.globalAlpha = Math.max(0, Math.min(1, sp.life));
-      ctx.fillStyle = sp.col;
-      ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, Math.PI * 2); ctx.fill();
+      const a = Math.sin(Math.min(1, sp.life / sp.maxLife) * Math.PI);
+      drawStarSparkle(sp.x, sp.y, sp.size, sp.col, Math.max(0, a));
     }
-    ctx.globalAlpha = 1;
-
-    drawPostGrade();
-
-    // 4. Minimal Diegetic HUD matching study/sheet.jpg (`DAY 6 · 8:00` bottom-left, rounded dialogue card bottom-right)
-    ctx.font = '700 18px ui-monospace, SFMono-Regular, Menlo, monospace';
-    ctx.fillStyle = '#4a3626';
-    ctx.fillText(`DAY ${S.day} · ${S.hour}:00   FREE TIME ${S.freeHours}h`, 28, 690);
-
-    // Subtle Fern Health pips top-left
-    for (let i = 0; i < 4; i++) {
-      ctx.fillStyle = i <= stageIdx ? '#5f9e6e' : 'rgba(74,54,38,0.18)';
-      ctx.beginPath(); ctx.roundRect(28 + i * 24, 24, 18, 8, 4); ctx.fill();
+    for (const n of S.anim.notes) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, n.life));
+      ctx.font = '700 20px Georgia, serif';
+      ctx.fillStyle = '#fff8dc';
+      ctx.shadowColor = '#f5cb6e';
+      ctx.shadowBlur = 8;
+      ctx.fillText(n.glyph, n.x, n.y);
+      ctx.restore();
     }
 
-    if (S.phase === 'title') {
-      ctx.fillStyle = 'rgba(251, 241, 228, 0.90)';
-      ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.roundRect(380, 210, 520, 270, 20); ctx.fill(); ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#5f9e6e'; ctx.font = '800 48px "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText('HOMEBODY', 640, 292);
-      ctx.fillStyle = '#4a3626'; ctx.font = '600 18px ui-monospace, monospace';
-      ctx.fillText('let me help you · 14 days with a fern', 640, 330);
-      ctx.strokeRect(540, 368, 200, 44);
-      ctx.font = '800 17px ui-monospace, monospace';
-      ctx.fillText('PRESS ENTER / CLICK', 640, 396);
-      ctx.textAlign = 'left';
-    } else if (S.phase === 'do' || S.phase === 'morn' || S.phase === 'night') {
-      const d = currentSpec();
-      // Rounded companion dialogue card in bottom-right matching Omni video!
-      ctx.fillStyle = 'rgba(251, 246, 238, 0.96)';
-      ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.roundRect(818, 528, 426, 156, 18); ctx.fill(); ctx.stroke();
+    drawDaylightPostGrade(S.t);
+    drawHudAndCard();
 
-      ctx.fillStyle = '#4a3626';
-      ctx.font = '700 19px ui-monospace, SFMono-Regular, Menlo, monospace';
-      if (S.phase === 'night') {
-        ctx.fillStyle = '#4a3626';
-        ctx.fillText(S.anim.statusMsg || 'Fern looks happy! :)', 842, 598);
-        ctx.fillStyle = '#5f9e6e';
-        ctx.beginPath(); ctx.arc(1214, 654, 11, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = '800 14px monospace'; ctx.fillText('✓', 1209, 659);
-      } else {
-        ctx.fillText(d.line1, 840, 566);
-        ctx.fillText(d.line2, 840, 594);
-
-        if (S.checkedToday) {
-          ctx.font = '700 13.5px ui-monospace, monospace';
-          ctx.fillStyle = d.bad ? '#b33a2b' : '#3d7a4f';
-          ctx.fillText(d.truth.slice(0, 46), 840, 619);
-        }
-
-        // Buttons: [1: DO IT] and [2/C: CHECK BOOK -1h] (or [2/C: USE BOOK CARE] once checked)
-        ctx.fillStyle = S.hoverBtn === 0 ? '#5f9e6e' : 'rgba(95,158,110,0.16)';
-        ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 1.8;
-        ctx.beginPath(); ctx.roundRect(BTN_DO.x, BTN_DO.y, BTN_DO.w, BTN_DO.h, 9); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = S.hoverBtn === 0 ? '#fff' : '#4a3626';
-        ctx.font = '800 14px ui-monospace, monospace';
-        ctx.fillText('[1] DO IT', BTN_DO.x + 28, BTN_DO.y + 23);
-
-        const secondLabel = S.checkedToday
-          ? (d.bad ? '[2] OVERRIDE' : '[2] CONFIRM')
-          : `[C] CHECK BOOK -1h`;
-        ctx.fillStyle = S.hoverBtn === 1 || S.checkedToday ? '#5f9e6e' : 'rgba(74,54,38,0.08)';
-        ctx.beginPath(); ctx.roundRect(BTN_BOOK.x, BTN_BOOK.y, BTN_BOOK.w, BTN_BOOK.h, 9); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = (S.hoverBtn === 1 || S.checkedToday) ? '#fff' : '#4a3626';
-        ctx.fillText(secondLabel, BTN_BOOK.x + 18, BTN_BOOK.y + 23);
-      }
-    } else if (S.phase === 'dead' || S.phase === 'end') {
-      ctx.fillStyle = 'rgba(251, 241, 228, 0.94)';
-      ctx.strokeStyle = '#4a3626'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.roundRect(270, 200, 740, 300, 20); ctx.fill(); ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = S.phase === 'dead' ? '#b33a2b' : '#5f9e6e';
-      ctx.font = '800 28px "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText(S.endingType, 640, 285);
-      ctx.fillStyle = '#4a3626';
-      ctx.font = '600 18px ui-monospace, monospace';
-      ctx.fillText(`Days survived: ${S.day}/14 · Book checks: ${S.checksCount} · Blind follows: ${S.blindFollows}`, 640, 345);
-      ctx.fillText('Press [R] or Click to play again', 640, 425);
-      ctx.textAlign = 'left';
-    }
-
+    ctx.restore();
     requestAnimationFrame(frame);
   }
 
@@ -597,13 +1373,15 @@
       return {
         phase: S.phase,
         day: S.day,
-        hour: S.hour,
-        freeHours: S.freeHours,
+        hour: Math.round(S.displayHour),
         health: +S.health.toFixed(2),
-        stageIdx: Math.max(0, Math.min(3, Math.round(S.health))),
+        stageIdx: currentStageIdx(),
         checkedToday: S.checkedToday,
         adviceIsBad: d.bad,
+        soilWet: d.soilWet,
+        marginNote: S.checkedToday ? d.note : '',
         checksCount: S.checksCount,
+        resistedCount: S.resistedCount,
         blindFollows: S.blindFollows,
         t: +S.t.toFixed(2)
       };

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HIVE — Group 12 (M2)</title>
+<title>HIVE</title>
 <link rel="icon" href="data:,">
 <style>
   * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -12,7 +12,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #060807;
+    background: #050807;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,8 +23,8 @@
     width: min(100vw, calc(100vh * 16 / 9));
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
-    image-rendering: pixelated;
-    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.85);
+    cursor: crosshair;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.92);
   }
 </style>
 </head>
@@ -32,35 +32,63 @@
 <canvas id="game" width="1280" height="720"></canvas>
 <script type="module">
 const W = 1280, H = 720;
+const INNER = { x: 52, y: 52, w: 1176, h: 615 };
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 const Q = new URLSearchParams(location.search);
-let seed = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+const INITIAL_SEED = (parseInt(Q.get('seed') || '7', 10) || 7) >>> 0;
+let seed = INITIAL_SEED;
 function rand() {
   seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
   return seed / 4294967296;
 }
 function randRange(a, b) { return a + (b - a) * rand(); }
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function angleDiff(target, cur) {
+  let d = target - cur;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
 
-const PALETTE = {
-  bg: '#0c0f0e',
+const PAL = {
+  bg: '#090d0c',
   fg: '#c8e6d0',
   acc: '#e0523c',
   gold: '#f5cf87',
+  cone: '#ead982',
 };
 
-// Audio: BGM loop + procedural WebAudio synth & absorption SFX
+// ============================================================================
+// AUDIO: Lyria 3 BGM loop + procedural WebAudio stealth pulse & bio-absorption
+// ============================================================================
 const bgm = new Audio('../assets/bgm_loop.mp3');
 bgm.loop = true;
-bgm.volume = 0.38;
+bgm.volume = 0.36;
 let audioCtx = null;
 let audioUnlocked = false;
+let droneGain = null;
+let droneOsc = null;
+let droneFilter = null;
 
 function ensureAudio() {
   if (!audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) audioCtx = new AC();
+    if (AC) {
+      audioCtx = new AC();
+      droneOsc = audioCtx.createOscillator();
+      droneFilter = audioCtx.createBiquadFilter();
+      droneGain = audioCtx.createGain();
+      droneOsc.type = 'sawtooth';
+      droneOsc.frequency.value = 46;
+      droneFilter.type = 'lowpass';
+      droneFilter.frequency.value = 110;
+      droneGain.gain.value = 0.0;
+      droneOsc.connect(droneFilter).connect(droneGain).connect(audioCtx.destination);
+      droneOsc.start();
+    }
   }
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {});
@@ -71,22 +99,45 @@ function ensureAudio() {
   }
 }
 
-function sfxAbsorb(sizeTier) {
+function updateStealthAudio(tension, paused) {
+  if (!audioCtx || audioCtx.state !== 'running' || !droneGain) return;
+  const now = audioCtx.currentTime;
+  const targetGain = paused ? 0.002 : 0.014 + tension * 0.055;
+  droneGain.gain.setTargetAtTime(targetGain, now, 0.08);
+  droneFilter.frequency.setTargetAtTime(105 + tension * 420, now, 0.08);
+  droneOsc.frequency.setTargetAtTime(45 + tension * 26, now, 0.08);
+}
+
+function sfxAbsorb(tier) {
   if (!audioCtx || audioCtx.state !== 'running') return;
   const now = audioCtx.currentTime;
-  // Soft wet bio-absorption chime + warm harmonic memory swell
-  const freqs = [293.66, 369.99, 440.0, 587.33].map(f => f * (1 - sizeTier * 0.06));
-  freqs.forEach((f, idx) => {
+
+  // Visceral low organic crunch/suction sub-drop
+  const sub = audioCtx.createOscillator();
+  const subGain = audioCtx.createGain();
+  sub.type = 'triangle';
+  sub.frequency.setValueAtTime(135, now);
+  sub.frequency.exponentialRampToValueAtTime(38, now + 0.26);
+  subGain.gain.setValueAtTime(0.16, now);
+  subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+  sub.connect(subGain).connect(audioCtx.destination);
+  sub.start(now);
+  sub.stop(now + 0.32);
+
+  // Haunting warm memory harmonic swell
+  const chord = [293.66, 369.99, 440.0, 554.37, 659.25].map(f => f * (1 - tier * 0.05));
+  chord.forEach((f, idx) => {
     const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const g = audioCtx.createGain();
     osc.type = idx === 0 ? 'triangle' : 'sine';
-    osc.frequency.setValueAtTime(f * 0.85, now + idx * 0.04);
-    osc.frequency.exponentialRampToValueAtTime(f, now + idx * 0.04 + 0.28);
-    gain.gain.setValueAtTime(0.065, now + idx * 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.04 + 0.95);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(now + idx * 0.04);
-    osc.stop(now + idx * 0.04 + 1.0);
+    const tStart = now + 0.04 + idx * 0.035;
+    osc.frequency.setValueAtTime(f * 0.92, tStart);
+    osc.frequency.exponentialRampToValueAtTime(f, tStart + 0.24);
+    g.gain.setValueAtTime(0.048, tStart);
+    g.gain.exponentialRampToValueAtTime(0.0007, tStart + 1.25);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(tStart);
+    osc.stop(tStart + 1.3);
   });
 }
 
@@ -94,105 +145,276 @@ function sfxCaught() {
   if (!audioCtx || audioCtx.state !== 'running') return;
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  const g = audioCtx.createGain();
   osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(520, now);
-  osc.frequency.linearRampToValueAtTime(180, now + 0.32);
-  gain.gain.setValueAtTime(0.10, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-  osc.connect(gain).connect(audioCtx.destination);
+  osc.frequency.setValueAtTime(540, now);
+  osc.frequency.exponentialRampToValueAtTime(130, now + 0.34);
+  g.gain.setValueAtTime(0.11, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+  osc.connect(g).connect(audioCtx.destination);
   osc.start(now);
-  osc.stop(now + 0.36);
+  osc.stop(now + 0.38);
 }
 
-function sfxGuiltEnding() {
+function sfxGuiltDissolve() {
   if (!audioCtx || audioCtx.state !== 'running') return;
   const now = audioCtx.currentTime;
-  for (const f of [220, 261.63, 329.63, 392.0]) {
+  [220.0, 261.63, 329.63, 392.0, 493.88].forEach((f, i) => {
     const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const g = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(f, now);
-    osc.frequency.exponentialRampToValueAtTime(f * 0.5, now + 2.2);
-    gain.gain.setValueAtTime(0.055, now);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + 2.3);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 2.35);
-  }
+    osc.frequency.setValueAtTime(f, now + i * 0.06);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.5, now + 2.6);
+    g.gain.setValueAtTime(0.045, now + i * 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0006, now + 2.7);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(now + i * 0.06);
+    osc.stop(now + 2.75);
+  });
 }
 
-// Load generated Nano Banana 2.1 assets
-function loadImg(src) {
+// ============================================================================
+// ASSET LOADING & OFFSCREEN #d8d8d8 STUDIO HALO SANITIZATION
+// ============================================================================
+function sanitizeSpriteSheet(img) {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const cx = c.getContext('2d');
+  cx.drawImage(img, 0, 0);
+  const imgData = cx.getImageData(0, 0, c.width, c.height);
+  const d = imgData.data;
+  const w = c.width, h = c.height;
+
+  // Pass 1: Strip neutral studio-grey (#d8d8d8) background & anti-aliased neutral halos
+  // while preserving #c8e6d0 phosphor mint (G - R >= 13) and #e0523c crimson (R - G >= 20)
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    if (a === 0) continue;
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const maxc = Math.max(r, g, b);
+    const minc = Math.min(r, g, b);
+    const chroma = maxc - minc;
+    if (maxc > 102 && chroma < 21 && (g - r) < 13 && (r - g) < 20) {
+      d[i + 3] = 0;
+    }
+  }
+
+  // Pass 2: Soft-defringe 1px boundary pixels adjacent to transparency
+  const alphaCopy = new Uint8ClampedArray(w * h);
+  for (let p = 0; p < w * h; p++) alphaCopy[p] = d[p * 4 + 3];
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const p = y * w + x;
+      if (alphaCopy[p] === 0) continue;
+      const touchesEmpty =
+        alphaCopy[p - 1] === 0 || alphaCopy[p + 1] === 0 ||
+        alphaCopy[p - w] === 0 || alphaCopy[p + w] === 0;
+      if (touchesEmpty) {
+        const idx = p * 4;
+        const r = d[idx], g = d[idx + 1], b = d[idx + 2];
+        const maxc = Math.max(r, g, b);
+        const chroma = maxc - Math.min(r, g, b);
+        if (maxc > 82 && chroma < 16 && (g - r) < 14 && (r - g) < 22) {
+          d[idx + 3] = 0;
+        } else if (maxc > 75 && chroma < 24 && (r - g) < 22) {
+          d[idx + 3] = Math.min(d[idx + 3], 150);
+        }
+      }
+    }
+  }
+
+  cx.putImageData(imgData, 0, 0);
+  return c;
+}
+
+// Pre-bake darkened stealth map + warm flashlight-illuminated map + crisp mint walls
+let mapDarkCanvas = null;
+let mapLitCanvas = null;
+let mapWallsCanvas = null;
+
+const BAKED_PEDESTALS = [
+  { x: 237, y: 522 },
+  { x: 438, y: 238 },
+  { x: 840, y: 238 },
+  { x: 1041, y: 521 },
+];
+
+function prepareRoomCanvases(img) {
+  const clean = document.createElement('canvas');
+  clean.width = W;
+  clean.height = H;
+  const cc = clean.getContext('2d');
+  cc.imageSmoothingEnabled = false;
+  cc.drawImage(img, 0, 0, W, H);
+
+  // Scrub baked red circles on the raw tilemap using clean adjacent dark floor tile patch
+  const CLEAN_FLOOR_SRC = [
+    { x: 155, y: 522 },
+    { x: 515, y: 318 },
+    { x: 745, y: 165 },
+    { x: 1118, y: 535 },
+  ];
+  for (let idx = 0; idx < BAKED_PEDESTALS.length; idx++) {
+    const p = BAKED_PEDESTALS[idx];
+    const sPt = CLEAN_FLOOR_SRC[idx];
+    cc.save();
+    cc.beginPath();
+    cc.arc(p.x, p.y, 29, 0, Math.PI * 2);
+    cc.clip();
+    cc.drawImage(clean, sPt.x - 30, sPt.y - 30, 60, 60, p.x - 30, p.y - 30, 60, 60);
+    cc.restore();
+  }
+
+  const rawData = cc.getImageData(0, 0, W, H);
+  const src = rawData.data;
+
+  // 1. Darkened stealth facility floor (matches study.json 56% deep #070c0a..#141615 palette)
+  mapDarkCanvas = document.createElement('canvas');
+  mapDarkCanvas.width = W;
+  mapDarkCanvas.height = H;
+  const darkCtx = mapDarkCanvas.getContext('2d');
+  const darkImg = darkCtx.createImageData(W, H);
+  const dd = darkImg.data;
+
+  // 2. Flashlight-lit floor & furniture canvas
+  mapLitCanvas = document.createElement('canvas');
+  mapLitCanvas.width = W;
+  mapLitCanvas.height = H;
+  const litCtx = mapLitCanvas.getContext('2d');
+  const litImg = litCtx.createImageData(W, H);
+  const ld = litImg.data;
+
+  // 3. Crisp #c8e6d0 architectural wall lines (gleam cleanly above darkness & inside blooms)
+  mapWallsCanvas = document.createElement('canvas');
+  mapWallsCanvas.width = W;
+  mapWallsCanvas.height = H;
+  const wallCtx = mapWallsCanvas.getContext('2d');
+  const wallImg = wallCtx.createImageData(W, H);
+  const wd = wallImg.data;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const r = src[i], g = src[i + 1], b = src[i + 2];
+
+      // Detect crisp pale-mint structural partition wall pixels
+      const isMintWall = g > 170 && r > 145 && b > 145 && (g - r) < 48;
+      // Upper-right security bay fluorescent ceiling fixture glow
+      const lampDist = Math.hypot(x - 1134, y - 92);
+      const lampBoost = lampDist < 145 ? Math.pow(1 - lampDist / 145, 1.8) * 0.55 : 0;
+
+      if (isMintWall) {
+        dd[i] = r;
+        dd[i + 1] = g;
+        dd[i + 2] = b;
+        dd[i + 3] = 255;
+
+        ld[i] = Math.min(255, r + 25);
+        ld[i + 1] = Math.min(255, g + 20);
+        ld[i + 2] = b;
+        ld[i + 3] = 255;
+
+        // Exclude small interior monitor screens from wall overlay
+        const inTopLeftMonitors = (x > 160 && x < 280 && y > 90 && y < 320);
+        if (!inTopLeftMonitors) {
+          wd[i] = r;
+          wd[i + 1] = g;
+          wd[i + 2] = b;
+          wd[i + 3] = 235;
+        }
+      } else {
+        // Deepen unlit server racks & floor tiles into moody dark obsidian-slate (#090f0d)
+        const shade = 0.36 + lampBoost;
+        dd[i] = clamp((r * shade + 3) | 0, 0, 255);
+        dd[i + 1] = clamp((g * (shade + 0.03) + 5) | 0, 0, 255);
+        dd[i + 2] = clamp((b * (shade + 0.02) + 4) | 0, 0, 255);
+        dd[i + 3] = 255;
+
+        // Warm golden-olive searchlight illumination on lab floor tiles (matches f_014.jpg!)
+        const lum = r * 0.28 + g * 0.54 + b * 0.18;
+        const base = 36 + lum * 1.45;
+        ld[i] = clamp((base * 1.38 + 46) | 0, 0, 255);
+        ld[i + 1] = clamp((base * 1.32 + 40) | 0, 0, 255);
+        ld[i + 2] = clamp((base * 0.78 + 14) | 0, 0, 255);
+        ld[i + 3] = 255;
+      }
+    }
+  }
+
+  darkCtx.putImageData(darkImg, 0, 0);
+  litCtx.putImageData(litImg, 0, 0);
+  wallCtx.putImageData(wallImg, 0, 0);
+}
+
+let creatureClean = null;
+let nodeClean = null;
+let guardClean = null;
+
+function loadAsset(src, onReady) {
   const img = new Image();
   img.decoding = 'async';
+  img.onload = () => onReady(img);
   img.src = src;
   return img;
 }
-const mapImg = loadImg('../assets/3_room_tile_maps.png');
-const creatureImg = loadImg('../assets/creature_sprite_3_sizes.png');
-const nodeImg = loadImg('../assets/node_sprite.png');
-const guardImg = loadImg('../assets/guard_sprite.png');
 
-// Exact sprite crop boxes from assets inspection (scaled to match Omni video creature presence)
-const CREATURE_CROPS = [
-  // Size 1 (small tadpole-core, native facing UP = -PI/2)
-  { sx: 120, sy: 438, sw: 82, sh: 162, dw: 54, dh: 108, rotOffset: Math.PI / 2, radius: 14 },
-  // Size 2 (medium slithering bio-form, native facing UP = -PI/2)
-  { sx: 354, sy: 340, sw: 140, sh: 370, dw: 82, dh: 196, rotOffset: Math.PI / 2, radius: 16 },
-  // Size 3 (large multi-tendril form, native facing RIGHT = 0)
-  { sx: 530, sy: 314, sw: 454, sh: 378, dw: 215, dh: 178, rotOffset: 0, radius: 19 },
+loadAsset('../assets/3_room_tile_maps.png', prepareRoomCanvases);
+loadAsset('../assets/creature_sprite_3_sizes.png', img => { creatureClean = sanitizeSpriteSheet(img); });
+loadAsset('../assets/node_sprite.png', img => { nodeClean = sanitizeSpriteSheet(img); });
+loadAsset('../assets/guard_sprite.png', img => { guardClean = sanitizeSpriteSheet(img); });
+
+// Creature sprite crops (from sanitized 1024x1024 sheet) paired with video-faithful body scale
+const CREATURE_TIERS = [
+  // Tier 0 (0 absorbed): sleek slithering eel-core (matches f_009 / f_014 scale & presence)
+  { sx: 356, sy: 342, sw: 136, sh: 366, dw: 76, dh: 186, rotOffset: Math.PI / 2, radius: 15, tendrils: 4, reach: 56 },
+  // Tier 1 (1 absorbed): stalking multi-tendril predator (11 S-curved tentacles w/ pale suction tips, f_021/f_027)
+  { sx: 356, sy: 342, sw: 136, sh: 366, dw: 88, dh: 206, rotOffset: Math.PI / 2, radius: 17, tendrils: 11, reach: 96 },
+  // Tier 2 (2+ absorbed): radial gargantuan HIVE biomass (16 lush radial S-curved tentacles, f_033/f_038)
+  { sx: 532, sy: 316, sw: 450, sh: 374, dw: 224, dh: 188, rotOffset: 0, radius: 20, tendrils: 16, reach: 118 },
 ];
 
-// Poignant human memory flashes (spec.json: "Each node you absorb makes you bigger and leaves a memory that is not yours. By the exit the memories add up: the nodes were people.")
+// ============================================================================
+// HUMAN MEMORIES (Inscribed diegetically on the floor inside golden blooms)
+// ============================================================================
 const MEMORIES = [
   {
-    code: 'NODE 01 · ARCHIVE SECTOR',
-    who: 'DR. ARIS CHEN (NEURAL MAPPING)',
-    line: '"If the containment ethics board asks, tell them these are synthetic weights."',
-    pose: 'handshake',
+    whisper: '"If ethics asks, tell them these are synthetic weights." — Aris',
+    pose: 'reach',
   },
   {
-    code: 'NODE 02 · SUB-LEVEL 04',
-    who: 'MARA & JONAS (LAB PARTNERS)',
-    line: '"First cortical transfer stable! Coffee on me once the snow clears upstairs."',
-    pose: 'handshake',
+    whisper: '"First cortical transfer stable. Coffee once the snow clears." — Mara & Jonas',
+    pose: 'clipboard',
   },
   {
-    code: 'NODE 03 · CRYO BAY',
-    who: 'ELENA ROSTOVA (MOTHER, AGE 34)',
-    line: '"Two sugars in the blue mug. Remember Maya hates the crust on her toast."',
+    whisper: '"Two sugars in the blue mug. Maya hates crust on her toast." — Elena',
     pose: 'child',
   },
   {
-    code: 'NODE 04 · MAINTENANCE',
-    who: 'SAMIR PATEL (NIGHT SHIFT TECH)',
-    line: '"I heard humming inside the red glass. It tapped my own badge number back."',
+    whisper: '"It tapped my own badge number back through the red glass." — Samir',
     pose: 'reach',
   },
   {
-    code: 'NODE 05 · OBSERVATION',
-    who: 'CLAIRE WU (CLINICAL NURSE)',
-    line: '"Squeeze my hand and count backwards from ten. You will wake up at home."',
-    pose: 'handshake',
+    whisper: '"Squeeze my hand and count from ten. You will wake at home." — Claire',
+    pose: 'clipboard',
   },
   {
-    code: 'NODE 06 · EXIT VAULT',
-    who: 'SUBJECT 19 (NAME REDACTED)',
-    line: '"Do not call us intelligence nodes. My name was David, and I want to stop."',
-    pose: 'reach',
+    whisper: '"Do not call us nodes. My name was David. Let me stop."',
+    pose: 'child',
   },
 ];
 
-// Base Room 1 walls in 1280x720 matching 3_room_tile_maps.png & study/sheet.jpg
+// ============================================================================
+// FACILITY ARCHITECTURE & OCCLUDERS (Exact match to 3_room_tile_maps & f_014)
+// ============================================================================
 const BASE_WALLS = [
-  { x: 48,   y: 48,  w: 1184, h: 8 },   // Top outer wall
-  { x: 48,   y: 664, w: 588,  h: 8 },   // Bottom-left outer wall (doorway 636..736)
-  { x: 736,  y: 664, w: 496,  h: 8 },   // Bottom-right outer wall
-  { x: 48,   y: 48,  w: 8,    h: 624 }, // Left outer wall
-  { x: 1224, y: 48,  w: 8,    h: 624 }, // Right outer wall
-  { x: 630,  y: 664, w: 8,    h: 56 },  // Exit corridor left jamb
-  { x: 734,  y: 664, w: 8,    h: 56 },  // Exit corridor right jamb
+  { x: 48,   y: 48,  w: 1184, h: 8 },    // North outer wall
+  { x: 48,   y: 664, w: 588,  h: 8 },    // South-west outer wall (doorway 636..736)
+  { x: 736,  y: 664, w: 496,  h: 8 },    // South-east outer wall
+  { x: 48,   y: 48,  w: 8,    h: 624 },  // West outer wall
+  { x: 1224, y: 48,  w: 8,    h: 624 },  // East outer wall
+  { x: 630,  y: 664, w: 8,    h: 56 },   // Bulkhead left jamb
+  { x: 734,  y: 664, w: 8,    h: 56 },   // Bulkhead right jamb
   // Interior lab partitions
   { x: 52,   y: 235, w: 326,  h: 8 },
   { x: 371,  y: 48,  w: 8,    h: 70 },
@@ -205,14 +427,8 @@ const BASE_WALLS = [
   { x: 1095, y: 281, w: 133,  h: 8 },
   { x: 959,  y: 463, w: 163,  h: 8 },
   { x: 959,  y: 463, w: 8,    h: 205 },
-];
-
-// Baked red pedestal coordinates in raw 3_room_tile_maps.png (so we cover absorbed/unused ones cleanly)
-const BAKED_PEDESTALS = [
-  { x: 237, y: 522 },
-  { x: 438, y: 238 },
-  { x: 840, y: 238 },
-  { x: 1041, y: 521 },
+  // Upright central-right console desk occluder (casts the iconic diagonal shadow in f_014 & f_027!)
+  { x: 774,  y: 486, w: 54,   h: 178, isProp: true },
 ];
 
 function transformRect(r, flipX, flipY) {
@@ -221,249 +437,275 @@ function transformRect(r, flipX, flipY) {
     y: flipY ? H - (r.y + r.h) : r.y,
     w: r.w,
     h: r.h,
-  };
-}
-function transformPt(p, flipX, flipY) {
-  return {
-    x: flipX ? W - p.x : p.x,
-    y: flipY ? H - p.y : p.y,
+    isProp: !!r.isProp,
   };
 }
 
-// 3 Facility Rooms definition
+// Guard deterministic patrol routine for Sector 1:
+// Gives entering players a 2.5s orient window on north/east racks, then sweeps the central corridor,
+// then turns east to inspect the wall monitor (creating the classic look-away stealth window in sheet.jpg!)
+function evalSector0Guard(t) {
+  const cyc = (t + 7.65) % 10.2;
+  if (cyc < 3.65) {
+    // Sweep central corridor down-left across gap & console pillar (f_001..f_015)
+    const u = cyc / 3.65;
+    const ease = u * u * (3 - 2 * u);
+    return {
+      x: lerp(1144, 1126, ease),
+      y: lerp(150, 158, ease),
+      angle: lerp(2.48, 2.16, ease),
+      range: 545,
+      halfAngle: 0.278,
+    };
+  } else if (cyc < 4.45) {
+    // Pivot clockwise toward east security monitor (f_016..f_018)
+    const u = (cyc - 3.65) / 0.80;
+    const ease = u * u * (3 - 2 * u);
+    return {
+      x: lerp(1126, 1118, ease),
+      y: lerp(158, 168, ease),
+      angle: 2.16 + angleDiff(0.18, 2.16) * ease,
+      range: lerp(545, 320, ease),
+      halfAngle: 0.278,
+    };
+  } else if (cyc < 7.55) {
+    // Inspect east security console — stealth window open across center! (f_019..f_028)
+    const u = (cyc - 4.45) / 3.10;
+    return {
+      x: 1118 + Math.sin(u * Math.PI) * 5,
+      y: 168 + Math.sin(u * Math.PI * 2) * 3,
+      angle: 0.16 + Math.sin(u * Math.PI * 2) * 0.09,
+      range: 300,
+      halfAngle: 0.28,
+    };
+  } else if (cyc < 8.95) {
+    // Check north terminal rack in upper-right bay (f_029..f_036)
+    const u = (cyc - 7.55) / 1.40;
+    const ease = u * u * (3 - 2 * u);
+    return {
+      x: lerp(1118, 1138, ease),
+      y: lerp(168, 136, ease),
+      angle: 0.16 + angleDiff(-1.25, 0.16) * Math.min(1, u * 1.5),
+      range: 250,
+      halfAngle: 0.27,
+    };
+  } else {
+    // Turn back to sweep central corridor
+    const u = (cyc - 8.95) / 1.25;
+    const ease = u * u * (3 - 2 * u);
+    return {
+      x: lerp(1138, 1144, ease),
+      y: lerp(136, 150, ease),
+      angle: -1.25 + angleDiff(2.48, -1.25) * ease,
+      range: lerp(250, 545, ease),
+      halfAngle: 0.278,
+    };
+  }
+}
+
 const ROOM_DEFS = [
   {
     index: 0,
-    label: 'SECTOR 01 · CONTAINMENT LAB',
     flipX: false,
     flipY: false,
-    spawn: { x: 162, y: 456, heading: 0 },
+    spawn: { x: 152, y: 492, heading: 0 },
     requiredNodes: 2,
-    doorTrigger: { x: 685, y: 696, r: 38 },
+    doorTrigger: { x: 685, y: 694, r: 40 },
     nodes: [
-      { x: 237, y: 522 },
-      { x: 438, y: 238 },
-      { x: 640, y: 522 },
-      { x: 840, y: 238 },
-      { x: 1041, y: 521 },
+      { x: 237, y: 522, domePull: 0.30, maxRad: 235, dur: 1.46 },
+      { x: 438, y: 238, domePull: 0.58, maxRad: 380, dur: 2.35 },
+      { x: 640, y: 522, domePull: 0.92, maxRad: 488, dur: 2.75 },
+      { x: 840, y: 238, domePull: 0.58, maxRad: 380, dur: 2.35 },
+      { x: 1041, y: 521, domePull: 0.45, maxRad: 320, dur: 2.15 },
     ],
     guards: [
-      // Upper-right guard sweeping amber cone down-left across gap (exact match to study/sheet.jpg!)
-      {
-        x0: 1158, y0: 118, x1: 1110, y1: 136, speed: 0.42,
-        baseAngle: 2.40, sweepAmp: 0.42, sweepFreq: 0.95, phaseOffset: 0.15,
-        range: 460, halfAngle: 0.29,
-      },
-      // Right-lower patrol guard sweeping right sector
-      {
-        x0: 1145, y0: 388, x1: 990, y1: 388, speed: 0.55,
-        baseAngle: 3.05, sweepAmp: 0.34, sweepFreq: 0.85, phaseOffset: 2.1,
-        range: 330, halfAngle: 0.26,
-      },
+      { customEval: evalSector0Guard },
     ],
   },
   {
     index: 1,
-    label: 'SECTOR 02 · NEURAL ARCHIVE',
     flipX: true,
     flipY: false,
-    spawn: { x: 1118, y: 456, heading: Math.PI },
-    requiredNodes: 1,
-    doorTrigger: { x: W - 685, y: 696, r: 38 },
+    spawn: { x: 1124, y: 492, heading: Math.PI },
+    requiredNodes: 2,
+    doorTrigger: { x: W - 685, y: 694, r: 40 },
     nodes: [
-      { x: W - 237, y: 522 },
-      { x: W - 640, y: 522 },
-      { x: W - 438, y: 238 },
+      { x: W - 237, y: 522, domePull: 0.38, maxRad: 265, dur: 1.95 },
+      { x: W - 640, y: 522, domePull: 0.70, maxRad: 375, dur: 2.45 },
+      { x: W - 438, y: 238, domePull: 0.55, maxRad: 330, dur: 2.30 },
+      { x: W - 840, y: 238, domePull: 0.55, maxRad: 330, dur: 2.30 },
     ],
     guards: [
       {
-        x0: W - 1155, y0: 120, x1: W - 1050, y1: 145, speed: 0.5,
-        baseAngle: Math.PI - 2.38, sweepAmp: 0.44, sweepFreq: 1.05, phaseOffset: 0.6,
-        range: 430, halfAngle: 0.28,
+        x0: W - 1142, y0: 146, x1: W - 1060, y1: 162, speed: 0.52,
+        baseAngle: Math.PI - 2.34, sweepAmp: 0.46, sweepFreq: 0.92, phaseOffset: 0.4,
+        range: 465, halfAngle: 0.27,
       },
       {
-        x0: W - 840, y0: 350, x1: W - 690, y1: 350, speed: 0.6,
-        baseAngle: Math.PI * 0.5, sweepAmp: 0.38, sweepFreq: 0.9, phaseOffset: 1.7,
-        range: 290, halfAngle: 0.26,
+        x0: W - 835, y0: 348, x1: W - 685, y1: 348, speed: 0.62,
+        baseAngle: -Math.PI * 0.48, sweepAmp: 0.42, sweepFreq: 0.85, phaseOffset: 1.9,
+        range: 300, halfAngle: 0.25,
       },
     ],
   },
   {
     index: 2,
-    label: 'SECTOR 03 · SURFACE EXIT BULKHEAD',
     flipX: false,
     flipY: true,
-    spawn: { x: 162, y: H - 456, heading: 0 },
-    requiredNodes: 1,
-    doorTrigger: { x: 685, y: H - 696, r: 42 },
+    spawn: { x: 156, y: H - 492, heading: 0 },
+    requiredNodes: 2,
+    doorTrigger: { x: 685, y: H - 694, r: 42 },
     nodes: [
-      { x: 237, y: H - 522 },
-      { x: 640, y: H - 522 },
-      { x: 840, y: H - 238 },
+      { x: 237, y: H - 522, domePull: 0.38, maxRad: 265, dur: 1.95 },
+      { x: 640, y: H - 522, domePull: 0.70, maxRad: 380, dur: 2.50 },
+      { x: 840, y: H - 238, domePull: 0.55, maxRad: 335, dur: 2.30 },
     ],
     guards: [
       {
-        x0: 1140, y0: H - 125, x1: 1030, y1: H - 150, speed: 0.58,
-        baseAngle: -2.35, sweepAmp: 0.45, sweepFreq: 1.1, phaseOffset: 0.2,
-        range: 420, halfAngle: 0.28,
+        x0: 1138, y0: H - 148, x1: 1050, y1: H - 165, speed: 0.56,
+        baseAngle: -2.32, sweepAmp: 0.46, sweepFreq: 0.98, phaseOffset: 0.2,
+        range: 455, halfAngle: 0.27,
       },
       {
-        x0: 880, y0: H - 380, x1: 1120, y1: H - 380, speed: 0.65,
-        baseAngle: -2.85, sweepAmp: 0.32, sweepFreq: 1.0, phaseOffset: 2.0,
-        range: 310, halfAngle: 0.25,
+        x0: 900, y0: H - 365, x1: 1110, y1: H - 365, speed: 0.64,
+        baseAngle: 2.85, sweepAmp: 0.36, sweepFreq: 0.90, phaseOffset: 2.2,
+        range: 295, halfAngle: 0.25,
       },
     ],
   },
 ];
 
+// ============================================================================
+// GAME STATE
+// ============================================================================
 const S = {
   phase: Q.has('autostart') ? 'room' : 'title', // title | room | flash | caught | exit | end
+  paused: false,
   t: 0,
+  roomT: 0,
   roomIdx: 0,
-  x: 162,
-  y: 456,
+  entryAbsorbed: 0,
+  entryTier: 0,
+  x: 152,
+  y: 492,
   vx: 0,
   vy: 0,
   heading: 0,
+  swimPhase: 0,
+  spine: [], // trailing organic body points
   totalAbsorbed: 0,
   roomAbsorbed: 0,
-  sizeTier: 0, // 0, 1, 2 (3 sizes)
+  sizeTier: 0,
+  hitStop: 0,
+  camZoom: 1,
+  camFocusX: W / 2,
+  camFocusY: H / 2,
   walls: [],
   doorBarrier: null,
   doorOpen: false,
-  doorPos: { x: 685, y: 696 },
-  pedestals: [],
+  doorPos: { x: 685, y: 694, r: 40 },
   nodes: [],
+  scars: [],
+  embers: [],
   guards: [],
   ripples: [],
   motes: [],
   flashTimer: 0,
   caughtTimer: 0,
+  caughtBy: null,
   exitTimer: 0,
   endTimer: 0,
+  endParticles: [],
   lastMemory: null,
-  howToOpen: false,
-  heartbeatT: 0,
+  nearestReadyNode: null,
+  pointerDown: false,
+  pointerX: 0,
+  pointerY: 0,
 };
+
+function initSpine(x, y, heading) {
+  S.spine = [];
+  for (let i = 0; i < 10; i++) {
+    S.spine.push({
+      x: x - Math.cos(heading) * i * 7,
+      y: y - Math.sin(heading) * i * 7,
+    });
+  }
+}
 
 function loadRoom(idx, fullReset = false) {
   if (fullReset) {
+    seed = INITIAL_SEED;
+    S.t = 0;
     S.totalAbsorbed = 0;
     S.sizeTier = 0;
     S.lastMemory = null;
     S.ripples.length = 0;
     S.motes.length = 0;
+    S.embers.length = 0;
+    S.endParticles.length = 0;
   }
   const def = ROOM_DEFS[idx];
   S.roomIdx = idx;
+  S.roomT = 0;
   S.roomAbsorbed = 0;
+  S.entryAbsorbed = S.totalAbsorbed;
+  S.entryTier = S.sizeTier;
   S.x = def.spawn.x;
   S.y = def.spawn.y;
   S.vx = 0;
   S.vy = 0;
   S.heading = def.spawn.heading;
+  S.hitStop = 0;
+  S.camZoom = 1;
+  S.camFocusX = W / 2;
+  S.camFocusY = H / 2;
+  S.scars.length = 0;
+  S.ripples.length = 0;
+  initSpine(S.x, S.y, S.heading);
 
   S.walls = BASE_WALLS.map(w => transformRect(w, def.flipX, def.flipY));
   S.doorBarrier = transformRect({ x: 636, y: 664, w: 100, h: 10 }, def.flipX, def.flipY);
   S.doorOpen = false;
   S.doorPos = { x: def.doorTrigger.x, y: def.doorTrigger.y, r: def.doorTrigger.r };
-  S.pedestals = BAKED_PEDESTALS.map(p => transformPt(p, def.flipX, def.flipY));
 
   S.nodes = def.nodes.map((n, i) => ({
     id: `r${idx}_n${i}`,
     x: n.x,
     y: n.y,
+    domePull: n.domePull,
+    maxRad: n.maxRad,
+    dur: n.dur,
     absorbed: false,
-    pulsePhase: i * 1.3,
+    pulsePhase: i * 1.35,
   }));
 
   S.guards = def.guards.map(g => ({
     ...g,
-    x: g.x0,
-    y: g.y0,
-    angle: g.baseAngle,
+    x: g.x0 || 1144,
+    y: g.y0 || 150,
+    angle: g.baseAngle ?? 2.48,
+    range: g.range || 540,
+    halfAngle: g.halfAngle || 0.275,
     alert: 0,
     poly: [],
+    softPoly: [],
   }));
+  updateGuards(0, activeWallsList());
 }
 
-loadRoom(0, true);
-
-// Keyboard & pointer input
-const keys = new Set();
-addEventListener('keydown', e => {
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) {
-    e.preventDefault();
-  }
-  ensureAudio();
-  keys.add(e.code);
-
-  if (S.phase === 'title') {
-    if (e.code === 'Enter' || e.code === 'Space') {
-      loadRoom(0, true);
-      S.phase = 'room';
-    } else if (e.code === 'KeyH') {
-      S.howToOpen = !S.howToOpen;
-    }
-    return;
-  }
-
-  if (S.phase === 'flash' && S.flashTimer > 0.35 && (e.code === 'Space' || e.code === 'Enter')) {
-    S.phase = 'room';
-    return;
-  }
-
-  if (S.phase === 'caught' && S.caughtTimer > 0.35 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR')) {
-    respawnRoom();
-    return;
-  }
-
-  if (S.phase === 'end' && S.endTimer > 0.8 && (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyR')) {
-    loadRoom(0, true);
-    S.phase = 'room';
-    return;
-  }
-
-  if (e.code === 'Space' && S.phase === 'room') {
-    tryAbsorbNearby(54);
-  }
-});
-
-addEventListener('keyup', e => keys.delete(e.code));
-
-canvas.addEventListener('pointerdown', e => {
-  ensureAudio();
-  const rect = canvas.getBoundingClientRect();
-  const px = ((e.clientX - rect.left) / rect.width) * W;
-  const py = ((e.clientY - rect.top) / rect.height) * H;
-  if (S.phase === 'title') {
-    if (px > 510 && px < 770 && py > 545 && py < 605) {
-      S.howToOpen = !S.howToOpen;
-      return;
-    }
-    loadRoom(0, true);
-    S.phase = 'room';
-  } else if (S.phase === 'caught' && S.caughtTimer > 0.3) {
-    respawnRoom();
-  } else if (S.phase === 'end' && S.endTimer > 0.8) {
-    loadRoom(0, true);
-    S.phase = 'room';
-  } else if (S.phase === 'room') {
-    tryAbsorbNearby(58);
-  }
-});
-
 function respawnRoom() {
-  const def = ROOM_DEFS[S.roomIdx];
-  S.x = def.spawn.x;
-  S.y = def.spawn.y;
-  S.vx = 0;
-  S.vy = 0;
-  for (const g of S.guards) g.alert = 0;
+  // Clean reversible recovery to entry state of current sector (Law 8)
+  S.totalAbsorbed = S.entryAbsorbed;
+  S.sizeTier = S.entryTier;
+  S.caughtBy = null;
+  loadRoom(S.roomIdx, false);
   S.phase = 'room';
 }
 
-// Fast 2D Ray vs AABB intersection for crisp wall-occluded flashlight cones
+// ============================================================================
+// RAYCAST VISIBILITY & COLLISION
+// ============================================================================
 function castRay(ox, oy, dx, dy, maxDist, walls) {
   let closest = maxDist;
   const invX = dx !== 0 ? 1 / dx : 1e9;
@@ -487,8 +729,7 @@ function buildConePolygon(ox, oy, angle, halfAngle, range, raysCount, walls) {
   const pts = [{ x: ox, y: oy }];
   for (let i = 0; i <= raysCount; i++) {
     const a = angle - halfAngle + (i / raysCount) * (halfAngle * 2);
-    const hit = castRay(ox, oy, Math.cos(a), Math.sin(a), range, walls);
-    pts.push(hit);
+    pts.push(castRay(ox, oy, Math.cos(a), Math.sin(a), range, walls));
   }
   return pts;
 }
@@ -498,15 +739,15 @@ function hasLineOfSight(x0, y0, x1, y1, walls) {
   const dist = Math.hypot(dx, dy);
   if (dist < 1) return true;
   const hit = castRay(x0, y0, dx / dist, dy / dist, dist, walls);
-  return hit.dist >= dist - 2;
+  return hit.dist >= dist - 2.5;
 }
 
 function resolveCircleWalls(x, y, r, walls) {
   let cx = x, cy = y;
   for (let i = 0; i < walls.length; i++) {
     const w = walls[i];
-    const nearX = Math.max(w.x, Math.min(cx, w.x + w.w));
-    const nearY = Math.max(w.y, Math.min(cy, w.y + w.h));
+    const nearX = clamp(cx, w.x, w.x + w.w);
+    const nearY = clamp(cy, w.y, w.y + w.h);
     const dx = cx - nearX, dy = cy - nearY;
     const d2 = dx * dx + dy * dy;
     if (d2 < r * r) {
@@ -519,16 +760,47 @@ function resolveCircleWalls(x, y, r, walls) {
   return { x: cx, y: cy };
 }
 
-function tryAbsorbNearby(maxRadius = 44) {
-  for (const n of S.nodes) {
-    if (n.absorbed) continue;
-    const d = Math.hypot(S.x - n.x, S.y - n.y);
-    if (d <= maxRadius) {
-      absorbNode(n);
-      return true;
+function activeWallsList() {
+  return S.doorOpen ? S.walls : [...S.walls, S.doorBarrier];
+}
+
+// ============================================================================
+// NODE ABSORPTION & VORONOI CAUSTIC MEMORY GENERATION
+// ============================================================================
+function buildCausticCells() {
+  const cells = [];
+  // Uniform jittered lattice across full unit disk so golden caustics weave from center to rim (f_033.jpg!)
+  const rings = [
+    { r: 0.0, n: 1 },
+    { r: 0.30, n: 6 },
+    { r: 0.58, n: 11 },
+    { r: 0.84, n: 15 },
+    { r: 0.99, n: 18 },
+  ];
+  for (const ring of rings) {
+    for (let k = 0; k < ring.n; k++) {
+      const a = (k / ring.n) * Math.PI * 2 + randRange(-0.18, 0.18);
+      const rr = ring.r === 0 ? 0 : ring.r + randRange(-0.07, 0.06);
+      cells.push({
+        ux: Math.cos(a) * rr,
+        uy: Math.sin(a) * rr,
+        ph: randRange(0, Math.PI * 2),
+        links: [],
+      });
     }
   }
-  return false;
+  for (let i = 0; i < cells.length; i++) {
+    const dists = [];
+    for (let j = i + 1; j < cells.length; j++) {
+      const d = Math.hypot(cells[i].ux - cells[j].ux, cells[i].uy - cells[j].uy);
+      if (d < 0.44) dists.push({ j, d });
+    }
+    dists.sort((a, b) => a.d - b.d);
+    for (let k = 0; k < Math.min(3, dists.length); k++) {
+      cells[i].links.push(dists[k].j);
+    }
+  }
+  return cells;
 }
 
 function absorbNode(n) {
@@ -537,28 +809,85 @@ function absorbNode(n) {
   S.roomAbsorbed++;
   S.sizeTier = S.totalAbsorbed >= 2 ? 2 : S.totalAbsorbed >= 1 ? 1 : 0;
 
+  // Lunge body smoothly partway toward absorbed node & apply tactile hit-stop + camera pull
+  S.x = lerp(S.x, n.x, 0.32);
+  S.y = lerp(S.y, n.y, 0.32);
+  S.hitStop = 0.072;
+  S.camFocusX = lerp(W / 2, n.x, 0.25);
+  S.camFocusY = lerp(H / 2, n.y, 0.25);
+
   const mem = MEMORIES[(S.totalAbsorbed - 1) % MEMORIES.length];
   S.lastMemory = mem;
 
-  // Check if room exit barrier unlocks
-  const req = ROOM_DEFS[S.roomIdx].requiredNodes;
-  if (S.roomAbsorbed >= req) {
+  if (S.roomAbsorbed >= ROOM_DEFS[S.roomIdx].requiredNodes) {
     S.doorOpen = true;
   }
 
-  // Spawn signature warm golden human silhouette memory ripple (matching study/sheet.jpg!)
-  const sparks = [];
-  for (let i = 0; i < 42; i++) {
-    const a = randRange(0, Math.PI * 2);
-    const rr = randRange(18, 250);
-    sparks.push({ a, rr, s: randRange(1.2, 3.0), ph: randRange(0, 6.28) });
+  // Permanent organic floor trace around absorbed husk (VOIDBASTARD-TAO Law 9)
+  const veins = [];
+  for (let i = 0; i < 11; i++) {
+    const a = (i / 11) * Math.PI * 2 + randRange(-0.2, 0.2);
+    veins.push({
+      a,
+      len: randRange(24, 52),
+      bend: randRange(-0.35, 0.35),
+    });
   }
+  S.scars.push({ x: n.x, y: n.y, veins });
+
+  // Lingering floor embers (matching f_038.jpg)
+  for (let i = 0; i < 44; i++) {
+    const a = randRange(0, Math.PI * 2);
+    const rr = randRange(14, n.maxRad * 0.92);
+    S.embers.push({
+      x: clamp(lerp(n.x, 516, n.domePull * 0.7) + Math.cos(a) * rr, 62, W - 62),
+      y: clamp(lerp(n.y, 388, n.domePull * 0.7) + Math.sin(a) * rr, 62, H - 62),
+      vx: randRange(-10, 10),
+      vy: randRange(-14, -3),
+      life: 0,
+      maxLife: randRange(3.2, 5.4),
+      size: randRange(1.4, 2.9),
+      ph: randRange(0, 6.28),
+    });
+  }
+
+  // Crimson bio-splatter droplets for initial burst (f_029.jpg)
+  const droplets = [];
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2 + randRange(-0.1, 0.1);
+    droplets.push({
+      a,
+      speed: randRange(95, 255),
+      len: randRange(10, 28),
+      w: randRange(2.0, 4.4),
+    });
+  }
+
+  // Sparkles inside the golden memory dome
+  const sparks = [];
+  for (let i = 0; i < 78; i++) {
+    const a = randRange(0, Math.PI * 2);
+    const rr = Math.sqrt(rand()) * 0.96;
+    sparks.push({
+      a,
+      rr,
+      s: randRange(1.2, 2.8),
+      ph: randRange(0, 6.28),
+    });
+  }
+
   S.ripples.push({
-    x: n.x,
-    y: n.y,
+    ox: n.x,
+    oy: n.y,
+    tx: lerp(n.x, 478, n.domePull),
+    ty: lerp(n.y, 372, n.domePull),
+    maxRad: n.maxRad,
     t: 0,
-    dur: 2.35,
+    dur: n.dur,
     pose: mem.pose,
+    whisper: mem.whisper,
+    cells: buildCausticCells(),
+    droplets,
     sparks,
   });
 
@@ -567,33 +896,237 @@ function absorbNode(n) {
   sfxAbsorb(S.sizeTier);
 }
 
-function activeWallsList() {
-  return S.doorOpen ? S.walls : [...S.walls, S.doorBarrier];
+function tryAbsorbNearby(maxRadius = 64) {
+  let best = null, bestD = maxRadius;
+  for (const n of S.nodes) {
+    if (n.absorbed) continue;
+    const d = Math.hypot(S.x - n.x, S.y - n.y);
+    if (d <= bestD) {
+      best = n;
+      bestD = d;
+    }
+  }
+  if (best) {
+    absorbNode(best);
+    return true;
+  }
+  return false;
 }
 
+// ============================================================================
+// INPUT: WASD / ARROWS / SPACE / [P] PAUSE / [R] RETRY / POINTER STEER & CLICK
+// ============================================================================
+const keys = new Set();
+
+addEventListener('keydown', e => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) {
+    e.preventDefault();
+  }
+  ensureAudio();
+  keys.add(e.code);
+
+  if (S.phase === 'title') {
+    if (e.code === 'Enter' || e.code === 'Space') {
+      loadRoom(0, true);
+      S.phase = 'room';
+    }
+    return;
+  }
+
+  // Law 7: Active work exposes clean Stop/Pause ([P] / Escape)
+  if ((e.code === 'KeyP' || e.code === 'Escape') && (S.phase === 'room' || S.phase === 'flash')) {
+    S.paused = !S.paused;
+    return;
+  }
+
+  if (S.paused) {
+    if (e.code === 'Space' || e.code === 'Enter') S.paused = false;
+    return;
+  }
+
+  // Law 8: Crisp [R] sector retry in caught, active room, or post-ending stillness
+  if (e.code === 'KeyR') {
+    if (S.phase === 'end') {
+      loadRoom(0, true);
+      S.phase = 'room';
+    } else if (S.phase === 'caught' || S.phase === 'room' || S.phase === 'flash') {
+      respawnRoom();
+    }
+    return;
+  }
+
+  if (S.phase === 'caught' && S.caughtTimer > 0.25 && (e.code === 'Space' || e.code === 'Enter')) {
+    respawnRoom();
+    return;
+  }
+
+  if (S.phase === 'end' && S.endTimer > 1.2 && (e.code === 'Enter' || e.code === 'Space')) {
+    loadRoom(0, true);
+    S.phase = 'room';
+    return;
+  }
+
+  if (e.code === 'Space' && (S.phase === 'room' || S.phase === 'flash')) {
+    tryAbsorbNearby(68);
+  }
+});
+
+addEventListener('keyup', e => keys.delete(e.code));
+
+function pointerToWorld(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: ((e.clientX - rect.left) / rect.width) * W,
+    y: ((e.clientY - rect.top) / rect.height) * H,
+  };
+}
+
+canvas.addEventListener('pointerdown', e => {
+  ensureAudio();
+  const pt = pointerToWorld(e);
+  S.pointerX = pt.x;
+  S.pointerY = pt.y;
+
+  if (S.phase === 'title') {
+    loadRoom(0, true);
+    S.phase = 'room';
+    return;
+  }
+  if (S.paused) {
+    S.paused = false;
+    return;
+  }
+  if (S.phase === 'caught' && S.caughtTimer > 0.2) {
+    respawnRoom();
+    return;
+  }
+  if (S.phase === 'end' && S.endTimer > 1.2) {
+    loadRoom(0, true);
+    S.phase = 'room';
+    return;
+  }
+
+  // Click directly on an in-range node to absorb it immediately
+  for (const n of S.nodes) {
+    if (!n.absorbed && Math.hypot(pt.x - n.x, pt.y - n.y) < 48 && Math.hypot(S.x - n.x, S.y - n.y) < 76) {
+      absorbNode(n);
+      return;
+    }
+  }
+  S.pointerDown = true;
+});
+
+canvas.addEventListener('pointermove', e => {
+  const pt = pointerToWorld(e);
+  S.pointerX = pt.x;
+  S.pointerY = pt.y;
+});
+
+addEventListener('pointerup', () => { S.pointerDown = false; });
+addEventListener('pointercancel', () => { S.pointerDown = false; });
+
+// ============================================================================
+// SIMULATION UPDATE
+// ============================================================================
+function updateGuards(effDt, walls) {
+  let maxAlert = 0;
+  for (const g of S.guards) {
+    if (g.customEval) {
+      const st = g.customEval(S.roomT);
+      g.x = st.x;
+      g.y = st.y;
+      g.angle = st.angle;
+      g.range = st.range;
+      g.halfAngle = st.halfAngle;
+    } else {
+      const patrolPhase = 0.5 + 0.5 * Math.sin(S.roomT * g.speed + g.phaseOffset);
+      g.x = lerp(g.x0, g.x1, patrolPhase);
+      g.y = lerp(g.y0, g.y1, patrolPhase);
+      g.angle = g.baseAngle + Math.sin(S.roomT * g.sweepFreq + g.phaseOffset) * g.sweepAmp;
+    }
+
+    const emitX = g.x + Math.cos(g.angle) * 14;
+    const emitY = g.y + Math.sin(g.angle) * 14;
+    g.emitX = emitX;
+    g.emitY = emitY;
+    g.poly = buildConePolygon(emitX, emitY, g.angle, g.halfAngle, g.range, 64, walls);
+    g.softPoly = buildConePolygon(emitX, emitY, g.angle, g.halfAngle + 0.065, g.range * 1.03, 48, walls);
+
+    if (effDt > 0 && S.phase === 'room') {
+      const dx = S.x - emitX, dy = S.y - emitY;
+      const dist = Math.hypot(dx, dy);
+      let seen = false;
+      if (dist < g.range - 10) {
+        const ang = Math.abs(angleDiff(Math.atan2(dy, dx), g.angle));
+        if (ang <= g.halfAngle * 0.94 && hasLineOfSight(emitX, emitY, S.x, S.y, walls)) {
+          seen = true;
+        }
+      }
+      if (seen) {
+        const rate = dist < 180 ? 3.8 : 2.6;
+        g.alert = Math.min(1, g.alert + effDt * rate);
+        if (g.alert >= 1) {
+          S.phase = 'caught';
+          S.caughtTimer = 0;
+          S.caughtBy = g;
+          sfxCaught();
+        }
+      } else {
+        g.alert = Math.max(0, g.alert - effDt * 2.4);
+      }
+    }
+    if (g.alert > maxAlert) maxAlert = g.alert;
+  }
+  return maxAlert;
+}
+
+loadRoom(0, true);
+
 function update(dt) {
+  if (S.paused) {
+    updateStealthAudio(0, true);
+    return;
+  }
+
+  // Tactile hit-stop on node absorption
+  if (S.hitStop > 0) {
+    S.hitStop -= dt;
+    for (const rp of S.ripples) rp.t += dt * 0.5;
+    S.camZoom = lerp(S.camZoom, 1.032, 1 - Math.exp(-24 * dt));
+    return;
+  }
+
   S.t += dt;
 
-  // Ambient floating dust motes in facility air
-  while (S.motes.length < 36) {
+  // Ambient dust motes in facility darkness
+  while (S.motes.length < 32) {
     S.motes.push({
-      x: randRange(60, W - 60),
-      y: randRange(60, H - 60),
-      vx: randRange(-9, 9),
-      vy: randRange(-7, 7),
-      a: randRange(0.12, 0.38),
+      x: randRange(64, W - 64),
+      y: randRange(64, H - 64),
+      vx: randRange(-7, 7),
+      vy: randRange(-6, 6),
+      a: randRange(0.10, 0.30),
     });
   }
   for (const m of S.motes) {
     m.x += m.vx * dt;
     m.y += m.vy * dt;
-    if (m.x < 56) m.x = W - 56;
-    if (m.x > W - 56) m.x = 56;
-    if (m.y < 56) m.y = H - 56;
-    if (m.y > H - 56) m.y = 56;
+    if (m.x < 58) m.x = W - 58;
+    if (m.x > W - 58) m.x = 58;
+    if (m.y < 58) m.y = H - 58;
+    if (m.y > H - 58) m.y = 58;
   }
 
-  // Update memory ripples even across flash -> room transition
+  // Lingering golden floor embers after absorption
+  for (let i = S.embers.length - 1; i >= 0; i--) {
+    const em = S.embers[i];
+    em.life += dt;
+    em.x += em.vx * dt;
+    em.y += em.vy * dt * 0.45;
+    if (em.life >= em.maxLife) S.embers.splice(i, 1);
+  }
+
+  // Update active floor-bloom ripples (never blocking player movement!)
   for (let i = S.ripples.length - 1; i >= 0; i--) {
     S.ripples[i].t += dt;
     if (S.ripples[i].t >= S.ripples[i].dur) {
@@ -601,42 +1134,78 @@ function update(dt) {
     }
   }
 
-  if (S.phase === 'title') return;
+  // Smooth camera breathing / absorption pull recovery
+  const targetZoom = S.ripples.length > 0 && S.ripples[0].t < 0.7 ? 1.022 : 1.0;
+  S.camZoom = lerp(S.camZoom, targetZoom, 1 - Math.exp(-5.5 * dt));
+  if (Math.abs(S.camZoom - 1) < 0.0005) S.camZoom = 1;
+
+  if (S.phase === 'title') {
+    S.roomT += dt * 0.65;
+    updateGuards(0, activeWallsList());
+    updateStealthAudio(0.08, false);
+    return;
+  }
 
   if (S.phase === 'caught') {
     S.caughtTimer += dt;
-    if (S.caughtTimer >= 1.35) respawnRoom();
+    updateStealthAudio(0.85, false);
+    if (S.caughtTimer >= 1.45) respawnRoom();
     return;
   }
 
   if (S.phase === 'exit') {
     S.exitTimer += dt;
-    if (S.exitTimer >= 1.5) {
+    // Glide creature gently into threshold center before self-dissolution
+    S.x = lerp(S.x, W / 2, 1 - Math.exp(-3.2 * dt));
+    S.y = lerp(S.y, H * 0.54, 1 - Math.exp(-3.2 * dt));
+    updateSpine(dt);
+    if (S.exitTimer >= 1.15) {
       S.phase = 'end';
       S.endTimer = 0;
-      sfxGuiltEnding();
+      S.endParticles = [];
+      for (let i = 0; i < 110; i++) {
+        const a = randRange(0, Math.PI * 2);
+        const sp = randRange(16, 115);
+        S.endParticles.push({
+          x: S.x + randRange(-22, 22),
+          y: S.y + randRange(-22, 22),
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp - randRange(18, 52),
+          r: randRange(1.8, 4.5),
+          gold: i % 3 !== 0,
+          ph: randRange(0, 6.28),
+        });
+      }
+      sfxGuiltDissolve();
     }
     return;
   }
 
   if (S.phase === 'end') {
     S.endTimer += dt;
+    for (const p of S.endParticles) {
+      p.x += p.vx * dt * 0.55;
+      p.y += p.vy * dt * 0.55;
+      p.vx *= 1 - 0.6 * dt;
+    }
+    updateStealthAudio(0, true);
     return;
   }
 
   if (S.phase === 'flash') {
     S.flashTimer += dt;
-    // Brief poignant pause/slow-mo (0.85s) while golden silhouette blooms, then seamlessly continues room
-    if (S.flashTimer >= 0.85) {
+    if (S.flashTimer >= 0.55) {
       S.phase = 'room';
     }
   }
 
-  const timeScale = S.phase === 'flash' ? 0.35 : 1.0;
+  // Gentle brief dilation right on absorption impact while keeping full player control
+  const timeScale = S.phase === 'flash' ? 0.68 : 1.0;
   const effDt = dt * timeScale;
+  S.roomT += dt;
   const walls = activeWallsList();
 
-  // Player movement (Arrow keys + WASD)
+  // Keyboard + optional pointer steering
   const ix = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
   const iy = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
   let mx = ix, my = iy;
@@ -644,656 +1213,1049 @@ function update(dt) {
   if (mag > 0) {
     mx /= mag;
     my /= mag;
+  } else if (S.pointerDown) {
+    const pdx = S.pointerX - S.x, pdy = S.pointerY - S.y;
+    const pdist = Math.hypot(pdx, pdy);
+    if (pdist > 10) {
+      mx = pdx / pdist;
+      my = pdy / pdist;
+    }
   }
 
-  const maxSpeed = 205 - S.sizeTier * 8;
+  const maxSpeed = 212 - S.sizeTier * 7;
   const damp = 1 - Math.exp(-14 * effDt);
   S.vx += (mx * maxSpeed - S.vx) * damp;
   S.vy += (my * maxSpeed - S.vy) * damp;
 
-  if (Math.hypot(S.vx, S.vy) > 12) {
+  const speed = Math.hypot(S.vx, S.vy);
+  S.swimPhase += dt * (3.6 + speed * 0.032);
+
+  if (speed > 10) {
     const wantHeading = Math.atan2(S.vy, S.vx);
-    let diff = wantHeading - S.heading;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    S.heading += diff * (1 - Math.exp(-12 * effDt));
+    S.heading += angleDiff(wantHeading, S.heading) * (1 - Math.exp(-12 * effDt));
   }
 
-  const colR = CREATURE_CROPS[S.sizeTier].radius;
+  const colR = CREATURE_TIERS[S.sizeTier].radius;
   const resolved = resolveCircleWalls(S.x + S.vx * effDt, S.y + S.vy * effDt, colR, walls);
-  S.x = Math.max(58, Math.min(W - 58, resolved.x));
-  S.y = Math.max(18, Math.min(H - 18, resolved.y));
+  S.x = clamp(resolved.x, 58, W - 58);
+  S.y = clamp(resolved.y, 18, H - 18);
+  updateSpine(effDt);
 
-  // Auto-absorb on direct contact (or Space within wider radius)
-  if (S.phase === 'room') {
-    tryAbsorbNearby(32);
+  // Check nearest live node for spatial READY cue (Law 4: only while valid) & direct contact absorption
+  S.nearestReadyNode = null;
+  let nearestDist = 68;
+  for (const n of S.nodes) {
+    if (n.absorbed) continue;
+    const d = Math.hypot(S.x - n.x, S.y - n.y);
+    if (d < 29 && S.phase === 'room') {
+      absorbNode(n);
+      break;
+    } else if (d < nearestDist) {
+      nearestDist = d;
+      S.nearestReadyNode = n;
+    }
   }
 
-  // Update guards, sweeping cones & line-of-sight detection
+  const maxAlert = updateGuards(effDt, walls);
+
+  // Calculate proximity tension for dynamic stealth drone
+  let proximity = maxAlert;
   for (const g of S.guards) {
-    const patrolPhase = 0.5 + 0.5 * Math.sin(S.t * g.speed + g.phaseOffset);
-    g.x = g.x0 + (g.x1 - g.x0) * patrolPhase;
-    g.y = g.y0 + (g.y1 - g.y0) * patrolPhase;
-    g.angle = g.baseAngle + Math.sin(S.t * g.sweepFreq + g.phaseOffset) * g.sweepAmp;
-    g.poly = buildConePolygon(g.x, g.y, g.angle, g.halfAngle, g.range, 52, walls);
-
-    // Check if creature is inside flashlight cone
-    const dx = S.x - g.x, dy = S.y - g.y;
-    const dist = Math.hypot(dx, dy);
-    let seen = false;
-    if (dist < g.range - 8) {
-      let angDiff = Math.atan2(dy, dx) - g.angle;
-      while (angDiff > Math.PI) angDiff -= Math.PI * 2;
-      while (angDiff < -Math.PI) angDiff += Math.PI * 2;
-      if (Math.abs(angDiff) <= g.halfAngle && hasLineOfSight(g.x, g.y, S.x, S.y, walls)) {
-        seen = true;
-      }
-    }
-
-    if (seen && S.phase === 'room') {
-      g.alert = Math.min(1, g.alert + effDt * 2.8);
-      if (g.alert >= 1) {
-        S.phase = 'caught';
-        S.caughtTimer = 0;
-        sfxCaught();
-        return;
-      }
-    } else {
-      g.alert = Math.max(0, g.alert - effDt * 2.2);
-    }
+    const d = Math.hypot(S.x - g.x, S.y - g.y);
+    if (d < 340) proximity = Math.max(proximity, (1 - d / 340) * 0.45);
   }
+  updateStealthAudio(proximity, false);
 
-  // Check doorway transition to next room / final exit
+  // Doorway progression into next sector or final exit threshold
   if (S.doorOpen && Math.hypot(S.x - S.doorPos.x, S.y - S.doorPos.y) <= S.doorPos.r) {
     if (S.roomIdx < ROOM_DEFS.length - 1) {
       loadRoom(S.roomIdx + 1, false);
     } else {
-      // Room 3 Exit Bulkhead reached!
       S.phase = 'exit';
       S.exitTimer = 0;
     }
   }
 }
 
-function drawRoomBackground(g) {
+function updateSpine(dt) {
+  if (S.spine.length < 13) {
+    S.spine = [];
+    for (let i = 0; i < 13; i++) {
+      S.spine.push({
+        x: S.x - Math.cos(S.heading) * i * 9,
+        y: S.y - Math.sin(S.heading) * i * 9,
+      });
+    }
+  }
+  S.spine[0].x = S.x;
+  S.spine[0].y = S.y;
+  const segLen = 9.5 + S.sizeTier * 2.0;
+  for (let i = 1; i < S.spine.length; i++) {
+    const prev = S.spine[i - 1];
+    const cur = S.spine[i];
+    const dx = cur.x - prev.x;
+    const dy = cur.y - prev.y;
+    const a = Math.atan2(dy, dx);
+    const wave = Math.sin(S.swimPhase - i * 0.58) * (1.5 + i * 0.32) * dt * 18;
+    cur.x = prev.x + Math.cos(a + wave * 0.035) * segLen;
+    cur.y = prev.y + Math.sin(a + wave * 0.035) * segLen;
+  }
+}
+
+// ============================================================================
+// RENDERING: PURE DIEGETIC WORLD SPACE (ZERO DETACHED HUD CHROME)
+// ============================================================================
+function drawFacility(g) {
   const def = ROOM_DEFS[S.roomIdx];
-  g.fillStyle = PALETTE.bg;
+  g.fillStyle = '#050807';
   g.fillRect(0, 0, W, H);
 
-  if (mapImg.complete && mapImg.naturalWidth > 0) {
+  if (mapDarkCanvas) {
     g.save();
-    g.imageSmoothingEnabled = false;
     g.translate(def.flipX ? W : 0, def.flipY ? H : 0);
     g.scale(def.flipX ? -1 : 1, def.flipY ? -1 : 1);
-    g.drawImage(mapImg, 0, 0, W, H);
+    g.drawImage(mapDarkCanvas, 0, 0);
     g.restore();
-
-    // Cleanly patch baked red pedestals whenever absorbed (or if unused in Rooms 2 & 3)
-    for (const p of S.pedestals) {
-      const activeHere = S.nodes.some(n => !n.absorbed && Math.hypot(n.x - p.x, n.y - p.y) < 18);
-      if (!activeHere) {
-        g.save();
-        g.fillStyle = '#131918';
-        g.beginPath();
-        g.arc(p.x, p.y, 27, 0, Math.PI * 2);
-        g.fill();
-        // Drained dark neural socket ring
-        g.strokeStyle = 'rgba(200, 230, 208, 0.14)';
-        g.lineWidth = 2;
-        g.beginPath();
-        g.arc(p.x, p.y, 16, 0, Math.PI * 2);
-        g.stroke();
-        g.fillStyle = '#0b0f0e';
-        g.beginPath();
-        g.arc(p.x, p.y, 7, 0, Math.PI * 2);
-        g.fill();
-        g.restore();
-      }
-    }
   } else {
-    // Fallback crisp architectural floor & walls
-    g.fillStyle = PALETTE.fg;
-    for (const w of S.walls) g.fillRect(w.x, w.y, w.w, w.h);
+    g.fillStyle = PAL.bg;
+    g.fillRect(INNER.x, INNER.y, INNER.w, INNER.h);
+    g.fillStyle = PAL.fg;
+    for (const w of S.walls) {
+      if (!w.isProp) g.fillRect(w.x, w.y, w.w, w.h);
+    }
   }
 
-  // Exit doorway barrier / unlocked indicator
+  // Permanent organic bio-vein traces radiated around absorbed nodes (Law 9)
+  for (const sc of S.scars) {
+    g.save();
+    g.translate(sc.x, sc.y);
+    g.strokeStyle = 'rgba(24, 36, 33, 0.85)';
+    g.lineWidth = 2.6;
+    g.lineCap = 'round';
+    for (const v of sc.veins) {
+      g.beginPath();
+      g.moveTo(0, 0);
+      const mx = Math.cos(v.a + v.bend) * v.len * 0.55;
+      const my = Math.sin(v.a + v.bend) * v.len * 0.55;
+      g.quadraticCurveTo(mx, my, Math.cos(v.a) * v.len, Math.sin(v.a) * v.len);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  // Diegetic Bulkhead Threshold & Physical Seal Pips (replaces floating text labels!)
   const db = S.doorBarrier;
-  if (!S.doorOpen) {
-    g.save();
-    g.fillStyle = 'rgba(224, 82, 60, 0.28)';
-    g.fillRect(db.x, db.y, db.w, db.h);
-    g.strokeStyle = PALETTE.acc;
-    g.lineWidth = 2.5;
+  const req = def.requiredNodes;
+  const unlockedCount = Math.min(req, S.roomAbsorbed);
+  const cx = db.x + db.w / 2;
+  const cy = db.y + db.h / 2;
+
+  // Hazard threshold stripes on floor
+  g.save();
+  g.fillStyle = '#111614';
+  g.fillRect(db.x + 2, db.y - 4, db.w - 4, 18);
+  g.strokeStyle = 'rgba(185, 146, 62, 0.24)';
+  g.lineWidth = 3;
+  for (let sx = db.x + 8; sx < db.x + db.w - 6; sx += 14) {
     g.beginPath();
-    g.moveTo(db.x, db.y + db.h / 2);
-    g.lineTo(db.x + db.w, db.y + db.h / 2);
+    g.moveTo(sx, db.y - 3);
+    g.lineTo(sx - 6, db.y + 12);
     g.stroke();
-    g.restore();
+  }
+
+  if (!S.doorOpen) {
+    // Physical containment laser bars spanning closed bulkhead
+    g.strokeStyle = 'rgba(224, 82, 60, 0.78)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(db.x + 2, cy - 2);
+    g.lineTo(db.x + db.w - 2, cy - 2);
+    g.moveTo(db.x + 2, cy + 3);
+    g.lineTo(db.x + db.w - 2, cy + 3);
+    g.stroke();
   } else {
-    const pulse = 0.55 + 0.45 * Math.sin(S.t * 5);
+    // Soft phosphor-mint directional floor chevrons inside open exit corridor
+    const dirY = def.flipY ? -1 : 1;
+    for (let k = 0; k < 2; k++) {
+      const pulse = 0.28 + 0.45 * Math.max(0, Math.sin(S.t * 4.2 - k * 1.1));
+      const y0 = cy + dirY * (8 + k * 13);
+      g.strokeStyle = `rgba(200, 230, 208, ${pulse})`;
+      g.lineWidth = 2.2;
+      g.beginPath();
+      g.moveTo(cx - 14, y0 - dirY * 5);
+      g.lineTo(cx, y0 + dirY * 4);
+      g.lineTo(cx + 14, y0 - dirY * 5);
+      g.stroke();
+    }
+  }
+
+  // Physical lock seal pips mounted directly into left & right door jambs
+  for (let i = 0; i < req; i++) {
+    const isOpen = i < unlockedCount;
+    const px = i === 0 ? db.x - 6 : db.x + db.w + 6;
+    const py = cy;
+    g.fillStyle = isOpen ? PAL.fg : PAL.acc;
+    g.beginPath();
+    g.arc(px, py, 3.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
+function drawFlashlightIllumination(g) {
+  const def = ROOM_DEFS[S.roomIdx];
+
+  // 1. Creature's cool phosphor-mint forward sensory cone (matches f_014.jpg & f_027.jpg!)
+  if (S.phase !== 'end') {
+    const walls = activeWallsList();
+    const snoutX = S.x + Math.cos(S.heading) * 18;
+    const snoutY = S.y + Math.sin(S.heading) * 18;
+    const senseRange = 152 + S.sizeTier * 16;
+    const sensePoly = buildConePolygon(snoutX, snoutY, S.heading, 0.40, senseRange, 32, walls);
+    if (sensePoly.length >= 3) {
+      g.save();
+      g.beginPath();
+      g.moveTo(sensePoly[0].x, sensePoly[0].y);
+      for (let i = 1; i < sensePoly.length; i++) g.lineTo(sensePoly[i].x, sensePoly[i].y);
+      g.closePath();
+      const sGrad = g.createRadialGradient(snoutX, snoutY, 4, snoutX, snoutY, senseRange);
+      sGrad.addColorStop(0, 'rgba(186, 224, 212, 0.22)');
+      sGrad.addColorStop(0.55, 'rgba(162, 206, 196, 0.09)');
+      sGrad.addColorStop(1, 'rgba(162, 206, 196, 0)');
+      g.fillStyle = sGrad;
+      g.fill();
+      g.restore();
+    }
+  }
+
+  // 2. Guard raycasted searchlight cones (true floor reveal + soft penumbra + lens flare)
+  for (const guard of S.guards) {
+    if (guard.poly.length < 3) continue;
+    const ex = guard.emitX, ey = guard.emitY;
+    const alert = S.phase === 'caught' && S.caughtBy === guard ? 1 : guard.alert;
+
+    // Outer soft penumbra cone
+    if (guard.softPoly.length >= 3) {
+      g.save();
+      g.beginPath();
+      g.moveTo(guard.softPoly[0].x, guard.softPoly[0].y);
+      for (let i = 1; i < guard.softPoly.length; i++) g.lineTo(guard.softPoly[i].x, guard.softPoly[i].y);
+      g.closePath();
+      const pGrad = g.createRadialGradient(ex, ey, 4, ex, ey, guard.range * 1.02);
+      pGrad.addColorStop(0, `rgba(236, ${Math.round(218 - alert * 110)}, ${Math.round(126 - alert * 65)}, 0.18)`);
+      pGrad.addColorStop(0.7, `rgba(220, ${Math.round(202 - alert * 105)}, ${Math.round(112 - alert * 60)}, 0.07)`);
+      pGrad.addColorStop(1, 'rgba(220, 202, 112, 0)');
+      g.fillStyle = pGrad;
+      g.fill();
+      g.restore();
+    }
+
+    // Core crisp raycasted cone revealing lit tiled floor texture
     g.save();
-    g.strokeStyle = `rgba(200, 230, 208, ${0.45 + pulse * 0.45})`;
-    g.lineWidth = 2.5;
-    g.setLineDash([7, 6]);
-    g.strokeRect(db.x + 2, db.y - 2, db.w - 4, db.h + 4);
-    g.font = 'bold 12px "Courier New", Courier, monospace';
-    g.fillStyle = PALETTE.fg;
-    g.textAlign = 'center';
-    const label = S.roomIdx === 2 ? 'EXIT BULKHEAD OPEN' : `SECTOR 0${S.roomIdx + 2} >>`;
-    const ly = ROOM_DEFS[S.roomIdx].flipY ? db.y + 24 : db.y - 10;
-    g.fillText(label, db.x + db.w / 2, ly);
+    g.beginPath();
+    g.moveTo(guard.poly[0].x, guard.poly[0].y);
+    for (let i = 1; i < guard.poly.length; i++) g.lineTo(guard.poly[i].x, guard.poly[i].y);
+    g.closePath();
+    g.clip();
+
+    if (mapLitCanvas) {
+      g.save();
+      g.globalAlpha = 0.76;
+      g.translate(def.flipX ? W : 0, def.flipY ? H : 0);
+      g.scale(def.flipX ? -1 : 1, def.flipY ? -1 : 1);
+      g.drawImage(mapLitCanvas, 0, 0);
+      g.restore();
+    }
+
+    const r0 = Math.round(248 + alert * 7);
+    const g0 = Math.round(232 - alert * 135);
+    const b0 = Math.round(142 - alert * 78);
+    const cGrad = g.createRadialGradient(ex, ey, 6, ex, ey, guard.range);
+    cGrad.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0.62)`);
+    cGrad.addColorStop(0.45, `rgba(${r0}, ${g0}, ${b0}, 0.26)`);
+    cGrad.addColorStop(0.85, `rgba(${r0}, ${g0}, ${b0}, 0.08)`);
+    cGrad.addColorStop(1, `rgba(${r0}, ${g0}, ${b0}, 0)`);
+    g.fillStyle = cGrad;
+    g.fillRect(0, 0, W, H);
     g.restore();
+
+    // Bright flashlight emitter hotspot at guard's hand (matches f_014.jpg!)
+    const lGrad = g.createRadialGradient(ex, ey, 1, ex, ey, 22);
+    lGrad.addColorStop(0, 'rgba(255, 252, 224, 0.95)');
+    lGrad.addColorStop(0.45, `rgba(${r0}, ${g0}, ${b0}, 0.45)`);
+    lGrad.addColorStop(1, 'rgba(255, 240, 170, 0)');
+    g.fillStyle = lGrad;
+    g.beginPath();
+    g.arc(ex, ey, 22, 0, Math.PI * 2);
+    g.fill();
+
+    // Diegetic sightline lock thread when spotting creature (no floating '!' text!)
+    if (alert > 0.12) {
+      g.save();
+      g.strokeStyle = `rgba(255, 96, 72, ${alert * 0.85})`;
+      g.lineWidth = 1.5 + alert * 2.0;
+      g.beginPath();
+      g.moveTo(ex, ey);
+      g.lineTo(S.x, S.y);
+      g.stroke();
+      g.restore();
+    }
   }
 }
 
 function drawNodes(g) {
-  const frameIdx = ((S.t * 8) | 0) % 8;
-  for (const n of S.nodes) {
-    if (n.absorbed) continue;
-    const pulse = 0.78 + 0.22 * Math.sin(S.t * 4.5 + n.pulsePhase);
+  const frameIdx = ((S.t * 7) | 0) % 8;
 
-    // Crimson bio-luminescent floor glow matching study/sheet.jpg
+  for (const n of S.nodes) {
+    if (n.absorbed) {
+      // Permanent hollow crimson ring husk on floor (exact match to f_033.jpg & f_038.jpg!)
+      g.save();
+      const hGlow = g.createRadialGradient(n.x, n.y, 8, n.x, n.y, 28);
+      hGlow.addColorStop(0, 'rgba(210, 68, 50, 0.16)');
+      hGlow.addColorStop(1, 'rgba(210, 68, 50, 0)');
+      g.fillStyle = hGlow;
+      g.beginPath();
+      g.arc(n.x, n.y, 28, 0, Math.PI * 2);
+      g.fill();
+
+      g.fillStyle = '#0b100f';
+      g.beginPath();
+      g.arc(n.x, n.y, 16, 0, Math.PI * 2);
+      g.fill();
+
+      g.strokeStyle = '#c94534';
+      g.lineWidth = 4.6;
+      g.beginPath();
+      g.arc(n.x, n.y, 18.5, 0, Math.PI * 2);
+      g.stroke();
+      g.restore();
+      continue;
+    }
+
+    const pulse = 0.82 + 0.18 * Math.sin(S.t * 4.2 + n.pulsePhase);
+    const isReady = S.nearestReadyNode === n && (S.phase === 'room' || S.phase === 'flash');
+
+    // Crimson bio-luminescent floor pool
     const grad = g.createRadialGradient(n.x, n.y, 4, n.x, n.y, 46 * pulse);
-    grad.addColorStop(0, 'rgba(224, 82, 60, 0.52)');
-    grad.addColorStop(0.55, 'rgba(224, 82, 60, 0.16)');
-    grad.addColorStop(1, 'rgba(224, 82, 60, 0)');
+    grad.addColorStop(0, 'rgba(228, 78, 58, 0.42)');
+    grad.addColorStop(0.55, 'rgba(224, 72, 52, 0.14)');
+    grad.addColorStop(1, 'rgba(224, 72, 52, 0)');
     g.fillStyle = grad;
     g.beginPath();
     g.arc(n.x, n.y, 46 * pulse, 0, Math.PI * 2);
     g.fill();
 
-    if (nodeImg.complete && nodeImg.naturalWidth > 0) {
+    // Dark recessed bio-socket
+    g.fillStyle = '#110d0d';
+    g.beginPath();
+    g.arc(n.x, n.y, 18.5, 0, Math.PI * 2);
+    g.fill();
+
+    // Sanitized animated node pod sprite (inner core, zero #d8d8d8 halo)
+    if (nodeClean) {
       g.save();
-      g.imageSmoothingEnabled = false;
-      const sx = frameIdx * 128;
-      const size = 44;
-      g.drawImage(nodeImg, sx, 428, 128, 168, n.x - size / 2, n.y - size * 0.62, size, size * 1.25);
-      g.restore();
-    } else {
-      g.strokeStyle = PALETTE.acc;
-      g.lineWidth = 4;
       g.beginPath();
-      g.arc(n.x, n.y, 16, 0, Math.PI * 2);
+      g.arc(n.x, n.y, 16.5, 0, Math.PI * 2);
+      g.clip();
+      const sx = frameIdx * 128;
+      g.drawImage(nodeClean, sx + 16, 444, 96, 128, n.x - 17, n.y - 20, 34, 40);
+      g.restore();
+    }
+
+    // Pulsing 4-lobed crimson bio-core + crisp crimson outer ring (matches f_014.jpg!)
+    g.save();
+    g.translate(n.x, n.y);
+    g.fillStyle = 'rgba(232, 82, 62, 0.88)';
+    for (let k = 0; k < 4; k++) {
+      const a = k * (Math.PI / 2) + Math.PI / 4 + Math.sin(S.t * 2 + n.pulsePhase) * 0.08;
+      g.beginPath();
+      g.arc(Math.cos(a) * 5.2, Math.sin(a) * 5.2, 4.2 * pulse, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#ff7b63';
+    g.beginPath();
+    g.arc(0, 0, 4.5 * pulse, 0, Math.PI * 2);
+    g.fill();
+
+    g.strokeStyle = '#de4f3c';
+    g.lineWidth = 4.8;
+    g.beginPath();
+    g.arc(0, 0, 19.2, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+
+    // Spatial READY cue ONLY while creature is within valid lunge range (Laws 4 & 5)
+    if (isReady && !S.paused) {
+      g.save();
+      // Living crimson-mint tendril threads latching from creature to node
+      for (let tIdx = -1; tIdx <= 1; tIdx++) {
+        const perp = Math.atan2(n.y - S.y, n.x - S.x) + Math.PI / 2;
+        const wave = Math.sin(S.t * 11 + tIdx * 2) * 9;
+        const mx = (S.x + n.x) / 2 + Math.cos(perp) * (tIdx * 10 + wave);
+        const my = (S.y + n.y) / 2 + Math.sin(perp) * (tIdx * 10 + wave);
+        g.strokeStyle = tIdx === 0 ? 'rgba(228, 92, 72, 0.72)' : 'rgba(200, 230, 208, 0.42)';
+        g.lineWidth = tIdx === 0 ? 2.4 : 1.5;
+        g.beginPath();
+        g.moveTo(S.x, S.y);
+        g.quadraticCurveTo(mx, my, n.x, n.y);
+        g.stroke();
+      }
+      // Subtle pulsing outer resonance arc + compact spatial key cue beside node
+      g.strokeStyle = 'rgba(245, 207, 135, 0.72)';
+      g.lineWidth = 1.6;
+      g.setLineDash([5, 5]);
+      g.beginPath();
+      g.arc(n.x, n.y, 26, S.t * 2.5, S.t * 2.5 + Math.PI * 1.5);
       g.stroke();
+      g.setLineDash([]);
+
+      g.fillStyle = 'rgba(245, 207, 135, 0.85)';
+      g.font = 'bold 11px "Courier New", Courier, monospace';
+      g.textAlign = 'center';
+      g.fillText('[SPACE]', n.x, n.y - 31);
+      g.restore();
     }
   }
 }
 
-function drawGuardsAndCones(g) {
-  // 1. Raycasted warm-amber guard flashlight cones (exact match to study/sheet.jpg!)
+function drawGuards(g) {
   for (const guard of S.guards) {
-    if (guard.poly.length < 3) continue;
-    g.save();
+    // Subtle dark floor contact shadow
+    g.fillStyle = 'rgba(0, 0, 0, 0.55)';
     g.beginPath();
-    g.moveTo(guard.poly[0].x, guard.poly[0].y);
-    for (let i = 1; i < guard.poly.length; i++) {
-      g.lineTo(guard.poly[i].x, guard.poly[i].y);
-    }
-    g.closePath();
-
-    const alertTint = guard.alert;
-    const r0 = Math.round(244 + alertTint * 11);
-    const g0 = Math.round(226 - alertTint * 115);
-    const b0 = Math.round(132 - alertTint * 70);
-    const grad = g.createRadialGradient(guard.x, guard.y, 8, guard.x, guard.y, guard.range);
-    grad.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0.62)`);
-    grad.addColorStop(0.55, `rgba(${r0}, ${g0}, ${b0}, 0.30)`);
-    grad.addColorStop(1, `rgba(${r0}, ${g0}, ${b0}, 0.03)`);
-    g.fillStyle = grad;
+    g.ellipse(guard.x, guard.y + 14, 15, 8, 0, 0, Math.PI * 2);
     g.fill();
-    g.restore();
-  }
 
-  // 2. Guard pixel-art sprites from guard_sprite.png (4x4 sheet)
-  for (const guard of S.guards) {
-    if (guardImg.complete && guardImg.naturalWidth > 0) {
+    if (guardClean) {
       let a = guard.angle;
       while (a > Math.PI) a -= Math.PI * 2;
       while (a < -Math.PI) a += Math.PI * 2;
-      const step = ((S.t * 4) | 0) % 2;
+      const step = ((S.roomT * 3.5) | 0) % 2;
       let row = 0, col = step;
       if (Math.abs(a) < Math.PI * 0.28) {
-        // Facing RIGHT -> row 3, cols 0..1
-        row = 3; col = step;
+        row = 3; col = step;       // Facing RIGHT w/ flashlight
       } else if (Math.abs(a) > Math.PI * 0.72) {
-        // Facing LEFT -> row 2, cols 2..3
-        row = 2; col = 2 + step;
+        row = 2; col = 2 + step;   // Facing LEFT w/ flashlight
       } else if (a > 0) {
-        // Facing DOWN -> row 0, cols 0..1
-        row = 0; col = step;
+        row = 0; col = step;       // Facing DOWN
       } else {
-        // Facing UP -> row 0, cols 2..3
-        row = 0; col = 2 + step;
+        row = 0; col = 2 + step;   // Facing UP
       }
       g.save();
       g.imageSmoothingEnabled = false;
-      const dw = 54, dh = 54;
-      g.drawImage(guardImg, col * 256, row * 256, 256, 256, guard.x - dw / 2, guard.y - dh / 2, dw, dh);
+      const dw = 50, dh = 50;
+      g.globalAlpha = 0.94;
+      g.drawImage(guardClean, col * 256, row * 256, 256, 256, guard.x - dw / 2, guard.y - dh / 2, dw, dh);
       g.restore();
-    }
-
-    if (guard.alert > 0.08) {
-      g.save();
-      g.fillStyle = PALETTE.acc;
-      g.font = 'bold 18px "Courier New", Courier, monospace';
-      g.textAlign = 'center';
-      g.fillText('!', guard.x, guard.y - 30);
-      g.restore();
+    } else {
+      g.fillStyle = '#1b2824';
+      g.beginPath();
+      g.arc(guard.x, guard.y, 14, 0, Math.PI * 2);
+      g.fill();
     }
   }
 }
 
-function drawCreature(g) {
-  const walls = activeWallsList();
-  // Subtle forward sensory cone (visible in study/sheet.jpg ahead of creature!)
-  const sensePoly = buildConePolygon(S.x, S.y, S.heading, 0.38, 128, 24, walls);
-  if (sensePoly.length >= 3) {
-    g.save();
-    g.beginPath();
-    g.moveTo(sensePoly[0].x, sensePoly[0].y);
-    for (let i = 1; i < sensePoly.length; i++) g.lineTo(sensePoly[i].x, sensePoly[i].y);
-    g.closePath();
-    const sGrad = g.createRadialGradient(S.x, S.y, 6, S.x, S.y, 128);
-    sGrad.addColorStop(0, 'rgba(195, 228, 214, 0.16)');
-    sGrad.addColorStop(1, 'rgba(195, 228, 214, 0.0)');
-    g.fillStyle = sGrad;
-    g.fill();
-    g.restore();
-  }
+function drawCreature(g, goldenTint = 0) {
+  if (S.phase === 'end') return;
 
-  // Crimson core glow on floor beneath creature
-  const cGlow = g.createRadialGradient(S.x, S.y, 4, S.x, S.y, 38 + S.sizeTier * 14);
-  cGlow.addColorStop(0, 'rgba(224, 82, 60, 0.42)');
-  cGlow.addColorStop(1, 'rgba(224, 82, 60, 0)');
+  const tier = CREATURE_TIERS[S.sizeTier];
+  const dissolve = S.phase === 'exit' ? clamp((S.exitTimer - 0.55) / 0.65, 0, 1) : 0;
+  const alpha = 1 - dissolve * 0.85;
+
+  g.save();
+  g.globalAlpha = alpha;
+
+  // 1. Crimson bio-core floor glow beneath creature
+  const glowR = 44 + S.sizeTier * 18;
+  const cGlow = g.createRadialGradient(S.x, S.y, 4, S.x, S.y, glowR);
+  cGlow.addColorStop(0, 'rgba(228, 76, 56, 0.44)');
+  cGlow.addColorStop(0.6, 'rgba(224, 68, 48, 0.12)');
+  cGlow.addColorStop(1, 'rgba(224, 68, 48, 0)');
   g.fillStyle = cGlow;
   g.beginPath();
-  g.arc(S.x, S.y, 38 + S.sizeTier * 14, 0, Math.PI * 2);
+  g.arc(S.x, S.y, glowR, 0, Math.PI * 2);
   g.fill();
 
-  // Animated organic dark bio-tendrils radiating gently so movement feels alive like Carrion / sheet.jpg
-  const tendrilCount = 4 + S.sizeTier * 4;
+  // 2. Sinuous trailing obsidian tail / spine membrane (gives lush eel silhouette at Tier 0 & 1!)
+  if (S.spine.length >= 4) {
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < S.spine.length - 1; i++) {
+        const u = 1 - i / (S.spine.length - 1);
+        const w = (22 + S.sizeTier * 6) * Math.pow(u, 1.25);
+        g.strokeStyle = pass === 0 ? 'rgba(176, 214, 200, 0.62)' : '#141d1c';
+        g.lineWidth = pass === 0 ? w + 3.4 : w;
+        g.beginPath();
+        g.moveTo(S.spine[i].x, S.spine[i].y);
+        g.lineTo(S.spine[i + 1].x, S.spine[i + 1].y);
+        g.stroke();
+      }
+    }
+  }
+
+  // 3. Articulated S-curved bio-tendrils with pale-mint rim & bulbous suction tips (f_009, f_021, f_033!)
+  const count = tier.tendrils;
+  for (let i = 0; i < count; i++) {
+    let baseAngle;
+    const sideSign = i % 2 === 0 ? 1 : -1;
+    if (S.sizeTier === 0) {
+      // Sleek S-curved lateral/trailing fins for Tier 0 eel-tadpole (f_009 / f_014)
+      const row = (i >> 1);
+      baseAngle = S.heading + Math.PI + sideSign * (0.42 + row * 0.38);
+    } else if (S.sizeTier === 1) {
+      // Fanning S-curved stalking tentacles (f_021 / f_027)
+      baseAngle = S.heading + ((i / count) - 0.5) * Math.PI * 1.92 + Math.PI * 0.85;
+    } else {
+      // Full 360-degree radial horror tentacles (f_033 / f_038)
+      baseAngle = S.heading + (i / count) * Math.PI * 2;
+    }
+
+    const curl = Math.sin(S.swimPhase * 1.05 + i * 1.67) * 0.46 + sideSign * 0.24;
+    const tipCurl = -curl * 0.72 + Math.cos(S.swimPhase * 0.85 + i * 2.13) * 0.28;
+    const baseLen = tier.reach * (0.80 + 0.22 * Math.sin(S.t * 2.3 + i * 1.7));
+
+    const r0 = 14 + S.sizeTier * 7;
+    const sx0 = S.x + Math.cos(baseAngle) * r0;
+    const sy0 = S.y + Math.sin(baseAngle) * r0;
+    const c1x = sx0 + Math.cos(baseAngle + curl) * (baseLen * 0.42);
+    const c1y = sy0 + Math.sin(baseAngle + curl) * (baseLen * 0.42);
+    const c2x = sx0 + Math.cos(baseAngle + curl * 0.35 + tipCurl) * (baseLen * 0.76);
+    const c2y = sy0 + Math.sin(baseAngle + curl * 0.35 + tipCurl) * (baseLen * 0.76);
+    const ex = sx0 + Math.cos(baseAngle + tipCurl * 0.85) * baseLen;
+    const ey = sy0 + Math.sin(baseAngle + tipCurl * 0.85) * baseLen;
+
+    // Outer pale-mint membrane rim
+    const rimAlpha = 0.56 + goldenTint * 0.26;
+    g.strokeStyle = goldenTint > 0.1
+      ? `rgba(238, 226, 188, ${rimAlpha})`
+      : `rgba(176, 214, 200, ${rimAlpha})`;
+    g.lineWidth = S.sizeTier === 0 ? 7.2 : 9.8;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(sx0, sy0);
+    g.bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
+    g.stroke();
+
+    // Inner dark obsidian bio-flesh
+    g.strokeStyle = '#16201e';
+    g.lineWidth = S.sizeTier === 0 ? 4.4 : 6.2;
+    g.beginPath();
+    g.moveTo(sx0, sy0);
+    g.bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
+    g.stroke();
+
+    // Bulbous suction tip w/ pale-mint specular dot (signature detail in f_027 & f_038!)
+    const tipR = S.sizeTier === 0 ? 3.2 : 4.6;
+    g.fillStyle = goldenTint > 0.1 ? 'rgba(240, 228, 190, 0.78)' : 'rgba(186, 222, 208, 0.76)';
+    g.beginPath();
+    g.arc(ex, ey, tipR, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#182220';
+    g.beginPath();
+    g.arc(ex, ey, tipR * 0.58, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = 'rgba(230, 248, 238, 0.90)';
+    g.beginPath();
+    g.arc(ex - 0.9, ey - 0.9, 1.1, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // 4. Sanitized pixel-art creature body + glossy translucent bio-membrane + multi-chambered core
+  const breathe = 1 + Math.sin(S.t * 5.4) * 0.045;
   g.save();
   g.translate(S.x, S.y);
   g.rotate(S.heading);
-  for (let i = 0; i < tendrilCount; i++) {
-    const baseA = ((i / tendrilCount) - 0.5) * Math.PI * 1.7 + Math.PI;
-    const wave = Math.sin(S.t * 7.5 + i * 1.9) * 0.28;
-    const len = (22 + S.sizeTier * 14) * (0.85 + 0.15 * Math.cos(S.t * 5 + i));
-    const mx = Math.cos(baseA + wave * 0.5) * (len * 0.55);
-    const my = Math.sin(baseA + wave * 0.5) * (len * 0.55);
-    const ex = Math.cos(baseA + wave) * len;
-    const ey = Math.sin(baseA + wave) * len;
 
-    g.strokeStyle = 'rgba(180, 214, 196, 0.35)';
-    g.lineWidth = 3.5;
-    g.lineCap = 'round';
-    g.beginPath();
-    g.moveTo(0, 0);
-    g.quadraticCurveTo(mx, my, ex, ey);
-    g.stroke();
+  // Smooth glossy obsidian outer mantle w/ pale-mint rim
+  const rx = 38 + S.sizeTier * 8;
+  const ry = 24 + S.sizeTier * 8;
+  g.fillStyle = '#151f1d';
+  g.strokeStyle = goldenTint > 0.1 ? 'rgba(242, 224, 178, 0.80)' : 'rgba(182, 218, 204, 0.72)';
+  g.lineWidth = 2.4;
+  g.beginPath();
+  g.ellipse(2, 0, rx * breathe, ry * breathe, 0, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
 
-    g.strokeStyle = '#101816';
-    g.lineWidth = 2.2;
-    g.stroke();
-  }
-  g.restore();
-
-  // Draw pixel-art creature sprite for current growth size (0, 1, 2)
-  const crop = CREATURE_CROPS[S.sizeTier];
-  if (creatureImg.complete && creatureImg.naturalWidth > 0) {
+  if (creatureClean) {
     g.save();
-    g.imageSmoothingEnabled = false;
-    g.translate(S.x, S.y);
-    g.rotate(S.heading + crop.rotOffset);
-    const breathe = 1 + Math.sin(S.t * 6) * 0.04;
-    const dw = crop.dw * breathe, dh = crop.dh * breathe;
-    g.drawImage(creatureImg, crop.sx, crop.sy, crop.sw, crop.sh, -dw / 2, -dh / 2, dw, dh);
+    g.rotate(tier.rotOffset);
+    g.globalAlpha = 0.78 * alpha;
+    const dw = tier.dw * breathe, dh = tier.dh * breathe;
+    g.drawImage(creatureClean, tier.sx, tier.sy, tier.sw, tier.sh, -dw / 2, -dh / 2, dw, dh);
     g.restore();
   }
+
+  // Rich glowing multi-chambered crimson nucleus + specular sheen (matches f_014, f_027, f_038!)
+  const coreR = (17.5 + S.sizeTier * 5.5) * breathe;
+  g.fillStyle = '#8e1f18';
+  g.beginPath();
+  g.ellipse(-2, 0, coreR * 1.15, coreR * 0.95, 0, 0, Math.PI * 2);
+  g.fill();
+
+  g.strokeStyle = '#ff5c46';
+  g.lineWidth = 2.0;
+  g.beginPath();
+  g.ellipse(-2, 0, coreR * 1.12, coreR * 0.92, 0, 0, Math.PI * 2);
+  g.stroke();
+
+  // Cellular crimson chambers inside nucleus
+  const lobes = 3 + S.sizeTier;
+  for (let k = 0; k < lobes; k++) {
+    const la = (k / lobes) * Math.PI * 2 + S.t * 1.1;
+    const lx = -2 + Math.cos(la) * (coreR * 0.36);
+    const ly = Math.sin(la) * (coreR * 0.30);
+    g.fillStyle = k === 0 ? '#ff6952' : '#e44230';
+    g.beginPath();
+    g.arc(lx, ly, coreR * 0.42, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // Glossy wet bio-highlight on core
+  g.fillStyle = 'rgba(255, 224, 214, 0.85)';
+  g.beginPath();
+  g.ellipse(-2 + coreR * 0.28, -coreR * 0.34, coreR * 0.26, coreR * 0.15, -0.4, 0, Math.PI * 2);
+  g.fill();
+
+  // Two glowing crimson photoreceptor eyes at snout (signature detail in f_014!)
+  const eyeX = rx * 0.72;
+  g.fillStyle = '#ff6b57';
+  g.beginPath();
+  g.ellipse(eyeX, -5.2, 2.6, 1.7, 0.2, 0, Math.PI * 2);
+  g.ellipse(eyeX, 5.2, 2.6, 1.7, -0.2, 0, Math.PI * 2);
+  g.fill();
+
+  // Subtle warm golden light wash over creature when inside an active memory bloom (f_033.jpg!)
+  if (goldenTint > 0.05) {
+    g.fillStyle = `rgba(255, 222, 152, ${goldenTint * 0.24})`;
+    g.beginPath();
+    g.ellipse(0, 0, rx * 1.1, ry * 1.1, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  g.restore();
+  g.restore();
 }
 
-// Warm golden human silhouette memory ripple (matches study/sheet.jpg row 4!)
-function drawMemoryRipples(g) {
-  for (const rp of S.ripples) {
-    const p = rp.t / rp.dur;
+// Detailed anatomical human silhouettes in profile (matches f_033.jpg!)
+function drawHumanSilhouettes(g, cx, cy, pose, alpha) {
+  g.save();
+  g.translate(cx - 10, cy + 56);
+  g.scale(1.16, 1.16);
+  g.shadowColor = `rgba(255, 198, 108, ${alpha * 0.95})`;
+  g.shadowBlur = 34;
 
-    // Initial crimson bio-starburst (0..0.22s, matching sheet.jpg frame 29)
-    if (rp.t < 0.32) {
-      const bp = rp.t / 0.32;
+  const grad = g.createLinearGradient(0, -210, 0, 210);
+  grad.addColorStop(0, `rgba(255, 238, 198, ${alpha * 0.96})`);
+  grad.addColorStop(0.55, `rgba(252, 218, 156, ${alpha * 0.90})`);
+  grad.addColorStop(0.85, `rgba(232, 182, 112, ${alpha * 0.55})`);
+  grad.addColorStop(1, `rgba(218, 158, 86, ${alpha * 0.12})`);
+  g.fillStyle = grad;
+  g.strokeStyle = `rgba(255, 238, 198, ${alpha * 0.92})`;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+
+  // LEFT RESEARCHER IN PROFILE (facing right: brow, nose, chin, glasses, collared lab coat)
+  g.beginPath();
+  g.moveTo(-114, -184); // crown back
+  g.bezierCurveTo(-102, -206, -68, -206, -60, -184); // hair top & forehead
+  g.lineTo(-58, -172); // brow
+  g.lineTo(-51, -162); // nose bridge/tip
+  g.lineTo(-57, -158); // philtrum
+  g.lineTo(-55, -150); // lips
+  g.quadraticCurveTo(-56, -140, -67, -140); // chin & jaw
+  g.lineTo(-74, -128); // front neck
+  // Collared lab coat front & torso
+  g.lineTo(-58, -112);
+  g.lineTo(-52, -32);
+  g.lineTo(-46, 88);
+  g.lineTo(-58, 195);
+  g.lineTo(-124, 195);
+  g.lineTo(-132, 72);
+  g.bezierCurveTo(-136, -30, -132, -104, -108, -124); // coat back & shoulder
+  g.lineTo(-104, -142); // nape
+  g.bezierCurveTo(-118, -152, -120, -170, -114, -184);
+  g.closePath();
+  g.fill();
+
+  // Left researcher eyeglasses glint
+  g.strokeStyle = `rgba(255, 245, 215, ${alpha * 0.85})`;
+  g.lineWidth = 2.2;
+  g.beginPath();
+  g.moveTo(-66, -170);
+  g.lineTo(-54, -169);
+  g.lineTo(-55, -163);
+  g.stroke();
+
+  // Left researcher arm & hand reaching/writing
+  g.strokeStyle = grad;
+  g.lineWidth = 22;
+  g.beginPath();
+  g.moveTo(-84, -96);
+  g.lineTo(-54, -34);
+  g.lineTo(-14, -38);
+  g.stroke();
+
+  if (pose === 'clipboard') {
+    // Stylus / pen in left researcher's fingers + shared glowing tablet/clipboard (f_033.jpg!)
+    g.lineWidth = 3.5;
+    g.strokeStyle = `rgba(255, 248, 220, ${alpha * 0.95})`;
+    g.beginPath();
+    g.moveTo(-20, -52);
+    g.lineTo(-4, -36);
+    g.stroke();
+
+    // Angled clipboard/tablet held between them
+    g.lineWidth = 6.5;
+    g.beginPath();
+    g.moveTo(-26, -18);
+    g.lineTo(18, -50);
+    g.stroke();
+  }
+
+  // RIGHT HUMAN IN PROFILE (facing left: second researcher w/ glasses OR smaller child)
+  const isChild = pose === 'child';
+  g.save();
+  if (isChild) {
+    g.translate(76, 58);
+    g.scale(0.74, 0.74);
+  } else {
+    g.translate(168, 4);
+  }
+
+  g.beginPath();
+  g.moveTo(-44, -182);
+  g.bezierCurveTo(-54, -204, -86, -202, -96, -180); // crown & forehead facing left
+  g.lineTo(-98, -168); // brow
+  g.lineTo(-105, -158); // nose
+  g.lineTo(-99, -154);
+  g.quadraticCurveTo(-100, -140, -88, -140); // chin
+  g.lineTo(-82, -128); // neck
+  g.lineTo(-96, -110); // front coat lapel
+  g.lineTo(-102, -26);
+  g.lineTo(-106, 192);
+  g.lineTo(-36, 192);
+  g.lineTo(-28, 56);
+  g.bezierCurveTo(-24, -34, -30, -104, -52, -124); // back shoulder
+  g.lineTo(-56, -142);
+  g.bezierCurveTo(-42, -152, -38, -168, -44, -182);
+  g.closePath();
+  g.fill();
+
+  if (!isChild) {
+    g.strokeStyle = `rgba(255, 245, 215, ${alpha * 0.82})`;
+    g.lineWidth = 2.2;
+    g.beginPath();
+    g.moveTo(-90, -166);
+    g.lineTo(-102, -165);
+    g.lineTo(-101, -159);
+    g.stroke();
+  }
+
+  // Right silhouette arm extending toward center
+  g.strokeStyle = grad;
+  g.lineWidth = 21;
+  g.beginPath();
+  g.moveTo(-72, -94);
+  g.lineTo(-112, -36);
+  g.lineTo(isChild ? -145 : -162, isChild ? -58 : -34);
+  g.stroke();
+
+  g.restore();
+  g.restore();
+}
+
+function drawMemoryRipples(g) {
+  let creatureTint = 0;
+
+  for (const rp of S.ripples) {
+    const p = clamp(rp.t / rp.dur, 0, 1);
+    const ease = 1 - Math.pow(1 - p, 2.5);
+    const cx = lerp(rp.ox, rp.tx, ease);
+    const cy = lerp(rp.oy, rp.ty, ease);
+    const rad = 44 + ease * (rp.maxRad - 44);
+    const alpha = p < 0.14 ? p / 0.14 : Math.pow(clamp(1 - (p - 0.14) / 0.86, 0, 1), 1.15);
+
+    if (Math.hypot(S.x - cx, S.y - cy) < rad + 30) {
+      creatureTint = Math.max(creatureTint, alpha);
+    }
+
+    // Clip strictly inside the facility's inner floor perimeter (matches f_033.jpg!)
+    g.save();
+    g.beginPath();
+    g.rect(INNER.x, INNER.y, INNER.w, INNER.h);
+    g.clip();
+
+    // Phase A (0..0.42s): Visceral crimson bio-splatter burst on node rupture (f_029.jpg!)
+    if (rp.t < 0.44) {
+      const bp = rp.t / 0.44;
+      const bAlpha = (1 - bp) * 0.92;
       g.save();
-      g.translate(rp.x, rp.y);
-      for (let i = 0; i < 18; i++) {
-        const a = (i / 18) * Math.PI * 2 + i * 0.2;
-        const r1 = 14 + bp * 58 * (0.7 + (i % 3) * 0.2);
-        g.strokeStyle = `rgba(255, 105, 85, ${(1 - bp) * 0.9})`;
-        g.lineWidth = 3;
+      g.translate(rp.ox, rp.oy);
+      for (const dr of rp.droplets) {
+        const r0 = 14 + bp * dr.speed * 0.52;
+        const r1 = r0 + dr.len * (1 - bp * 0.4);
+        g.strokeStyle = `rgba(242, 76, 56, ${bAlpha})`;
+        g.lineWidth = dr.w * (1 - bp * 0.35);
+        g.lineCap = 'round';
         g.beginPath();
-        g.moveTo(0, 0);
-        g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+        g.moveTo(Math.cos(dr.a) * r0, Math.sin(dr.a) * r0);
+        g.lineTo(Math.cos(dr.a) * r1, Math.sin(dr.a) * r1);
         g.stroke();
       }
       g.restore();
     }
 
-    // Expanding golden memory dome + glowing human silhouettes inside
-    const ease = 1 - Math.pow(1 - p, 2.3);
-    const rad = 48 + ease * 315;
-    const cy = Math.min(rp.y, 445); // frame dome cleanly over center floor like study/sheet.jpg
-    const alpha = p < 0.16 ? p / 0.16 : Math.max(0, 1 - (p - 0.16) / 0.84);
-
+    // Phase B: Golden neural-caustic floor dome
     g.save();
     g.beginPath();
-    g.arc(rp.x - 45, cy, rad, 0, Math.PI * 2);
+    g.arc(cx, cy, rad, 0, Math.PI * 2);
     g.clip();
 
-    const cx = rp.x - 45;
-    // Warm amber radial wash
-    const domeGrad = g.createRadialGradient(cx, cy, rad * 0.08, cx, cy, rad);
-    domeGrad.addColorStop(0, `rgba(255, 226, 156, ${alpha * 0.38})`);
-    domeGrad.addColorStop(0.68, `rgba(235, 180, 90, ${alpha * 0.22})`);
-    domeGrad.addColorStop(1, `rgba(255, 218, 134, ${alpha * 0.50})`);
+    // Translucent warm-amber radial floor wash (keeps floor & red nodes visible through dome!)
+    const domeGrad = g.createRadialGradient(cx, cy, rad * 0.06, cx, cy, rad);
+    domeGrad.addColorStop(0, `rgba(255, 212, 134, ${alpha * 0.24})`);
+    domeGrad.addColorStop(0.58, `rgba(232, 168, 78, ${alpha * 0.16})`);
+    domeGrad.addColorStop(0.88, `rgba(248, 196, 104, ${alpha * 0.34})`);
+    domeGrad.addColorStop(1, `rgba(255, 226, 148, ${alpha * 0.62})`);
     g.fillStyle = domeGrad;
     g.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
 
-    // Golden neural caustic threads & sparkles inside memory bubble
-    g.strokeStyle = `rgba(255, 228, 165, ${alpha * 0.38})`;
-    g.lineWidth = 2.0;
-    for (let k = 0; k < 9; k++) {
-      g.beginPath();
-      const yOff = cy - rad * 0.78 + k * (rad * 0.20);
-      g.moveTo(cx - rad, yOff);
-      g.bezierCurveTo(
-        cx - rad * 0.3, yOff + Math.sin(rp.t * 3 + k) * 38,
-        cx + rad * 0.3, yOff - Math.cos(rp.t * 3 + k) * 38,
-        cx + rad, yOff
-      );
-      g.stroke();
+    // Organic cellular golden caustic ribbons (soft outer bloom + bright filament core, f_033.jpg!)
+    g.lineCap = 'round';
+    for (let pass = 0; pass < 2; pass++) {
+      g.strokeStyle = pass === 0
+        ? `rgba(246, 184, 88, ${alpha * 0.34})`
+        : `rgba(255, 238, 182, ${alpha * 0.58})`;
+      g.lineWidth = pass === 0 ? 9.0 : 2.1;
+      for (let i = 0; i < rp.cells.length; i++) {
+        const cA = rp.cells[i];
+        const x1 = cx + cA.ux * rad + Math.sin(rp.t * 2.2 + cA.ph) * 10;
+        const y1 = cy + cA.uy * rad + Math.cos(rp.t * 2.0 + cA.ph) * 10;
+        for (const j of cA.links) {
+          const cB = rp.cells[j];
+          // Skip outer-ring-only straight chords so rim stays organic
+          if (Math.hypot(cA.ux, cA.uy) > 0.90 && Math.hypot(cB.ux, cB.uy) > 0.90) continue;
+          const x2 = cx + cB.ux * rad + Math.sin(rp.t * 2.2 + cB.ph) * 10;
+          const y2 = cy + cB.uy * rad + Math.cos(rp.t * 2.0 + cB.ph) * 10;
+          const nx = -(y2 - y1) * 0.28 * Math.sin(cA.ph + i);
+          const ny = (x2 - x1) * 0.28 * Math.cos(cB.ph + j);
+          const mx = (x1 + x2) / 2 + nx + Math.sin(rp.t * 2.5 + i + j) * 14;
+          const my = (y1 + y2) / 2 + ny + Math.cos(rp.t * 2.3 + i - j) * 14;
+          g.beginPath();
+          g.moveTo(x1, y1);
+          g.quadraticCurveTo(mx, my, x2, y2);
+          g.stroke();
+        }
+      }
     }
 
+    // Warm golden sparkles inside dome
     for (const sp of rp.sparks) {
-      const sx = cx + Math.cos(sp.a) * (sp.rr * (0.55 + ease * 0.85));
-      const sy = cy + Math.sin(sp.a) * (sp.rr * (0.55 + ease * 0.85));
-      g.fillStyle = `rgba(255, 244, 200, ${alpha * (0.55 + 0.45 * Math.sin(rp.t * 8 + sp.ph))})`;
+      const rr = sp.rr * rad;
+      const sx = cx + Math.cos(sp.a + rp.t * 0.08) * rr;
+      const sy = cy + Math.sin(sp.a + rp.t * 0.08) * rr;
+      const tw = 0.45 + 0.55 * Math.sin(rp.t * 7.5 + sp.ph);
+      g.fillStyle = `rgba(255, 242, 196, ${alpha * tw * 0.95})`;
       g.beginPath();
-      g.arc(sx, sy, sp.s * 1.35, 0, Math.PI * 2);
+      g.arc(sx, sy, sp.s * 1.25, 0, Math.PI * 2);
       g.fill();
     }
 
-    // Tall expressive warm human silhouettes inside the ripple (matching study/sheet.jpg row 4!)
-    g.save();
-    g.translate(cx - 18, cy + 48);
-    g.shadowColor = 'rgba(255, 210, 120, 0.95)';
-    g.shadowBlur = 24;
-    g.fillStyle = `rgba(255, 236, 192, ${alpha * 0.92})`;
-    g.strokeStyle = `rgba(255, 236, 192, ${alpha * 0.92})`;
-    g.lineCap = 'round';
-    g.lineJoin = 'round';
+    // Expressive human memory silhouettes emerging after initial crimson burst (t > 0.14s)
+    if (p > 0.10) {
+      const silAlpha = alpha * clamp((p - 0.10) / 0.16, 0, 1);
+      drawHumanSilhouettes(g, cx, cy, rp.pose, silAlpha);
+    }
 
-    // Left researcher profile facing right (head, neck, lab coat torso & outstretched hands)
-    g.beginPath();
-    g.ellipse(-74, -158, 22, 26, 0.12, 0, Math.PI * 2);
-    g.fill();
-    g.beginPath();
-    g.moveTo(-98, -124);
-    g.quadraticCurveTo(-75, -132, -52, -120);
-    g.lineTo(-42, 35);
-    g.lineTo(-54, 120);
-    g.lineTo(-96, 120);
-    g.lineTo(-104, 25);
-    g.closePath();
-    g.fill();
-    g.lineWidth = 16;
-    g.beginPath();
-    g.moveTo(-58, -94);
-    g.lineTo(-24, -52);
-    g.lineTo(8, -58);
-    g.stroke();
-
-    // Right human silhouette facing left
-    const childScale = rp.pose === 'child' ? 0.72 : 1.0;
-    g.save();
-    g.translate(78, rp.pose === 'child' ? 38 : 0);
-    g.scale(childScale, childScale);
-    g.beginPath();
-    g.ellipse(0, -154, 22, 26, -0.12, 0, Math.PI * 2);
-    g.fill();
-    g.beginPath();
-    g.moveTo(-22, -118);
-    g.quadraticCurveTo(2, -130, 26, -120);
-    g.lineTo(36, 35);
-    g.lineTo(28, 120);
-    g.lineTo(-18, 120);
-    g.lineTo(-26, 30);
-    g.closePath();
-    g.fill();
-    g.lineWidth = 16;
-    g.beginPath();
-    g.moveTo(-16, -92);
-    g.lineTo(-46, -54);
-    g.lineTo(-70 / childScale, (-58 - (rp.pose === 'child' ? 38 : 0)) / childScale);
-    g.stroke();
-    g.restore();
+    // Crisp structural mint partition lines gleaming cleanly through the golden bloom (f_033.jpg!)
+    if (mapWallsCanvas) {
+      const def = ROOM_DEFS[S.roomIdx];
+      g.save();
+      g.globalAlpha = alpha * 0.85;
+      g.translate(def.flipX ? W : 0, def.flipY ? H : 0);
+      g.scale(def.flipX ? -1 : 1, def.flipY ? -1 : 1);
+      g.drawImage(mapWallsCanvas, 0, 0);
+      g.restore();
+    }
 
     g.restore();
-    g.restore();
 
-    // Crisp outer golden shockwave ring
-    g.save();
-    g.strokeStyle = `rgba(255, 224, 150, ${alpha * 0.92})`;
-    g.lineWidth = 3.5;
+    // Crisp luminous outer golden shockwave ring
+    g.strokeStyle = `rgba(255, 226, 152, ${alpha * 0.94})`;
+    g.lineWidth = 3.8;
     g.beginPath();
     g.arc(cx, cy, rad, 0, Math.PI * 2);
     g.stroke();
+
+    // Frameless diegetic floor-etched memory whisper beside the drained socket (zero box!)
+    if (p > 0.16 && p < 0.88) {
+      const wAlpha = Math.min(1, (p - 0.16) / 0.14) * Math.min(1, (0.88 - p) / 0.18) * 0.78;
+      const wx = clamp(cx, 290, W - 290);
+      const wy = clamp(rp.oy + (rp.oy > 560 ? -36 : 44), 92, 646);
+      g.save();
+      g.font = 'italic 14px Georgia, "Times New Roman", serif';
+      g.textAlign = 'center';
+      g.shadowColor = 'rgba(6, 9, 8, 0.95)';
+      g.shadowBlur = 8;
+      g.fillStyle = `rgba(255, 232, 178, ${wAlpha})`;
+      g.fillText(rp.whisper, wx, wy);
+      g.restore();
+    }
+
+    g.restore();
+  }
+
+  return creatureTint;
+}
+
+function drawWorldStateCues(g) {
+  // Law 7: Active work pause exposes ONLY spatial [P] RESUME beside creature
+  if (S.paused) {
+    g.fillStyle = 'rgba(5, 8, 7, 0.42)';
+    g.fillRect(0, 0, W, H);
+    g.save();
+    g.font = 'bold 13px "Courier New", Courier, monospace';
+    g.textAlign = 'center';
+    g.fillStyle = PAL.fg;
+    g.fillText('[P] RESUME', S.x, S.y - 42);
+    g.restore();
+    return;
+  }
+
+  // Law 8: FAULT (spotted) locks beam in world space + crisp [R] beside creature (zero modal box!)
+  if (S.phase === 'caught') {
+    const pulse = 0.65 + 0.35 * Math.sin(S.caughtTimer * 16);
+    g.save();
+    g.strokeStyle = `rgba(224, 82, 60, ${0.75 * pulse})`;
+    g.lineWidth = 2.2;
+    g.beginPath();
+    g.arc(S.x, S.y, 34 + S.sizeTier * 8, 0, Math.PI * 2);
+    g.stroke();
+
+    g.font = 'bold 13px "Courier New", Courier, monospace';
+    g.textAlign = 'center';
+    g.fillStyle = PAL.acc;
+    g.fillText('[R] RETRY', S.x, S.y - 44 - S.sizeTier * 8);
     g.restore();
   }
 }
 
-function drawHUD(g) {
-  // Minimal clean pixel-monospace telemetry in upper-left margin + memory flash bar when active
-  g.save();
-  g.font = 'bold 14px "Courier New", Courier, monospace';
-  g.fillStyle = 'rgba(200, 230, 208, 0.76)';
-  g.textAlign = 'left';
-  const def = ROOM_DEFS[S.roomIdx];
-  g.fillText(
-    `${def.label}   ·   MASS ${S.sizeTier + 1}/3   ·   MEMORIES ${S.totalAbsorbed}`,
-    54,
-    34
-  );
-
-  // Show poignant memory flash card banner during/shortly after node absorption
-  if (S.lastMemory && (S.phase === 'flash' || S.ripples.length > 0)) {
-    const a = S.phase === 'flash' ? 0.96 : Math.min(0.92, S.ripples[0].t < 1.8 ? 0.92 : (2.35 - S.ripples[0].t) * 1.6);
-    if (a > 0.04) {
-      g.globalAlpha = Math.max(0, a);
-      g.fillStyle = 'rgba(10, 14, 13, 0.88)';
-      g.fillRect(210, 594, 860, 62);
-      g.strokeStyle = PALETTE.gold;
-      g.lineWidth = 2;
-      g.strokeRect(210, 594, 860, 62);
-
-      g.fillStyle = PALETTE.gold;
-      g.font = 'bold 13px "Courier New", Courier, monospace';
-      g.fillText(`${S.lastMemory.code} — ${S.lastMemory.who}`, 230, 616);
-
-      g.fillStyle = PALETTE.fg;
-      g.font = '16px "Courier New", Courier, monospace';
-      g.fillText(S.lastMemory.line, 230, 642);
-    }
-  }
-  g.restore();
-}
-
 function drawGlitchTitle(g) {
-  g.fillStyle = 'rgba(10, 13, 12, 0.86)';
+  // REST: Dark breathing containment room behind minimal horror-glitching identity + single [ENTER]
+  g.fillStyle = 'rgba(6, 9, 8, 0.68)';
   g.fillRect(0, 0, W, H);
 
-  // Periodic horror glitch burst (spec.json: "Pixel art; a start screen that glitches to a horror version")
-  const cyc = S.t % 2.8;
-  const glitch = (cyc > 2.35 && cyc < 2.62) || (cyc > 1.15 && cyc < 1.22);
+  const cyc = S.t % 3.1;
+  const glitch = (cyc > 2.55 && cyc < 2.80) || (cyc > 1.18 && cyc < 1.25);
 
   if (glitch) {
-    g.fillStyle = 'rgba(224, 82, 60, 0.12)';
-    g.fillRect(0, 0, W, H);
-    for (let i = 0; i < 9; i++) {
-      const sy = ((S.t * 930 + i * 83) | 0) % H;
-      const sh = 6 + (i % 4) * 8;
-      const shift = ((i % 2 === 0 ? 1 : -1) * 18);
-      g.fillStyle = i % 2 === 0 ? 'rgba(224, 82, 60, 0.28)' : 'rgba(200, 230, 208, 0.15)';
+    for (let i = 0; i < 6; i++) {
+      const sy = ((S.t * 890 + i * 97) | 0) % H;
+      const sh = 4 + (i % 3) * 6;
+      const shift = (i % 2 === 0 ? 1 : -1) * 14;
+      g.fillStyle = i % 2 === 0 ? 'rgba(224, 82, 60, 0.22)' : 'rgba(200, 230, 208, 0.12)';
       g.fillRect(shift, sy, W, sh);
     }
   }
 
+  g.save();
   g.textAlign = 'center';
   g.textBaseline = 'middle';
 
-  // Title HIVE
-  g.font = 'bold 104px "Helvetica Neue", Arial, sans-serif';
+  g.font = 'bold 96px "Helvetica Neue", Arial, sans-serif';
   if (glitch) {
-    g.fillStyle = 'rgba(200, 230, 208, 0.6)';
-    g.fillText('THEY WERE', W / 2 - 8, 272);
-    g.fillStyle = PALETTE.acc;
-    g.fillText('PEOPLE', W / 2 + 8, 276);
+    g.fillStyle = 'rgba(200, 230, 208, 0.55)';
+    g.fillText('THEY WERE', W / 2 - 7, H / 2 - 48);
+    g.fillStyle = PAL.acc;
+    g.fillText('PEOPLE', W / 2 + 7, H / 2 + 28);
   } else {
-    g.fillStyle = PALETTE.acc;
-    g.fillText('HIVE', W / 2, 274);
+    g.fillStyle = PAL.acc;
+    g.fillText('HIVE', W / 2, H / 2 - 24);
   }
 
-  g.fillStyle = glitch ? PALETTE.acc : PALETTE.fg;
-  g.font = '28px "Courier New", Courier, monospace';
-  g.fillText(glitch ? 'do not absorb us.' : 'absorb. learn. grow.', W / 2, 376);
-
-  // START button matching m2_title_ref.png
-  g.fillStyle = PALETTE.bg;
-  g.fillRect(480, 448, 320, 74);
-  g.strokeStyle = glitch ? PALETTE.acc : PALETTE.fg;
-  g.lineWidth = 5;
-  g.strokeRect(480, 448, 320, 74);
-  g.fillStyle = PALETTE.fg;
-  g.font = 'bold 28px "Courier New", Courier, monospace';
-  g.fillText('START', W / 2, 486);
-
-  g.font = '22px "Courier New", Courier, monospace';
-  g.fillStyle = 'rgba(200, 230, 208, 0.75)';
-  g.fillText('HOW TO PLAY', W / 2, 574);
-
-  if (S.howToOpen) {
-    g.fillStyle = '#0c0f0e';
-    g.fillRect(300, 600, 680, 92);
-    g.strokeStyle = PALETTE.fg;
-    g.lineWidth = 2;
-    g.strokeRect(300, 600, 680, 92);
-    g.font = '15px "Courier New", Courier, monospace';
-    g.fillStyle = PALETTE.fg;
-    g.fillText('[WASD / ARROWS] Slither behind lab walls & dodge guard beams.', W / 2, 628);
-    g.fillText('[SPACE / TOUCH] Absorb crimson nodes to grow across 3 sectors.', W / 2, 654);
-    g.fillText('Piece together what the nodes really were before the exit.', W / 2, 678);
-  }
+  const pulse = 0.55 + 0.45 * Math.sin(S.t * 3.2);
+  g.font = 'bold 16px "Courier New", Courier, monospace';
+  g.fillStyle = `rgba(200, 230, 208, ${0.45 + pulse * 0.45})`;
+  g.fillText('[ ENTER ]', W / 2, H / 2 + 86);
+  g.restore();
 }
 
-function drawCaughtOverlay(g) {
-  g.fillStyle = 'rgba(28, 8, 8, 0.78)';
+function drawGuiltDissolution(g) {
+  // COMPLETE: In-world core self-dissolution at the exit threshold (zero prose wall, Law 12!)
+  const fade = clamp(S.endTimer / 1.8, 0, 1);
+  g.fillStyle = `rgba(7, 10, 9, ${fade * 0.72})`;
   g.fillRect(0, 0, W, H);
-  g.strokeStyle = PALETTE.acc;
-  g.lineWidth = 3;
-  g.strokeRect(340, 250, 600, 220);
 
-  g.textAlign = 'center';
-  g.fillStyle = PALETTE.acc;
-  g.font = 'bold 42px "Courier New", Courier, monospace';
-  g.fillText('SPECIMEN CAUGHT', W / 2, 320);
-
-  g.fillStyle = PALETTE.fg;
-  g.font = '18px "Courier New", Courier, monospace';
-  g.fillText('Guard spotlight locked before breakout mass reached.', W / 2, 372);
-  g.fillText('Re-initializing sector stealth...', W / 2, 412);
-}
-
-function drawExitAndEndOverlay(g) {
-  if (S.phase === 'exit') {
-    const p = Math.min(1, S.exitTimer / 1.5);
-    g.fillStyle = `rgba(12, 15, 14, ${p * 0.92})`;
-    g.fillRect(0, 0, W, H);
-    g.textAlign = 'center';
-    g.fillStyle = PALETTE.gold;
-    g.font = 'bold 26px "Courier New", Courier, monospace';
-    g.fillText('SURFACE BLAST DOORS OPEN...', W / 2, H / 2 - 18);
-    g.fillStyle = PALETTE.fg;
-    g.font = '20px "Courier New", Courier, monospace';
-    g.fillText('Every voice inside the core speaks at once.', W / 2, H / 2 + 24);
-    return;
+  // Brief golden echoes of the minds absorbed surrounding the dissolving core
+  const silFade = S.endTimer < 2.6 ? Math.sin(clamp(S.endTimer / 2.6, 0, 1) * Math.PI) * 0.52 : 0;
+  if (silFade > 0.02) {
+    drawHumanSilhouettes(g, W / 2, H * 0.46, 'clipboard', silFade);
   }
 
-  // ENDING: GUILT (spec.json: "At the exit the memories add up: the nodes were people. The creature, now able to feel guilt, self-destructs.")
-  g.fillStyle = 'rgba(10, 13, 12, 0.95)';
-  g.fillRect(0, 0, W, H);
-
-  // Dissolving crimson-to-gold particles ascending from center
-  for (let i = 0; i < 36; i++) {
-    const a = i * 2.399;
-    const rr = (20 + S.endTimer * (32 + (i % 5) * 14)) % 280;
-    const px = W / 2 + Math.cos(a) * rr;
-    const py = 270 + Math.sin(a) * rr * 0.45 - (S.endTimer * 18) % 90;
-    g.fillStyle = i % 3 === 0 ? 'rgba(224,82,60,0.65)' : 'rgba(245,207,135,0.75)';
+  // Rising crimson & golden core embers
+  for (const p of S.endParticles) {
+    const a = clamp(1 - S.endTimer / 4.2, 0.12, 0.92) * (0.55 + 0.45 * Math.sin(S.endTimer * 5 + p.ph));
+    g.fillStyle = p.gold ? `rgba(245, 207, 135, ${a})` : `rgba(224, 82, 60, ${a})`;
     g.beginPath();
-    g.arc(px, py, 2.5 + (i % 3), 0, Math.PI * 2);
+    g.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     g.fill();
   }
 
-  g.strokeStyle = PALETTE.fg;
-  g.lineWidth = 3;
-  g.strokeRect(200, 125, 880, 470);
+  if (S.endTimer > 0.7) {
+    const ta = clamp((S.endTimer - 0.7) / 1.1, 0, 0.88);
+    g.save();
+    g.textAlign = 'center';
+    g.font = 'italic 20px Georgia, "Times New Roman", serif';
+    g.fillStyle = `rgba(245, 214, 156, ${ta})`;
+    g.fillText('The nodes were people.', W / 2, H * 0.56);
 
-  g.textAlign = 'center';
-  g.fillStyle = PALETTE.acc;
-  g.font = 'bold 19px "Courier New", Courier, monospace';
-  g.fillText(`EXIT THRESHOLD REACHED  ·  ${S.totalAbsorbed} MINDS ABSORBED`, W / 2, 185);
-
-  g.fillStyle = PALETTE.fg;
-  g.font = 'bold 52px "Courier New", Courier, monospace';
-  g.fillText('ENDING: GUILT', W / 2, 252);
-
-  g.fillStyle = PALETTE.gold;
-  g.font = '21px "Courier New", Courier, monospace';
-  g.fillText('Aris. Mara. Jonas. Elena. Samir. Claire. David.', W / 2, 326);
-
-  g.fillStyle = PALETTE.fg;
-  g.font = '20px "Courier New", Courier, monospace';
-  g.fillText('What the facility called intelligence nodes were people.', W / 2, 378);
-  g.fillText('Now large enough to understand what it took,', W / 2, 414);
-  g.fillText('the creature opens its core at the threshold and lets go.', W / 2, 450);
-
-  g.fillStyle = 'rgba(200, 230, 208, 0.72)';
-  g.font = 'bold 17px "Courier New", Courier, monospace';
-  g.fillText('[ENTER / SPACE] RETURN TO CONTAINMENT', W / 2, 540);
+    if (S.endTimer > 2.2) {
+      const ra = clamp((S.endTimer - 2.2) / 1.0, 0, 0.48);
+      g.font = 'bold 12px "Courier New", Courier, monospace';
+      g.fillStyle = `rgba(200, 230, 208, ${ra})`;
+      g.fillText('[R]', W / 2, H - 36);
+    }
+    g.restore();
+  }
 }
 
-// Pre-baked subtle film grain for post-processing
+// Pre-baked isotropic 2D film grain (zero vertical/horizontal periodicity)
 const grainCanvas = document.createElement('canvas');
 grainCanvas.width = 128;
 grainCanvas.height = 128;
 const gctx = grainCanvas.getContext('2d');
 const gData = gctx.createImageData(128, 128);
-for (let i = 0; i < gData.data.length; i += 4) {
-  const v = (Math.random() * 255) | 0;
-  gData.data[i] = v;
-  gData.data[i + 1] = v;
-  gData.data[i + 2] = v;
-  gData.data[i + 3] = 10;
+for (let py = 0; py < 128; py++) {
+  for (let px = 0; px < 128; px++) {
+    const i = (py * 128 + px) * 4;
+    let h = Math.imul(px + 1, 374761393) ^ Math.imul(py + 1, 668265263);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    const v = ((h ^ (h >>> 16)) >>> 0) & 255;
+    gData.data[i] = v;
+    gData.data[i + 1] = v;
+    gData.data[i + 2] = v;
+    gData.data[i + 3] = 7;
+  }
 }
 gctx.putImageData(gData, 0, 0);
 
-// Expose read-only state for play.mjs
+// Read-only state telemetry for automated playtest verification
 window.__game = {
   get state() {
     return {
       phase: S.phase,
+      paused: S.paused,
       t: +S.t.toFixed(3),
+      roomT: +S.roomT.toFixed(3),
       room: S.roomIdx,
       x: +S.x.toFixed(1),
       y: +S.y.toFixed(1),
       vx: +S.vx.toFixed(1),
       vy: +S.vy.toFixed(1),
+      heading: +S.heading.toFixed(3),
       size: S.sizeTier + 1,
       absorbed: S.totalAbsorbed,
       roomAbsorbed: S.roomAbsorbed,
@@ -1309,7 +2271,8 @@ window.__game = {
         range: g.range,
         alert: +g.alert.toFixed(2),
       })),
-      lastMemory: S.lastMemory ? S.lastMemory.line : null,
+      ripples: S.ripples.length,
+      lastMemory: S.lastMemory ? S.lastMemory.whisper : null,
     };
   },
 };
@@ -1321,37 +2284,56 @@ function frame(now) {
 
   update(dt);
 
-  drawRoomBackground(ctx);
-  drawNodes(ctx);
-  drawGuardsAndCones(ctx);
-  drawCreature(ctx);
-  drawMemoryRipples(ctx);
+  ctx.save();
+  if (S.camZoom !== 1) {
+    ctx.translate(S.camFocusX, S.camFocusY);
+    ctx.scale(S.camZoom, S.camZoom);
+    ctx.translate(-S.camFocusX, -S.camFocusY);
+  }
 
-  // Subtle floating dust motes in facility darkness
-  ctx.fillStyle = 'rgba(200, 230, 208, 0.22)';
+  drawFacility(ctx);
+  drawFlashlightIllumination(ctx);
+  drawNodes(ctx);
+  drawGuards(ctx);
+
+  // Lingering golden memory embers on dark lab floor (matches f_038.jpg!)
+  for (const em of S.embers) {
+    const p = em.life / em.maxLife;
+    const a = (p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85) * (0.55 + 0.45 * Math.sin(S.t * 6 + em.ph));
+    ctx.fillStyle = `rgba(255, 224, 152, ${a * 0.85})`;
+    ctx.beginPath();
+    ctx.arc(em.x, em.y, em.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw golden memory dome first, then creature layered cleanly with golden rim wash (matches f_033.jpg!)
+  const goldenTint = drawMemoryRipples(ctx);
+  drawCreature(ctx, goldenTint);
+
+  // Ambient dust motes
+  ctx.fillStyle = 'rgba(196, 226, 208, 0.16)';
   for (const m of S.motes) {
     ctx.fillRect(m.x, m.y, 2, 2);
   }
 
-  if (S.phase === 'room' || S.phase === 'flash') {
-    drawHUD(ctx);
-  } else if (S.phase === 'title') {
+  drawWorldStateCues(ctx);
+  ctx.restore();
+
+  if (S.phase === 'title') {
     drawGlitchTitle(ctx);
-  } else if (S.phase === 'caught') {
-    drawCaughtOverlay(ctx);
-  } else if (S.phase === 'exit' || S.phase === 'end') {
-    drawExitAndEndOverlay(ctx);
+  } else if (S.phase === 'end') {
+    drawGuiltDissolution(ctx);
   }
 
-  // Atmospheric dark vignette + subtle CRT/film grain matched to study/sheet.jpg
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, W * 0.68);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(2,5,4,0.46)');
+  // Atmospheric dark edge vignette + subtle film grain matched to study/sheet.jpg
+  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.38, W / 2, H / 2, W * 0.72);
+  vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  vig.addColorStop(1, 'rgba(2, 5, 4, 0.48)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
 
-  const ox = ((S.t * 89) | 0) % 128;
-  const oy = ((S.t * 53) | 0) % 128;
+  const ox = ((S.t * 83) | 0) % 128;
+  const oy = ((S.t * 47) | 0) % 128;
   ctx.save();
   ctx.translate(-ox, -oy);
   ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat');

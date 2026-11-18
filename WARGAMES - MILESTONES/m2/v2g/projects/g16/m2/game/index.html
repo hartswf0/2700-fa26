@@ -9,13 +9,13 @@
   :root {
     --bg: #161616;
     --fg: #d8d8d8;
-    --acc: #ff4fd8;
+    --acc: #ff00dc;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   html, body {
     width: 100%;
     height: 100%;
-    background: #0c0c0c;
+    background: #0a0a0b;
     color: var(--fg);
     font-family: "Courier New", "Lucida Console", Monaco, monospace;
     overflow: hidden;
@@ -29,13 +29,13 @@
     height: min(100vh, calc(100vw * 9 / 16));
     aspect-ratio: 16 / 9;
     background: var(--bg);
-    box-shadow: 0 0 64px rgba(0, 0, 0, 0.96);
+    box-shadow: 0 0 72px rgba(0, 0, 0, 0.98);
   }
   canvas {
     display: block;
     width: 100%;
     height: 100%;
-    cursor: pointer;
+    cursor: default;
   }
 </style>
 </head>
@@ -49,7 +49,8 @@
 
   const W = 1280, H = 720;
   // Exact inner curved CRT glass coordinates inside room_background_around_the_tv.png (scaled to 1280x720)
-  const SCR = { x: 412, y: 186, w: 438, h: 362, r: 28 };
+  const SCR = { x: 412, y: 186, w: 444, h: 363 };
+  const CAB = { x: 358, y: 143, w: 652, h: 445 };
 
   const params = new URLSearchParams(location.search);
   const AUTOSTART = params.has('autostart');
@@ -69,20 +70,111 @@
     };
   }
 
-  // --- Load Nano Banana Assets ---
+  // --- Barrel-Curved CRT Screen Path ---
+  function traceCrtGlassPath(c, x, y, w, h, pad = 0) {
+    const x0 = x - pad, y0 = y - pad, x1 = x + w + pad, y1 = y + h + pad;
+    const r = 26 + pad * 0.5;
+    const bowX = 6, bowY = 5;
+    c.beginPath();
+    c.moveTo(x0 + r, y0);
+    c.quadraticCurveTo((x0 + x1) * 0.5, y0 - bowY, x1 - r, y0);
+    c.quadraticCurveTo(x1, y0, x1, y0 + r);
+    c.quadraticCurveTo(x1 + bowX, (y0 + y1) * 0.5, x1, y1 - r);
+    c.quadraticCurveTo(x1, y1, x1 - r, y1);
+    c.quadraticCurveTo((x0 + x1) * 0.5, y1 + bowY, x0 + r, y1);
+    c.quadraticCurveTo(x0, y1, x0, y1 - r);
+    c.quadraticCurveTo(x0 - bowX, (y0 + y1) * 0.5, x0, y0 + r);
+    c.quadraticCurveTo(x0, y0, x0 + r, y0);
+    c.closePath();
+  }
+
+  // --- Load Nano Banana 2.1 Assets ---
   const assets = {
     room: new Image(),
     tvRemote: new Image(),
     channels: new Image(),
     readyCount: 0,
   };
+
   let cleanRoomCanvas = null;
+  let cleanHandCanvas = null;
   let darkHandCanvas = null;
+  let eyeFrames = [];
+
+  const crtBuf = document.createElement('canvas');
+  crtBuf.width = SCR.w;
+  crtBuf.height = SCR.h;
+  const bctx = crtBuf.getContext('2d');
+
+  // --- Pre-Render Authentic Hand-Crosshatched Charcoal Eye (2-Frame Boil, Heavy-Lidded f_022 Match) ---
+  function buildCharcoalEyeFrames() {
+    eyeFrames = [0, 1].map((frameIdx) => {
+      const cw = 280, ch = 220;
+      const ec = document.createElement('canvas');
+      ec.width = cw;
+      ec.height = ch;
+      const ectx = ec.getContext('2d');
+      const prng = mulberry32(901 + frameIdx * 137);
+      const cx = cw * 0.5, cy = ch * 0.52;
+
+      ectx.save();
+      ectx.translate(cx, cy);
+
+      // 1. Domed upper eyelid & lower bag in authentic stairwell charcoal-paper tone (#848480..#62625e, ZERO dark oval badge!)
+      ectx.save();
+      ectx.beginPath();
+      ectx.moveTo(-98, 6);
+      ectx.bezierCurveTo(-86, -68, 86, -68, 98, 4);
+      ectx.bezierCurveTo(82, 54, -82, 56, -98, 6);
+      ectx.closePath();
+      const domeGrad = ectx.createRadialGradient(0, -16, 10, 0, -4, 102);
+      domeGrad.addColorStop(0, '#969692');
+      domeGrad.addColorStop(0.58, '#7a7a76');
+      domeGrad.addColorStop(0.88, '#585855');
+      domeGrad.addColorStop(1, 'rgba(54, 54, 52, 0)');
+      ectx.fillStyle = domeGrad;
+      ectx.fill();
+      ectx.restore();
+
+      // 2. Curved spherical upper eyelid pencil/charcoal strokes (matches f_022.jpg domed lid!)
+      for (let i = 0; i < 82; i++) {
+        const t = i / 81;
+        const archY = -58 + t * 48 + (prng() - 0.5) * 2.5;
+        const halfW = 94 * Math.sqrt(Math.max(0.08, 1 - Math.pow((archY + 12) / 56, 2)));
+        const curveLift = -20 * (1 - t * 0.55) - prng() * 4;
+        const shade = Math.floor(22 + prng() * 32);
+        ectx.strokeStyle = `rgba(${shade}, ${shade}, ${shade - 1}, ${(0.22 + prng() * 0.34).toFixed(3)})`;
+        ectx.lineWidth = 0.8 + prng() * 1.15;
+        ectx.beginPath();
+        ectx.moveTo(-halfW + (prng() - 0.5) * 4, archY + 8);
+        ectx.quadraticCurveTo((prng() - 0.5) * 6, archY + curveLift, halfW + (prng() - 0.5) * 4, archY + 7);
+        ectx.stroke();
+      }
+
+      // 3. Dense horizontal/curved charcoal crosshatching under lower lid resting onto the stair steps
+      for (let i = 0; i < 95; i++) {
+        const t = i / 94;
+        const bagY = 14 + t * 38 + (prng() - 0.5) * 2.5;
+        const halfW = 92 * Math.sqrt(Math.max(0.12, 1 - Math.pow((bagY - 12) / 44, 2)));
+        const dip = 14 * (1 - t * 0.5) + (prng() - 0.5) * 3;
+        const shade = Math.floor(14 + prng() * 24);
+        ectx.strokeStyle = `rgba(${shade}, ${shade}, ${shade}, ${(0.30 + prng() * 0.40).toFixed(3)})`;
+        ectx.lineWidth = 0.9 + prng() * 1.25;
+        ectx.beginPath();
+        ectx.moveTo(-halfW + (prng() - 0.5) * 5, bagY - 3);
+        ectx.quadraticCurveTo((prng() - 0.5) * 8, bagY + dip, halfW + (prng() - 0.5) * 5, bagY - 3);
+        ectx.stroke();
+      }
+
+      ectx.restore();
+      return ec;
+    });
+  }
 
   function buildProcessedCanvases() {
     if (assets.readyCount < 3) return;
 
-    // 1. Clean uncorrupted greyscale bedroom canvas for Flip 0 (matches f_001.jpg!)
+    // 1. Spotless uncorrupted charcoal bedroom canvas (for Flip 0 & clean restoration)
     cleanRoomCanvas = document.createElement('canvas');
     cleanRoomCanvas.width = W;
     cleanRoomCanvas.height = H;
@@ -90,81 +182,219 @@
     cctx.drawImage(assets.room, 0, 0, W, H);
     const imgData = cctx.getImageData(0, 0, W, H);
     const d = imgData.data;
+    const orig = new Uint8ClampedArray(d);
 
     const mask = new Uint8Array(W * H);
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const r = d[i], g = d[i + 1], b = d[i + 2];
-      if (r > g + 34 && b > g + 24 && r > 90) {
-        mask[p] = 1;
-      }
-    }
-    const dil = new Uint8Array(W * H);
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
-        if (!mask[y * W + x]) continue;
-        const y0 = Math.max(0, y - 8), y1 = Math.min(H - 1, y + 8);
-        const x0 = Math.max(0, x - 8), x1 = Math.min(W - 1, x + 8);
-        for (let yy = y0; yy <= y1; yy++) {
-          const rowOff = yy * W;
-          for (let xx = x0; xx <= x1; xx++) {
-            dil[rowOff + xx] = 1;
-          }
+        const p = y * W + x;
+        const idx = p * 4;
+        const r = orig[idx], g = orig[idx + 1], b = orig[idx + 2];
+        // Pink checker pixels
+        const isPink = (r > g + 26 && b > g + 18 && r > 72);
+        // Pure-black checker pixels baked into wallpaper/desk glitch zones
+        const inGlitchZone =
+          (y < 143 && x >= 70 && x <= 1135) ||
+          (x >= 68 && x < 358 && y < 585) ||
+          (x > 1009 && x <= 1135 && y < 560) ||
+          (y > 586 && x >= 340 && x <= 800) ||
+          (x >= 845 && x <= 985 && y >= 340 && y <= 425);
+        const isPureBlackBlock = inGlitchZone && r < 14 && g < 14 && b < 15;
+        if (isPink || isPureBlackBlock) {
+          mask[p] = isPink ? 2 : 1;
         }
       }
     }
+
+    const dil = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const m = mask[y * W + x];
+        if (!m) continue;
+        const rad = m === 2 ? 12 : 5;
+        const y0 = Math.max(0, y - rad), y1 = Math.min(H - 1, y + rad);
+        const x0 = Math.max(0, x - rad), x1 = Math.min(W - 1, x + rad);
+        for (let yy = y0; yy <= y1; yy++) {
+          const ro = yy * W;
+          for (let xx = x0; xx <= x1; xx++) dil[ro + xx] = 1;
+        }
+      }
+    }
+
+    // Inpaint masked regions with authentic local charcoal paper luminance + grain
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const p = y * W + x;
         if (!dil[p]) continue;
-        let baseLum = 56;
-        if (x >= 250 && x <= 1060 && y < 144) baseLum = 104;
-        else if (x >= 250 && x <= 355 && y < 580) baseLum = 92;
-        else if (x >= 1009 && x <= 1075 && y < 580) baseLum = 86;
-        else if (x >= 356 && x <= 1009 && y >= 144 && y <= 604) baseLum = 58;
-        else if (y > 580) baseLum = 44;
-        const grain = (((x * 13 + y * 37) % 19) - 9) * 0.9;
-        const v = Math.max(18, Math.min(135, baseLum + grain));
-        const idx = p * 4;
+
+        // Sample nearest clean vertical/horizontal neighbor in same zone to preserve wallpaper shading
+        let sumR = 0, sumG = 0, sumB = 0, cnt = 0;
+        const inCab = (x >= CAB.x && x <= CAB.x + CAB.w && y >= CAB.y && y <= CAB.y + CAB.h);
+        if (!inCab) {
+          for (let step = 10; step <= 90; step += 16) {
+            for (const [dx, dy] of [[0, -step], [0, step], [-step, 0], [step, 0]]) {
+              const nx = x + dx, ny = y + dy;
+              if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+              if (nx >= CAB.x - 4 && nx <= CAB.x + CAB.w + 4 && ny >= CAB.y - 4 && ny <= CAB.y + CAB.h + 4) continue;
+              // Stay on same wallpaper column strip (center pillar x=246..1068)
+              const sameStrip = ((x >= 248 && x <= 1066) === (nx >= 248 && nx <= 1066)) && ((y > 585) === (ny > 585));
+              if (!sameStrip) continue;
+              const np = ny * W + nx;
+              if (!dil[np]) {
+                const ni = np * 4;
+                sumR += orig[ni]; sumG += orig[ni + 1]; sumB += orig[ni + 2];
+                cnt++;
+              }
+            }
+            if (cnt >= 2) break;
+          }
+        }
+
+        let r, g, b;
+        const grain = (((x * 17 + y * 31) % 23) - 11) * 0.75;
+        if (cnt > 0) {
+          r = sumR / cnt + grain;
+          g = sumG / cnt + grain;
+          b = sumB / cnt + grain;
+        } else {
+          let base = 56;
+          if (x >= 248 && x <= 1066 && y < 143) base = 103;
+          else if (x >= 248 && x < 358 && y < 585) base = 92;
+          else if (x > 1009 && x <= 1068 && y < 585) base = 86;
+          else if (x < 248 && y < 585) base = 46;
+          else if (x > 1068 && y < 585) base = 42;
+          else if (inCab) base = 57;
+          else if (y > 585 && y < 650) base = 52;
+          else base = 30;
+          r = base + grain; g = base - 1 + grain; b = base - 2 + grain;
+        }
+
         const onCabBorder =
-          (Math.abs(y - 144) <= 2 && x >= 355 && x <= 1010) ||
-          (Math.abs(x - 356) <= 2 && y >= 144 && y <= 604) ||
-          (Math.abs(x - 1008) <= 2 && y >= 144 && y <= 604);
-        const fv = onCabBorder ? 28 : v;
-        d[idx] = fv;
-        d[idx + 1] = fv - 1;
-        d[idx + 2] = fv - 2;
+          (Math.abs(y - CAB.y) <= 2 && x >= CAB.x && x <= CAB.x + CAB.w) ||
+          (Math.abs(x - CAB.x) <= 2 && y >= CAB.y && y <= CAB.y + CAB.h) ||
+          (Math.abs(x - (CAB.x + CAB.w)) <= 2 && y >= CAB.y && y <= CAB.y + CAB.h);
+        if (onCabBorder) { r = 24; g = 24; b = 24; }
+
+        const idx = p * 4;
+        d[idx] = Math.max(14, Math.min(148, r));
+        d[idx + 1] = Math.max(14, Math.min(146, g));
+        d[idx + 2] = Math.max(14, Math.min(144, b));
       }
+    }
+    // Harmonize entire uncorrupted room plate to pure warm-charcoal greyscale (strips baked pink bounce tint!)
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      d[i] = Math.min(255, lum + 2);
+      d[i + 1] = Math.min(255, lum + 1);
+      d[i + 2] = Math.max(0, lum - 2);
     }
     cctx.putImageData(imgData, 0, 0);
 
-    // 2. Darkened magenta-rimmed silhouette version of hand+remote for late SPILL state (matches f_032.jpg!)
-    darkHandCanvas = document.createElement('canvas');
-    darkHandCanvas.width = 400;
-    darkHandCanvas.height = 310;
-    const hctx = darkHandCanvas.getContext('2d');
-    hctx.drawImage(assets.tvRemote, 87, 692, 390, 297, 5, 5, 390, 297);
-    const hd = hctx.getImageData(0, 0, 400, 310);
+    // Restore clean hand-drawn TV right control panel details & subtle VCR deck under wooden stand (matches f_001.jpg)
+    cctx.save();
+    cctx.strokeStyle = '#1b1b1b';
+    cctx.lineWidth = 2.2;
+    // Right panel inner box & speaker grille slats where pink bar was cleaned
+    cctx.strokeRect(888, 188, 92, 206);
+    cctx.beginPath();
+    cctx.arc(934, 326, 26, 0, Math.PI * 2);
+    cctx.stroke();
+    for (let kb = 0; kb < 3; kb++) {
+      cctx.beginPath();
+      cctx.arc(904 + kb * 28, 376, 6, 0, Math.PI * 2);
+      cctx.stroke();
+    }
+    cctx.lineWidth = 2;
+    for (let sy = 404; sy <= 520; sy += 8) {
+      cctx.beginPath();
+      cctx.moveTo(888, sy);
+      cctx.lineTo(982, sy);
+      cctx.stroke();
+    }
+    // Subtle charcoal VCR deck under table (matches f_001.jpg bottom center)
+    cctx.fillStyle = '#212122';
+    cctx.fillRect(436, 666, 202, 52);
+    cctx.strokeStyle = '#111112';
+    cctx.lineWidth = 2.5;
+    cctx.strokeRect(436, 666, 202, 52);
+    cctx.strokeRect(448, 678, 96, 16);
+    cctx.beginPath();
+    cctx.arc(592, 686, 6, 0, Math.PI * 2);
+    cctx.arc(614, 686, 6, 0, Math.PI * 2);
+    cctx.stroke();
+    cctx.restore();
+
+    // 2. De-fringed Clean Hand + Remote Canvas (zero #d8d8d8 cutout halo!)
+    const hw = 410, hh = 315;
+    cleanHandCanvas = document.createElement('canvas');
+    cleanHandCanvas.width = hw;
+    cleanHandCanvas.height = hh;
+    const hctx = cleanHandCanvas.getContext('2d');
+    hctx.drawImage(assets.tvRemote, 87, 692, 390, 297, 8, 8, 390, 297);
+    const hd = hctx.getImageData(0, 0, hw, hh);
     const hp = hd.data;
-    const alphaCopy = new Uint8Array(400 * 310);
-    for (let i = 0, q = 0; i < hp.length; i += 4, q++) alphaCopy[q] = hp[i + 3];
-    for (let y = 1; y < 309; y++) {
-      for (let x = 1; x < 399; x++) {
-        const q = y * 400 + x;
-        const a = alphaCopy[q];
-        if (a < 25) continue;
+
+    // Strip light-grey studio fringe on outer semi-transparent boundary
+    const rawA = new Uint8Array(hw * hh);
+    for (let i = 0, q = 0; i < hp.length; i += 4, q++) rawA[q] = hp[i + 3];
+    for (let y = 1; y < hh - 1; y++) {
+      for (let x = 1; x < hw - 1; x++) {
+        const q = y * hw + x;
         const idx = q * 4;
-        const edge = (alphaCopy[q - 2] < 40 || alphaCopy[q + 2] < 40 || alphaCopy[q - 800] < 40);
-        if (edge) {
-          hp[idx] = 255; hp[idx + 1] = 79; hp[idx + 2] = 216;
-        } else {
-          const lum = hp[idx] * 0.22;
-          hp[idx] = Math.min(52, lum + 12);
-          hp[idx + 1] = Math.min(38, lum + 5);
-          hp[idx + 2] = Math.min(48, lum + 10);
+        const a = rawA[q];
+        if (a === 0) continue;
+        const minNeighborA = Math.min(rawA[q - 1], rawA[q + 1], rawA[q - hw], rawA[q + hw]);
+        if (a < 165 && hp[idx] > 88) {
+          hp[idx + 3] = 0;
+        } else if (minNeighborA < 90 || a < 235) {
+          // Clamp outer ink outline to deep charcoal so zero grey halo ever appears
+          hp[idx] = Math.min(hp[idx], 26);
+          hp[idx + 1] = Math.min(hp[idx + 1], 25);
+          hp[idx + 2] = Math.min(hp[idx + 2], 26);
+          hp[idx + 3] = a < 90 ? 0 : 255;
         }
       }
     }
     hctx.putImageData(hd, 0, 0);
+
+    // 3. Darkened Nocturnal Silhouette Hand + Neon-Magenta Rim Highlight (matches pair_008 left / f_033.jpg!)
+    darkHandCanvas = document.createElement('canvas');
+    darkHandCanvas.width = hw;
+    darkHandCanvas.height = hh;
+    const dctx = darkHandCanvas.getContext('2d');
+    const dd = dctx.createImageData(hw, hh);
+    const dp = dd.data;
+    const cleanA = new Uint8Array(hw * hh);
+    for (let i = 0, q = 0; i < hp.length; i += 4, q++) cleanA[q] = hp[i + 3];
+
+    for (let y = 5; y < hh - 5; y++) {
+      for (let x = 5; x < hw - 5; x++) {
+        const q = y * hw + x;
+        if (cleanA[q] < 128) continue;
+        const idx = q * 4;
+        // Bold 4px luminous neon-magenta CRT rim-light along upper/screen-facing contour (matches pair_008 left!)
+        const hotRim =
+          cleanA[q - hw] < 80 || cleanA[q - hw * 2] < 80 || cleanA[q - hw * 3] < 80 ||
+          cleanA[q - 1] < 80 || cleanA[q - 2] < 80 || cleanA[q + 1] < 80 || cleanA[q + 2] < 80;
+        const midRim = !hotRim && (
+          cleanA[q - hw * 4] < 80 || cleanA[q - hw * 5] < 80 || cleanA[q - 4] < 80 || cleanA[q + 4] < 80
+        );
+        if (hotRim && y < hh - 18) {
+          dp[idx] = 255; dp[idx + 1] = 112; dp[idx + 2] = 238; dp[idx + 3] = 255;
+        } else if (midRim && y < hh - 18) {
+          dp[idx] = 224; dp[idx + 1] = 32; dp[idx + 2] = 192; dp[idx + 3] = 255;
+        } else {
+          const origLum = hp[idx] * 0.18;
+          dp[idx] = Math.max(14, Math.min(46, origLum + 14));
+          dp[idx + 1] = Math.max(12, Math.min(41, origLum + 10));
+          dp[idx + 2] = Math.max(15, Math.min(45, origLum + 13));
+          dp[idx + 3] = 255;
+        }
+      }
+    }
+    dctx.putImageData(dd, 0, 0);
+
+    buildCharcoalEyeFrames();
   }
 
   function onAssetLoad() {
@@ -178,13 +408,13 @@
   assets.tvRemote.src = '../assets/tv_frame_and_remote.png';
   assets.channels.src = '../assets/8_channel_loops_still_or_2_frame.png';
 
-  // --- Audio (BGM + Plastic Remote Click + CRT Static Hiss + Rising Sub-Drone) ---
+  // --- Audio (Lyria 3 BGM + Mechanical Remote Click + Bandpass Static Tear + Sub-Drone + Cathode Collapse) ---
   const bgm = new Audio('../assets/bgm_loop.mp3');
   bgm.loop = true;
-  bgm.volume = 0.36;
+  bgm.volume = 0.34;
   let audioCtx = null;
   let audioUnlocked = false;
-  let droneOsc = null, droneGain = null;
+  let droneOsc = null, droneFilter = null, droneGain = null;
 
   function unlockAudio() {
     if (!audioCtx) {
@@ -193,14 +423,14 @@
         audioCtx = new AC();
         try {
           droneOsc = audioCtx.createOscillator();
+          droneFilter = audioCtx.createBiquadFilter();
           droneGain = audioCtx.createGain();
           droneOsc.type = 'sawtooth';
-          droneOsc.frequency.value = 58;
-          const lp = audioCtx.createBiquadFilter();
-          lp.type = 'lowpass';
-          lp.frequency.value = 140;
+          droneOsc.frequency.value = 55;
+          droneFilter.type = 'lowpass';
+          droneFilter.frequency.value = 135;
           droneGain.gain.value = 0.0;
-          droneOsc.connect(lp).connect(droneGain).connect(audioCtx.destination);
+          droneOsc.connect(droneFilter).connect(droneGain).connect(audioCtx.destination);
           droneOsc.start();
         } catch (_) {}
       }
@@ -214,74 +444,95 @@
     }
   }
 
-  function playRemoteClick(intensity = 0.5) {
+  function playRemoteClick(intensity = 0.4) {
     if (!audioCtx || audioCtx.state !== 'running') return;
     const now = audioCtx.currentTime;
     try {
+      // Heavy plastic button snap (press + spring release micro-transient)
       const o = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       o.type = 'square';
-      o.frequency.setValueAtTime(1350, now);
-      o.frequency.exponentialRampToValueAtTime(220, now + 0.028);
-      g.gain.setValueAtTime(0.14, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.032);
+      o.frequency.setValueAtTime(1480, now);
+      o.frequency.exponentialRampToValueAtTime(190, now + 0.026);
+      g.gain.setValueAtTime(0.15, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
       o.connect(g).connect(audioCtx.destination);
-      o.start(now); o.stop(now + 0.035);
+      o.start(now); o.stop(now + 0.032);
 
-      const dur = 0.14 + intensity * 0.12;
+      // Analog RF sync-tear hiss burst
+      const dur = 0.18 + intensity * 0.16;
       const len = Math.floor(audioCtx.sampleRate * dur);
       const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
       const ch = buf.getChannelData(0);
       for (let i = 0; i < len; i++) {
-        ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.55));
+        ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.58));
       }
       const src = audioCtx.createBufferSource();
       src.buffer = buf;
       const bp = audioCtx.createBiquadFilter();
       bp.type = 'bandpass';
-      bp.frequency.value = 1800;
+      bp.frequency.value = 1650 - intensity * 420;
+      bp.Q.value = 0.9;
       const sg = audioCtx.createGain();
-      sg.gain.setValueAtTime(0.08 + intensity * 0.08, now + 0.015);
+      sg.gain.setValueAtTime(0.09 + intensity * 0.09, now + 0.012);
       sg.gain.exponentialRampToValueAtTime(0.001, now + dur);
       src.connect(bp).connect(sg).connect(audioCtx.destination);
-      src.start(now + 0.015);
+      src.start(now + 0.012);
     } catch (_) {}
   }
 
-  function playPowerOffSfx() {
+  function playCalmStillnessChime() {
     if (!audioCtx || audioCtx.state !== 'running') return;
     const now = audioCtx.currentTime;
     try {
       const o = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       o.type = 'sine';
-      o.frequency.setValueAtTime(3800, now);
-      o.frequency.exponentialRampToValueAtTime(90, now + 0.45);
-      g.gain.setValueAtTime(0.08, now);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      o.frequency.setValueAtTime(392, now);
+      o.frequency.exponentialRampToValueAtTime(196, now + 1.1);
+      g.gain.setValueAtTime(0.045, now);
+      g.gain.exponentialRampToValueAtTime(0.0008, now + 1.2);
       o.connect(g).connect(audioCtx.destination);
-      o.start(now); o.stop(now + 0.5);
-      if (droneGain) droneGain.gain.setTargetAtTime(0, now, 0.2);
+      o.start(now); o.stop(now + 1.25);
+      if (droneGain) droneGain.gain.setTargetAtTime(0.0, now, 0.35);
     } catch (_) {}
   }
 
-  // --- 2x2 Half-Life 2 Missing-Texture Checker Pattern (#ff4fd8 & #000000) ---
-  function makeCheckerPattern(tilePx) {
+  function playDegaussResetSfx() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const now = audioCtx.currentTime;
+    try {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(110, now);
+      o.frequency.exponentialRampToValueAtTime(42, now + 0.38);
+      g.gain.setValueAtTime(0.18, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.44);
+      if (droneGain) droneGain.gain.setTargetAtTime(0.0, now, 0.12);
+    } catch (_) {}
+  }
+
+  // --- Crisp 2x2 Half-Life 2 Missing-Texture Checker Pattern (#ff00dc & #050306) ---
+  function makeCheckerCanvas(tilePx) {
     const pc = document.createElement('canvas');
     pc.width = tilePx * 2;
     pc.height = tilePx * 2;
     const pctx = pc.getContext('2d');
-    pctx.fillStyle = '#ff4fd8';
+    pctx.fillStyle = '#ff00dc';
     pctx.fillRect(0, 0, tilePx, tilePx);
     pctx.fillRect(tilePx, tilePx, tilePx, tilePx);
-    pctx.fillStyle = '#070507';
+    pctx.fillStyle = '#060407';
     pctx.fillRect(tilePx, 0, tilePx, tilePx);
     pctx.fillRect(0, tilePx, tilePx, tilePx);
-    return ctx.createPattern(pc, 'repeat');
+    return pc;
   }
-  const checkerPat16 = makeCheckerPattern(16);
+  const checkerPat16 = ctx.createPattern(makeCheckerCanvas(16), 'repeat');
+  const checkerPat12 = ctx.createPattern(makeCheckerCanvas(12), 'repeat');
 
-  // --- 8 Broadcast Channels (ordered to match Omni video progression: CH 07 -> CH 01 -> CH 03 -> ...) ---
+  // --- 8 Broadcast Channels (Sequenced to Omni Seed Video: CH 07 -> CH 01 -> CH 03 -> Corridor -> Woods -> Face -> Door -> SYSTEM ERROR) ---
   const CHANNELS = [
     {
       num: 'CH 07',
@@ -302,12 +553,6 @@
       caption: '"IT IS WATCHING"',
     },
     {
-      num: 'CH 04',
-      mode: 'sprite',
-      crop: [136, 557, 226, 166],
-      caption: '"THE NEXT CHANNEL EXPLAINS IT"',
-    },
-    {
       num: 'CH 02',
       mode: 'sprite',
       crop: [136, 308, 226, 166],
@@ -320,6 +565,12 @@
       caption: '"OUTSIDE IS MISSING. STAY HERE."',
     },
     {
+      num: 'CH 04',
+      mode: 'sprite',
+      crop: [136, 557, 226, 166],
+      caption: '"THE NEXT CHANNEL EXPLAINS IT"',
+    },
+    {
       num: 'CH 06',
       mode: 'sprite',
       crop: [136, 805, 226, 166],
@@ -327,9 +578,9 @@
     },
     {
       num: 'CH 08',
-      mode: 'static_err',
-      crop: [630, 308, 224, 166],
-      altCrop: [630, 805, 224, 166],
+      mode: 'system_err',
+      crop: [652, 68, 226, 168],
+      altCrop: [636, 802, 228, 166],
       caption: '"SYSTEM ERROR"',
     },
   ];
@@ -338,147 +589,250 @@
   let runIdx = 0;
 
   const game = {
-    phase: AUTOSTART ? 'ch' : 'title', // title | ch | spill | end
-    endingKind: null, // 'taken_over' | 'put_down'
-    howToOpen: false,
+    phase: AUTOSTART ? 'ch' : 'title', // title (REST) | ch (READY/WORKING) | spill (CHANGED) | complete (COMPLETE) | end (FAULT) | recovery (RECOVERY)
+    endingKind: null, // null | 'put_down' | 'taken_over'
     seed: BASE_SEED,
     time: 0,
     phaseTime: 0,
+    chTime: 0,
     idleSinceFlip: 0,
+    stillnessThreshold: 4.5,
     flips: 0,
-    maxFlipsToEnd: 11,
+    maxFlipsToFault: 10,
     chIdx: 0,
     corruption: 0,
-    staticBurst: 0,
+    visualCorruption: 0,
+    syncTear: 0,       // 1..0 over 0.44s on channel flip (analog VHS/CRT horizontal sync-roll + V-blank bar)
+    checkerFlash: 0,   // brief checker flash on mid/late flips (matches f_019..f_020)
+    powerOnFlash: AUTOSTART ? 0 : 0,
     remoteClickAnim: 0,
     remoteDropAnim: 0,
+    hoverZone: 'none', // 'none' | 'flip' | 'lower'
+    downHoldSec: 0,
+    downHeld: false,
     eyeBlink: 0,
+    fps: 60,
     glitchClusters: [],
-    wallCircuits: [],
+    deskPatches: [],
+    wallTendrils: [],
     sparks: [],
   };
 
-  function initSession(seedVal, skipTitle) {
+  function getVoidState() {
+    if (game.phase === 'title') return 'REST';
+    if (game.phase === 'recovery') return 'RECOVERY';
+    if (game.phase === 'complete' || game.endingKind === 'put_down') return 'COMPLETE';
+    if (game.phase === 'end' && game.endingKind === 'taken_over') return 'FAULT';
+    if (game.syncTear > 0.08 || game.remoteClickAnim > 0.15) return 'WORKING';
+    if (game.flips >= 1) return 'CHANGED';
+    return 'READY';
+  }
+
+  function initSession(seedVal, skipRest) {
     rng = mulberry32(seedVal);
     game.seed = seedVal;
-    game.phase = skipTitle ? 'ch' : 'title';
+    game.phase = skipRest ? 'ch' : 'title';
     game.endingKind = null;
-    game.howToOpen = false;
     game.phaseTime = 0;
+    game.chTime = 0;
     game.idleSinceFlip = 0;
     game.flips = 0;
     game.chIdx = 0;
     game.corruption = 0;
-    game.staticBurst = skipTitle ? 0.15 : 0;
+    game.visualCorruption = 0;
+    game.syncTear = 0;
+    game.checkerFlash = 0;
+    game.powerOnFlash = skipRest ? 0.18 : 0;
     game.remoteClickAnim = 0;
-    game.remoteDropAnim = 0;
+    game.remoteDropAnim = skipRest ? 0 : 0.25;
+    game.downHoldSec = 0;
+    game.downHeld = false;
     game.glitchClusters = [];
-    game.wallCircuits = [];
+    game.deskPatches = [];
+    game.wallTendrils = [];
     game.sparks = [];
   }
 
-  function spawnFlipGlitches(flipNum) {
-    const count = 4 + Math.min(9, flipNum * 2);
-    const minDist = 175 + Math.min(180, flipNum * 18);
-    const maxDist = 280 + Math.min(390, flipNum * 45);
-    const cx = SCR.x + SCR.w * 0.5;
-    const cy = SCR.y + SCR.h * 0.5;
+  // --- Organic Bezel-Anchored Missing-Texture Clusters + Glowing Neon-Magenta Orthogonal Tendrils ---
+  function spawnFlipCorruption(flipNum) {
+    // Anchor early clusters tightly onto the CRT bezel rim (matching pair_005 left!), expanding outward on later flips
+    const clusterCount = flipNum <= 2 ? 6 : (5 + Math.min(7, flipNum));
+    const spread = Math.min(1, Math.max(0, (flipNum - 2) / 5));
 
-    for (let i = 0; i < count; i++) {
-      const ang = rng() * Math.PI * 2;
-      const dist = minDist + rng() * (maxDist - minDist);
-      const gx = Math.round((cx + Math.cos(ang) * dist * 1.25) / 16) * 16;
-      const gy = Math.round((cy + Math.sin(ang) * dist * 0.85) / 16) * 16;
-      const cols = 2 + Math.floor(rng() * (2 + Math.min(4, Math.floor(flipNum / 2))));
-      const rows = 2 + Math.floor(rng() * (2 + Math.min(4, Math.floor(flipNum / 2))));
+    for (let i = 0; i < clusterCount; i++) {
+      const perimeterSide = i % 4; // 0:left bezel, 1:top bezel, 2:right bezel, 3:upper-left/lower-left bezel
+      let gx, gy;
+      if (perimeterSide === 0) {
+        gx = CAB.x - 28 - rng() * (34 + spread * 210);
+        gy = CAB.y + 18 + rng() * (CAB.h - 40);
+      } else if (perimeterSide === 1) {
+        gx = CAB.x - 10 + rng() * (CAB.w - 20);
+        gy = CAB.y - 26 - rng() * (24 + spread * 85);
+      } else if (perimeterSide === 2) {
+        gx = SCR.x + SCR.w + 48 + rng() * (110 + spread * 190);
+        gy = CAB.y + 30 + rng() * (CAB.h - 60);
+      } else {
+        gx = CAB.x - 42 - rng() * (40 + spread * 140);
+        gy = CAB.y - 18 + rng() * (CAB.h * 0.85);
+      }
 
+      const tile = 16;
+      gx = Math.round(gx / tile) * tile;
+      gy = Math.round(gy / tile) * tile;
+
+      const cols = 3 + Math.floor(rng() * (2 + Math.min(3, Math.floor(flipNum * 0.5))));
+      const rows = 3 + Math.floor(rng() * (2 + Math.min(3, Math.floor(flipNum * 0.5))));
       const cells = [];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          if (rng() < 0.76 || (r === 0 && c === 0)) {
-            cells.push([c, r]);
+          const distCenter = Math.hypot(c - cols * 0.5, r - rows * 0.5) / Math.max(1, Math.max(cols, rows) * 0.58);
+          if (rng() < (0.94 - distCenter * 0.32) || (r === 1 && c === 1)) {
+            cells.push([c, r, (c + r) % 2 === 0]);
           }
         }
       }
+
+      // Delay Flip 1 bezel eruption by 0.24s so t=2.00s (pair_002) shows pure analog CRT sync-roll in a clean room!
       game.glitchClusters.push({
-        x: gx - (cols * 8),
-        y: gy - (rows * 8),
-        tile: rng() < 0.5 ? 12 : 16,
+        x: gx - Math.floor(cols * 0.5) * tile,
+        y: gy - Math.floor(rows * 0.5) * tile,
+        tile,
         cells,
-        inScreen: flipNum >= 6 && rng() < 0.35,
+        bornAt: game.time + (flipNum === 1 ? (0.24 + rng() * 0.20) : (0.05 + rng() * 0.14)),
+        threshold: Math.max(0.04, (flipNum - 0.9) / game.maxFlipsToFault),
       });
     }
 
+    // Perspective checker patches spilling onto the wooden tabletop
     if (flipNum >= 2) {
-      const lineCount = 3 + flipNum;
-      for (let i = 0; i < lineCount; i++) {
-        const leftSide = rng() < 0.52;
-        let lx = leftSide ? (18 + rng() * 310) : (960 + rng() * 300);
-        let ly = 30 + rng() * 640;
-        const pts = [[lx, ly]];
-        const segs = 3 + Math.floor(rng() * 4);
-        for (let s = 0; s < segs; s++) {
-          if (s % 2 === 0) lx += (rng() > 0.5 ? 1 : -1) * (22 + rng() * 54);
-          else ly += (rng() > 0.5 ? 1 : -1) * (22 + rng() * 54);
-          pts.push([lx, ly]);
-        }
-        game.wallCircuits.push({ pts });
+      const deskCount = flipNum === 2 ? 1 : 2;
+      for (let d = 0; d < deskCount; d++) {
+        const px = 250 + rng() * 430;
+        const py = 592 + rng() * 52;
+        game.deskPatches.push({
+          x: px,
+          y: py,
+          cols: 3 + Math.floor(rng() * 4),
+          rows: 2 + Math.floor(rng() * 3),
+          tw: 16 + Math.floor(rng() * 6),
+          th: 7 + Math.floor(rng() * 4),
+          shear: -0.45 + rng() * 0.25,
+          bornAt: game.time + 0.12 + rng() * 0.15,
+          threshold: Math.max(0.08, (flipNum - 0.8) / game.maxFlipsToFault),
+        });
       }
     }
 
-    for (let i = 0; i < 18; i++) {
+    // Clean, spaced glowing neon-magenta (#ff2ae5) orthogonal circuit tendrils on left & right walls (capped at 16 so never tangled!)
+    if (flipNum >= 2 && game.wallTendrils.length < 16) {
+      const tendrilCount = flipNum === 2 ? 5 : 3;
+      for (let i = 0; i < tendrilCount && game.wallTendrils.length < 16; i++) {
+        const goLeft = (game.wallTendrils.length % 2 === 0);
+        let tx = goLeft ? (CAB.x - 18 - rng() * (30 + spread * 140)) : (CAB.x + CAB.w + 8 + rng() * (30 + spread * 130));
+        let ty = 48 + ((game.wallTendrils.length * 83 + Math.floor(rng() * 50)) % 510);
+        const pts = [[tx, ty]];
+        const segs = 3 + Math.floor(rng() * 3);
+        for (let s = 0; s < segs; s++) {
+          if (s % 2 === 0) {
+            const outward = goLeft ? -1 : 1;
+            tx = Math.max(10, Math.min(W - 10, tx + outward * (24 + rng() * 46)));
+          } else {
+            const dir = rng() < 0.5 ? -1 : 1;
+            ty = Math.max(14, Math.min(610, ty + dir * (22 + rng() * 44)));
+          }
+          pts.push([Math.round(tx), Math.round(ty)]);
+        }
+        if (rng() < 0.6) {
+          const bw = (goLeft ? -1 : 1) * (18 + Math.floor(rng() * 16));
+          const bh = (rng() < 0.5 ? -1 : 1) * (18 + Math.floor(rng() * 16));
+          pts.push([tx + bw, ty], [tx + bw, ty + bh], [tx, ty + bh]);
+        }
+        game.wallTendrils.push({
+          pts,
+          bornAt: game.time + 0.10 + rng() * 0.16,
+          threshold: Math.max(0.08, (flipNum - 0.9) / game.maxFlipsToFault),
+        });
+      }
+    }
+
+    // Phosphor glitch sparks flying from bezel seam
+    const sparkCount = flipNum === 1 ? 8 : 16;
+    const scx = SCR.x + SCR.w * 0.5, scy = SCR.y + SCR.h * 0.5;
+    for (let i = 0; i < sparkCount; i++) {
       const a = rng() * Math.PI * 2;
-      const sp = 35 + rng() * 140;
+      const sp = 42 + rng() * 145;
       game.sparks.push({
-        x: cx + (rng() - 0.5) * SCR.w * 0.9,
-        y: cy + (rng() - 0.5) * SCR.h * 0.9,
+        x: scx + Math.cos(a) * (SCR.w * 0.48),
+        y: scy + Math.sin(a) * (SCR.h * 0.46),
         vx: Math.cos(a) * sp,
         vy: Math.sin(a) * sp,
-        size: rng() < 0.6 ? 6 : 10,
-        life: 0.9 + rng() * 1.4,
-        age: 0,
-        black: rng() < 0.25,
+        size: rng() < 0.65 ? 6 : 10,
+        life: 0.55 + rng() * 0.85,
+        age: flipNum === 1 ? -0.20 : 0,
+        black: rng() < 0.28,
       });
     }
   }
 
-  function flipChannel(dir = 1) {
-    if (game.phase === 'end') return;
+  function tuneToChannel(nextIdx) {
+    if (game.phase === 'end' || game.phase === 'recovery') return;
     unlockAudio();
 
     if (game.phase === 'title') {
       game.phase = 'ch';
       game.phaseTime = 0;
-      game.staticBurst = 0.65;
+      game.chTime = 0;
+      game.powerOnFlash = 1.0;
+      game.syncTear = 0.55;
       game.remoteClickAnim = 1.0;
+      game.remoteDropAnim = 0;
+      playRemoteClick(0.25);
+      return;
+    }
+
+    if (game.phase === 'complete') {
+      // Picking the remote back up from calm CH 00
+      game.phase = 'ch';
+      game.endingKind = null;
+      game.phaseTime = 0;
+      game.chTime = 0;
+      game.idleSinceFlip = 0;
+      game.remoteDropAnim = 0;
+      game.remoteClickAnim = 1.0;
+      game.syncTear = 0.85;
       playRemoteClick(0.3);
       return;
     }
 
     game.flips++;
     game.idleSinceFlip = 0;
+    game.downHoldSec = 0;
     game.remoteClickAnim = 1.0;
-    game.staticBurst = 1.0;
+    game.syncTear = 1.0;
+    game.checkerFlash = game.flips >= 2 ? Math.min(1, 0.55 + game.flips * 0.08) : 0;
+    game.chIdx = ((nextIdx % CHANNELS.length) + CHANNELS.length) % CHANNELS.length;
+    game.chTime = 0;
 
-    if (dir >= 0) {
-      game.chIdx = (game.chIdx + 1) % CHANNELS.length;
-    } else {
-      game.chIdx = (game.chIdx - 1 + CHANNELS.length) % CHANNELS.length;
+    // Escalate corruption so Flip 7 (CH 08 "SYSTEM ERROR") reaches 0.86 surge and Flip 10 triggers full FAULT consumption
+    game.corruption = Math.min(1, Math.pow(game.flips / game.maxFlipsToFault, 0.82));
+    if (CHANNELS[game.chIdx].mode === 'system_err' && game.corruption < 0.84) {
+      game.corruption = 0.86;
     }
 
-    game.corruption = Math.min(1, game.flips / game.maxFlipsToEnd);
-    spawnFlipGlitches(game.flips);
+    spawnFlipCorruption(game.flips);
     playRemoteClick(game.corruption);
 
-    if (droneGain && audioCtx) {
-      droneGain.gain.setTargetAtTime(Math.min(0.18, game.corruption * 0.18), audioCtx.currentTime, 0.15);
+    if (droneGain && droneFilter && audioCtx) {
+      droneGain.gain.setTargetAtTime(Math.min(0.19, game.corruption * 0.19), audioCtx.currentTime, 0.14);
+      droneFilter.frequency.setTargetAtTime(135 + game.corruption * 320, audioCtx.currentTime, 0.18);
     }
 
-    if (game.flips >= game.maxFlipsToEnd) {
+    if (game.flips >= game.maxFlipsToFault) {
       game.phase = 'end';
       game.endingKind = 'taken_over';
+      game.corruption = 1.0;
       game.phaseTime = 0;
-    } else if (game.flips >= 3) {
+    } else if (game.flips >= 2) {
       game.phase = 'spill';
       game.phaseTime = 0;
     } else {
@@ -487,28 +841,58 @@
     }
   }
 
+  function flipChannel(dir = 1) {
+    tuneToChannel(game.chIdx + (dir >= 0 ? 1 : -1));
+  }
+
   function putRemoteDown() {
     if (game.phase !== 'ch' && game.phase !== 'spill') return;
     unlockAudio();
-    game.phase = 'end';
+    game.phase = 'complete';
     game.endingKind = 'put_down';
     game.phaseTime = 0;
-    playPowerOffSfx();
+    game.downHoldSec = 0;
+    playCalmStillnessChime();
   }
 
-  // --- Input Handling ---
+  function triggerDegaussRecovery() {
+    if (game.phase !== 'end') return;
+    unlockAudio();
+    game.phase = 'recovery';
+    game.phaseTime = 0;
+    playDegaussResetSfx();
+  }
+
+  // --- Spatial & Keyboard Input (VOIDBASTARD-TAO Law 4, 5, 8, 13) ---
   window.addEventListener('keydown', (e) => {
     unlockAudio();
     const k = e.key;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(k)) {
       e.preventDefault();
     }
+    if (e.repeat && k === 'ArrowDown') return;
 
     if (game.phase === 'title') {
-      if (k === 'h' || k === 'H') {
-        game.howToOpen = !game.howToOpen;
-      } else if (k === ' ' || k === 'Enter' || k === 'ArrowUp' || k === 'ArrowRight') {
-        flipChannel(1);
+      if (k === ' ' || k === 'Enter' || k === 'ArrowUp' || k === 'ArrowRight') {
+        tuneToChannel(0);
+      }
+      return;
+    }
+
+    if (game.phase === 'end') {
+      if (k === 'r' || k === 'R') {
+        triggerDegaussRecovery();
+      }
+      return;
+    }
+
+    if (game.phase === 'complete') {
+      if (k === 'r' || k === 'R') {
+        runIdx++;
+        initSession(BASE_SEED + runIdx, true);
+        playRemoteClick(0.2);
+      } else if (k === ' ' || k === 'Enter' || k === 'ArrowUp') {
+        tuneToChannel(0);
       }
       return;
     }
@@ -516,65 +900,115 @@
     if (game.phase === 'ch' || game.phase === 'spill') {
       if (k === 'p' || k === 'P' || k === 'Escape') {
         putRemoteDown();
-      } else if (k === 'ArrowDown' || k === 'ArrowLeft') {
+        return;
+      }
+      if (k >= '1' && k <= '8') {
+        tuneToChannel(parseInt(k, 10) - 1);
+        return;
+      }
+      if (k === 'ArrowDown') {
+        game.downHeld = true;
+        game.downHoldSec = 0;
+        return;
+      }
+      if (k === 'ArrowLeft') {
         flipChannel(-1);
       } else if (k === ' ' || k === 'Enter' || k === 'ArrowUp' || k === 'ArrowRight') {
         flipChannel(1);
       }
-      return;
     }
+  });
 
-    if (game.phase === 'end') {
-      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') {
-        runIdx++;
-        initSession(BASE_SEED + runIdx, true);
-        playRemoteClick(0.2);
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowDown' && game.downHeld) {
+      const held = game.downHoldSec;
+      game.downHeld = false;
+      game.downHoldSec = 0;
+      if ((game.phase === 'ch' || game.phase === 'spill') && held < 0.42) {
+        flipChannel(-1);
       }
     }
+  });
+
+  function getCanvasCoords(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return [
+      (ev.clientX - rect.left) * (W / rect.width),
+      (ev.clientY - rect.top) * (H / rect.height),
+    ];
+  }
+
+  function classifySpatialZone(px, py) {
+    if (game.phase === 'title') {
+      const onTvOrRemote = (px >= CAB.x && px <= CAB.x + CAB.w && py >= CAB.y && py <= CAB.y + CAB.h) || (px >= 740 && py >= 460);
+      return onTvOrRemote ? 'flip' : 'none';
+    }
+    if (game.phase === 'complete') {
+      const onTv = (px >= CAB.x && px <= CAB.x + CAB.w && py >= CAB.y && py <= CAB.y + CAB.h);
+      return onTv ? 'flip' : 'none';
+    }
+    if (game.phase === 'end') {
+      const onScreen = (px >= SCR.x && px <= SCR.x + SCR.w && py >= SCR.y && py <= SCR.y + SCR.h);
+      return onScreen ? 'flip' : 'none';
+    }
+    // Lower part of physical remote / wrist lowers the remote out of frame (Law 5)
+    if (px >= 785 && px <= 1265 && py >= 588) {
+      return 'lower';
+    }
+    // Upper remote keypad or TV cabinet/screen flips channel
+    const onUpperRemote = (px >= 735 && px <= 1040 && py >= 455 && py < 588);
+    const onTv = (px >= CAB.x && px <= CAB.x + CAB.w && py >= CAB.y && py <= CAB.y + CAB.h);
+    if (onUpperRemote || onTv) {
+      return 'flip';
+    }
+    // Law 13: Empty bedroom regions remain inactive
+    return 'none';
+  }
+
+  canvas.addEventListener('mousemove', (ev) => {
+    const [px, py] = getCanvasCoords(ev);
+    game.hoverZone = classifySpatialZone(px, py);
+    canvas.style.cursor = game.hoverZone === 'none' ? 'default' : 'pointer';
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    game.hoverZone = 'none';
+    canvas.style.cursor = 'default';
   });
 
   canvas.addEventListener('click', (ev) => {
     unlockAudio();
-    const rect = canvas.getBoundingClientRect();
-    const px = (ev.clientX - rect.left) * (W / rect.width);
-    const py = (ev.clientY - rect.top) * (H / rect.height);
+    const [px, py] = getCanvasCoords(ev);
 
-    // Ignore synthetic center focus-click at startup so CH 07 holds cleanly for f_001.jpg!
-    if (game.time < 3.2 && Math.abs(px - W * 0.5) < 4 && Math.abs(py - H * 0.5) < 4 && AUTOSTART) {
+    // Ignore synthetic headless focus-click at exact viewport center during pre-roll so CH 07 holds cleanly at t=0
+    if (AUTOSTART && game.flips === 0 && game.time < 3.6 && Math.abs(px - W * 0.5) < 8 && Math.abs(py - H * 0.5) < 8) {
       return;
     }
+
+    const zone = classifySpatialZone(px, py);
+    if (zone === 'none') return;
 
     if (game.phase === 'title') {
-      if (py >= 550 && py <= 612 && px >= 490 && px <= 790) {
-        game.howToOpen = !game.howToOpen;
-      } else {
-        flipChannel(1);
-      }
-      return;
-    }
-
-    if (game.phase === 'end') {
-      runIdx++;
-      initSession(BASE_SEED + runIdx, true);
-      playRemoteClick(0.2);
-      return;
-    }
-
-    if ((game.phase === 'ch' || game.phase === 'spill') && px <= 265 && py >= 665) {
+      tuneToChannel(0);
+    } else if (game.phase === 'end') {
+      triggerDegaussRecovery();
+    } else if (game.phase === 'complete') {
+      tuneToChannel(0);
+    } else if (zone === 'lower') {
       putRemoteDown();
-      return;
+    } else if (zone === 'flip') {
+      flipChannel(1);
     }
-
-    flipChannel(1);
   });
 
+  // --- CRT Scanline Overlay ---
   const crtScanCanvas = document.createElement('canvas');
   crtScanCanvas.width = W;
   crtScanCanvas.height = H;
   {
     const sctx = crtScanCanvas.getContext('2d');
     for (let y = 0; y < H; y += 3) {
-      sctx.fillStyle = 'rgba(0, 0, 0, 0.19)';
+      sctx.fillStyle = 'rgba(0, 0, 0, 0.17)';
       sctx.fillRect(0, y, W, 1);
     }
   }
@@ -582,36 +1016,76 @@
   // --- Update Loop ---
   let prevNow = performance.now();
   function tick(now) {
-    const dt = Math.min(0.05, Math.max(0.001, (now - prevNow) / 1000));
+    const rawDt = (now - prevNow) / 1000;
     prevNow = now;
-    game.time += dt;
-    game.phaseTime += dt;
-
-    game.staticBurst = Math.max(0, game.staticBurst - dt * 2.9);
-    game.remoteClickAnim = Math.max(0, game.remoteClickAnim - dt * 5.2);
-
-    if (game.phase === 'ch' || game.phase === 'spill') {
-      game.idleSinceFlip += dt;
-      if (!AUTOSTART && game.flips >= 1 && game.idleSinceFlip > 11.0) {
-        putRemoteDown();
-      }
-    } else if (game.phase === 'end' && game.endingKind === 'put_down') {
-      game.remoteDropAnim = Math.min(1, game.remoteDropAnim + dt * 1.4);
-      game.corruption = Math.max(0, game.corruption - dt * 0.75);
-    } else if (game.phase === 'end' && game.endingKind === 'taken_over') {
-      game.corruption = 1.0;
+    const dt = Math.min(0.05, Math.max(0.001, rawDt));
+    if (rawDt > 0.0005) {
+      game.fps = game.fps * 0.9 + (1 / rawDt) * 0.1;
     }
 
-    const blinkCycle = game.time % 3.4;
-    game.eyeBlink = blinkCycle > 3.15 ? Math.sin(((blinkCycle - 3.15) / 0.25) * Math.PI) : 0;
+    game.time += dt;
+    game.phaseTime += dt;
+    game.chTime += dt;
+
+    game.syncTear = Math.max(0, game.syncTear - dt * 2.28);
+    game.checkerFlash = Math.max(0, game.checkerFlash - dt * 3.1);
+    game.powerOnFlash = Math.max(0, game.powerOnFlash - dt * 3.2);
+    game.remoteClickAnim = Math.max(0, game.remoteClickAnim - dt * 5.4);
+
+    if (game.phase === 'ch' || game.phase === 'spill') {
+      if (game.downHeld) {
+        game.downHoldSec += dt;
+        if (game.downHoldSec >= 0.42) {
+          game.downHeld = false;
+          putRemoteDown();
+        }
+      }
+
+      if (game.flips >= 1) {
+        game.idleSinceFlip += dt;
+        // Untouched stillness discovery (~4.5s without feeding the TV lowers the remote & heals the room)
+        const preEase = game.idleSinceFlip > 2.45 ? Math.min(1, (game.idleSinceFlip - 2.45) / (game.stillnessThreshold - 2.45)) : 0;
+        game.remoteDropAnim = preEase * 0.34;
+        const targetCorr = game.corruption * (1 - preEase * 0.38);
+        game.visualCorruption += (targetCorr - game.visualCorruption) * Math.min(1, dt * 6);
+
+        if (droneGain && audioCtx && preEase > 0) {
+          droneGain.gain.setTargetAtTime(Math.max(0, game.corruption * 0.19 * (1 - preEase * 0.7)), audioCtx.currentTime, 0.2);
+        }
+
+        if (game.idleSinceFlip >= game.stillnessThreshold) {
+          putRemoteDown();
+        }
+      } else {
+        game.remoteDropAnim = Math.max(0, game.remoteDropAnim - dt * 4);
+        game.visualCorruption = 0;
+      }
+    } else if (game.phase === 'complete') {
+      game.remoteDropAnim = Math.min(1, game.remoteDropAnim + dt * 1.35);
+      game.corruption = Math.max(0, game.corruption - dt * 0.68);
+      game.visualCorruption = Math.max(0, game.visualCorruption - dt * 0.78);
+    } else if (game.phase === 'end') {
+      game.visualCorruption = 1.0;
+    } else if (game.phase === 'recovery') {
+      game.visualCorruption = Math.max(0, 1 - game.phaseTime / 0.42);
+      if (game.phaseTime >= 0.42) {
+        runIdx++;
+        initSession(BASE_SEED + runIdx, true);
+      }
+    }
+
+    // Synchronize eye blink to chTime so at t=5.0s (chTime ~ 0.88s) the charcoal eye is 100% wide open!
+    const blinkMod = (game.chTime + 1.1) % 3.6;
+    game.eyeBlink = blinkMod > 3.34 ? Math.sin(((blinkMod - 3.34) / 0.26) * Math.PI) : 0;
 
     for (let i = game.sparks.length - 1; i >= 0; i--) {
       const sp = game.sparks[i];
       sp.age += dt;
+      if (sp.age < 0) continue;
       sp.x += sp.vx * dt;
       sp.y += sp.vy * dt;
-      sp.vx *= 0.96;
-      sp.vy *= 0.96;
+      sp.vx *= 0.95;
+      sp.vy *= 0.95;
       if (sp.age >= sp.life) game.sparks.splice(i, 1);
     }
 
@@ -619,474 +1093,660 @@
     requestAnimationFrame(tick);
   }
 
-  // --- Render Helpers ---
-  function drawWatchingEye(cx, cy, blink) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    const openY = Math.max(0.08, 1 - blink * 0.92);
+  // --- Draw Authentic Heavy-Lidded Charcoal Eye Inside CRT Buffer (Matches pair_005 left / f_022.jpg!) ---
+  function drawCharcoalWatchingEye(c, cx, cy, blink) {
+    if (eyeFrames.length === 0) return;
+    const boilIdx = Math.floor(game.time * 8) % eyeFrames.length;
+    const frame = eyeFrames[boilIdx];
+    const openY = Math.max(0.06, 1 - blink * 0.94);
 
-    // Sketchy horizontal cross-hatched eyelids blended directly into the staircase art (matches f_022 / pair_005.00!)
-    ctx.strokeStyle = 'rgba(20, 20, 20, 0.58)';
-    ctx.lineWidth = 1.6;
-    for (let i = -8; i <= 8; i++) {
-      const w = 108 * Math.sqrt(Math.max(0, 1 - (i / 9) * (i / 9)));
-      const yOff = i * 6.8;
-      ctx.beginPath();
-      ctx.moveTo(-w, yOff + Math.sin(i * 2.3) * 2);
-      ctx.quadraticCurveTo(0, yOff + (i < 0 ? -12 : 12), w, yOff - Math.cos(i * 1.9) * 2);
-      ctx.stroke();
+    c.save();
+    c.translate(cx, cy);
+
+    // 1. Pre-rendered charcoal-paper domed upper eyelid & crosshatched lower eye bag
+    c.drawImage(frame, -140, -114);
+
+    // 2. Heavy-hooded, uncanny asymmetric almond eye opening (upper lid cuts across top of iris like f_022.jpg!)
+    c.save();
+    c.beginPath();
+    c.moveTo(-92, 6);
+    c.bezierCurveTo(-48, -26 * openY, 44, -28 * openY, 92, 2);
+    c.bezierCurveTo(46, 30 * openY, -46, 32 * openY, -92, 6);
+    c.closePath();
+
+    const sclGrad = c.createRadialGradient(0, 4, 8, 0, 2, 94);
+    sclGrad.addColorStop(0, '#b5b5b0');
+    sclGrad.addColorStop(0.55, '#91918c');
+    sclGrad.addColorStop(0.86, '#646460');
+    sclGrad.addColorStop(1, '#383836');
+    c.fillStyle = sclGrad;
+    c.fill();
+    c.clip();
+
+    // Horizontal charcoal grain lines across sclera
+    c.strokeStyle = 'rgba(32, 32, 30, 0.22)';
+    c.lineWidth = 1;
+    for (let gy = -22; gy <= 24; gy += 4) {
+      c.beginPath();
+      c.moveTo(-92, gy);
+      c.lineTo(92, gy + ((gy % 8 === 0) ? 1 : -1));
+      c.stroke();
     }
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(-104, 4);
-    ctx.quadraticCurveTo(0, -56 * openY, 104, 2);
-    ctx.quadraticCurveTo(0, 52 * openY, -104, 4);
-    ctx.closePath();
-    const sg = ctx.createRadialGradient(0, 0, 18, 0, 0, 104);
-    sg.addColorStop(0, '#c6c6c2');
-    sg.addColorStop(0.65, '#9d9d99');
-    sg.addColorStop(1, '#555552');
-    ctx.fillStyle = sg;
-    ctx.fill();
-    ctx.clip();
+    // Iris tucked slightly beneath the heavy hooded upper eyelid (matches f_022.jpg!)
+    const lookX = 2 + Math.sin(game.time * 1.45) * 3.5;
+    const lookY = -3 + Math.cos(game.time * 1.15) * 1.8;
+    const irisR = 30;
 
-    const lookX = Math.sin(game.time * 1.7) * 5;
-    const lookY = Math.cos(game.time * 1.3) * 2.5;
-    ctx.fillStyle = '#424240';
-    ctx.beginPath();
-    ctx.arc(lookX, lookY, 35, 0, Math.PI * 2);
-    ctx.fill();
+    const irisGrad = c.createRadialGradient(lookX, lookY, 9, lookX, lookY, irisR);
+    irisGrad.addColorStop(0, '#262624');
+    irisGrad.addColorStop(0.55, '#5d5d59');
+    irisGrad.addColorStop(0.85, '#2b2b29');
+    irisGrad.addColorStop(1, '#10100f');
+    c.fillStyle = irisGrad;
+    c.beginPath();
+    c.arc(lookX, lookY, irisR, 0, Math.PI * 2);
+    c.fill();
 
-    ctx.strokeStyle = '#181818';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 32; i++) {
-      const a = (i / 32) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(lookX + Math.cos(a) * 14, lookY + Math.sin(a) * 14);
-      ctx.lineTo(lookX + Math.cos(a) * 34, lookY + Math.sin(a) * 34);
-      ctx.stroke();
+    // Hand-inked radial charcoal iris striations
+    c.strokeStyle = 'rgba(14, 14, 14, 0.76)';
+    c.lineWidth = 1.2;
+    for (let i = 0; i < 44; i++) {
+      const a = (i / 44) * Math.PI * 2 + (boilIdx * 0.03);
+      const r0 = 11 + ((i * 7) % 3);
+      const r1 = irisR - 1 - ((i * 5) % 3);
+      c.beginPath();
+      c.moveTo(lookX + Math.cos(a) * r0, lookY + Math.sin(a) * r0);
+      c.lineTo(lookX + Math.cos(a) * r1, lookY + Math.sin(a) * r1);
+      c.stroke();
     }
 
-    ctx.fillStyle = '#0c0c0c';
-    ctx.beginPath();
-    ctx.arc(lookX, lookY, 15, 0, Math.PI * 2);
-    ctx.fill();
+    // Deep charcoal pupil + subtle catchlight
+    c.fillStyle = '#080808';
+    c.beginPath();
+    c.arc(lookX, lookY, 12.5, 0, Math.PI * 2);
+    c.fill();
 
-    ctx.fillStyle = '#e8e8e6';
-    ctx.beginPath();
-    ctx.arc(lookX - 7, lookY - 7, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    c.fillStyle = '#dededa';
+    c.beginPath();
+    c.ellipse(lookX + 6, lookY - 4, 4.2, 3.4, -0.25, 0, Math.PI * 2);
+    c.fill();
 
-    ctx.strokeStyle = '#121212';
-    ctx.lineWidth = 3.2;
-    for (let k = -1; k <= 1; k++) {
-      ctx.beginPath();
-      ctx.moveTo(-108, 4 + k * 1.5);
-      ctx.quadraticCurveTo(0, (-56 + k * 4) * openY, 108, 2 + k * 1.5);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(-104, 4 + k * 1.5);
-      ctx.quadraticCurveTo(0, (52 + k * 3) * openY, 104, 2 + k * 1.5);
-      ctx.stroke();
+    // Heavy cast shadow under the hooded upper eyelid across top of sclera & iris
+    const lidShadow = c.createLinearGradient(0, -26 * openY, 0, (-26 + 24) * openY);
+    lidShadow.addColorStop(0, 'rgba(10, 10, 10, 0.86)');
+    lidShadow.addColorStop(0.55, 'rgba(18, 18, 18, 0.42)');
+    lidShadow.addColorStop(1, 'rgba(18, 18, 18, 0)');
+    c.fillStyle = lidShadow;
+    c.fillRect(-100, -34, 200, 32);
+    c.restore();
+
+    // 3. Multi-pass scratchy charcoal ink contours for hooded upper lid, high arched eyelid fold, & lower lid
+    const jit = boilIdx === 0 ? 0 : 0.8;
+    c.strokeStyle = '#111111';
+    for (let pass = -1; pass <= 1; pass++) {
+      c.lineWidth = pass === 0 ? 3.4 : 1.4;
+      c.beginPath();
+      c.moveTo(-96, 6 + pass * 1.1);
+      c.bezierCurveTo(-48, (-27 + pass * 2.0 + jit) * openY, 46, (-29 + pass * 1.8 - jit) * openY, 96, 2 + pass * 1.1);
+      c.stroke();
+
+      c.lineWidth = pass === 0 ? 2.4 : 1.1;
+      c.beginPath();
+      c.moveTo(-92, 6 + pass * 1.0);
+      c.bezierCurveTo(-44, (31 + pass * 1.8 - jit) * openY, 44, (29 + pass * 1.6 + jit) * openY, 93, 3 + pass * 1.0);
+      c.stroke();
     }
-    for (let c = 1; c <= 3; c++) {
-      ctx.lineWidth = 2.0 - c * 0.35;
-      ctx.beginPath();
-      ctx.moveTo(-102 + c * 5, (-8 - c * 7) * openY);
-      ctx.quadraticCurveTo(0, (-64 - c * 11) * openY, 102 - c * 5, (-8 - c * 7) * openY);
-      ctx.stroke();
-    }
 
-    ctx.restore();
+    // High arched upper eyelid crease & dome contour (distinctive double-fold above hooded eye in f_022.jpg!)
+    c.strokeStyle = 'rgba(16, 16, 16, 0.82)';
+    c.lineWidth = 2.1;
+    c.beginPath();
+    c.moveTo(-92, -1 * openY);
+    c.bezierCurveTo(-46, (-44 + jit) * openY, 46, (-45 - jit) * openY, 92, -3 * openY);
+    c.stroke();
+
+    c.strokeStyle = 'rgba(22, 22, 22, 0.58)';
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(-84, -10 * openY);
+    c.bezierCurveTo(-40, (-62 + jit) * openY, 40, (-62 - jit) * openY, 84, -11 * openY);
+    c.stroke();
+
+    c.restore();
   }
 
+  // --- Draw Base Channel Scene Onto Offscreen CRT Buffer (crtBuf) ---
+  function drawChannelToBuffer(ch) {
+    const bw = SCR.w, bh = SCR.h;
+    bctx.clearRect(0, 0, bw, bh);
+
+    if (game.phase === 'complete') {
+      // CH 00: Calm, snowless hand-sketched night horizon / quiet stillness (Law 12: zero new demand)
+      const g = bctx.createLinearGradient(0, 0, 0, bh);
+      g.addColorStop(0, '#222326');
+      g.addColorStop(0.62, '#2d2e31');
+      g.addColorStop(1, '#1d1e20');
+      bctx.fillStyle = g;
+      bctx.fillRect(0, 0, bw, bh);
+
+      // Quiet hand-drawn windowpane & distant crescent moon stillness
+      bctx.strokeStyle = 'rgba(216, 216, 214, 0.22)';
+      bctx.lineWidth = 2;
+      bctx.strokeRect(bw * 0.30, bh * 0.18, bw * 0.40, bh * 0.54);
+      bctx.beginPath();
+      bctx.moveTo(bw * 0.50, bh * 0.18); bctx.lineTo(bw * 0.50, bh * 0.72);
+      bctx.moveTo(bw * 0.30, bh * 0.45); bctx.lineTo(bw * 0.70, bh * 0.45);
+      bctx.stroke();
+
+      bctx.fillStyle = 'rgba(226, 226, 222, 0.55)';
+      bctx.beginPath();
+      bctx.arc(bw * 0.60, bh * 0.31, 11, 0, Math.PI * 2);
+      bctx.fill();
+      bctx.fillStyle = '#26272a';
+      bctx.beginPath();
+      bctx.arc(bw * 0.60 + 5, bh * 0.31 - 3, 9.5, 0, Math.PI * 2);
+      bctx.fill();
+      return;
+    }
+
+    if (ch.mode === 'minimal7') {
+      // Exact match to f_001.jpg: dark scanlined grey screen with ONLY the small 7-square diagonal pink/black tear
+      bctx.fillStyle = '#333335';
+      bctx.fillRect(0, 0, bw, bh);
+      bctx.strokeStyle = 'rgba(216, 216, 216, 0.16)';
+      bctx.lineWidth = 1.6;
+      for (let y = 34; y < bh - 24; y += 38) {
+        bctx.beginPath();
+        bctx.moveTo(0, y); bctx.lineTo(bw, y);
+        bctx.stroke();
+      }
+      const bx = 172 + Math.round(Math.sin(game.time * 2.4) * 1.5);
+      const by = 122;
+      const sq = 21;
+      const blocks = [
+        [0, 0, '#ff00dc'],
+        [1, 1, '#070507'], [2, 1, '#ff00dc'],
+        [3, 2, '#070507'],
+        [2, 3, '#070507'], [3, 3, '#ff00dc'],
+        [5, 4, '#ff00dc'],
+      ];
+      for (const [gx, gy, col] of blocks) {
+        bctx.fillStyle = col;
+        bctx.fillRect(bx + gx * sq, by + gy * sq, sq, sq);
+      }
+      return;
+    }
+
+    if (ch.mode === 'system_err' || (game.phase === 'end' && game.endingKind === 'taken_over')) {
+      // Dense horizontally-sheared #ff00dc / #000000 missing-texture checkerboard takeover (matches pair_008 left / f_033.jpg!)
+      bctx.fillStyle = '#070507';
+      bctx.fillRect(0, 0, bw, bh);
+      if (assets.readyCount >= 3) {
+        const useAlt = (Math.floor(game.time * 10) % 2 === 1) && ch.altCrop;
+        const [sx, sy, sw, sh] = useAlt ? ch.altCrop : ch.crop;
+        bctx.drawImage(assets.channels, sx, sy, sw, sh, -6, -6, bw + 12, bh + 12);
+      }
+      // Crisp scanline-sheared 2x2 #ff00dc / #050306 checker bands + analog tear bar across middle
+      const tile = 20;
+      const rows = Math.ceil(bh / tile) + 1;
+      const cols = Math.ceil(bw / tile) + 4;
+      for (let r = 0; r < rows; r++) {
+        const ry = r * tile;
+        const wave = Math.round(Math.sin(r * 0.75 + game.time * 19) * 8 + (Math.sin(r * 2.3 - game.time * 31) > 0.68 ? 14 : 0));
+        for (let c = -2; c < cols; c++) {
+          const isPink = ((r + c) & 1) === 0;
+          // Leave subtle organic sub-fractures where Nano Banana static/checker peeks through
+          if (((r * 13 + c * 7 + Math.floor(game.time * 9)) % 11) === 0) continue;
+          bctx.fillStyle = isPink ? '#ff00dc' : '#070508';
+          bctx.fillRect(c * tile + wave, ry, tile, tile - 1);
+        }
+      }
+      // Analog horizontal tear band across lower-middle of tube (matches f_033.jpg!)
+      const tearY = Math.floor(bh * 0.57 + Math.sin(game.time * 13) * 8);
+      for (let ty = 0; ty < 38; ty += 3) {
+        const lum = 135 + ((ty * 29 + Math.floor(game.time * 240)) % 95);
+        bctx.fillStyle = `rgba(${lum}, ${lum - 10}, ${lum}, 0.52)`;
+        bctx.fillRect(0, tearY + ty, bw, 2);
+      }
+      return;
+    }
+
+    if (assets.readyCount >= 3) {
+      const [sx, sy, sw, sh] = ch.crop;
+      const boilScale = (Math.floor(game.time * 8) % 2 === 0) ? 1.0 : 1.014;
+      const dw = bw * boilScale;
+      const dh = bh * boilScale;
+      bctx.drawImage(assets.channels, sx, sy, sw, sh, -(dw - bw) * 0.5, -(dh - bh) * 0.5, dw, dh);
+
+      if (ch.mode === 'eye') {
+        drawCharcoalWatchingEye(bctx, bw * 0.50, bh * 0.48, game.eyeBlink);
+      }
+    }
+  }
+
+  // --- Composite CRT Screen Onto Main Canvas with Analog VHS/CRT Sync-Roll & OSD ---
   function renderCrtScreenContent() {
     ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(SCR.x, SCR.y, SCR.w, SCR.h, SCR.r);
+    traceCrtGlassPath(ctx, SCR.x, SCR.y, SCR.w, SCR.h, 0);
     ctx.clip();
 
-    if (game.phase === 'title' || (game.phase === 'end' && game.endingKind === 'put_down')) {
-      ctx.fillStyle = '#202022';
+    // REST (TV OFF — diegetic dark phosphor tube, zero modal boxes!)
+    if (game.phase === 'title') {
+      ctx.fillStyle = '#19191b';
       ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
-      if (game.phase === 'end' && game.phaseTime < 0.45) {
-        const p = game.phaseTime / 0.45;
-        const lw = SCR.w * (1 - p);
-        const lh = Math.max(2, 16 * (1 - p * 0.8));
-        ctx.fillStyle = '#f2f2f2';
-        ctx.fillRect(SCR.x + (SCR.w - lw) * 0.5, SCR.y + SCR.h * 0.5 - lh * 0.5, lw, lh);
-      }
+      // Subtle curved glass reflection + faint etched standby phosphor
+      ctx.strokeStyle = 'rgba(220, 220, 220, 0.11)';
+      ctx.lineWidth = 13;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(SCR.x + 26, SCR.y + 94);
+      ctx.quadraticCurveTo(SCR.x + 28, SCR.y + 26, SCR.x + 110, SCR.y + 24);
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255, 0, 220, 0.55)';
+      ctx.font = 'bold 28px "Courier New", monospace';
+      ctx.fillText('CHANNEL 0', SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.48);
+      ctx.fillStyle = 'rgba(216, 216, 216, 0.38)';
+      ctx.font = '16px "Courier New", monospace';
+      ctx.fillText('[ POWER ]', SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.58);
+      ctx.restore();
+      return;
+    }
+
+    // RECOVERY (Authentic CRT cathode collapse line -> pinpoint dot)
+    if (game.phase === 'recovery') {
+      ctx.fillStyle = '#121113';
+      ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+      const p = Math.min(1, game.phaseTime / 0.42);
+      const lw = Math.max(8, SCR.w * (1 - p * 0.96));
+      const lh = Math.max(3, 24 * Math.pow(1 - p, 2.2));
+      ctx.fillStyle = p < 0.5 ? '#ff7af0' : '#f4f4f4';
+      ctx.fillRect(SCR.x + (SCR.w - lw) * 0.5, SCR.y + SCR.h * 0.5 - lh * 0.5, lw, lh);
       ctx.restore();
       return;
     }
 
     const ch = CHANNELS[game.chIdx];
-    const jitterX = (Math.sin(game.time * 43) > 0.7 ? 2 : 0) + (game.staticBurst > 0 ? (Math.random() - 0.5) * 18 : 0);
-    const jitterY = (Math.cos(game.time * 37) > 0.75 ? 1.5 : 0);
+    drawChannelToBuffer(ch);
 
-    ctx.fillStyle = '#262628';
+    ctx.fillStyle = '#1d1d1f';
     ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
 
-    if (ch.mode === 'minimal7') {
-      ctx.fillStyle = '#323234';
-      ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
-      ctx.strokeStyle = 'rgba(216, 216, 216, 0.16)';
-      ctx.lineWidth = 2;
-      for (let y = SCR.y + 34; y < SCR.y + SCR.h - 24; y += 42) {
-        ctx.beginPath();
-        ctx.moveTo(SCR.x, y); ctx.lineTo(SCR.x + SCR.w, y);
-        ctx.stroke();
+    // 1. Draw base channel with horizontal scanline sync-shear during channel flip!
+    const tear = game.syncTear;
+    if (tear > 0.04) {
+      const stripH = 6;
+      const vRoll = Math.floor(tear * SCR.h * 0.42) % SCR.h;
+      for (let sy = 0; sy < SCR.h; sy += stripH) {
+        const srcY = (sy + vRoll) % SCR.h;
+        const hShear = Math.sin(sy * 0.065 + game.time * 46) * 34 * tear
+                     + (Math.cos(sy * 0.19 - game.time * 62) > 0.55 ? 22 * tear : 0);
+        const hClamp = Math.min(stripH, SCR.h - srcY);
+        ctx.globalAlpha = 1 - tear * 0.48;
+        ctx.drawImage(crtBuf, 0, srcY, SCR.w, hClamp, SCR.x + hShear, SCR.y + sy, SCR.w, hClamp);
       }
-      const bx = SCR.x + 172 + Math.round(Math.sin(game.time * 3) * 2);
-      const by = SCR.y + 126;
-      const sq = 22;
-      const blocks = [
-        [0, 0, '#ff4fd8'],
-        [1, 1, '#080808'], [2, 1, '#ff4fd8'],
-        [3, 2, '#080808'],
-        [2, 3, '#080808'], [3, 3, '#ff4fd8'],
-        [5, 4, '#ff4fd8'],
-      ];
-      for (const [gx, gy, col] of blocks) {
-        ctx.fillStyle = col;
-        ctx.fillRect(bx + gx * sq, by + gy * sq, sq, sq);
-      }
-    } else if (assets.readyCount >= 3) {
-      const [sx, sy, sw, sh] = (ch.mode === 'static_err' && Math.sin(game.time * 18) > 0.25 && ch.altCrop)
-        ? ch.altCrop
-        : ch.crop;
-      const boilScale = (Math.floor(game.time * 8) % 2 === 0) ? 1.0 : 1.018;
-      const dw = SCR.w * boilScale;
-      const dh = SCR.h * boilScale;
-      ctx.drawImage(
-        assets.channels,
-        sx, sy, sw, sh,
-        SCR.x - (dw - SCR.w) * 0.5 + jitterX,
-        SCR.y - (dh - SCR.h) * 0.5 + jitterY,
-        dw, dh
-      );
+      ctx.globalAlpha = 1;
 
-      if (ch.mode === 'eye') {
-        drawWatchingEye(SCR.x + SCR.w * 0.51 + jitterX * 0.3, SCR.y + SCR.h * 0.50, game.eyeBlink);
+      // Authentic wavy analog VHS/CRT RF marble ribbons + bright right-edge horizontal sync-curl + dark V-blank sync bar (matches pair_002 left / f_009.jpg!)
+      const rfAlpha = Math.min(0.96, tear * 1.45);
+      for (let y = 0; y < SCR.h; y += 3) {
+        const warp = Math.sin(y * 0.032 - game.time * 19) * 2.4;
+        const wave = Math.sin(y * 0.085 + warp + game.time * 36) * 0.55 + Math.cos(y * 0.16 - game.time * 27) * 0.45;
+        const lum = Math.floor(156 + wave * 68 + (((y * 19 + Math.floor(game.time * 320)) % 29) - 14));
+        ctx.fillStyle = `rgba(${lum}, ${lum}, ${lum - 2}, ${(rfAlpha * 0.78).toFixed(3)})`;
+        ctx.fillRect(SCR.x, SCR.y + y, SCR.w, 3);
+
+        // Right-edge white sync-curl sawtooth + dark notch (distinctive CRT horizontal hold loss in f_009.jpg!)
+        const curlPhase = Math.sin(y * 0.082 + game.time * 31);
+        const curlW = Math.max(0, (curlPhase * 0.5 + 0.5) * 52 * tear);
+        if (curlW > 14) {
+          ctx.fillStyle = `rgba(242, 242, 240, ${(rfAlpha * 0.90).toFixed(3)})`;
+          ctx.fillRect(SCR.x + SCR.w - curlW, SCR.y + y, curlW * 0.58, 3);
+          ctx.fillStyle = `rgba(20, 20, 22, ${(rfAlpha * 0.88).toFixed(3)})`;
+          ctx.fillRect(SCR.x + SCR.w - curlW * 0.42, SCR.y + y, curlW * 0.42, 3);
+        }
       }
+
+      // Dark rolling Vertical-Blanking Interval (V-BI) sync bar across middle of CRT
+      const vbarY = SCR.y + Math.floor(SCR.h * (0.43 + (1 - tear) * 0.10));
+      ctx.fillStyle = `rgba(18, 18, 20, ${Math.min(0.96, tear * 1.45).toFixed(3)})`;
+      ctx.fillRect(SCR.x, vbarY, SCR.w, 28);
+      ctx.fillStyle = `rgba(98, 98, 100, ${(tear * 0.55).toFixed(3)})`;
+      ctx.fillRect(SCR.x, vbarY + 3, SCR.w, 2);
+    } else {
+      const microJitX = Math.sin(game.time * 37) > 0.86 ? 1.5 : 0;
+      ctx.drawImage(crtBuf, SCR.x + microJitX, SCR.y);
     }
 
-    const staticAmt = Math.max(game.staticBurst, game.corruption > 0.65 ? (game.corruption - 0.55) * 0.85 : 0.04);
-    if (staticAmt > 0.05) {
-      const bandCount = Math.floor(6 + staticAmt * 28);
-      for (let i = 0; i < bandCount; i++) {
-        const by = SCR.y + ((i * 37 + Math.floor(game.time * 260)) % SCR.h);
-        const bh = 2 + ((i * 13) % 9);
-        const lum = 175 + ((i * 29) % 75);
-        ctx.fillStyle = `rgba(${lum}, ${lum}, ${lum}, ${(staticAmt * 0.65).toFixed(3)})`;
-        ctx.fillRect(SCR.x, by, SCR.w, bh);
+    // 2. Brief wavy pink/black checker tear during mid/late channel transitions (matches f_019..f_020!)
+    if (game.checkerFlash > 0.32 && game.flips >= 2 && ch.mode !== 'system_err') {
+      const cfAlpha = Math.min(0.88, (game.checkerFlash - 0.32) * 1.45);
+      ctx.save();
+      ctx.globalAlpha = cfAlpha;
+      ctx.fillStyle = checkerPat16;
+      for (let band = 0; band < 7; band++) {
+        const by = SCR.y + band * 52;
+        const bx = SCR.x + Math.round(Math.sin(band * 1.7 + game.time * 32) * 18);
+        ctx.fillRect(bx - 20, by, SCR.w + 40, 44);
       }
+      ctx.restore();
     }
 
-    if (game.corruption >= 0.45) {
-      const invAlpha = Math.min(0.92, (game.corruption - 0.42) * 1.45);
+    // 3. Progressive screen-edge missing-texture encroachment at high corruption (before full CH 08 takeover)
+    if (game.visualCorruption >= 0.52 && ch.mode !== 'system_err' && game.phase !== 'end' && game.phase !== 'complete') {
+      const invAlpha = Math.min(0.85, (game.visualCorruption - 0.50) * 1.5);
       ctx.save();
       ctx.globalAlpha = invAlpha;
       ctx.fillStyle = checkerPat16;
-      const patchCount = Math.floor(4 + game.corruption * 14);
-      for (let i = 0; i < patchCount; i++) {
-        const pw = 48 + ((i * 53) % 140);
-        const ph = 32 + ((i * 41) % 96);
-        const px = SCR.x + ((i * 97 + game.flips * 31) % (SCR.w - 40));
-        const py = SCR.y + ((i * 71 + game.flips * 19) % (SCR.h - 30));
-        if (game.phase === 'end' && game.endingKind === 'taken_over') {
-          ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
-          break;
-        }
+      const patches = Math.floor(3 + game.visualCorruption * 9);
+      for (let i = 0; i < patches; i++) {
+        const pw = 48 + ((i * 53) % 112);
+        const ph = 32 + ((i * 41) % 72);
+        const px = SCR.x + ((i * 103 + game.flips * 29) % (SCR.w - 36));
+        const py = SCR.y + ((i * 79 + game.flips * 23) % (SCR.h - 32));
         ctx.fillRect(px, py, pw, ph);
       }
       ctx.restore();
     }
 
-    ctx.strokeStyle = 'rgba(225, 225, 225, 0.16)';
-    ctx.lineWidth = 14;
+    // 4. Curved CRT glass corner sheen + rolling hum bar + inner glass vignette
+    ctx.strokeStyle = 'rgba(232, 232, 230, 0.16)';
+    ctx.lineWidth = 13;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(SCR.x + 26, SCR.y + 92);
-    ctx.quadraticCurveTo(SCR.x + 28, SCR.y + 26, SCR.x + 108, SCR.y + 24);
+    ctx.moveTo(SCR.x + 24, SCR.y + 92);
+    ctx.quadraticCurveTo(SCR.x + 26, SCR.y + 24, SCR.x + 106, SCR.y + 22);
     ctx.stroke();
 
-    const barY = SCR.y + ((game.time * 58) % SCR.h);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
-    ctx.fillRect(SCR.x, barY, SCR.w, 18);
+    if (game.powerOnFlash > 0.02) {
+      ctx.fillStyle = `rgba(245, 240, 248, ${(game.powerOnFlash * 0.65).toFixed(3)})`;
+      ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+    }
+
+    const humY = SCR.y + ((game.time * 52) % SCR.h);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.fillRect(SCR.x, humY, SCR.w, 16);
 
     const sv = ctx.createRadialGradient(
-      SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.h * 0.34,
-      SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.w * 0.62
+      SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.h * 0.35,
+      SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.w * 0.64
     );
     sv.addColorStop(0, 'rgba(0,0,0,0)');
-    sv.addColorStop(1, 'rgba(10,10,12,0.55)');
+    sv.addColorStop(1, 'rgba(8,8,10,0.52)');
     ctx.fillStyle = sv;
     ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
 
-    ctx.fillStyle = '#e6e6e6';
+    // 5. Crisp CRT Phosphor OSD (Channel Number top-right + Broadcast Imperative bottom-center)
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.88)';
+    ctx.shadowBlur = 4;
+
+    let osdNum = game.phase === 'complete' ? 'CH 00' : ch.num;
+    if ((ch.mode === 'system_err' || game.phase === 'end') && Math.sin(game.time * 24) > 0.1) {
+      osdNum = 'CH 03'; // Matches f_033.jpg / f_040.jpg flickering OSD!
+    }
+    ctx.fillStyle = '#ececec';
     ctx.font = 'bold 28px "Courier New", monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(ch.num, SCR.x + SCR.w - 32, SCR.y + 52);
+    ctx.fillText(osdNum, SCR.x + SCR.w - 30, SCR.y + 52);
 
-    ctx.font = 'bold 20px "Courier New", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ededed';
-    ctx.fillText(ch.caption, SCR.x + SCR.w * 0.47, SCR.y + SCR.h - 54);
+    if (game.phase !== 'complete') {
+      const capText = (game.phase === 'end' && game.endingKind === 'taken_over') ? '"SYSTEM ERROR"' : ch.caption;
+      ctx.font = 'bold 20px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f2f2f2';
+      ctx.fillText(capText, SCR.x + SCR.w * 0.49, SCR.y + SCR.h - 52);
 
+      // Law 8 & Law 14: Diegetic CRT OSD recovery line ONLY when FAULT state is reached (never cluttering normal play!)
+      if (game.phase === 'end' && game.endingKind === 'taken_over' && game.phaseTime > 0.5) {
+        const pulse = 0.62 + 0.38 * Math.sin(game.time * 5.5);
+        ctx.fillStyle = `rgba(242, 242, 242, ${pulse.toFixed(3)})`;
+        ctx.font = 'bold 15px "Courier New", monospace';
+        ctx.fillText('[R] DEGAUSS', SCR.x + SCR.w * 0.49, SCR.y + SCR.h - 24);
+      }
+    }
+    ctx.restore();
+
+    ctx.restore();
+
+    // Seal the curved CRT inner bezel contour in crisp hand-drawn charcoal ink so zero edge seam ever leaks
+    ctx.save();
+    traceCrtGlassPath(ctx, SCR.x, SCR.y, SCR.w, SCR.h, 0);
+    ctx.strokeStyle = '#161616';
+    ctx.lineWidth = 4;
+    ctx.stroke();
     ctx.restore();
   }
 
-  function renderSpillGlitches() {
-    if (game.corruption <= 0.01 && game.glitchClusters.length === 0) return;
+  // --- Render Room-Spilling Checker Clusters, Perspective Desk Patches & Glowing Neon-Magenta Tendrils ---
+  function renderSpillCorruption() {
+    const vc = game.visualCorruption;
+    if (vc <= 0.005 && game.sparks.length === 0) return;
 
-    if (game.wallCircuits.length > 0 && game.corruption > 0.05) {
+    // 1. Glowing neon-magenta (#ff2ae5) orthogonal right-angle wireframe tendrils on bedroom walls
+    if (game.wallTendrils.length > 0 && vc > 0.08) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 79, 216, 0.34)';
-      ctx.lineWidth = 9;
-      for (const wc of game.wallCircuits) {
+      ctx.lineCap = 'square';
+      ctx.lineJoin = 'miter';
+
+      for (const td of game.wallTendrils) {
+        const age = game.time - td.bornAt;
+        if (age <= 0) continue;
+        // Grow outward on flips; smoothly retract back toward bezel as vc recedes in stillness!
+        const reach = Math.min(1, age * 3.4) * Math.min(1, Math.max(0, (vc - td.threshold * 0.55) / 0.28));
+        if (reach <= 0.04) continue;
+
+        const maxSegs = Math.max(1, Math.ceil((td.pts.length - 1) * reach));
+
+        // Outer neon-magenta bloom
+        ctx.strokeStyle = 'rgba(255, 0, 220, 0.36)';
+        ctx.lineWidth = 8.5;
         ctx.beginPath();
-        wc.pts.forEach(([x, y], idx) => {
-          if (idx === 0) ctx.moveTo(x, y);
+        for (let i = 0; i <= maxSegs && i < td.pts.length; i++) {
+          const [x, y] = td.pts[i];
+          if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
-        });
+        }
         ctx.stroke();
-      }
-      ctx.strokeStyle = '#ff6ae2';
-      ctx.lineWidth = 3.2;
-      ctx.globalAlpha = Math.min(0.96, 0.45 + game.corruption * 0.65);
-      for (const wc of game.wallCircuits) {
-        ctx.beginPath();
-        wc.pts.forEach(([x, y], idx) => {
-          if (idx === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
+
+        // Crisp luminous core (#ff48ea)
+        ctx.strokeStyle = '#ff48ea';
+        ctx.lineWidth = 2.6;
         ctx.stroke();
       }
       ctx.restore();
     }
 
-    ctx.save();
-    ctx.fillStyle = checkerPat16;
-    for (const cl of game.glitchClusters) {
-      if (!cl.inScreen &&
-          cl.x > SCR.x + 18 && cl.x < SCR.x + SCR.w - 48 &&
-          cl.y > SCR.y + 18 && cl.y < SCR.y + SCR.h - 48) {
-        continue;
+    // 2. Perspective missing-texture checker patches lying flat on the wooden tabletop
+    if (game.deskPatches.length > 0 && vc > 0.08) {
+      ctx.save();
+      for (const dp of game.deskPatches) {
+        const age = game.time - dp.bornAt;
+        if (age <= 0) continue;
+        const vis = Math.min(1, age * 4.2) * Math.min(1, Math.max(0, (vc - dp.threshold * 0.5) / 0.25));
+        if (vis <= 0.05) continue;
+
+        ctx.save();
+        ctx.globalAlpha = vis;
+        ctx.translate(dp.x, dp.y);
+        ctx.transform(1, 0, dp.shear, 1, 0, 0);
+        for (let r = 0; r < dp.rows; r++) {
+          for (let c = 0; c < dp.cols; c++) {
+            if (((r + c) * 7 + dp.cols) % 5 === 0) continue;
+            ctx.fillStyle = ((r + c) & 1) === 0 ? '#ff00dc' : '#060407';
+            ctx.fillRect(c * dp.tw, r * dp.th, dp.tw, dp.th);
+          }
+        }
+        ctx.restore();
       }
+      ctx.restore();
+    }
+
+    // 3. Bezel & Wallpaper 2x2 Missing-Texture Checker Clusters
+    ctx.save();
+    for (const cl of game.glitchClusters) {
+      const age = game.time - cl.bornAt;
+      if (age <= 0) continue;
+      const vis = Math.min(1, age * 5.0) * Math.min(1, Math.max(0, (vc - cl.threshold * 0.42) / 0.12));
+      if (vis <= 0.04) continue;
+
       const s = cl.tile;
-      for (const [cx, cy] of cl.cells) {
-        ctx.fillRect(cl.x + cx * s, cl.y + cy * s, s, s);
+      const activeCells = Math.ceil(cl.cells.length * vis);
+      for (let i = 0; i < activeCells; i++) {
+        const [cx, cy, isPink] = cl.cells[i];
+        const px = cl.x + cx * s;
+        const py = cl.y + cy * s;
+        // Keep interior of CRT glass clean so broadcast OSD & eye remain sharp unless at high corruption
+        if (vc < 0.72 && px > SCR.x + 14 && px < SCR.x + SCR.w - 30 && py > SCR.y + 14 && py < SCR.y + SCR.h - 30) {
+          continue;
+        }
+        ctx.fillStyle = isPink ? '#ff00dc' : '#060407';
+        ctx.fillRect(px, py, s, s);
       }
     }
     ctx.restore();
 
+    // 4. Flying phosphor/checker sparks
     for (const sp of game.sparks) {
-      const a = 1 - sp.age / sp.life;
-      ctx.fillStyle = sp.black ? `rgba(8, 6, 8, ${a.toFixed(3)})` : `rgba(255, 79, 216, ${a.toFixed(3)})`;
+      if (sp.age < 0) continue;
+      const a = (1 - sp.age / sp.life) * Math.min(1, vc * 3 + 0.35);
+      ctx.fillStyle = sp.black ? `rgba(6, 4, 7, ${a.toFixed(3)})` : `rgba(255, 0, 220, ${a.toFixed(3)})`;
       ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
     }
   }
 
+  // --- Render First-Person Hand & Physical Remote (Diegetic Spatial Affordance + Nocturnal Rim Shadow) ---
   function renderHandAndRemote() {
-    if (assets.readyCount < 3) return;
-    if (game.phase === 'title') return;
+    if (!cleanHandCanvas) return;
+    if (game.remoteDropAnim >= 0.995) return;
 
-    const dropY = game.remoteDropAnim * 280;
-    const clickDipX = -game.remoteClickAnim * 8;
-    const clickDipY = game.remoteClickAnim * 12;
-    const swayX = Math.sin(game.time * 1.6) * 3;
-    const swayY = Math.cos(game.time * 2.1) * 2.5;
+    const dropY = Math.pow(game.remoteDropAnim, 1.35) * 305;
+    const clickDipX = -game.remoteClickAnim * 9;
+    const clickDipY = game.remoteClickAnim * 14;
+    // Wordless spatial hover shift: hovering upper remote poises forward (-4px); hovering lower wrist eases downward (+11px)!
+    const hoverShiftY = game.hoverZone === 'lower' ? 11 : (game.hoverZone === 'flip' ? -4 : 0);
+    const hoverShiftX = game.hoverZone === 'flip' ? -3 : 0;
+    const holdEaseY = game.downHeld ? Math.min(28, game.downHoldSec * 65) : 0;
 
-    const dx = 758 + clickDipX + swayX;
-    const dy = 472 + clickDipY + swayY + dropY;
-    const dw = 448;
-    const dh = 340;
+    const swayX = Math.sin(game.time * 1.55) * 2.5;
+    const swayY = Math.cos(game.time * 2.05) * 2.0;
+
+    // Anchored slightly further right/down so the wrist exits the viewport cleanly without floating cutoff
+    const dx = 772 + clickDipX + hoverShiftX + swayX;
+    const dy = 468 + clickDipY + hoverShiftY + holdEaseY + swayY + dropY;
+    const dw = 468;
+    const dh = 356;
 
     ctx.save();
-    ctx.drawImage(assets.tvRemote, 87, 692, 390, 297, dx, dy, dw, dh);
-    if (darkHandCanvas && game.corruption > 0.34) {
-      ctx.globalAlpha = Math.min(0.96, (game.corruption - 0.34) * 2.2);
-      ctx.drawImage(darkHandCanvas, 0, 0, 400, 310, dx - 4, dy - 4, dw + 8, dh + 8);
+    ctx.drawImage(cleanHandCanvas, 0, 0, cleanHandCanvas.width, cleanHandCanvas.height, dx, dy, dw, dh);
+
+    // Smoothly darken into magenta-rimmed silhouette as missing-texture corruption fills the room (matches pair_008 left!)
+    if (darkHandCanvas && game.visualCorruption > 0.56) {
+      ctx.globalAlpha = Math.min(0.97, (game.visualCorruption - 0.56) * 2.8);
+      ctx.drawImage(darkHandCanvas, 0, 0, darkHandCanvas.width, darkHandCanvas.height, dx, dy, dw, dh);
     }
 
-    if (game.remoteClickAnim > 0.35) {
-      ctx.globalAlpha = (game.remoteClickAnim - 0.35) / 0.65;
-      ctx.fillStyle = '#ff4fd8';
+    // Subtle IR emitter flash only at high corruption so Flip 1 stays pure greyscale
+    if (game.remoteClickAnim > 0.55 && game.visualCorruption > 0.22) {
+      ctx.globalAlpha = (game.remoteClickAnim - 0.55) / 0.45;
+      const irGrad = ctx.createRadialGradient(dx + 34, dy + 22, 2, dx + 34, dy + 22, 14);
+      irGrad.addColorStop(0, '#ff88ef');
+      irGrad.addColorStop(0.45, 'rgba(255, 0, 220, 0.55)');
+      irGrad.addColorStop(1, 'rgba(255, 0, 220, 0)');
+      ctx.fillStyle = irGrad;
       ctx.beginPath();
-      ctx.arc(dx + 32, dy + 22, 9, 0, Math.PI * 2);
+      ctx.arc(dx + 34, dy + 22, 14, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
   }
 
-  function renderTitleOverlay() {
-    ctx.save();
-    ctx.fillStyle = 'rgba(18, 18, 18, 0.78)';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff4fd8';
-    ctx.font = 'bold 88px "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText('CHANNEL 0', W * 0.5, 312);
-
-    ctx.fillStyle = '#d8d8d8';
-    ctx.font = '32px "Courier New", monospace';
-    ctx.fillText('press power', W * 0.5, 382);
-
-    ctx.strokeStyle = '#d8d8d8';
-    ctx.lineWidth = 4;
-    ctx.fillStyle = 'rgba(22, 22, 22, 0.92)';
-    ctx.fillRect(480, 448, 320, 74);
-    ctx.strokeRect(480, 448, 320, 74);
-    ctx.fillStyle = '#d8d8d8';
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillText('START', W * 0.5, 495);
-
-    ctx.font = '22px "Courier New", monospace';
-    ctx.fillStyle = 'rgba(216, 216, 216, 0.75)';
-    ctx.fillText(game.howToOpen ? '[ CLOSE ]' : 'HOW TO PLAY [H]', W * 0.5, 584);
-
-    if (game.howToOpen) {
-      ctx.fillStyle = 'rgba(18, 18, 18, 0.96)';
-      ctx.strokeStyle = '#d8d8d8';
-      ctx.lineWidth = 2;
-      ctx.fillRect(280, 604, 720, 86);
-      ctx.strokeRect(280, 604, 720, 86);
-      ctx.font = '16px "Courier New", monospace';
-      ctx.fillStyle = '#d8d8d8';
-      ctx.fillText('Press [SPACE], [ARROWS], or CLICK remote to flip channels.', W * 0.5, 636);
-      ctx.fillText('Every channel asks you to keep watching. Or press [P] to put it down.', W * 0.5, 664);
-    }
-    ctx.restore();
-  }
-
-  function renderEndingOverlay() {
-    ctx.save();
-    if (game.endingKind === 'taken_over') {
-      ctx.fillStyle = 'rgba(16, 10, 16, 0.72)';
-      ctx.fillRect(0, 0, W, H);
-
-      ctx.fillStyle = checkerPat16;
-      ctx.fillRect(300, 175, 680, 370);
-      ctx.fillStyle = '#141214';
-      ctx.fillRect(324, 199, 632, 322);
-      ctx.strokeStyle = '#ff4fd8';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(324, 199, 632, 322);
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ff4fd8';
-      ctx.font = 'bold 54px "Courier New", monospace';
-      ctx.fillText('TAKEN OVER', W * 0.5, 290);
-
-      ctx.fillStyle = '#d8d8d8';
-      ctx.font = '22px "Courier New", monospace';
-      ctx.fillText('"every channel told you the same thing."', W * 0.5, 352);
-      ctx.fillStyle = 'rgba(216, 216, 216, 0.72)';
-      ctx.font = '18px "Courier New", monospace';
-      ctx.fillText(`CHANNELS FLIPPED: ${game.flips}   ·   SIGNAL COVERAGE: 100%`, W * 0.5, 404);
-
-      ctx.fillStyle = '#ff4fd8';
-      ctx.font = 'bold 21px "Courier New", monospace';
-      ctx.fillText('[ PRESS SPACE OR R TO POWER CYCLE ]', W * 0.5, 476);
-    } else {
-      const fade = Math.min(1, game.phaseTime * 0.9);
-      ctx.globalAlpha = fade;
-      ctx.fillStyle = 'rgba(22, 22, 22, 0.76)';
-      ctx.fillRect(310, 205, 660, 300);
-      ctx.strokeStyle = '#d8d8d8';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(310, 205, 660, 300);
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#d8d8d8';
-      ctx.font = 'bold 42px "Courier New", monospace';
-      ctx.fillText('REMOTE SET DOWN', W * 0.5, 286);
-
-      ctx.font = '20px "Courier New", monospace';
-      ctx.fillStyle = 'rgba(216, 216, 216, 0.88)';
-      ctx.fillText('The screen goes dark. The room stays yours.', W * 0.5, 346);
-      ctx.font = '17px "Courier New", monospace';
-      ctx.fillStyle = 'rgba(216, 216, 216, 0.6)';
-      ctx.fillText('(Putting the remote down was the one real choice.)', W * 0.5, 386);
-
-      ctx.fillStyle = '#d8d8d8';
-      ctx.font = 'bold 20px "Courier New", monospace';
-      ctx.fillText('[ PRESS R OR SPACE TO TURN BACK ON ]', W * 0.5, 456);
-    }
-    ctx.restore();
-  }
-
+  // --- Main Render Frame (VOIDBASTARD-TAO: Pure Room + Curved CRT + Physical Remote + Spreading Reality Rot) ---
   function render() {
-    ctx.fillStyle = '#161616';
+    ctx.fillStyle = '#141415';
     ctx.fillRect(0, 0, W, H);
 
-    const zoom = 1.0 + game.corruption * 0.12;
-    ctx.save();
-    ctx.translate(W * 0.5, H * 0.46);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-W * 0.5, -H * 0.46);
+    const vc = game.visualCorruption;
+    // Claustrophobic push-in toward CRT as corruption rises (matches f_001 1.0x -> f_033 1.16x!)
+    const zoom = 1.0 + vc * 0.175;
 
+    ctx.save();
+    ctx.translate(W * 0.5, H * 0.45);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W * 0.5, -H * 0.45);
+
+    // 1. Clean uncorrupted charcoal bedroom base
     if (cleanRoomCanvas) {
       ctx.drawImage(cleanRoomCanvas, 0, 0, W, H);
     } else if (assets.room.complete && assets.room.naturalWidth) {
       ctx.drawImage(assets.room, 0, 0, W, H);
     }
 
-    if (assets.room.complete && assets.room.naturalWidth && game.flips >= 1 && game.endingKind !== 'put_down') {
+    // 2. Gradually blend Nano Banana bezel corruption ONLY from mid-stage onward (NEVER dumped on Flip 1!)
+    if (assets.room.complete && assets.room.naturalWidth && vc > 0.24) {
       ctx.save();
-      ctx.globalAlpha = Math.min(1, game.flips * 0.72);
+      ctx.globalAlpha = Math.min(0.84, (vc - 0.24) * 1.15);
       ctx.drawImage(assets.room, 0, 0, W, H);
       ctx.restore();
     }
 
+    // 3. Ambient magenta phosphor room spill cast onto wallpaper & wooden desk at high corruption
+    if (vc > 0.28) {
+      const glow = ctx.createRadialGradient(
+        SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, SCR.w * 0.35,
+        SCR.x + SCR.w * 0.5, SCR.y + SCR.h * 0.5, W * 0.62
+      );
+      glow.addColorStop(0, `rgba(255, 0, 220, ${(vc * 0.16).toFixed(3)})`);
+      glow.addColorStop(1, 'rgba(36, 6, 32, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 4. Curved CRT Screen Content + Analog Sync-Roll + OSD
     renderCrtScreenContent();
 
-    if (game.endingKind !== 'put_down') {
-      renderSpillGlitches();
-    }
+    // 5. Organic Bezel Checker Clusters + Perspective Desk Patches + Neon-Magenta Wall Tendrils
+    renderSpillCorruption();
 
     ctx.restore();
 
+    // 6. First-Person Hand & Physical Remote
     renderHandAndRemote();
 
-    const vigInner = Math.max(110, H * (0.42 - game.corruption * 0.18));
-    const vigOuter = W * (0.68 - game.corruption * 0.12);
+    // 7. Closing Atmospheric Vignette (tightens with corruption, opens cleanly on stillness!)
+    const vigInner = Math.max(115, H * (0.44 - vc * 0.19));
+    const vigOuter = W * (0.70 - vc * 0.13);
     const vg = ctx.createRadialGradient(W * 0.5, H * 0.46, vigInner, W * 0.5, H * 0.46, vigOuter);
     vg.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vg.addColorStop(1, `rgba(10, 8, 10, ${(0.52 + game.corruption * 0.36).toFixed(3)})`);
+    vg.addColorStop(1, `rgba(8, 6, 9, ${(0.48 + vc * 0.38).toFixed(3)})`);
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
 
-    if (game.phase === 'ch' || game.phase === 'spill') {
-      ctx.save();
-      ctx.font = '14px "Courier New", monospace';
-      ctx.fillStyle = 'rgba(216, 216, 216, 0.36)';
-      ctx.textAlign = 'left';
-      ctx.fillText('[SPACE / CLICK] FLIP CHANNEL     [P] PUT REMOTE DOWN', 24, H - 18);
-      ctx.restore();
-    }
-
-    if (game.phase === 'title') renderTitleOverlay();
-    else if (game.phase === 'end') renderEndingOverlay();
-
+    // 8. Subtle global film scanlines
     ctx.drawImage(crtScanCanvas, 0, 0);
   }
 
+  // --- Rich Observable Game State ---
   window.__game = {
     get state() {
+      const ch = CHANNELS[game.chIdx];
       return {
+        voidState: getVoidState(),
         phase: game.phase,
         endingKind: game.endingKind,
         channelIndex: game.chIdx,
-        channelNumber: CHANNELS[game.chIdx].num,
-        caption: CHANNELS[game.chIdx].caption,
+        channelNumber: game.phase === 'complete' ? 'CH 00' : ch.num,
+        caption: game.phase === 'complete' ? '' : ((game.phase === 'end' && game.endingKind === 'taken_over') ? '"SYSTEM ERROR"' : ch.caption),
         flips: game.flips,
-        corruption: Number(game.corruption.toFixed(3)),
+        corruption: Number(game.visualCorruption.toFixed(3)),
+        syncTear: Number(game.syncTear.toFixed(3)),
+        remoteDrop: Number(game.remoteDropAnim.toFixed(3)),
+        idleSeconds: Number(game.idleSinceFlip.toFixed(2)),
         glitchCount: game.glitchClusters.length,
+        tendrilCount: game.wallTendrils.length,
+        fps: Math.round(game.fps),
       };
     }
   };
